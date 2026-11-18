@@ -1,4 +1,19 @@
-import { Activity, Athlete, Challenge, Club, GroupEvent, NotificationItem, Segment } from '../types';
+import {
+  Activity,
+  Athlete,
+  Challenge,
+  Club,
+  FitnessFatiguePoint,
+  GearItem,
+  GroupEvent,
+  NotificationItem,
+  PrivacyZoneItem,
+  RacePrediction,
+  RouteItem,
+  Segment,
+  TrainingGoal,
+  TrainingPlan,
+} from '../types';
 
 export const CURRENT_USER: Athlete = {
   id: 'user_current',
@@ -403,4 +418,208 @@ export const MOCK_NOTIFICATIONS: NotificationItem[] = [
     isRead: true,
   },
 ];
+
+export const MOCK_ROUTES: RouteItem[] = [
+  {
+    id: 'route_1',
+    name: 'Hatirjheel Sunrise Loop 🌅',
+    sportType: 'Run',
+    distanceMeters: 8500,
+    elevationGainMeters: 45,
+    estimatedTimeSeconds: 2700,
+    climbCategory: 'Flat',
+    surfacePavedPercent: 90,
+    surfaceGravelPercent: 10,
+    surfaceDirtPercent: 0,
+    authorName: 'Rakib Ahmed',
+    isSaved: true,
+    isPopular: true,
+    elevationProfile: [12, 14, 18, 16, 22, 19, 15, 14, 13],
+    polylinePoints: [
+      { latitude: 23.7745, longitude: 90.4072 },
+      { latitude: 23.7780, longitude: 90.4150 },
+      { latitude: 23.7730, longitude: 90.4200 },
+      { latitude: 23.7680, longitude: 90.4120 },
+      { latitude: 23.7745, longitude: 90.4072 },
+    ],
+    turns: [
+      { id: 't1', instruction: 'Head East on Hatirjheel Perimeter Path', distanceFromStartMeters: 0, iconName: 'arrow-up' },
+      { id: 't2', instruction: 'In 2.1km, keep right at the Gulshan-1 bridge ramp', distanceFromStartMeters: 2100, iconName: 'arrow-forward' },
+      { id: 't3', instruction: 'In 3.4km, continue straight past the amphitheater', distanceFromStartMeters: 5500, iconName: 'arrow-up' },
+      { id: 't4', instruction: 'Loop finish at Police Plaza Point', distanceFromStartMeters: 8500, iconName: 'flag' },
+    ],
+  },
+  {
+    id: 'route_2',
+    name: '300 Feet Expressway Gravel & Road 🚴',
+    sportType: 'Ride',
+    distanceMeters: 32000,
+    elevationGainMeters: 140,
+    estimatedTimeSeconds: 4200,
+    climbCategory: 'Cat 4',
+    surfacePavedPercent: 75,
+    surfaceGravelPercent: 25,
+    surfaceDirtPercent: 0,
+    authorName: 'Marcus Vance',
+    isSaved: false,
+    isPopular: true,
+    elevationProfile: [8, 12, 25, 30, 42, 38, 20, 10, 8],
+    polylinePoints: [
+      { latitude: 23.8200, longitude: 90.4400 },
+      { latitude: 23.8500, longitude: 90.5200 },
+      { latitude: 23.8200, longitude: 90.4400 },
+    ],
+    turns: [
+      { id: 't1', instruction: 'Start East from Kuril Flyover toward Purbachal', distanceFromStartMeters: 0, iconName: 'arrow-up' },
+      { id: 't2', instruction: 'In 16km, make safe U-turn at Kanchan Bridge Roundabout', distanceFromStartMeters: 16000, iconName: 'arrow-back' },
+      { id: 't3', instruction: 'Finish at Kuril Service Road', distanceFromStartMeters: 32000, iconName: 'flag' },
+    ],
+  },
+  {
+    id: 'route_3',
+    name: 'Dhanmondi Lake Perimeter Trail 🌳',
+    sportType: 'Run',
+    distanceMeters: 5200,
+    elevationGainMeters: 20,
+    estimatedTimeSeconds: 1680,
+    climbCategory: 'Flat',
+    surfacePavedPercent: 60,
+    surfaceGravelPercent: 20,
+    surfaceDirtPercent: 20,
+    authorName: 'Elena Rostova',
+    isSaved: true,
+    isPopular: false,
+    elevationProfile: [10, 11, 14, 15, 12, 10],
+    polylinePoints: [
+      { latitude: 23.7465, longitude: 90.3762 },
+      { latitude: 23.7510, longitude: 90.3790 },
+      { latitude: 23.7465, longitude: 90.3762 },
+    ],
+    turns: [
+      { id: 't1', instruction: 'Start clockwise along lakeside boardwalk', distanceFromStartMeters: 0, iconName: 'arrow-up' },
+      { id: 't2', instruction: 'Cross bridge near Medinova', distanceFromStartMeters: 2600, iconName: 'arrow-forward' },
+      { id: 't3', instruction: 'Finish at Rabindra Sarobar stage', distanceFromStartMeters: 5200, iconName: 'flag' },
+    ],
+  },
+];
+
+export const MOCK_GEAR: GearItem[] = [
+  {
+    id: 'gear_1',
+    name: 'Nike Vaporfly 3',
+    brand: 'Nike',
+    model: 'ZoomX Vaporfly Next% 3',
+    sportType: 'Run',
+    distanceMeters: 342000, // 342 km
+    maxDistanceMeters: 500000, // 500 km
+    isRetired: false,
+    isDefault: true,
+    purchaseDate: '2026-02-10',
+  },
+  {
+    id: 'gear_2',
+    name: 'Asics Novablast 4',
+    brand: 'Asics',
+    model: 'Novablast 4 Daily Trainer',
+    sportType: 'Run',
+    distanceMeters: 580000, // 580 km - Near retirement!
+    maxDistanceMeters: 600000, // 600 km
+    isRetired: false,
+    isDefault: false,
+    purchaseDate: '2025-08-15',
+  },
+  {
+    id: 'gear_3',
+    name: 'Specialized Allez Sprint',
+    brand: 'Specialized',
+    model: 'Allez Sprint Disc LTD',
+    sportType: 'Ride',
+    distanceMeters: 2450000, // 2,450 km
+    maxDistanceMeters: 10000000,
+    isRetired: false,
+    isDefault: true,
+    purchaseDate: '2025-01-20',
+  },
+];
+
+export const MOCK_GOALS: TrainingGoal[] = [
+  {
+    id: 'goal_1',
+    title: 'Weekly Mileage Target',
+    targetValue: 45,
+    currentValue: 32.5,
+    unit: 'km',
+    period: 'WEEKLY',
+    sportType: 'Run',
+  },
+  {
+    id: 'goal_2',
+    title: 'Monthly Saddle Time',
+    targetValue: 30,
+    currentValue: 21.4,
+    unit: 'hours',
+    period: 'MONTHLY',
+    sportType: 'Ride',
+  },
+  {
+    id: 'goal_3',
+    title: 'Monthly Elevation Climb',
+    targetValue: 2000,
+    currentValue: 1450,
+    unit: 'm_elev',
+    period: 'MONTHLY',
+    sportType: 'Run',
+  },
+];
+
+export const MOCK_PLANS: TrainingPlan[] = [
+  {
+    id: 'plan_1',
+    title: 'Sub-20 Min 5K Speed Accelerator ⚡',
+    durationWeeks: 8,
+    level: 'Intermediate',
+    sportType: 'Run',
+    description: 'Structured intervals, threshold tempo runs, and aerobic capacity work to break the 20-minute barrier.',
+    weeklyWorkouts: [
+      { day: 'Mon', title: 'Easy Recovery Run', distanceKm: 6, durationMinutes: 35, description: 'Zone 2 conversational effort.', isCompleted: true },
+      { day: 'Tue', title: 'Track Intervals: 6x800m', distanceKm: 8, durationMinutes: 42, description: 'Pace: 3:50/km with 200m jog recovery.', isCompleted: true },
+      { day: 'Thu', title: 'Lactate Threshold Tempo', distanceKm: 8, durationMinutes: 38, description: '20 min continuous at 4:05/km.', isCompleted: false },
+      { day: 'Sat', title: 'Aerobic Long Run', distanceKm: 14, durationMinutes: 75, description: 'Negative split last 3 km.', isCompleted: false },
+    ],
+  },
+  {
+    id: 'plan_2',
+    title: 'First Half Marathon Finisher 🏅',
+    durationWeeks: 12,
+    level: 'Beginner',
+    sportType: 'Run',
+    description: 'Gradual progressive mileage builder to cross the 21.1 km finish line with confidence.',
+    weeklyWorkouts: [
+      { day: 'Tue', title: 'Easy Base Aerobic', distanceKm: 5, durationMinutes: 32, description: 'Steady conversational pace.', isCompleted: true },
+      { day: 'Thu', title: 'Strides & Speed Play', distanceKm: 6, durationMinutes: 36, description: '6x100m fast strides after 4k.', isCompleted: false },
+      { day: 'Sun', title: 'Sunday Long Progression', distanceKm: 12, durationMinutes: 72, description: 'Consistent aerobic endurance.', isCompleted: false },
+    ],
+  },
+];
+
+export const MOCK_FITNESS_TRENDS: FitnessFatiguePoint[] = [
+  { date: 'Nov 01', fitnessCtl: 52, fatigueAtl: 48, formTsb: 4 },
+  { date: 'Nov 05', fitnessCtl: 54, fatigueAtl: 62, formTsb: -8 },
+  { date: 'Nov 10', fitnessCtl: 58, fatigueAtl: 70, formTsb: -12 },
+  { date: 'Nov 14', fitnessCtl: 60, fatigueAtl: 55, formTsb: 5 },
+  { date: 'Nov 18', fitnessCtl: 63, fatigueAtl: 58, formTsb: 5 },
+];
+
+export const MOCK_RACE_PREDICTIONS: RacePrediction[] = [
+  { distanceLabel: '5K', predictedTimeFormatted: '19:42', predictedPaceFormatted: '3:56 /km', confidenceScorePercent: 94 },
+  { distanceLabel: '10K', predictedTimeFormatted: '41:15', predictedPaceFormatted: '4:07 /km', confidenceScorePercent: 89 },
+  { distanceLabel: 'Half Marathon', predictedTimeFormatted: '1:32:48', predictedPaceFormatted: '4:23 /km', confidenceScorePercent: 82 },
+  { distanceLabel: 'Marathon', predictedTimeFormatted: '3:18:20', predictedPaceFormatted: '4:42 /km', confidenceScorePercent: 74 },
+];
+
+export const MOCK_PRIVACY_ZONES: PrivacyZoneItem[] = [
+  { id: 'pz_1', name: 'Home Residence', addressSnippet: 'Road 12, Dhanmondi, Dhaka', latitude: 23.7465, longitude: 90.3762, radiusMeters: 250 },
+  { id: 'pz_2', name: 'Office Tech Hub', addressSnippet: 'Gulshan Avenue, Gulshan 2', latitude: 23.7925, longitude: 90.4162, radiusMeters: 300 },
+];
+
 

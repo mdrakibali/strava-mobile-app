@@ -159,3 +159,95 @@ export interface NotificationItem {
   targetActivityId?: string;
 }
 
+export interface RouteTurnCue {
+  id: string;
+  instruction: string;
+  distanceFromStartMeters: number;
+  iconName: 'arrow-forward' | 'arrow-back' | 'arrow-up' | 'flag';
+}
+
+export interface RouteItem {
+  id: string;
+  name: string;
+  sportType: SportType;
+  distanceMeters: number;
+  elevationGainMeters: number;
+  estimatedTimeSeconds: number;
+  climbCategory: string; // 'HC' | 'Cat 1' | 'Cat 2' | 'Cat 3' | 'Cat 4' | 'Flat'
+  surfacePavedPercent: number;
+  surfaceGravelPercent: number;
+  surfaceDirtPercent: number;
+  polylinePoints: LatLngPoint[];
+  elevationProfile: number[];
+  turns: RouteTurnCue[];
+  isSaved: boolean;
+  authorName: string;
+  isPopular?: boolean;
+}
+
+export interface GearItem {
+  id: string;
+  name: string;
+  brand: string;
+  model: string;
+  sportType: 'Run' | 'Ride';
+  distanceMeters: number;
+  maxDistanceMeters: number;
+  isRetired: boolean;
+  isDefault: boolean;
+  purchaseDate: string;
+}
+
+export interface TrainingGoal {
+  id: string;
+  title: string;
+  targetValue: number;
+  currentValue: number;
+  unit: 'km' | 'hours' | 'm_elev';
+  period: 'WEEKLY' | 'MONTHLY' | 'ANNUAL';
+  sportType: SportType;
+}
+
+export interface TrainingPlanWorkout {
+  day: string;
+  title: string;
+  distanceKm: number;
+  durationMinutes: number;
+  description: string;
+  isCompleted: boolean;
+}
+
+export interface TrainingPlan {
+  id: string;
+  title: string;
+  durationWeeks: number;
+  level: 'Beginner' | 'Intermediate' | 'Advanced';
+  sportType: SportType;
+  description: string;
+  weeklyWorkouts: TrainingPlanWorkout[];
+}
+
+export interface FitnessFatiguePoint {
+  date: string;
+  fitnessCtl: number; // Chronic Training Load (42-day)
+  fatigueAtl: number; // Acute Training Load (7-day)
+  formTsb: number;    // Training Stress Balance (Fitness - Fatigue)
+}
+
+export interface RacePrediction {
+  distanceLabel: '5K' | '10K' | 'Half Marathon' | 'Marathon';
+  predictedTimeFormatted: string;
+  predictedPaceFormatted: string;
+  confidenceScorePercent: number;
+}
+
+export interface PrivacyZoneItem {
+  id: string;
+  name: string;
+  addressSnippet: string;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+}
+
+

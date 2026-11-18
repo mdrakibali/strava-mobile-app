@@ -4,18 +4,18 @@ import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [isRegister, setIsRegister] = useState(false);
-  const [email, setEmail] = useState('rakib.runner@example.com');
-  const [password, setPassword] = useState('••••••••');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
 
   const handleSubmit = () => {
     router.replace('/(tabs)');
@@ -36,69 +36,88 @@ export default function LoginScreen() {
               OPEN STRAVA
             </Text>
             <Text className="text-xs text-gray-400 mt-1">
-              Free-Tier Athletic Tracking & Social Community
+              {isSignUp ? 'Join the community of athletes' : 'Sign in to sync your fitness and feed'}
             </Text>
           </View>
 
+          {/* Google OAuth One-Click Button */}
+          <TouchableOpacity
+            onPress={handleSubmit}
+            className="flex-row items-center justify-center py-3.5 px-4 bg-white border border-gray-300 rounded-2xl shadow-sm mb-4">
+            <Ionicons name="logo-google" size={20} color="#EA4335" />
+            <Text className="text-sm font-bold text-gray-700 ml-2.5">
+              Continue with Google
+            </Text>
+          </TouchableOpacity>
+
+          <View className="flex-row items-center my-4">
+            <View className="flex-1 h-px bg-gray-200" />
+            <Text className="mx-3 text-xs text-gray-400 font-semibold uppercase">Or with email</Text>
+            <View className="flex-1 h-px bg-gray-200" />
+          </View>
+
           {/* Form */}
-          <View className="gap-3 mb-6">
-            <View className="gap-1">
-              <Text className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                EMAIL ADDRESS
-              </Text>
+          <View className="space-y-3 mb-6">
+            <View>
+              <Text className="text-xs font-bold text-gray-700 mb-1">Email</Text>
               <TextInput
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
-                placeholder="athlete@example.com"
-                placeholderTextColor="#9CA3AF"
                 value={email}
                 onChangeText={setEmail}
+                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+                placeholder="athlete@example.com"
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
             </View>
 
-            <View className="gap-1">
-              <Text className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                PASSWORD
-              </Text>
+            <View className="mt-3">
+              <Text className="text-xs font-bold text-gray-700 mb-1">Password</Text>
               <TextInput
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
-                placeholder="••••••••"
-                placeholderTextColor="#9CA3AF"
                 value={password}
                 onChangeText={setPassword}
+                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+                placeholder="••••••••"
                 secureTextEntry
               />
             </View>
+          </View>
 
-            <TouchableOpacity
-              className="bg-[#FC4C02] h-12 rounded-xl items-center justify-center shadow-md mt-2"
-              onPress={handleSubmit}
-              activeOpacity={0.85}>
-              <Text className="text-sm font-bold text-white tracking-wider">
-                {isRegister ? 'CREATE ATHLETE ACCOUNT' : 'LOG IN'}
-              </Text>
-            </TouchableOpacity>
+          {/* Submit Button */}
+          <TouchableOpacity
+            onPress={handleSubmit}
+            className="w-full py-4 bg-[#FC4C02] rounded-2xl items-center shadow-md mb-4">
+            <Text className="text-base font-black text-white">
+              {isSignUp ? 'Create Athlete Account' : 'Log In'}
+            </Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              className="bg-gray-100 h-12 rounded-xl items-center justify-center border border-gray-200 mt-1"
-              onPress={handleSubmit}
-              activeOpacity={0.75}>
-              <Text className="text-xs font-semibold text-gray-700">
-                Continue as Guest / Demo Athlete →
+          {/* Quick Demo Athlete Bypass */}
+          <TouchableOpacity
+            onPress={handleSubmit}
+            className="w-full py-3 bg-orange-50 border border-orange-200 rounded-2xl items-center mb-6">
+            <Text className="text-xs font-black text-[#FC4C02]">
+              ⚡ Quick Demo Athlete Login (Instant Access)
+            </Text>
+          </TouchableOpacity>
+
+          {/* Toggle Login / SignUp */}
+          <View className="flex-row justify-center items-center">
+            <Text className="text-xs text-gray-500">
+              {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+            </Text>
+            <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
+              <Text className="text-xs font-bold text-[#FC4C02]">
+                {isSignUp ? 'Log In' : 'Sign Up'}
               </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Toggle between Login and Register */}
+          {/* Tour Onboarding Link */}
           <TouchableOpacity
-            className="items-center"
-            onPress={() => setIsRegister(!isRegister)}>
-            <Text className="text-xs text-gray-500">
-              {isRegister ? 'Already have an account? ' : "Don't have an account? "}
-              <Text className="font-bold text-[#FC4C02]">
-                {isRegister ? 'Log In' : 'Sign Up Free'}
-              </Text>
+            onPress={() => router.push('/onboarding/welcome')}
+            className="items-center mt-4">
+            <Text className="text-[11px] font-semibold text-gray-400">
+              New here? View the Guided App Walkthrough →
             </Text>
           </TouchableOpacity>
         </View>
