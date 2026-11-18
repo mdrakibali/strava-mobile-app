@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Image,
   ScrollView,
@@ -11,6 +11,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { Activity, SportType } from '../../types';
 import { RouteMapPreview } from './RouteMapPreview';
+import { ShareModal } from './ShareModal';
 import { StatBox } from './StatBox';
 
 interface ActivityCardProps {
