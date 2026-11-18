@@ -158,3 +158,4 @@ export interface NotificationItem {
   isRead: boolean;
   targetActivityId?: string;
 }
+
