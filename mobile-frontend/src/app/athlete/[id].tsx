@@ -74,7 +74,10 @@ export default function AthleteProfileScreen() {
 
           <Text className="text-xl font-black text-gray-900">{athlete.displayName}</Text>
           <Text className="text-xs font-semibold text-[#FC4C02] mb-1">@{athlete.username}</Text>
-          <Text className="text-xs text-gray-400 mb-2">📍 {athlete.city}, {athlete.country}</Text>
+          <View className="flex-row items-center mb-2">
+            <Ionicons name="location-outline" size={12} color="#9CA3AF" />
+            <Text className="text-xs text-gray-400 ml-1">{athlete.city}, {athlete.country}</Text>
+          </View>
 
           {athlete.bio && (
             <Text className="text-xs text-gray-600 leading-4 mb-4">{athlete.bio}</Text>

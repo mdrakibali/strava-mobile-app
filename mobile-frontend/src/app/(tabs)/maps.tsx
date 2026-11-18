@@ -161,8 +161,9 @@ export default function MapsScreen() {
 
               <TouchableOpacity
                 onPress={() => router.push('/routes/navigation')}
-                className="flex-1 py-3 bg-[#FC4C02] rounded-xl items-center shadow-md">
-                <Text className="text-xs font-black text-white">Start Navigation 🧭</Text>
+                className="flex-1 py-3 bg-[#FC4C02] rounded-xl flex-row items-center justify-center shadow-md">
+                <Ionicons name="navigate" size={14} color="#FFFFFF" />
+                <Text className="text-xs font-black text-white ml-1.5">Start Navigation</Text>
               </TouchableOpacity>
             </View>
           </View>

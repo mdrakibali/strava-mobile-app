@@ -39,9 +39,12 @@ export default function ChallengeDetailScreen() {
             className="w-28 h-28 rounded-full border-4 border-orange-100 bg-orange-50 mb-3"
           />
           <Text className="text-xl font-black text-gray-900 text-center mb-1">{challenge.title}</Text>
-          <Text className="text-xs font-semibold text-orange-600 mb-3">
-            ⏱ {challenge.daysRemaining} days remaining in November
-          </Text>
+          <View className="flex-row items-center mb-3">
+            <Ionicons name="time-outline" size={13} color="#EA580C" />
+            <Text className="text-xs font-semibold text-orange-600 ml-1">
+              {challenge.daysRemaining} days remaining in November
+            </Text>
+          </View>
           <Text className="text-xs text-gray-600 text-center max-w-sm leading-5">
             {challenge.description}
           </Text>

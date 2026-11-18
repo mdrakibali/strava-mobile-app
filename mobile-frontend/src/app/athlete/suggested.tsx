@@ -21,7 +21,7 @@ export default function SuggestedAthletesScreen() {
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900 ml-3">Suggested Athletes 🤝</Text>
+        <Text className="text-base font-black text-gray-900 ml-3">Suggested Athletes</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} className="p-4" contentContainerClassName="pb-20">
@@ -41,9 +41,12 @@ export default function SuggestedAthletesScreen() {
                 <View className="flex-1">
                   <Text className="text-sm font-bold text-gray-900">{athlete.displayName}</Text>
                   <Text className="text-xs text-gray-400">@{athlete.username}</Text>
-                  <Text className="text-[11px] text-[#FC4C02] font-semibold mt-0.5">
-                    📍 {athlete.city} · 8 mutual connections
-                  </Text>
+                  <View className="flex-row items-center mt-0.5">
+                    <Ionicons name="location-outline" size={11} color="#FC4C02" />
+                    <Text className="text-[11px] text-[#FC4C02] font-semibold ml-0.5">
+                      {athlete.city} · 8 mutual connections
+                    </Text>
+                  </View>
                 </View>
               </TouchableOpacity>
 

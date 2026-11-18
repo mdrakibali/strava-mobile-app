@@ -122,12 +122,18 @@ export default function SegmentDetailScreen() {
                 item.isYou ? 'bg-orange-50/50 px-2 rounded-xl my-0.5' : ''
               }`}>
               <View className="flex-row items-center flex-1 mr-3">
-                <Text
-                  className={`text-xs font-black w-6 ${
-                    item.rank === 1 ? 'text-amber-500' : item.isYou ? 'text-[#FC4C02]' : 'text-gray-400'
-                  }`}>
-                  {item.rank === 1 ? '👑 1' : `#${item.rank}`}
-                </Text>
+                <View className="w-6 flex-row items-center">
+                  {item.rank === 1 ? (
+                    <Ionicons name="trophy" size={14} color="#F59E0B" />
+                  ) : (
+                    <Text
+                      className={`text-xs font-black ${
+                        item.isYou ? 'text-[#FC4C02]' : 'text-gray-400'
+                      }`}>
+                      #{item.rank}
+                    </Text>
+                  )}
+                </View>
                 <Image source={{ uri: item.avatar }} className="w-8 h-8 rounded-full mr-2.5 bg-gray-100" />
                 <View className="flex-1">
                   <Text className={`text-xs font-bold ${item.isYou ? 'text-[#FC4C02]' : 'text-gray-900'}`}>

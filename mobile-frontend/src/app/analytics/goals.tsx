@@ -41,7 +41,7 @@ export default function GoalsScreen() {
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900">Training Goals 🎯</Text>
+        <Text className="text-base font-black text-gray-900">Training Goals</Text>
         <TouchableOpacity onPress={() => setIsAdding(!isAdding)} className="p-1">
           <Ionicons name={isAdding ? 'close' : 'add'} size={24} color="#FC4C02" />
         </TouchableOpacity>
@@ -99,7 +99,7 @@ export default function GoalsScreen() {
 
               <View className="flex-row justify-between items-center">
                 <Text className="text-[10px] font-semibold text-gray-400">
-                  {percent >= 100 ? '🎉 Target Achieved!' : `${(goal.targetValue - goal.currentValue).toFixed(1)} ${goal.unit} remaining`}
+                  {percent >= 100 ? 'Target Achieved!' : `${(goal.targetValue - goal.currentValue).toFixed(1)} ${goal.unit} remaining`}
                 </Text>
                 <Text className="text-xs font-black text-gray-900">{percent}%</Text>
               </View>

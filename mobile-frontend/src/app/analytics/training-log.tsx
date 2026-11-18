@@ -52,7 +52,7 @@ export default function TrainingLogScreen() {
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900">Training Log 📅</Text>
+        <Text className="text-base font-black text-gray-900">Training Log</Text>
         <TouchableOpacity onPress={() => router.push('/analytics/goals')} className="p-1">
           <Ionicons name="flag-outline" size={20} color="#FC4C02" />
         </TouchableOpacity>

@@ -14,7 +14,7 @@ export default function ProfileScreen() {
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Top Bar */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
-        <Text className="text-xl font-black text-gray-900">Athlete Profile 👤</Text>
+        <Text className="text-xl font-black text-gray-900">Athlete Profile</Text>
         <TouchableOpacity onPress={() => router.push('/settings')} className="p-1">
           <Ionicons name="settings-outline" size={22} color="#111827" />
         </TouchableOpacity>
@@ -37,7 +37,10 @@ export default function ProfileScreen() {
 
           <Text className="text-xl font-black text-gray-900">{currentUser.displayName}</Text>
           <Text className="text-sm font-semibold text-[#FC4C02] mb-1">@{currentUser.username}</Text>
-          <Text className="text-xs text-gray-400 mb-2">📍 {currentUser.city}, {currentUser.country}</Text>
+          <View className="flex-row items-center mb-2">
+            <Ionicons name="location-outline" size={12} color="#9CA3AF" />
+            <Text className="text-xs text-gray-400 ml-1">{currentUser.city}, {currentUser.country}</Text>
+          </View>
 
           {currentUser.bio && (
             <Text className="text-xs text-gray-600 leading-4 mb-3">{currentUser.bio}</Text>
@@ -118,7 +121,7 @@ export default function ProfileScreen() {
 
         {/* Trophy Case */}
         <View className="bg-white p-4 border-b border-gray-200 mt-3">
-          <Text className="text-sm font-black text-gray-900 mb-3">Trophy Case 🏆</Text>
+          <Text className="text-sm font-black text-gray-900 mb-3">Trophy Case</Text>
           <View className="flex-row justify-around">
             <View className="items-center">
               <View className="w-14 h-14 rounded-full bg-amber-50 items-center justify-center border-2 border-amber-300 mb-1">

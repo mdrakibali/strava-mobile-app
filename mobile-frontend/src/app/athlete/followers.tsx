@@ -55,7 +55,10 @@ export default function FollowersScreen() {
               <View className="flex-1">
                 <Text className="text-sm font-bold text-gray-900">{athlete.displayName}</Text>
                 <Text className="text-xs text-gray-400">@{athlete.username}</Text>
-                <Text className="text-[10px] text-gray-400">📍 {athlete.city}</Text>
+                <View className="flex-row items-center mt-0.5">
+                  <Ionicons name="location-outline" size={10} color="#9CA3AF" />
+                  <Text className="text-[10px] text-gray-400 ml-0.5">{athlete.city}</Text>
+                </View>
               </View>
             </TouchableOpacity>
 

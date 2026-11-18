@@ -22,7 +22,7 @@ export const CURRENT_USER: Athlete = {
   avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
   city: 'Dhaka',
   country: 'Bangladesh',
-  bio: 'Marathon trainee & weekend cyclist. Chasing PRs and good coffee ☕🏃‍♂️',
+  bio: 'Marathon trainee & weekend cyclist. Chasing PRs and good coffee.',
   followersCount: 142,
   followingCount: 98,
 };
@@ -35,7 +35,7 @@ export const MOCK_ATHLETES: Athlete[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80',
     city: 'Berlin',
     country: 'Germany',
-    bio: 'Ultra-trail runner & mountain lover 🏔️',
+    bio: 'Ultra-trail runner & mountain lover.',
     followersCount: 540,
     followingCount: 210,
     isFollowing: true,
@@ -47,7 +47,7 @@ export const MOCK_ATHLETES: Athlete[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
     city: 'San Francisco',
     country: 'USA',
-    bio: 'Cat 2 Road Cyclist. Climbing enthusiast 🚴‍♂️💨',
+    bio: 'Cat 2 Road Cyclist. Climbing enthusiast.',
     followersCount: 890,
     followingCount: 340,
     isFollowing: true,
@@ -70,7 +70,7 @@ export const MOCK_ACTIVITIES: Activity[] = [
   {
     id: 'act_1',
     athlete: MOCK_ATHLETES[0],
-    title: 'Morning Alpine Sunrise Loop 🌅🏃‍♀️',
+    title: 'Morning Alpine Sunrise Loop',
     description: 'Pushed the hill climbs hard today. Beautiful morning fog lifting over the ridge! Felt strong in Zone 3.',
     sportType: 'Run',
     visibility: 'PUBLIC',
@@ -133,7 +133,7 @@ export const MOCK_ACTIVITIES: Activity[] = [
         id: 'c_2',
         activityId: 'act_1',
         athlete: CURRENT_USER,
-        content: 'That sunrise photo is pure gold! Great job Elena 👏',
+        content: 'That sunrise photo is pure gold! Great job Elena.',
         createdAt: '1 hour ago',
       },
     ],
@@ -141,7 +141,7 @@ export const MOCK_ACTIVITIES: Activity[] = [
   {
     id: 'act_2',
     athlete: MOCK_ATHLETES[1],
-    title: 'Twin Peaks Headwind Tempo Ride 🚴💨',
+    title: 'Twin Peaks Headwind Tempo Ride',
     description: 'Fighting 35 km/h coastal gusts. Solid power numbers across the rolling sections. FTP testing week starts Monday.',
     sportType: 'Ride',
     visibility: 'PUBLIC',
@@ -181,7 +181,7 @@ export const MOCK_ACTIVITIES: Activity[] = [
   {
     id: 'act_3',
     athlete: CURRENT_USER,
-    title: '5x1000m Track Intervals (Sub-3:45 Target) ⚡',
+    title: '5x1000m Track Intervals (Sub-3:45 Target)',
     description: 'Felt crisp. Rest intervals 90s active jog. Consistency across all 5 reps within 2 seconds of target!',
     sportType: 'Run',
     visibility: 'PUBLIC',
@@ -344,7 +344,7 @@ export const MOCK_SEGMENTS: Segment[] = [
     elevationGainMeters: 2,
     komAthleteName: 'Rakib Ahmed',
     komTimeFormatted: '2:18',
-    userPrTimeFormatted: '2:18 (👑 KOM)',
+    userPrTimeFormatted: '2:18 (KOM)',
     rank: 1,
     polylinePoints: [
       { latitude: 23.780, longitude: 90.405 },
@@ -356,7 +356,7 @@ export const MOCK_SEGMENTS: Segment[] = [
 export const MOCK_EVENTS: GroupEvent[] = [
   {
     id: 'ev_1',
-    title: 'Saturday Sunrise 15k Long Run 🏃‍♂️',
+    title: 'Saturday Sunrise 15k Long Run',
     clubName: 'City Strider Running Club',
     sportType: 'Run',
     dateFormatted: 'Sat, Nov 22',
@@ -369,7 +369,7 @@ export const MOCK_EVENTS: GroupEvent[] = [
   },
   {
     id: 'ev_2',
-    title: 'Coffee & Cranks 50k Group Ride ☕🚴',
+    title: 'Coffee & Cranks 50k Group Ride',
     clubName: 'Peloton Gravel & Road Racers',
     sportType: 'Ride',
     dateFormatted: 'Sun, Nov 23',
@@ -387,7 +387,7 @@ export const MOCK_NOTIFICATIONS: NotificationItem[] = [
     id: 'notif_1',
     actionType: 'KUDOS',
     actor: MOCK_ATHLETES[0],
-    message: 'gave Kudos to your activity: 5x1000m Track Intervals ⚡',
+    message: 'gave Kudos to your activity: 5x1000m Track Intervals',
     timeAgo: '12m ago',
     isRead: false,
     targetActivityId: 'act_3',
@@ -413,7 +413,7 @@ export const MOCK_NOTIFICATIONS: NotificationItem[] = [
     id: 'notif_4',
     actionType: 'CHALLENGE_WON',
     actor: CURRENT_USER,
-    message: 'You unlocked the November Elevation Climb Trophy! 🏆',
+    message: 'You unlocked the November Elevation Climb Trophy!',
     timeAgo: '1d ago',
     isRead: true,
   },
@@ -422,7 +422,7 @@ export const MOCK_NOTIFICATIONS: NotificationItem[] = [
 export const MOCK_ROUTES: RouteItem[] = [
   {
     id: 'route_1',
-    name: 'Hatirjheel Sunrise Loop 🌅',
+    name: 'Hatirjheel Sunrise Loop',
     sportType: 'Run',
     distanceMeters: 8500,
     elevationGainMeters: 45,
@@ -451,7 +451,7 @@ export const MOCK_ROUTES: RouteItem[] = [
   },
   {
     id: 'route_2',
-    name: '300 Feet Expressway Gravel & Road 🚴',
+    name: '300 Feet Expressway Gravel & Road',
     sportType: 'Ride',
     distanceMeters: 32000,
     elevationGainMeters: 140,
@@ -477,7 +477,7 @@ export const MOCK_ROUTES: RouteItem[] = [
   },
   {
     id: 'route_3',
-    name: 'Dhanmondi Lake Perimeter Trail 🌳',
+    name: 'Dhanmondi Lake Perimeter Trail',
     sportType: 'Run',
     distanceMeters: 5200,
     elevationGainMeters: 20,
@@ -575,7 +575,7 @@ export const MOCK_GOALS: TrainingGoal[] = [
 export const MOCK_PLANS: TrainingPlan[] = [
   {
     id: 'plan_1',
-    title: 'Sub-20 Min 5K Speed Accelerator ⚡',
+    title: 'Sub-20 Min 5K Speed Accelerator',
     durationWeeks: 8,
     level: 'Intermediate',
     sportType: 'Run',
@@ -589,7 +589,7 @@ export const MOCK_PLANS: TrainingPlan[] = [
   },
   {
     id: 'plan_2',
-    title: 'First Half Marathon Finisher 🏅',
+    title: 'First Half Marathon Finisher',
     durationWeeks: 12,
     level: 'Beginner',
     sportType: 'Run',

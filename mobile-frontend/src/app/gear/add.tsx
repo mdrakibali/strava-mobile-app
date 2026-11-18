@@ -36,7 +36,7 @@ export default function AddGearScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text className="text-2xl font-black text-gray-900 mb-2">Track Mileage & Life 👟</Text>
+        <Text className="text-2xl font-black text-gray-900 mb-2">Track Mileage & Life</Text>
         <Text className="text-xs text-gray-500 mb-6">
           Track wear and tear on your running shoes or bike components to prevent injury and maintain optimal performance.
         </Text>

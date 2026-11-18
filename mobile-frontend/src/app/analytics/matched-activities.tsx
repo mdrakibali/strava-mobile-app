@@ -23,7 +23,7 @@ export default function MatchedActivitiesScreen() {
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900">Matched Activities ⏱️</Text>
+        <Text className="text-base font-black text-gray-900">Matched Activities</Text>
         <TouchableOpacity onPress={() => alert('Matched activities automatically detects identical GPS trajectories.')} className="p-1">
           <Ionicons name="information-circle-outline" size={22} color="#6B7280" />
         </TouchableOpacity>
@@ -60,8 +60,9 @@ export default function MatchedActivitiesScreen() {
                 <View className="flex-row items-center">
                   <Text className="text-xs font-bold text-gray-900 mr-2">{effort.date}</Text>
                   {effort.isPr && (
-                    <View className="bg-amber-100 px-1.5 py-0.5 rounded">
-                      <Text className="text-[9px] font-black text-amber-700">★ PR</Text>
+                    <View className="bg-amber-100 px-1.5 py-0.5 rounded flex-row items-center">
+                      <Ionicons name="trophy" size={10} color="#B45309" />
+                      <Text className="text-[9px] font-black text-amber-700 ml-0.5">PR</Text>
                     </View>
                   )}
                 </View>

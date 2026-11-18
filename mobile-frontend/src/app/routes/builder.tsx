@@ -73,7 +73,7 @@ export default function RouteBuilderScreen() {
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text className="text-base font-black text-white">Route Builder 🗺️</Text>
+        <Text className="text-base font-black text-white">Route Builder</Text>
         <TouchableOpacity onPress={handleSaveRoute} className="p-1">
           <Text className="text-sm font-black text-[#FC4C02]">Save</Text>
         </TouchableOpacity>
@@ -114,16 +114,18 @@ export default function RouteBuilderScreen() {
         <View className="flex-row bg-gray-100 p-1 rounded-xl mb-3">
           <TouchableOpacity
             onPress={() => setMode('loop')}
-            className={`flex-1 py-2 items-center rounded-lg ${mode === 'loop' ? 'bg-[#FC4C02]' : ''}`}>
-            <Text className={`text-xs font-black ${mode === 'loop' ? 'text-white' : 'text-gray-700'}`}>
-              🔄 Loop Generator
+            className={`flex-1 py-2 flex-row items-center justify-center rounded-lg ${mode === 'loop' ? 'bg-[#FC4C02]' : ''}`}>
+            <Ionicons name="sync-outline" size={13} color={mode === 'loop' ? '#FFFFFF' : '#374151'} />
+            <Text className={`text-xs font-black ml-1 ${mode === 'loop' ? 'text-white' : 'text-gray-700'}`}>
+              Loop Generator
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setMode('manual')}
-            className={`flex-1 py-2 items-center rounded-lg ${mode === 'manual' ? 'bg-[#FC4C02]' : ''}`}>
-            <Text className={`text-xs font-black ${mode === 'manual' ? 'text-white' : 'text-gray-700'}`}>
-              📍 Tap to Place ({manualPoints.length} pts)
+            className={`flex-1 py-2 flex-row items-center justify-center rounded-lg ${mode === 'manual' ? 'bg-[#FC4C02]' : ''}`}>
+            <Ionicons name="pin-outline" size={13} color={mode === 'manual' ? '#FFFFFF' : '#374151'} />
+            <Text className={`text-xs font-black ml-1 ${mode === 'manual' ? 'text-white' : 'text-gray-700'}`}>
+              Tap to Place ({manualPoints.length} pts)
             </Text>
           </TouchableOpacity>
         </View>

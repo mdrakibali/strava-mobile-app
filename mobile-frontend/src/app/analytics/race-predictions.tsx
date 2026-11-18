@@ -15,7 +15,7 @@ export default function RacePredictionsScreen() {
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900">Race Predictor 🏁</Text>
+        <Text className="text-base font-black text-gray-900">Race Predictor</Text>
         <TouchableOpacity onPress={() => alert('Predicted using Riegel Power Law and your last 8 weeks of VO2 & aerobic volume.')} className="p-1">
           <Ionicons name="information-circle-outline" size={22} color="#6B7280" />
         </TouchableOpacity>

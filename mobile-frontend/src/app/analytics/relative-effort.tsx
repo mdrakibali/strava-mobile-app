@@ -29,7 +29,7 @@ export default function RelativeEffortScreen() {
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900">Relative Effort ⚡</Text>
+        <Text className="text-base font-black text-gray-900">Relative Effort</Text>
         <TouchableOpacity onPress={() => alert('Based on TRIMP 5-zone cardiovascular load modeling.')} className="p-1">
           <Ionicons name="information-circle-outline" size={22} color="#6B7280" />
         </TouchableOpacity>
@@ -40,8 +40,9 @@ export default function RelativeEffortScreen() {
         <View className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4">
           <View className="flex-row items-center justify-between mb-2">
             <Text className="text-xs font-bold text-gray-500 uppercase">Weekly Cardiovascular Load</Text>
-            <View className="bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-              <Text className="text-[10px] font-bold text-emerald-700">✓ In Target Range</Text>
+            <View className="bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex-row items-center">
+              <Ionicons name="checkmark" size={12} color="#047857" />
+              <Text className="text-[10px] font-bold text-emerald-700 ml-1">In Target Range</Text>
             </View>
           </View>
           <Text className="text-3xl font-black text-gray-900 mb-1">{currentScore}</Text>

@@ -18,7 +18,7 @@ export default function FitnessFreshnessScreen() {
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900">Fitness & Freshness 📈</Text>
+        <Text className="text-base font-black text-gray-900">Fitness & Freshness</Text>
         <TouchableOpacity onPress={() => alert('Calculated using Banister/Coggan Impulse-Response Science.')} className="p-1">
           <Ionicons name="information-circle-outline" size={22} color="#6B7280" />
         </TouchableOpacity>

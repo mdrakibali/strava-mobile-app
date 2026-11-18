@@ -34,7 +34,7 @@ export default function CreateChallengeScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text className="text-2xl font-black text-gray-900 mb-2">Launch a Challenge 🏆</Text>
+        <Text className="text-2xl font-black text-gray-900 mb-2">Launch a Challenge</Text>
         <Text className="text-xs text-gray-500 mb-6">
           Set a collective distance or elevation goal for your friends and club members to conquer together.
         </Text>

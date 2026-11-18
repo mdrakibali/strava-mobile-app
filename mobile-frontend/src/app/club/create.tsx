@@ -34,7 +34,7 @@ export default function CreateClubScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text className="text-2xl font-black text-gray-900 mb-2">Build Your Crew 🏃‍♀️🚴</Text>
+        <Text className="text-2xl font-black text-gray-900 mb-2">Build Your Crew</Text>
         <Text className="text-xs text-gray-500 mb-6">
           Clubs bring athletes together with dedicated group feeds, weekly mileage leaderboards, and exclusive group workouts.
         </Text>

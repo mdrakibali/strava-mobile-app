@@ -23,7 +23,7 @@ export default function PersonalHeatmapScreen() {
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text className="text-base font-black text-white">Personal Heatmap 🔥</Text>
+        <Text className="text-base font-black text-white">Personal Heatmap</Text>
         <TouchableOpacity onPress={() => alert('Cumulative GPS coordinates rendered via vector GPU shaders.')} className="p-1">
           <Ionicons name="information-circle-outline" size={22} color="#9CA3AF" />
         </TouchableOpacity>

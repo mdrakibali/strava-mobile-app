@@ -69,7 +69,7 @@ export default function ClubDetailScreen() {
               className={`text-sm font-bold ${
                 club.isMember ? 'text-gray-700' : 'text-white'
               }`}>
-              {club.isMember ? 'Member ✓ (Tap to Leave)' : 'Join Club'}
+              {club.isMember ? 'Joined (Tap to Leave)' : 'Join Club'}
             </Text>
           </TouchableOpacity>
         </View>

@@ -35,7 +35,7 @@ export default function SportPreferencesScreen() {
         </TouchableOpacity>
 
         <Text className="text-2xl font-black text-gray-900 mb-2">
-          What moves you? 🏃‍♂️🚴‍♀️
+          What moves you?
         </Text>
         <Text className="text-xs text-gray-500 mb-6">
           Choose your primary activities so we can tailor your feed, routes, and challenges.

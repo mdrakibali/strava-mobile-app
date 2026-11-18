@@ -127,8 +127,9 @@ export default function RouteDetailScreen() {
       <View className="absolute bottom-0 left-0 right-0 bg-white p-4 border-t border-gray-200 flex-row space-x-3">
         <TouchableOpacity
           onPress={() => router.push('/routes/navigation')}
-          className="flex-1 py-3.5 bg-[#FC4C02] rounded-2xl items-center shadow-md mr-2">
-          <Text className="text-sm font-black text-white">Start Navigation 🧭</Text>
+          className="flex-1 py-3.5 bg-[#FC4C02] rounded-2xl flex-row items-center justify-center shadow-md mr-2">
+          <Ionicons name="navigate" size={16} color="#FFFFFF" />
+          <Text className="text-sm font-black text-white ml-2">Start Navigation</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => alert('Route exported as GPX file')}

@@ -19,7 +19,7 @@ export default function PermissionsScreen() {
         </TouchableOpacity>
 
         <Text className="text-2xl font-black text-gray-900 mb-2">
-          Permissions & Safety 🔒
+          Permissions & Safety
         </Text>
         <Text className="text-xs text-gray-500 mb-6">
           To provide real-time GPS tracking and instant community kudos, Open Strava requires two system permissions:

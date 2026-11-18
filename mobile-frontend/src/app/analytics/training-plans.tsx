@@ -34,7 +34,7 @@ export default function TrainingPlansScreen() {
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900">Training Plans 🏃‍♂️</Text>
+        <Text className="text-base font-black text-gray-900">Training Plans</Text>
         <View className="w-6" />
       </View>
 

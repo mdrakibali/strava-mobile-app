@@ -21,7 +21,7 @@ export default function ProfileSetupScreen() {
         </TouchableOpacity>
 
         <Text className="text-2xl font-black text-gray-900 mb-2">
-          Setup Athlete Profile 👤
+          Setup Athlete Profile
         </Text>
         <Text className="text-xs text-gray-500 mb-6">
           Your metrics calculate accurate calorie burn, power estimation, and cardiovascular Relative Effort.
