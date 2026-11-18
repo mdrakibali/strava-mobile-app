@@ -53,6 +53,16 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </TouchableOpacity>
         )}
+
+        {/* Direct Messages */}
+        <TouchableOpacity
+          className="w-9 h-9 rounded-full items-center justify-center bg-gray-100 relative"
+          onPress={() => router.push('/messages')}
+          activeOpacity={0.7}
+          accessibilityLabel="Direct Messages">
+          <Ionicons name="chatbubbles-outline" size={20} color="#111827" />
+          <View className="absolute top-1 right-1 bg-[#FC4C02] rounded-full w-2 h-2" />
+        </TouchableOpacity>
       </View>
     </View>
   );

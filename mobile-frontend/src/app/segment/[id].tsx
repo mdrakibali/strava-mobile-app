@@ -17,7 +17,7 @@ export default function SegmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { segments } = useApp();
-  const [filter, setFilter] = useState<'OVERALL' | 'MEN' | 'WOMEN'>('OVERALL');
+  const [filter, setFilter] = useState<'OVERALL' | 'THIS MONTH' | 'FOLLOWING'>('OVERALL');
   const [isStarred, setIsStarred] = useState(false);
 
   const segment = segments.find((s) => s.id === id) || segments[0];
@@ -96,12 +96,42 @@ export default function SegmentDetailScreen() {
           <ElevationChart />
         </View>
 
+        {/* Local Legend Laurel Banner */}
+        <View className="bg-white mt-3 p-4 border-y border-gray-200">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center flex-1 mr-2">
+              <View className="w-10 h-10 rounded-full bg-emerald-50 items-center justify-center mr-3 border border-emerald-200">
+                <Ionicons name="ribbon" size={20} color="#059669" />
+              </View>
+              <View>
+                <View className="flex-row items-center">
+                  <Text className="text-xs font-black text-gray-900 uppercase tracking-wider">
+                    Local Legend
+                  </Text>
+                  <View className="bg-emerald-100 px-1.5 py-0.5 rounded ml-1.5">
+                    <Text className="text-[9px] font-bold text-emerald-800">90-DAY LCL</Text>
+                  </View>
+                </View>
+                <Text className="text-xs font-bold text-gray-800 mt-0.5">
+                  {segment.localLegendName || 'Marcus Vance'}
+                </Text>
+                <Text className="text-[10px] text-gray-400">
+                  {segment.localLegendEffortsCount || 38} efforts in the last 90 days
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={() => alert('Local Legend is awarded to the athlete who records the most efforts on this segment over a rolling 90-day window.')} className="p-1">
+              <Ionicons name="information-circle-outline" size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Leaderboard Section */}
         <View className="bg-white mt-3 p-4 border-y border-gray-200">
           <View className="flex-row justify-between items-center mb-3">
             <Text className="text-sm font-black text-gray-900">Leaderboard</Text>
             <View className="flex-row bg-gray-100 p-0.5 rounded-lg">
-              {(['OVERALL', 'MEN', 'WOMEN'] as const).map((tab) => (
+              {(['OVERALL', 'THIS MONTH', 'FOLLOWING'] as const).map((tab) => (
                 <TouchableOpacity
                   key={tab}
                   onPress={() => setFilter(tab)}

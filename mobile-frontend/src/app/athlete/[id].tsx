@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BestEffortsSection } from '../../components/activity/BestEffortsSection';
 import { ActivityCard } from '../../components/common/ActivityCard';
 import { StatBox } from '../../components/common/StatBox';
 import { MOCK_ACTIVITIES, MOCK_ATHLETES } from '../../mock/data';
@@ -61,15 +62,22 @@ export default function AthleteProfileScreen() {
               source={{ uri: athlete.avatarUrl }}
               className="w-18 h-18 rounded-full border-2 border-[#FC4C02] bg-gray-100"
             />
-            <TouchableOpacity
-              onPress={handleToggleFollow}
-              className={`px-6 py-2 rounded-full shadow-sm ${
-                isFollowing ? 'bg-gray-100' : 'bg-[#FC4C02]'
-              }`}>
-              <Text className={`text-xs font-black ${isFollowing ? 'text-gray-800' : 'text-white'}`}>
-                {isFollowing ? 'Following' : 'Follow +'}
-              </Text>
-            </TouchableOpacity>
+            <View className="flex-row items-center">
+              <TouchableOpacity
+                onPress={() => router.push('/messages/conv_1')}
+                className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center mr-2 border border-gray-200">
+                <Ionicons name="chatbubble-outline" size={18} color="#374151" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleToggleFollow}
+                className={`px-5 py-2.5 rounded-full shadow-sm ${
+                  isFollowing ? 'bg-gray-100' : 'bg-[#FC4C02]'
+                }`}>
+                <Text className={`text-xs font-black ${isFollowing ? 'text-gray-800' : 'text-white'}`}>
+                  {isFollowing ? 'Following' : 'Follow +'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <Text className="text-xl font-black text-gray-900">{athlete.displayName}</Text>
@@ -115,6 +123,9 @@ export default function AthleteProfileScreen() {
             <StatBox label="Elev Gain" value="1,420 m" />
           </View>
         </View>
+
+        {/* Best Efforts Benchmarks */}
+        <BestEffortsSection limit={4} />
 
         {/* Public Activity Feed */}
         <View className="mt-3 px-4">

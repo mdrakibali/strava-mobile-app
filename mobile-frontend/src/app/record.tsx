@@ -24,6 +24,7 @@ export default function RecordCockpitScreen() {
   const [mapExpanded, setMapExpanded] = useState(false);
   const [showSportPicker, setShowSportPicker] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [lapCount, setLapCount] = useState(1);
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -152,6 +153,13 @@ export default function RecordCockpitScreen() {
                   {activeRecording.currentHeartRate || 154} bpm
                 </Text>
               </View>
+
+              {activeRecording.isRecording && (
+                <View>
+                  <Text className="text-[10px] uppercase font-bold text-orange-400">Lap</Text>
+                  <Text className="text-lg font-black text-orange-400">#{lapCount}</Text>
+                </View>
+              )}
             </View>
           </View>
         )}
@@ -167,13 +175,27 @@ export default function RecordCockpitScreen() {
               </Text>
             </TouchableOpacity>
           ) : !activeRecording.isPaused ? (
-            <TouchableOpacity
-              onPress={pauseRecording}
-              className="w-full py-5 bg-amber-500 rounded-3xl items-center justify-center shadow-2xl border-2 border-amber-300">
-              <Text className="text-xl font-black text-white uppercase tracking-wider">
-                Pause Workout
-              </Text>
-            </TouchableOpacity>
+            <View className="flex-row items-center">
+              <TouchableOpacity
+                onPress={() => {
+                  setLapCount((prev) => prev + 1);
+                  Alert.alert('Lap Logged', `Lap ${lapCount} marked successfully.`);
+                }}
+                className="w-20 py-4 bg-stone-800 rounded-3xl items-center justify-center border border-stone-700 shadow-xl mr-3">
+                <Ionicons name="flag" size={18} color="#FC4C02" />
+                <Text className="text-[10px] font-black text-white uppercase mt-0.5">
+                  Lap {lapCount}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={pauseRecording}
+                className="flex-1 py-4 bg-amber-500 rounded-3xl items-center justify-center shadow-2xl border-2 border-amber-300">
+                <Text className="text-lg font-black text-white uppercase tracking-wider">
+                  Pause Workout
+                </Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <View className="flex-row justify-between space-x-3">
               <TouchableOpacity

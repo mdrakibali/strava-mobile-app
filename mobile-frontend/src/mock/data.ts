@@ -1,8 +1,11 @@
 import {
   Activity,
   Athlete,
+  BestEffortItem,
   Challenge,
   Club,
+  Conversation,
+  DirectMessage,
   FitnessFatiguePoint,
   GearItem,
   GroupEvent,
@@ -312,6 +315,8 @@ export const MOCK_SEGMENTS: Segment[] = [
     komTimeFormatted: '3:22',
     userPrTimeFormatted: '3:45',
     rank: 4,
+    localLegendName: 'Marcus Vance',
+    localLegendEffortsCount: 38,
     polylinePoints: [
       { latitude: 23.771, longitude: 90.412 },
       { latitude: 23.775, longitude: 90.418 },
@@ -621,5 +626,51 @@ export const MOCK_PRIVACY_ZONES: PrivacyZoneItem[] = [
   { id: 'pz_1', name: 'Home Residence', addressSnippet: 'Road 12, Dhanmondi, Dhaka', latitude: 23.7465, longitude: 90.3762, radiusMeters: 250 },
   { id: 'pz_2', name: 'Office Tech Hub', addressSnippet: 'Gulshan Avenue, Gulshan 2', latitude: 23.7925, longitude: 90.4162, radiusMeters: 300 },
 ];
+
+export const MOCK_BEST_EFFORTS: BestEffortItem[] = [
+  { id: 'be_1', distanceLabel: '400m', timeFormatted: '1:08', paceFormatted: '2:50 /km', dateAchieved: 'Sep 12, 2026', isRecentPr: false },
+  { id: 'be_2', distanceLabel: '1 km', timeFormatted: '3:22', paceFormatted: '3:22 /km', dateAchieved: 'Nov 16, 2026', isRecentPr: true },
+  { id: 'be_3', distanceLabel: '1 mile', timeFormatted: '5:35', paceFormatted: '3:28 /km', dateAchieved: 'Oct 04, 2026', isRecentPr: false },
+  { id: 'be_4', distanceLabel: '5 km', timeFormatted: '18:54', paceFormatted: '3:46 /km', dateAchieved: 'Nov 08, 2026', isRecentPr: true },
+  { id: 'be_5', distanceLabel: '10 km', timeFormatted: '39:40', paceFormatted: '3:58 /km', dateAchieved: 'Oct 22, 2026', isRecentPr: false },
+  { id: 'be_6', distanceLabel: 'Half Marathon', timeFormatted: '1:29:15', paceFormatted: '4:13 /km', dateAchieved: 'Feb 15, 2026', isRecentPr: false },
+];
+
+export const MOCK_CONVERSATIONS: Conversation[] = [
+  {
+    id: 'conv_1',
+    participant: MOCK_ATHLETES[0],
+    lastMessage: 'Awesome pace on that morning loop! Are you running the 10k this weekend?',
+    lastMessageTime: '10:42 AM',
+    unreadCount: 1,
+  },
+  {
+    id: 'conv_2',
+    participant: MOCK_ATHLETES[1],
+    lastMessage: 'The headwind on the expressway was brutal today haha.',
+    lastMessageTime: 'Yesterday',
+    unreadCount: 0,
+  },
+  {
+    id: 'conv_3',
+    participant: MOCK_ATHLETES[2],
+    lastMessage: 'Thanks for the Kudos on the trail run!',
+    lastMessageTime: 'Nov 15',
+    unreadCount: 0,
+  },
+];
+
+export const MOCK_MESSAGES: Record<string, DirectMessage[]> = {
+  conv_1: [
+    { id: 'm_1', senderId: 'ath_1', text: 'Hey Rakib! Loved the track interval splits you posted!', timestamp: '10:30 AM', isRead: true },
+    { id: 'm_2', senderId: 'user_current', text: 'Thanks Elena! Pushed hard to hit sub-3:45 on all 5 reps.', timestamp: '10:35 AM', isRead: true },
+    { id: 'm_3', senderId: 'ath_1', text: 'Awesome pace on that morning loop! Are you running the 10k this weekend?', timestamp: '10:42 AM', isRead: false },
+  ],
+  conv_2: [
+    { id: 'm_4', senderId: 'ath_2', text: 'Hey man, did you do the 300 Feet Expressway loop?', timestamp: 'Yesterday 4:15 PM', isRead: true },
+    { id: 'm_5', senderId: 'user_current', text: 'Yeah, did a 32k tempo ride there.', timestamp: 'Yesterday 4:20 PM', isRead: true },
+    { id: 'm_6', senderId: 'ath_2', text: 'The headwind on the expressway was brutal today haha.', timestamp: 'Yesterday 4:22 PM', isRead: true },
+  ],
+};
 
 

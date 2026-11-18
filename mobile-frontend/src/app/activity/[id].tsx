@@ -13,6 +13,8 @@ import {
   View,
 } from 'react-native';
 import { ActivitySplitsTable } from '../../components/activity/ActivitySplitsTable';
+import { AthleteIntelligenceCard } from '../../components/activity/AthleteIntelligenceCard';
+import { HeartRateIntensityCard } from '../../components/activity/HeartRateIntensityCard';
 import { MatchedSegmentsSection } from '../../components/activity/MatchedSegmentsSection';
 import { ElevationChart } from '../../components/common/ElevationChart';
 import { ShareModal } from '../../components/common/ShareModal';
@@ -99,6 +101,12 @@ export default function ActivityDetailScreen() {
             />
           </View>
 
+          {/* Athlete Intelligence (AI Coaching & Insights) */}
+          <AthleteIntelligenceCard
+            activityTitle={activity.title}
+            sportType={activity.sportType}
+          />
+
           {/* Primary Performance Metrics */}
           <View className="bg-white p-4 border-b border-gray-200">
             <View className="flex-row justify-between mb-3">
@@ -133,40 +141,11 @@ export default function ActivityDetailScreen() {
           </View>
 
           {/* Heart Rate Intensity Distribution */}
-          <View className="bg-white mt-3 p-4 border-y border-gray-200">
-            <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-              Heart Rate & Aerobic Load
-            </Text>
-            <View className="flex-row justify-between">
-              <View className="flex-row items-center">
-                <Ionicons name="heart" size={18} color="#EF4444" />
-                <View className="ml-1.5">
-                  <Text className="text-sm font-black text-gray-900">
-                    {activity.averageHeartRate || 154} bpm
-                  </Text>
-                  <Text className="text-[10px] text-gray-400">Avg Heart Rate</Text>
-                </View>
-              </View>
-
-              <View className="flex-row items-center">
-                <Ionicons name="pulse" size={18} color="#F59E0B" />
-                <View className="ml-1.5">
-                  <Text className="text-sm font-black text-gray-900">
-                    {activity.maxHeartRate || 178} bpm
-                  </Text>
-                  <Text className="text-[10px] text-gray-400">Max Heart Rate</Text>
-                </View>
-              </View>
-
-              <View className="flex-row items-center">
-                <Ionicons name="flame" size={18} color="#FC4C02" />
-                <View className="ml-1.5">
-                  <Text className="text-sm font-black text-gray-900">{activity.calories || 680}</Text>
-                  <Text className="text-[10px] text-gray-400">Calories</Text>
-                </View>
-              </View>
-            </View>
-          </View>
+          <HeartRateIntensityCard
+            averageHeartRate={activity.averageHeartRate}
+            maxHeartRate={activity.maxHeartRate}
+            calories={activity.calories}
+          />
 
           {/* 1km Splits Table */}
           <ActivitySplitsTable splits={activity.splits || []} />

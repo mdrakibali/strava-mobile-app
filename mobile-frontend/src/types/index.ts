@@ -108,6 +108,8 @@ export interface Segment {
   userPrTimeFormatted?: string;
   rank?: number;
   polylinePoints: LatLngPoint[];
+  localLegendName?: string;
+  localLegendEffortsCount?: number;
 }
 
 export interface Club {
@@ -201,6 +203,7 @@ export interface GearItem {
 }
 
 export * from './analytics';
+export * from './social';
 
 
 

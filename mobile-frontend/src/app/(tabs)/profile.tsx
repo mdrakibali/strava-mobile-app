@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BestEffortsSection } from '../../components/activity/BestEffortsSection';
 import { StatBox } from '../../components/common/StatBox';
 import { useApp } from '../../context/AppContext';
 
@@ -95,6 +96,9 @@ export default function ProfileScreen() {
             <StatBox label="Elevation Gain" value="1,840 m" />
           </View>
         </View>
+
+        {/* Best Efforts Benchmarks */}
+        <BestEffortsSection />
 
         {/* Gear Tracking Preview */}
         <View className="bg-white p-4 border-b border-gray-200 mt-3">

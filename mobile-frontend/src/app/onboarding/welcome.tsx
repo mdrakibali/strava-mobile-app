@@ -38,7 +38,7 @@ export default function WelcomeScreen() {
 
           {/* Bold Brand Wordmark */}
           <Text className="text-3xl font-black text-white tracking-widest z-10 drop-shadow-md">
-            OPEN STRAVA
+            STRAVA
           </Text>
 
           {/* Floating Device Mockup Card — Exact Strava Reference */}
@@ -68,10 +68,10 @@ export default function WelcomeScreen() {
             <View className="bg-white rounded-2xl pt-2 px-1">
               <View className="w-6 h-1 bg-gray-200 rounded-full self-center mb-1.5" />
               <Text className="text-[11px] font-black text-gray-900 mb-1.5">Choose a Sport</Text>
-              <Text className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+              <Text className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-1">
                 Your Top Sports
               </Text>
-              <View className="flex-row justify-around mb-2">
+              <View className="flex-row justify-around mb-1.5">
                 <View className="items-center">
                   <View className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center">
                     <Ionicons name="bicycle-outline" size={16} color="#374151" />
@@ -95,6 +95,21 @@ export default function WelcomeScreen() {
                     <Ionicons name="snow-outline" size={16} color="#374151" />
                   </View>
                   <Text className="text-[9px] font-semibold text-gray-700 mt-0.5">Ski</Text>
+                </View>
+              </View>
+
+              {/* Water Sports Category */}
+              <Text className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                Water Sports
+              </Text>
+              <View className="px-1 space-y-1">
+                <View className="flex-row items-center py-0.5 border-b border-gray-100">
+                  <Ionicons name="water-outline" size={12} color="#374151" />
+                  <Text className="text-[9px] font-semibold text-gray-700 ml-2">Swim</Text>
+                </View>
+                <View className="flex-row items-center py-0.5">
+                  <Ionicons name="boat-outline" size={12} color="#374151" />
+                  <Text className="text-[9px] font-semibold text-gray-700 ml-2">Surf</Text>
                 </View>
               </View>
             </View>
