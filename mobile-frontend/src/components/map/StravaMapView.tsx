@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import { MapFallbackView } from './MapFallbackView';
@@ -93,7 +94,11 @@ export const StravaMapView: React.FC<StravaMapViewProps> = ({
     setCurrentStyle(styles[nextIdx]);
   };
 
-  const isMapLibreAvailable = MapLibreGL && MapLibreGL.MapView && Platform.OS !== 'web';
+  const isExpoGo =
+    Constants.appOwnership === 'expo' ||
+    Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+  const isMapLibreAvailable =
+    !isExpoGo && Boolean(MapLibreGL && MapLibreGL.MapView && Platform.OS !== 'web');
 
   return (
     <View className={`relative overflow-hidden bg-gray-100 ${className}`}>
