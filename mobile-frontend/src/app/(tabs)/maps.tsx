@@ -11,11 +11,13 @@ import {
 } from 'react-native';
 import { RouteMapPreview } from '../../components/common/RouteMapPreview';
 import { useApp } from '../../context/AppContext';
-import { Segment } from '../../types';
+import { MOCK_ROUTES } from '../../mock/data';
+import { RouteItem, Segment } from '../../types';
 
 export default function MapsScreen() {
   const router = useRouter();
   const { segments } = useApp();
+  const [activeTab, setActiveTab] = useState<'routes' | 'segments'>('routes');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState<'ALL' | 'Run' | 'Ride'>('ALL');
 
@@ -25,40 +27,76 @@ export default function MapsScreen() {
     return matchesSport && matchesSearch;
   });
 
-  const renderSegmentItem = ({ item }: { item: Segment }) => (
+  const filteredRoutes = MOCK_ROUTES.filter((r) => {
+    const matchesSport = selectedSport === 'ALL' || r.sportType === selectedSport;
+    const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSport && matchesSearch;
+  });
+
+  const renderRouteItem = ({ item }: { item: RouteItem }) => (
     <TouchableOpacity
-      className="bg-white rounded-xl p-4 mb-3 border border-gray-200 gap-2"
-      onPress={() => router.push({ pathname: '/segment/[id]', params: { id: item.id } })}
-      activeOpacity={0.8}>
-      <View className="flex-row justify-between items-start">
-        <View className="flex-1">
-          <Text className="text-base font-bold text-gray-900 mb-0.5">
-            {item.name}
-          </Text>
-          <Text className="text-xs text-gray-500">
-            {item.sportType} · {(item.distanceMeters / 1000).toFixed(2)} km · Avg {item.averageGradePercent}% grade · +{item.elevationGainMeters}m
+      className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 shadow-sm"
+      onPress={() => router.push(`/routes/${item.id}`)}
+      activeOpacity={0.85}>
+      <View className="flex-row justify-between items-start mb-2">
+        <View className="flex-1 mr-2">
+          <Text className="text-base font-black text-gray-900 mb-0.5">{item.name}</Text>
+          <Text className="text-xs text-gray-500 font-medium">
+            {item.sportType} · {(item.distanceMeters / 1000).toFixed(1)} km · +{item.elevationGainMeters}m climb · {item.climbCategory}
           </Text>
         </View>
-        <View className="flex-row items-center bg-amber-100 px-2.5 py-1 rounded-full gap-1">
-          <Ionicons name="trophy" size={14} color="#D97706" />
-          <Text className="text-xs font-bold text-amber-900">#{item.rank || 1}</Text>
+        <View className="bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100">
+          <Text className="text-[10px] font-bold text-[#FC4C02]">
+            {item.isPopular ? '★ Popular' : 'Saved'}
+          </Text>
         </View>
       </View>
 
-      <RouteMapPreview points={item.polylinePoints} height={120} />
+      <RouteMapPreview height={140} />
 
-      <View className="flex-row justify-between bg-gray-50 p-2.5 rounded-lg mt-1">
-        <View className="flex-1">
-          <Text className="text-[10px] font-bold text-gray-500 mb-0.5">👑 KOM Crown</Text>
-          <Text className="text-xs text-gray-900">
-            {item.komAthleteName} · <Text className="font-bold">{item.komTimeFormatted}</Text>
+      <View className="flex-row justify-between items-center pt-2.5 mt-2 border-t border-gray-100">
+        <Text className="text-[11px] font-semibold text-gray-500">
+          Surface: {item.surfacePavedPercent}% Paved · {item.surfaceGravelPercent}% Gravel
+        </Text>
+        <View className="flex-row items-center">
+          <Text className="text-xs font-bold text-[#FC4C02] mr-1">View Route</Text>
+          <Ionicons name="chevron-forward" size={14} color="#FC4C02" />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderSegmentItem = ({ item }: { item: Segment }) => (
+    <TouchableOpacity
+      className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 shadow-sm"
+      onPress={() => router.push(`/segment/${item.id}`)}
+      activeOpacity={0.85}>
+      <View className="flex-row justify-between items-start mb-2">
+        <View className="flex-1 mr-2">
+          <Text className="text-base font-black text-gray-900 mb-0.5">{item.name}</Text>
+          <Text className="text-xs text-gray-500">
+            {item.sportType} · {(item.distanceMeters / 1000).toFixed(2)} km · Avg {item.averageGradePercent}% · +{item.elevationGainMeters}m
           </Text>
         </View>
+        <View className="bg-amber-100 px-2.5 py-1 rounded-full flex-row items-center">
+          <Ionicons name="trophy" size={12} color="#D97706" />
+          <Text className="text-[10px] font-black text-amber-900 ml-1">#{item.rank || 1}</Text>
+        </View>
+      </View>
 
+      <RouteMapPreview height={120} />
+
+      <View className="flex-row justify-between bg-gray-50 p-2.5 rounded-xl mt-2 border border-gray-100">
+        <View className="flex-1">
+          <Text className="text-[10px] font-bold text-gray-500">👑 KOM Record</Text>
+          <Text className="text-xs font-black text-gray-900">
+            {item.komAthleteName} · <Text className="text-[#FC4C02]">{item.komTimeFormatted}</Text>
+          </Text>
+        </View>
         {item.userPrTimeFormatted && (
           <View className="items-end">
-            <Text className="text-[10px] font-bold text-gray-500 mb-0.5">Your PR</Text>
-            <Text className="text-xs font-bold text-[#FC4C02]">{item.userPrTimeFormatted}</Text>
+            <Text className="text-[10px] font-bold text-gray-500">Your PR</Text>
+            <Text className="text-xs font-black text-emerald-600">{item.userPrTimeFormatted}</Text>
           </View>
         )}
       </View>
@@ -67,71 +105,73 @@ export default function MapsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Top Search & Filter Bar */}
+      {/* Top Bar */}
       <View className="bg-white px-4 pt-3 pb-2 border-b border-gray-200">
-        <Text className="text-xl font-black text-gray-900 mb-2">
-          Maps & Segments
-        </Text>
-        <View className="flex-row items-center bg-gray-50 px-3 h-10 rounded-lg border border-gray-200 gap-2 mb-2">
+        <View className="flex-row justify-between items-center mb-2">
+          <Text className="text-xl font-black text-gray-900">Maps & Routes 🧭</Text>
+          <TouchableOpacity
+            onPress={() => router.push('/analytics/heatmap')}
+            className="flex-row items-center bg-gray-900 px-3 py-1.5 rounded-full">
+            <Ionicons name="flame" size={14} color="#FC4C02" />
+            <Text className="text-xs font-bold text-white ml-1">Heatmap</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Search Input */}
+        <View className="flex-row items-center bg-gray-100 px-3 h-10 rounded-xl mb-2">
           <Ionicons name="search-outline" size={18} color="#9CA3AF" />
           <TextInput
-            placeholder="Search segments, routes, climbs..."
+            placeholder="Search routes, trails, segments..."
             placeholderTextColor="#9CA3AF"
             value={searchQuery}
             onChangeText={setSearchQuery}
-            className="flex-1 text-sm text-gray-900"
+            className="flex-1 ml-2 text-sm text-gray-900"
           />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-            </TouchableOpacity>
-          )}
         </View>
 
-        {/* Sport Type Filters */}
-        <View className="flex-row gap-2 py-1">
-          {(['ALL', 'Run', 'Ride'] as const).map((sport) => (
-            <TouchableOpacity
-              key={sport}
-              className={`px-3 py-1 rounded-full border ${
-                selectedSport === sport
-                  ? 'bg-primary border-primary'
-                  : 'bg-gray-50 border-gray-200'
-              }`}
-              onPress={() => setSelectedSport(sport)}>
-              <Text
-                className={`text-xs font-semibold ${
-                  selectedSport === sport ? 'text-white' : 'text-gray-600'
-                }`}>
-                {sport === 'ALL' ? 'All Sports' : sport === 'Run' ? '🏃 Running' : '🚴 Cycling'}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        {/* Sub-Tabs: Routes vs Segments */}
+        <View className="flex-row bg-gray-100 p-0.5 rounded-xl mb-2">
+          <TouchableOpacity
+            onPress={() => setActiveTab('routes')}
+            className={`flex-1 py-1.5 rounded-lg items-center ${activeTab === 'routes' ? 'bg-white shadow-sm' : ''}`}>
+            <Text className={`text-xs font-black ${activeTab === 'routes' ? 'text-gray-900' : 'text-gray-500'}`}>
+              Popular Routes ({filteredRoutes.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setActiveTab('segments')}
+            className={`flex-1 py-1.5 rounded-lg items-center ${activeTab === 'segments' ? 'bg-white shadow-sm' : ''}`}>
+            <Text className={`text-xs font-black ${activeTab === 'segments' ? 'text-gray-900' : 'text-gray-500'}`}>
+              Segments & KOMs ({filteredSegments.length})
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Segments List */}
+      {/* Main List */}
       <FlatList
-        data={filteredSegments}
+        data={activeTab === 'routes' ? (filteredRoutes as any) : filteredSegments}
         keyExtractor={(item) => item.id}
-        renderItem={renderSegmentItem}
-        contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
+        renderItem={activeTab === 'routes' ? (renderRouteItem as any) : renderSegmentItem}
+        contentContainerStyle={{ padding: 14, paddingBottom: 80 }}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <View className="bg-white rounded-xl p-4 mb-3 border border-gray-200">
-            <View className="gap-1">
-              <Text className="text-base font-bold text-gray-900">Discover Popular Routes</Text>
-              <Text className="text-xs text-gray-500 leading-5 mb-1">
-                Community-curated routes with verified road quality and elevation profiles.
-              </Text>
-              <TouchableOpacity
-                className="flex-row items-center justify-center bg-[#FC4C02] py-2 px-3.5 rounded-lg gap-1.5 self-start mt-1"
-                activeOpacity={0.8}>
-                <Ionicons name="navigate-outline" size={16} color="#FFFFFF" />
-                <Text className="text-xs font-bold text-white">Create Custom Route</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          activeTab === 'routes' ? (
+            <TouchableOpacity
+              onPress={() => router.push('/routes/builder')}
+              className="bg-orange-50 border border-orange-200 rounded-2xl p-4 mb-3 flex-row items-center justify-between">
+              <View className="flex-row items-center flex-1 mr-2">
+                <View className="w-10 h-10 rounded-xl bg-[#FC4C02] items-center justify-center mr-3">
+                  <Ionicons name="map" size={20} color="#FFFFFF" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-black text-gray-900">Custom Route Builder</Text>
+                  <Text className="text-xs text-gray-500">Auto-loop generator & manual waypoints</Text>
+                </View>
+              </View>
+              <Ionicons name="arrow-forward" size={18} color="#FC4C02" />
+            </TouchableOpacity>
+          ) : undefined
         }
       />
     </SafeAreaView>

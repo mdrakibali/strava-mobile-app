@@ -39,6 +39,7 @@ const getSportIcon = (sport: SportType): keyof typeof Ionicons.glyphMap => {
 export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
   const router = useRouter();
   const { toggleKudos } = useApp();
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const handleCardPress = () => {
     router.push({
@@ -47,17 +48,24 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
     });
   };
 
+  const handleAthletePress = () => {
+    router.push(`/athlete/${activity.athlete.id}`);
+  };
+
   return (
     <View className="bg-white rounded-xl p-4 mb-3 border border-gray-200">
       {/* Header: Athlete info & Sport */}
       <View className="flex-row justify-between items-center mb-3">
-        <View className="flex-row items-center">
+        <TouchableOpacity
+          onPress={handleAthletePress}
+          className="flex-row items-center flex-1 mr-2"
+          activeOpacity={0.8}>
           <Image
             source={{ uri: activity.athlete.avatarUrl }}
             className="w-11 h-11 rounded-full mr-3 bg-gray-100"
           />
-          <View className="justify-center">
-            <Text className="text-base font-bold text-gray-900">
+          <View className="justify-center flex-1">
+            <Text className="text-base font-bold text-gray-900" numberOfLines={1}>
               {activity.athlete.displayName}
             </Text>
             <View className="flex-row items-center mt-0.5">
@@ -72,7 +80,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
               </Text>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
 
         <TouchableOpacity className="p-1">
           <Ionicons name="ellipsis-horizontal" size={18} color="#9CA3AF" />
@@ -174,11 +182,21 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity className="flex-row items-center gap-1.5 py-1 px-2" activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={() => setShowShareModal(true)}
+          className="flex-row items-center gap-1.5 py-1 px-2"
+          activeOpacity={0.7}>
           <Ionicons name="share-social-outline" size={18} color="#4B5563" />
           <Text className="text-xs font-medium text-gray-600">Share</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Share Modal */}
+      <ShareModal
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        activityTitle={activity.title}
+      />
 
       {/* Mini Comment Preview */}
       {activity.comments && activity.comments.length > 0 && (

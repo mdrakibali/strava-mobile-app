@@ -5,13 +5,11 @@ import { Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityCard } from '../../components/common/ActivityCard';
 import { StatBox } from '../../components/common/StatBox';
-import { useApp } from '../../context/AppContext';
 import { MOCK_ACTIVITIES, MOCK_ATHLETES } from '../../mock/data';
 
 export default function AthleteProfileScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const { toggleKudos, addComment } = useApp();
 
   const athlete = MOCK_ATHLETES.find((a) => a.id === id) || MOCK_ATHLETES[0];
   const [isFollowing, setIsFollowing] = useState(athlete.isFollowing ?? false);
@@ -123,8 +121,6 @@ export default function AthleteProfileScreen() {
               <ActivityCard
                 key={act.id}
                 activity={act}
-                onToggleKudos={toggleKudos}
-                onAddComment={addComment}
               />
             ))
           ) : (
