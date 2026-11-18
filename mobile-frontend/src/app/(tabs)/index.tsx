@@ -73,7 +73,7 @@ export default function FeedScreen() {
         data={filteredActivities}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <ActivityCard activity={item} />}
-        contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
+        contentContainerClassName="p-3 pb-24"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />
@@ -93,8 +93,9 @@ export default function FeedScreen() {
               </View>
               <TouchableOpacity
                 onPress={() => router.push('/analytics/training-log')}
-                className="bg-orange-50 px-2.5 py-1 rounded-full border border-orange-200">
-                <Text className="text-[10px] font-bold text-[#FC4C02]">Log &gt;</Text>
+                className="bg-orange-50 px-2.5 py-1 rounded-full border border-orange-200 flex-row items-center">
+                <Text className="text-[10px] font-bold text-[#FC4C02] mr-0.5">Log</Text>
+                <Ionicons name="chevron-forward" size={10} color="#FC4C02" />
               </TouchableOpacity>
             </View>
 

@@ -141,10 +141,20 @@ export default function SettingsHubScreen() {
 
           <TouchableOpacity
             onPress={() => router.push('/settings/import-gpx')}
-            className="flex-row items-center justify-between p-4">
+            className="flex-row items-center justify-between p-4 border-b border-gray-50">
             <View className="flex-row items-center">
               <Ionicons name="cloud-upload-outline" size={20} color="#4B5563" />
               <Text className="text-sm font-bold text-gray-900 ml-3">Import GPX / FIT File</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push('/onboarding/welcome')}
+            className="flex-row items-center justify-between p-4">
+            <View className="flex-row items-center">
+              <Ionicons name="compass-outline" size={20} color="#4B5563" />
+              <Text className="text-sm font-bold text-gray-900 ml-3">Product Onboarding Walkthrough</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
           </TouchableOpacity>

@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StravaMapView } from '../components/map/StravaMapView';
+import { RecordSettingsModal } from '../components/record/RecordSettingsModal';
+import { SportPickerModal } from '../components/record/SportPickerModal';
 import { useApp } from '../context/AppContext';
 import { SportType } from '../types';
 
@@ -20,6 +22,8 @@ export default function RecordCockpitScreen() {
 
   const [selectedSport, setSelectedSport] = useState<SportType>(activeRecording.sportType || 'Run');
   const [mapExpanded, setMapExpanded] = useState(false);
+  const [showSportPicker, setShowSportPicker] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -61,7 +65,6 @@ export default function RecordCockpitScreen() {
     router.push('/save-activity');
   };
 
-  // Live GPS breadcrumbs
   const liveCoords = activeRecording.routeCoordinates.map(
     (c) => [c.longitude, c.latitude] as [number, number]
   );
@@ -75,62 +78,38 @@ export default function RecordCockpitScreen() {
         showControls={false}
         showUserLocation={true}
         className="w-full h-full">
-        {/* Top Floating Header HUD */}
+        {/* Top Floating Strava Navigation Bar */}
         <SafeAreaView className="absolute top-0 left-0 right-0 z-30 px-4 pt-2">
           <View className="flex-row items-center justify-between bg-stone-900/90 rounded-2xl p-3 border border-stone-800 shadow-xl">
             <TouchableOpacity onPress={() => router.back()} className="p-1">
-              <Ionicons name="close" size={22} color="#FFFFFF" />
+              <Text className="text-sm font-bold text-gray-300">Close</Text>
             </TouchableOpacity>
 
-            {/* GPS Signal Status */}
-            <View className="flex-row items-center">
-              <View className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2 animate-pulse" />
-              <Text className="text-xs font-black text-white">GPS LOCKED (±3m)</Text>
-            </View>
-
-            {/* Map Expand Toggle */}
+            {/* Sport Picker Trigger — Strava style "Run ▾" */}
             <TouchableOpacity
-              onPress={() => setMapExpanded(!mapExpanded)}
-              className="p-1 bg-stone-800 rounded-lg">
-              <Ionicons
-                name={mapExpanded ? 'contract' : 'expand'}
-                size={18}
-                color="#FC4C02"
-              />
+              onPress={() => setShowSportPicker(true)}
+              className="flex-row items-center bg-stone-800 px-3.5 py-1.5 rounded-full border border-stone-700">
+              <Ionicons name="fitness-outline" size={14} color="#FC4C02" />
+              <Text className="text-sm font-black text-white ml-1.5">{selectedSport}</Text>
+              <Ionicons name="chevron-down" size={14} color="#9CA3AF" className="ml-1" />
+            </TouchableOpacity>
+
+            {/* Settings Gear */}
+            <TouchableOpacity onPress={() => setShowSettings(true)} className="p-1">
+              <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
 
-          {/* Sport Selector Carousel (When Idle) */}
-          {!activeRecording.isRecording && (
-            <View className="flex-row justify-center mt-3 space-x-2">
-              {(['Run', 'Ride', 'Trail Run', 'Hike'] as const).map((sport) => {
-                const isSelected = selectedSport === sport;
-                return (
-                  <TouchableOpacity
-                    key={sport}
-                    onPress={() => setSelectedSport(sport)}
-                    className={`px-4 py-2 rounded-full border shadow-md mr-2 ${
-                      isSelected
-                        ? 'bg-[#FC4C02] border-[#FC4C02]'
-                        : 'bg-stone-900/90 border-stone-700'
-                    }`}>
-                    <Text
-                      className={`text-xs font-black ${
-                        isSelected ? 'text-white' : 'text-gray-300'
-                      }`}>
-                      {sport}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
+          {/* GPS Locked Status Pill */}
+          <View className="self-center mt-2 flex-row items-center bg-stone-900/80 px-3 py-1 rounded-full border border-stone-800">
+            <View className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5" />
+            <Text className="text-[10px] font-black text-white">GPS LOCKED (±3m)</Text>
+          </View>
         </SafeAreaView>
 
         {/* Athletic Performance Telemetry HUD */}
         {!mapExpanded && (
           <View className="absolute bottom-32 left-4 right-4 bg-stone-900/95 rounded-3xl p-5 border border-stone-800 shadow-2xl z-30">
-            {/* Main Primary Metrics */}
             <View className="flex-row justify-between items-baseline mb-4 pb-3 border-b border-stone-800">
               <View>
                 <Text className="text-[10px] uppercase font-black text-gray-400 tracking-wider">
@@ -154,7 +133,6 @@ export default function RecordCockpitScreen() {
               </View>
             </View>
 
-            {/* Secondary Metrics Grid */}
             <View className="flex-row justify-between">
               <View>
                 <Text className="text-[10px] uppercase font-bold text-gray-400">Pace</Text>
@@ -181,7 +159,6 @@ export default function RecordCockpitScreen() {
         {/* Bottom Tactile Action Controls */}
         <SafeAreaView className="absolute bottom-4 left-0 right-0 z-40 px-6">
           {!activeRecording.isRecording ? (
-            /* Start Button */
             <TouchableOpacity
               onPress={() => startRecording(selectedSport)}
               className="w-full py-5 bg-[#FC4C02] rounded-3xl items-center justify-center shadow-2xl border-2 border-orange-400">
@@ -190,7 +167,6 @@ export default function RecordCockpitScreen() {
               </Text>
             </TouchableOpacity>
           ) : !activeRecording.isPaused ? (
-            /* Recording State: Pause Button */
             <TouchableOpacity
               onPress={pauseRecording}
               className="w-full py-5 bg-amber-500 rounded-3xl items-center justify-center shadow-2xl border-2 border-amber-300">
@@ -199,7 +175,6 @@ export default function RecordCockpitScreen() {
               </Text>
             </TouchableOpacity>
           ) : (
-            /* Paused State: Resume, Finish, Discard */
             <View className="flex-row justify-between space-x-3">
               <TouchableOpacity
                 onPress={handleDiscard}
@@ -222,6 +197,18 @@ export default function RecordCockpitScreen() {
           )}
         </SafeAreaView>
       </StravaMapView>
+
+      <SportPickerModal
+        visible={showSportPicker}
+        onClose={() => setShowSportPicker(false)}
+        selectedSport={selectedSport}
+        onSelectSport={setSelectedSport}
+      />
+
+      <RecordSettingsModal
+        visible={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </View>
   );
 }

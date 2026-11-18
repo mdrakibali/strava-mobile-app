@@ -116,10 +116,11 @@ export default function LoginScreen() {
           {/* Tour Onboarding Link */}
           <TouchableOpacity
             onPress={() => router.push('/onboarding/welcome')}
-            className="items-center mt-4">
-            <Text className="text-[11px] font-semibold text-gray-400">
-              New here? View the Guided App Walkthrough →
+            className="flex-row items-center justify-center mt-4">
+            <Text className="text-[11px] font-semibold text-gray-400 mr-1">
+              New here? View the Guided App Walkthrough
             </Text>
+            <Ionicons name="arrow-forward" size={12} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

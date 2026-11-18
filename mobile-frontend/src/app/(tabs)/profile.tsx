@@ -100,8 +100,9 @@ export default function ProfileScreen() {
         <View className="bg-white p-4 border-b border-gray-200 mt-3">
           <View className="flex-row justify-between items-center mb-3">
             <Text className="text-sm font-black text-gray-900">Gear & Shoes</Text>
-            <TouchableOpacity onPress={() => router.push('/gear')}>
-              <Text className="text-xs font-bold text-[#FC4C02]">Manage Gear →</Text>
+            <TouchableOpacity onPress={() => router.push('/gear')} className="flex-row items-center">
+              <Text className="text-xs font-bold text-[#FC4C02] mr-0.5">Manage Gear</Text>
+              <Ionicons name="chevron-forward" size={14} color="#FC4C02" />
             </TouchableOpacity>
           </View>
 

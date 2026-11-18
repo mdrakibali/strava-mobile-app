@@ -171,13 +171,24 @@ export default function RouteBuilderScreen() {
         ) : (
           <View className="flex-row justify-between items-center mb-3">
             <Text className="text-xs font-semibold text-gray-500">
-              Tap anywhere on map to add waypoints.
+              Tap map to place waypoints.
             </Text>
-            <TouchableOpacity
-              onPress={() => setManualPoints([manualPoints[0]])}
-              className="px-3 py-1 bg-red-50 rounded-lg">
-              <Text className="text-xs font-bold text-red-600">Clear</Text>
-            </TouchableOpacity>
+            <View className="flex-row items-center">
+              <TouchableOpacity
+                onPress={() => {
+                  if (manualPoints.length > 1) {
+                    setManualPoints((prev) => prev.slice(0, prev.length - 1));
+                  }
+                }}
+                className="px-2.5 py-1 bg-gray-100 rounded-lg mr-2">
+                <Text className="text-xs font-bold text-gray-700">Undo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setManualPoints([manualPoints[0]])}
+                className="px-3 py-1 bg-red-50 rounded-lg">
+                <Text className="text-xs font-bold text-red-600">Clear</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 

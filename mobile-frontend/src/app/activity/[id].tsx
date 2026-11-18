@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { ActivitySplitsTable } from '../../components/activity/ActivitySplitsTable';
+import { MatchedSegmentsSection } from '../../components/activity/MatchedSegmentsSection';
 import { ElevationChart } from '../../components/common/ElevationChart';
 import { ShareModal } from '../../components/common/ShareModal';
 import { StatBox } from '../../components/common/StatBox';
@@ -169,6 +170,9 @@ export default function ActivityDetailScreen() {
 
           {/* 1km Splits Table */}
           <ActivitySplitsTable splits={activity.splits || []} />
+
+          {/* Matched Segments & Leaderboards */}
+          <MatchedSegmentsSection />
 
           {/* Social Kudos & Comments */}
           <View className="bg-white mt-3 p-4 border-y border-gray-200">
