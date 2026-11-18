@@ -11,3 +11,4 @@ export default function RecordTabPlaceholder() {
 
   return <View style={{ flex: 1, backgroundColor: '#FFFFFF' }} />;
 }
+
