@@ -17,7 +17,17 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "package": "com.anonymous.mobilefrontend",
+      "gradleProperties": {
+        "org.gradle.jvmargs": "-Xmx4096m -XX:MaxMetaspaceSize=1024m",
+        "systemProp.org.gradle.internal.http.connectionTimeout": "180000",
+        "systemProp.org.gradle.internal.http.socketTimeout": "180000"
+      }
     },
     "web": {
       "output": "server",
