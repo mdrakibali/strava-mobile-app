@@ -46,3 +46,4 @@ export const HeartRateIntensityCard: React.FC<HeartRateIntensityCardProps> = ({
     </View>
   );
 };
+

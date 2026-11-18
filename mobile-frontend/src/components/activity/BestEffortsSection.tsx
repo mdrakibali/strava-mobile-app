@@ -58,3 +58,4 @@ export const BestEffortsSection: React.FC<BestEffortsSectionProps> = ({
     </View>
   );
 };
+

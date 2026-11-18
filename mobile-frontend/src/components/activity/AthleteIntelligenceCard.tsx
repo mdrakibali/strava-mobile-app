@@ -83,3 +83,4 @@ export const AthleteIntelligenceCard: React.FC<AthleteIntelligenceCardProps> = (
     </View>
   );
 };
+
