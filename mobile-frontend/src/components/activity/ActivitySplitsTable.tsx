@@ -36,3 +36,4 @@ export const ActivitySplitsTable: React.FC<ActivitySplitsTableProps> = ({ splits
     </View>
   );
 };
+

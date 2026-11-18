@@ -55,3 +55,4 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
     </View>
   );
 };
+

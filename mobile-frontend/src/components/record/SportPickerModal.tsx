@@ -104,3 +104,4 @@ export const SportPickerModal: React.FC<SportPickerModalProps> = ({
     </Modal>
   );
 };
+

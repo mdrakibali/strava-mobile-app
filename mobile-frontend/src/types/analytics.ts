@@ -51,3 +51,4 @@ export interface PrivacyZoneItem {
   longitude: number;
   radiusMeters: number;
 }
+

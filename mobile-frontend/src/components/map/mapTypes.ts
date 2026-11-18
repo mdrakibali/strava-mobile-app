@@ -29,3 +29,4 @@ export interface StravaMapViewProps {
   className?: string;
   children?: React.ReactNode;
 }
+

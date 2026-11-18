@@ -67,3 +67,4 @@ export const RecordSettingsModal: React.FC<RecordSettingsModalProps> = ({
     </Modal>
   );
 };
+
