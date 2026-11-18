@@ -1,6 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Colors, Spacing, Typography } from '../../constants/theme';
+import { Text, View } from 'react-native';
 
 interface StatBoxProps {
   label: string;
@@ -15,46 +14,23 @@ export const StatBox: React.FC<StatBoxProps> = ({
   value,
   unit,
   highlight = false,
-  highlightColor = Colors.primary,
+  highlightColor,
 }) => {
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.valueRow}>
-        <Text style={[styles.value, highlight && { color: highlightColor }]}>{value}</Text>
-        {unit && <Text style={styles.unit}>{unit}</Text>}
+    <View className="flex-1 min-w-[70px]">
+      <Text className="text-[11px] text-gray-400 font-medium uppercase tracking-wider mb-0.5">
+        {label}
+      </Text>
+      <View className="flex-row items-baseline">
+        <Text
+          className={`text-xl font-black ${
+            highlight ? (highlightColor ? `text-[${highlightColor}]` : 'text-[#FC4C02]') : 'text-gray-900'
+          }`}
+          style={highlightColor ? { color: highlightColor } : undefined}>
+          {value}
+        </Text>
+        {unit && <Text className="text-xs text-gray-500 font-medium ml-1">{unit}</Text>}
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    minWidth: 70,
-  },
-  label: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textMuted,
-    fontWeight: Typography.fontWeight.medium,
-    textTransform: 'uppercase',
-    marginBottom: 2,
-    letterSpacing: 0.4,
-  },
-  valueRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  value: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.heavy,
-    color: Colors.textPrimary,
-  },
-  unit: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    marginLeft: 3,
-    fontWeight: Typography.fontWeight.medium,
-  },
-});
-

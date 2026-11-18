@@ -1,7 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
-import { Colors, Spacing, Typography } from '../../constants/theme';
 
 interface ElevationChartProps {
   elevations?: number[];
@@ -36,10 +35,12 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({
   const areaPath = `${linePath} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Elevation Profile</Text>
-        <Text style={styles.statText}>
+    <View className="w-full py-2">
+      <View className="flex-row justify-between items-center mb-1">
+        <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          Elevation Profile
+        </Text>
+        <Text className="text-[11px] text-gray-400 font-medium">
           Min {minElev}m · Max {maxElev}m · Gain +{maxElev - minElev}m
         </Text>
       </View>
@@ -47,19 +48,16 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({
       <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
         <Defs>
           <LinearGradient id="elevGradient" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor={Colors.elevation} stopOpacity="0.4" />
-            <Stop offset="100%" stopColor={Colors.elevation} stopOpacity="0.02" />
+            <Stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.4" />
+            <Stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.02" />
           </LinearGradient>
         </Defs>
 
-        {/* Shaded Area */}
         <Path d={areaPath} fill="url(#elevGradient)" />
-
-        {/* Outline Line */}
         <Path
           d={linePath}
           fill="none"
-          stroke={Colors.elevation}
+          stroke="#8B5CF6"
           strokeWidth="2.5"
           strokeLinecap="round"
         />
@@ -67,29 +65,3 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    paddingVertical: Spacing.sm,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.xs,
-  },
-  title: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  statText: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textMuted,
-    fontWeight: Typography.fontWeight.medium,
-  },
-});
-

@@ -4,14 +4,12 @@ import React, { useState } from 'react';
 import {
   Alert,
   SafeAreaView,
-  StyleSheet,
   Switch,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { RouteMapPreview } from '../components/common/RouteMapPreview';
-import { BorderRadius, Colors, Spacing, Typography } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { SportType } from '../types';
 
@@ -29,7 +27,6 @@ export default function RecordCockpitScreen() {
   const [selectedSport, setSelectedSport] = useState<SportType>(activeRecording.sportType || 'Run');
   const [autoPause, setAutoPause] = useState(true);
 
-  // Time format helper
   const formatTime = (secs: number) => {
     const h = Math.floor(secs / 3600);
     const m = Math.floor((secs % 3600) / 60);
@@ -40,7 +37,6 @@ export default function RecordCockpitScreen() {
     return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // Pace format helper
   const formatPace = () => {
     if (activeRecording.distanceMeters <= 50 || activeRecording.currentSpeedMps <= 0.1) {
       return '-:--';
@@ -96,71 +92,80 @@ export default function RecordCockpitScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-white">
       {/* Top Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.closeBtn} onPress={handleClose}>
-          <Ionicons name="close" size={24} color={Colors.textPrimary} />
+      <View className="flex-row justify-between items-center px-4 py-3 border-b border-gray-200">
+        <TouchableOpacity className="p-1" onPress={handleClose}>
+          <Ionicons name="close" size={24} color="#111827" />
         </TouchableOpacity>
 
-        <View style={styles.sportSelector}>
+        <View className="flex-row bg-gray-100 rounded-full p-1 gap-1">
           {(['Run', 'Ride', 'Hike', 'Walk'] as SportType[]).map((sport) => (
             <TouchableOpacity
               key={sport}
-              style={[styles.sportChip, selectedSport === sport && styles.sportChipActive]}
+              className={`px-3 py-1 rounded-full ${
+                selectedSport === sport ? 'bg-[#FC4C02]' : ''
+              }`}
               onPress={() => !activeRecording.isRecording && setSelectedSport(sport)}>
-              <Text style={[styles.sportChipText, selectedSport === sport && styles.sportChipTextActive]}>
+              <Text
+                className={`text-xs font-bold ${
+                  selectedSport === sport ? 'text-white' : 'text-gray-600'
+                }`}>
                 {sport}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <TouchableOpacity style={styles.settingsBtn}>
-          <Ionicons name="cog-outline" size={22} color={Colors.textPrimary} />
+        <TouchableOpacity className="p-1">
+          <Ionicons name="cog-outline" size={22} color="#111827" />
         </TouchableOpacity>
       </View>
 
       {/* Cockpit Digital Metrics */}
-      <View style={styles.metricsContainer}>
+      <View className="p-4">
         {/* Main Distance */}
-        <View style={styles.primaryMetric}>
-          <Text style={styles.primaryLabel}>DISTANCE (KM)</Text>
-          <Text style={styles.primaryValue}>
+        <View className="items-center mb-4">
+          <Text className="text-xs font-bold text-gray-400 tracking-widest mb-1">
+            DISTANCE (KM)
+          </Text>
+          <Text className="text-7xl font-black text-gray-900 font-mono">
             {(activeRecording.distanceMeters / 1000).toFixed(2)}
           </Text>
         </View>
 
-        <View style={styles.metricGrid}>
-          {/* Time */}
-          <View style={styles.gridItem}>
-            <Text style={styles.gridLabel}>TIME</Text>
-            <Text style={styles.gridValue}>{formatTime(activeRecording.movingSeconds)}</Text>
+        <View className="flex-row justify-between mb-3 border-t border-gray-100 pt-3">
+          <View className="flex-1 items-center">
+            <Text className="text-xs font-bold text-gray-400 tracking-wider mb-1">TIME</Text>
+            <Text className="text-3xl font-black text-gray-900 font-mono">
+              {formatTime(activeRecording.movingSeconds)}
+            </Text>
           </View>
 
-          {/* Current Pace / Speed */}
-          <View style={styles.gridItem}>
-            <Text style={styles.gridLabel}>
+          <View className="flex-1 items-center">
+            <Text className="text-xs font-bold text-gray-400 tracking-wider mb-1">
               {selectedSport === 'Ride' ? 'SPEED' : 'CURRENT PACE'}
             </Text>
-            <Text style={styles.gridValue}>{formatPace()}</Text>
+            <Text className="text-3xl font-black text-gray-900 font-mono">
+              {formatPace()}
+            </Text>
           </View>
         </View>
 
-        <View style={styles.metricGrid}>
-          {/* Elevation Gain */}
-          <View style={styles.gridItem}>
-            <Text style={styles.gridLabel}>ELEVATION GAIN</Text>
-            <Text style={styles.gridValue}>+{activeRecording.elevationGainMeters} m</Text>
+        <View className="flex-row justify-between mb-2 border-t border-gray-100 pt-3">
+          <View className="flex-1 items-center">
+            <Text className="text-xs font-bold text-gray-400 tracking-wider mb-1">ELEV GAIN</Text>
+            <Text className="text-2xl font-black text-gray-900 font-mono">
+              +{activeRecording.elevationGainMeters} m
+            </Text>
           </View>
 
-          {/* Heart Rate & Zone */}
-          <View style={styles.gridItem}>
-            <Text style={styles.gridLabel}>HEART RATE</Text>
-            <View style={styles.hrRow}>
-              <Ionicons name="heart" size={18} color={Colors.heartRate} />
-              <Text style={[styles.gridValue, { marginLeft: 4 }]}>
-                {activeRecording.currentHeartRate > 0 ? `${activeRecording.currentHeartRate} bpm` : '--'}
+          <View className="flex-1 items-center">
+            <Text className="text-xs font-bold text-gray-400 tracking-wider mb-1">HEART RATE</Text>
+            <View className="flex-row items-center">
+              <Ionicons name="heart" size={18} color="#EF4444" />
+              <Text className="text-2xl font-black text-gray-900 font-mono ml-1">
+                {activeRecording.currentHeartRate > 0 ? `${activeRecording.currentHeartRate}` : '--'}
               </Text>
             </View>
           </View>
@@ -168,56 +173,63 @@ export default function RecordCockpitScreen() {
       </View>
 
       {/* Mini-Map Trail Preview */}
-      <View style={styles.mapContainer}>
+      <View className="px-4 my-2">
         <RouteMapPreview height={140} points={activeRecording.routeCoordinates} />
       </View>
 
       {/* Auto-Pause Toggle */}
-      <View style={styles.autoPauseBar}>
-        <Text style={styles.autoPauseText}>Smart Auto-Pause (Threshold &lt; 0.8 m/s)</Text>
+      <View className="flex-row justify-between items-center px-6 py-2">
+        <Text className="text-xs text-gray-600 font-medium">
+          Smart Auto-Pause (Threshold &lt; 0.8 m/s)
+        </Text>
         <Switch
           value={autoPause}
           onValueChange={setAutoPause}
-          trackColor={{ false: Colors.border, true: Colors.primary }}
+          trackColor={{ false: '#E5E7EB', true: '#FC4C02' }}
         />
       </View>
 
       {/* Tactile Control Buttons */}
-      <View style={styles.controlsContainer}>
+      <View className="mt-auto p-6 pb-10">
         {!activeRecording.isRecording ? (
-          <TouchableOpacity style={styles.startBtn} onPress={handleStart} activeOpacity={0.85}>
-            <Text style={styles.startBtnText}>START {selectedSport.toUpperCase()}</Text>
+          <TouchableOpacity
+            className="bg-[#FC4C02] h-14 rounded-full items-center justify-center shadow-lg"
+            onPress={handleStart}
+            activeOpacity={0.85}>
+            <Text className="text-base font-black text-white tracking-wider">
+              START {selectedSport.toUpperCase()}
+            </Text>
           </TouchableOpacity>
         ) : (
-          <View style={styles.activeControls}>
+          <View className="flex-row justify-between items-center gap-3">
             {activeRecording.isPaused ? (
               <>
                 <TouchableOpacity
-                  style={[styles.actionBtn, styles.resumeBtn]}
+                  className="flex-[2] h-14 rounded-full bg-emerald-500 items-center justify-center flex-row gap-2"
                   onPress={resumeRecording}>
                   <Ionicons name="play" size={24} color="#FFFFFF" />
-                  <Text style={styles.actionBtnText}>RESUME</Text>
+                  <Text className="text-base font-black text-white">RESUME</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.actionBtn, styles.finishBtn]}
+                  className="flex-[2] h-14 rounded-full bg-[#FC4C02] items-center justify-center flex-row gap-2"
                   onPress={handleFinish}>
                   <Ionicons name="flag" size={22} color="#FFFFFF" />
-                  <Text style={styles.actionBtnText}>FINISH</Text>
+                  <Text className="text-base font-black text-white">FINISH</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.actionBtn, styles.discardBtn]}
+                  className="w-14 h-14 rounded-full bg-red-100 border border-red-300 items-center justify-center"
                   onPress={handleDiscard}>
                   <Ionicons name="trash-outline" size={22} color="#EF4444" />
                 </TouchableOpacity>
               </>
             ) : (
               <TouchableOpacity
-                style={[styles.actionBtn, styles.pauseBtn]}
+                className="flex-1 h-14 rounded-full bg-amber-500 items-center justify-center flex-row gap-2"
                 onPress={pauseRecording}>
-                <Ionicons name="pause" size={28} color="#FFFFFF" />
-                <Text style={styles.actionBtnText}>PAUSE</Text>
+                <Ionicons name="pause" size={26} color="#FFFFFF" />
+                <Text className="text-base font-black text-white">PAUSE</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -226,175 +238,3 @@ export default function RecordCockpitScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
-  },
-  closeBtn: {
-    padding: Spacing.xs,
-  },
-  settingsBtn: {
-    padding: Spacing.xs,
-  },
-  sportSelector: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.full,
-    padding: 3,
-    gap: 2,
-  },
-  sportChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.full,
-  },
-  sportChipActive: {
-    backgroundColor: Colors.primary,
-  },
-  sportChipText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textSecondary,
-  },
-  sportChipTextActive: {
-    color: Colors.textInverse,
-  },
-  metricsContainer: {
-    padding: Spacing.lg,
-  },
-  primaryMetric: {
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  primaryLabel: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textMuted,
-    letterSpacing: 1.2,
-    marginBottom: 4,
-  },
-  primaryValue: {
-    fontSize: 64,
-    fontWeight: Typography.fontWeight.heavy,
-    color: Colors.textPrimary,
-    fontFamily: Typography.fontFamily.mono,
-  },
-  metricGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.borderLight,
-    paddingTop: Spacing.md,
-  },
-  gridItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  gridLabel: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textMuted,
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
-  gridValue: {
-    fontSize: Typography.fontSize.xxl,
-    fontWeight: Typography.fontWeight.heavy,
-    color: Colors.textPrimary,
-    fontFamily: Typography.fontFamily.mono,
-  },
-  hrRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  mapContainer: {
-    paddingHorizontal: Spacing.lg,
-    marginVertical: Spacing.sm,
-  },
-  autoPauseBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.sm,
-  },
-  autoPauseText: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    fontWeight: Typography.fontWeight.medium,
-  },
-  controlsContainer: {
-    marginTop: 'auto',
-    padding: Spacing.xl,
-    paddingBottom: Spacing.xxl,
-  },
-  startBtn: {
-    backgroundColor: Colors.primary,
-    height: 60,
-    borderRadius: BorderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  startBtnText: {
-    fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.heavy,
-    color: Colors.textInverse,
-    letterSpacing: 1,
-  },
-  activeControls: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  actionBtn: {
-    height: 60,
-    borderRadius: BorderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  pauseBtn: {
-    flex: 1,
-    backgroundColor: '#F59E0B',
-  },
-  resumeBtn: {
-    flex: 2,
-    backgroundColor: '#10B981',
-  },
-  finishBtn: {
-    flex: 2,
-    backgroundColor: Colors.primary,
-  },
-  discardBtn: {
-    width: 60,
-    backgroundColor: '#FEE2E2',
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
-  },
-  actionBtnText: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.heavy,
-    color: Colors.textInverse,
-    letterSpacing: 0.5,
-  },
-});
-

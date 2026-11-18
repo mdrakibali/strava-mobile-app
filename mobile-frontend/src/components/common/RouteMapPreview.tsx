@@ -1,24 +1,20 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
-import { Colors } from '../../constants/theme';
 import { LatLngPoint } from '../../types';
 
 interface RouteMapPreviewProps {
   points?: LatLngPoint[];
   height?: number;
-  width?: number | string;
 }
 
 export const RouteMapPreview: React.FC<RouteMapPreviewProps> = ({
   points,
   height = 180,
 }) => {
-  // If points are provided, normalize them to 0-300 width and 0-height coordinates
   const svgWidth = 340;
   const svgHeight = height;
 
-  // Generate normalized SVG path
   let pathString = '';
   let startX = 40;
   let startY = 120;
@@ -55,7 +51,6 @@ export const RouteMapPreview: React.FC<RouteMapPreviewProps> = ({
       return idx === 0 ? `M ${curr.x} ${curr.y}` : `${acc} L ${curr.x} ${curr.y}`;
     }, '');
   } else {
-    // Default dynamic scenic route curve
     startX = 50;
     startY = 130;
     endX = 280;
@@ -64,11 +59,13 @@ export const RouteMapPreview: React.FC<RouteMapPreviewProps> = ({
   }
 
   return (
-    <View style={[styles.container, { height }]}>
+    <View
+      className="w-full rounded-xl overflow-hidden bg-gray-50 border border-gray-200"
+      style={{ height }}>
       <Svg width="100%" height={height} viewBox={`0 0 ${svgWidth} ${svgHeight}`}>
         <Defs>
           <LinearGradient id="routeGradient" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0%" stopColor={Colors.primary} stopOpacity="1" />
+            <Stop offset="0%" stopColor="#FC4C02" stopOpacity="1" />
             <Stop offset="100%" stopColor="#FF7A00" stopOpacity="1" />
           </LinearGradient>
           <LinearGradient id="bgGradient" x1="0" y1="0" x2="0" y2="1">
@@ -83,7 +80,7 @@ export const RouteMapPreview: React.FC<RouteMapPreviewProps> = ({
           fill="url(#bgGradient)"
         />
 
-        {/* Soft Grid Lines mimicking topography map */}
+        {/* Soft Grid Lines */}
         <Path
           d={`M 0 ${svgHeight * 0.33} L ${svgWidth} ${svgHeight * 0.33} M 0 ${svgHeight * 0.66} L ${svgWidth} ${svgHeight * 0.66} M ${svgWidth * 0.33} 0 L ${svgWidth * 0.33} ${svgHeight} M ${svgWidth * 0.66} 0 L ${svgWidth * 0.66} ${svgHeight}`}
           stroke="#E5E7EB"
@@ -120,15 +117,3 @@ export const RouteMapPreview: React.FC<RouteMapPreviewProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#F9FAFB',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E5E7EB',
-  },
-});
-

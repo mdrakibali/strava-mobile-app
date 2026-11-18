@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Colors, Typography } from '../../constants/theme';
+import { View } from 'react-native';
 
 export default function TabLayout() {
   const router = useRouter();
@@ -11,17 +10,31 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
-        tabBarStyle: styles.tabBar,
-        tabBarLabelStyle: styles.tabBarLabel,
+        tabBarActiveTintColor: '#FC4C02',
+        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: '#E5E7EB',
+          height: 60,
+          paddingBottom: 6,
+          paddingTop: 6,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+        },
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <Ionicons
+              name={focused ? 'home' : 'home-outline'}
+              size={22}
+              color={focused ? '#FC4C02' : '#9CA3AF'}
+            />
           ),
         }}
       />
@@ -30,8 +43,12 @@ export default function TabLayout() {
         name="maps"
         options={{
           title: 'Maps',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'map' : 'map-outline'} size={22} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <Ionicons
+              name={focused ? 'map' : 'map-outline'}
+              size={22}
+              color={focused ? '#FC4C02' : '#9CA3AF'}
+            />
           ),
         }}
       />
@@ -41,8 +58,8 @@ export default function TabLayout() {
         options={{
           title: 'Record',
           tabBarIcon: () => (
-            <View style={styles.recordButton}>
-              <Ionicons name="radio-button-on" size={26} color="#FFFFFF" />
+            <View className="w-11 h-11 rounded-full bg-[#FC4C02] items-center justify-center -mb-1 shadow-md">
+              <Ionicons name="radio-button-on" size={24} color="#FFFFFF" />
             </View>
           ),
         }}
@@ -58,8 +75,12 @@ export default function TabLayout() {
         name="groups"
         options={{
           title: 'Groups',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'people' : 'people-outline'} size={22} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <Ionicons
+              name={focused ? 'people' : 'people-outline'}
+              size={22}
+              color={focused ? '#FC4C02' : '#9CA3AF'}
+            />
           ),
         }}
       />
@@ -68,41 +89,15 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'You',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'person' : 'person-outline'} size={22} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <Ionicons
+              name={focused ? 'person' : 'person-outline'}
+              size={22}
+              color={focused ? '#FC4C02' : '#9CA3AF'}
+            />
           ),
         }}
       />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: Colors.background,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
-    height: 58,
-    paddingBottom: 6,
-    paddingTop: 6,
-  },
-  tabBarLabel: {
-    fontSize: 11,
-    fontWeight: Typography.fontWeight.semibold,
-  },
-  recordButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-    elevation: 4,
-  },
-});
-

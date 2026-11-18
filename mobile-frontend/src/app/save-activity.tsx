@@ -4,14 +4,12 @@ import React, { useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
-  StyleSheet,
   Switch,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { BorderRadius, Colors, Spacing, Typography } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 
 export default function SaveActivityScreen() {
@@ -30,67 +28,69 @@ export default function SaveActivityScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+    <SafeAreaView className="flex-1 bg-white">
+      <View className="flex-row justify-between items-center px-4 py-3 border-b border-gray-200">
+        <TouchableOpacity onPress={() => router.back()} className="p-1">
+          <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Save Activity</Text>
-        <TouchableOpacity onPress={handleSave} style={styles.saveHeaderBtn}>
-          <Text style={styles.saveHeaderText}>Save</Text>
+        <Text className="text-base font-bold text-gray-900">Save Activity</Text>
+        <TouchableOpacity onPress={handleSave} className="p-1">
+          <Text className="text-base font-bold text-[#FC4C02]">Save</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60, gap: 16 }}>
         {/* Workout Quick Summary */}
-        <View style={styles.summaryBanner}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>DISTANCE</Text>
-            <Text style={styles.summaryValue}>
+        <View className="flex-row justify-between bg-gray-50 p-3.5 rounded-xl">
+          <View className="items-center">
+            <Text className="text-[10px] text-gray-400 font-bold uppercase">DISTANCE</Text>
+            <Text className="text-base font-black text-gray-900 mt-0.5">
               {(activeRecording.distanceMeters / 1000).toFixed(2)} km
             </Text>
           </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>TIME</Text>
-            <Text style={styles.summaryValue}>
+          <View className="items-center">
+            <Text className="text-[10px] text-gray-400 font-bold uppercase">TIME</Text>
+            <Text className="text-base font-black text-gray-900 mt-0.5">
               {Math.floor(activeRecording.movingSeconds / 60)}m {activeRecording.movingSeconds % 60}s
             </Text>
           </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>ELEVATION</Text>
-            <Text style={styles.summaryValue}>+{activeRecording.elevationGainMeters} m</Text>
+          <View className="items-center">
+            <Text className="text-[10px] text-gray-400 font-bold uppercase">ELEVATION</Text>
+            <Text className="text-base font-black text-gray-900 mt-0.5">
+              +{activeRecording.elevationGainMeters} m
+            </Text>
           </View>
         </View>
 
         {/* Title & Description Fields */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.fieldLabel}>ACTIVITY TITLE</Text>
+        <View className="gap-1">
+          <Text className="text-xs font-bold text-gray-400 tracking-wider">ACTIVITY TITLE</Text>
           <TextInput
-            style={styles.textInput}
+            className="bg-gray-50 border border-gray-200 rounded-lg px-3.5 py-3 text-sm text-gray-900"
             value={title}
             onChangeText={setTitle}
             placeholder="Give your activity a title..."
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor="#9CA3AF"
           />
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.fieldLabel}>DESCRIPTION</Text>
+        <View className="gap-1">
+          <Text className="text-xs font-bold text-gray-400 tracking-wider">DESCRIPTION</Text>
           <TextInput
-            style={[styles.textInput, styles.textArea]}
+            className="bg-gray-50 border border-gray-200 rounded-lg px-3.5 py-3 text-sm text-gray-900 h-20"
             value={description}
             onChangeText={setDescription}
-            placeholder="How did it feel? What was the weather like? (optional)"
-            placeholderTextColor={Colors.textMuted}
+            placeholder="How did it feel? (optional)"
+            placeholderTextColor="#9CA3AF"
             multiline
             numberOfLines={3}
           />
         </View>
 
         {/* Visibility Selector */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.fieldLabel}>WHO CAN SEE THIS?</Text>
-          <View style={styles.visibilityOptions}>
+        <View className="gap-1.5">
+          <Text className="text-xs font-bold text-gray-400 tracking-wider">WHO CAN SEE THIS?</Text>
+          <View className="gap-2">
             {(
               [
                 { id: 'PUBLIC', label: 'Everyone', desc: 'Visible on feeds & leaderboards' },
@@ -100,16 +100,21 @@ export default function SaveActivityScreen() {
             ).map((opt) => (
               <TouchableOpacity
                 key={opt.id}
-                style={[styles.visOption, visibility === opt.id && styles.visOptionActive]}
+                className={`flex-row items-center justify-between bg-gray-50 border rounded-lg p-3 ${
+                  visibility === opt.id ? 'border-[#FC4C02] bg-[#FFF2EB]' : 'border-gray-200'
+                }`}
                 onPress={() => setVisibility(opt.id)}>
-                <View style={styles.visTextRow}>
-                  <Text style={[styles.visTitle, visibility === opt.id && styles.visTitleActive]}>
+                <View className="flex-1">
+                  <Text
+                    className={`text-sm font-bold ${
+                      visibility === opt.id ? 'text-[#FC4C02]' : 'text-gray-900'
+                    }`}>
                     {opt.label}
                   </Text>
-                  <Text style={styles.visDesc}>{opt.desc}</Text>
+                  <Text className="text-xs text-gray-500 mt-0.5">{opt.desc}</Text>
                 </View>
                 {visibility === opt.id && (
-                  <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
+                  <Ionicons name="checkmark-circle" size={20} color="#FC4C02" />
                 )}
               </TouchableOpacity>
             ))}
@@ -117,181 +122,30 @@ export default function SaveActivityScreen() {
         </View>
 
         {/* Privacy Zone Masking Toggle */}
-        <View style={styles.switchRow}>
-          <View style={styles.switchMeta}>
-            <Text style={styles.switchTitle}>Apply Privacy Zone Masking</Text>
-            <Text style={styles.switchSub}>
+        <View className="flex-row justify-between items-center bg-gray-50 p-3.5 rounded-lg">
+          <View className="flex-1 mr-3">
+            <Text className="text-sm font-bold text-gray-900">Apply Privacy Zone Masking</Text>
+            <Text className="text-xs text-gray-500 mt-0.5">
               Clips the first and last 500m of the GPS track around your home/office.
             </Text>
           </View>
           <Switch
             value={applyPrivacyZone}
             onValueChange={setApplyPrivacyZone}
-            trackColor={{ false: Colors.border, true: Colors.primary }}
+            trackColor={{ false: '#E5E7EB', true: '#FC4C02' }}
           />
         </View>
 
         {/* Big Save Button */}
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
-          <Text style={styles.saveBtnText}>SAVE & POST TO FEED</Text>
+        <TouchableOpacity
+          className="bg-[#FC4C02] h-14 rounded-full items-center justify-center shadow-md mt-2"
+          onPress={handleSave}
+          activeOpacity={0.85}>
+          <Text className="text-base font-black text-white tracking-wider">
+            SAVE & POST TO FEED
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
-  },
-  backBtn: {
-    padding: Spacing.xs,
-  },
-  headerTitle: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  saveHeaderBtn: {
-    padding: Spacing.xs,
-  },
-  saveHeaderText: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.primary,
-  },
-  scrollContent: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xxxl,
-    gap: Spacing.lg,
-  },
-  summaryBanner: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.surface,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  summaryItem: {
-    alignItems: 'center',
-  },
-  summaryLabel: {
-    fontSize: 10,
-    color: Colors.textMuted,
-    fontWeight: Typography.fontWeight.bold,
-  },
-  summaryValue: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.heavy,
-    color: Colors.textPrimary,
-    marginTop: 2,
-  },
-  inputGroup: {
-    gap: Spacing.xs,
-  },
-  fieldLabel: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textMuted,
-    letterSpacing: 0.5,
-  },
-  textInput: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textPrimary,
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  visibilityOptions: {
-    gap: Spacing.sm,
-  },
-  visOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.sm,
-    padding: Spacing.md,
-  },
-  visOptionActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-  },
-  visTextRow: {
-    flex: 1,
-  },
-  visTitle: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  visTitleActive: {
-    color: Colors.primaryDark,
-  },
-  visDesc: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.sm,
-  },
-  switchMeta: {
-    flex: 1,
-    marginRight: Spacing.md,
-  },
-  switchTitle: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  switchSub: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  saveBtn: {
-    backgroundColor: Colors.primary,
-    height: 54,
-    borderRadius: BorderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-    marginTop: Spacing.md,
-  },
-  saveBtnText: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.heavy,
-    color: Colors.textInverse,
-    letterSpacing: 0.8,
-  },
-});
-

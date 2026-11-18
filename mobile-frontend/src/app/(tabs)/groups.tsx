@@ -4,12 +4,10 @@ import {
   FlatList,
   Image,
   SafeAreaView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { BorderRadius, Colors, Spacing, Typography } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
 import { Challenge, Club, GroupEvent } from '../../types';
 
@@ -27,34 +25,48 @@ export default function GroupsScreen() {
 
   // Render Club Item
   const renderClubItem = ({ item }: { item: Club }) => (
-    <View style={styles.card}>
-      <Image source={{ uri: item.bannerUrl }} style={styles.clubBanner} />
-      <View style={styles.clubContent}>
-        <View style={styles.clubHeader}>
-          <Image source={{ uri: item.avatarUrl }} style={styles.clubAvatar} />
-          <View style={styles.clubMeta}>
-            <Text style={styles.clubTitle}>{item.name}</Text>
-            <Text style={styles.clubSub}>
+    <View className="bg-white rounded-xl mb-3 border border-gray-200 overflow-hidden">
+      <Image source={{ uri: item.bannerUrl }} className="w-full h-28 bg-gray-100" />
+      <View className="p-4">
+        <View className="flex-row items-center -mt-8 mb-2">
+          <Image
+            source={{ uri: item.avatarUrl }}
+            className="w-14 h-14 rounded-full border-2 border-white bg-gray-100 mr-3"
+          />
+          <View className="flex-1 pt-4">
+            <Text className="text-base font-bold text-gray-900">{item.name}</Text>
+            <Text className="text-xs text-gray-500 mt-0.5">
               {item.sportType} · {item.city} · {item.memberCount} Athletes
             </Text>
           </View>
         </View>
 
-        <Text style={styles.clubDescription}>{item.description}</Text>
+        <Text className="text-xs text-gray-600 leading-5 mb-3">{item.description}</Text>
 
-        <View style={styles.clubStatsRow}>
+        <View className="flex-row justify-between items-center border-t border-gray-100 pt-2.5">
           <View>
-            <Text style={styles.statLabel}>Weekly Volume</Text>
-            <Text style={styles.statValue}>{(item.weeklyDistanceMeters / 1000).toLocaleString()} km</Text>
+            <Text className="text-[10px] text-gray-400 uppercase">Weekly Volume</Text>
+            <Text className="text-xs font-bold text-gray-900 mt-0.5">
+              {(item.weeklyDistanceMeters / 1000).toLocaleString()} km
+            </Text>
           </View>
           <View>
-            <Text style={styles.statLabel}>Activities</Text>
-            <Text style={styles.statValue}>{item.weeklyActivitiesCount} logged</Text>
+            <Text className="text-[10px] text-gray-400 uppercase">Activities</Text>
+            <Text className="text-xs font-bold text-gray-900 mt-0.5">
+              {item.weeklyActivitiesCount} logged
+            </Text>
           </View>
           <TouchableOpacity
-            style={[styles.actionButton, item.isMember && styles.actionButtonActive]}
+            className={`px-3.5 py-1.5 rounded-lg border ${
+              item.isMember
+                ? 'bg-gray-100 border-gray-200'
+                : 'bg-[#FC4C02] border-[#FC4C02]'
+            }`}
             onPress={() => toggleJoinClub(item.id)}>
-            <Text style={[styles.actionButtonText, item.isMember && styles.actionButtonTextActive]}>
+            <Text
+              className={`text-xs font-bold ${
+                item.isMember ? 'text-gray-600' : 'text-white'
+              }`}>
               {item.isMember ? 'Joined ✓' : 'Join Club'}
             </Text>
           </TouchableOpacity>
@@ -68,49 +80,53 @@ export default function GroupsScreen() {
     const progressPercent = Math.min(100, Math.round((item.currentMeters / item.targetMeters) * 100));
 
     return (
-      <View style={styles.card}>
-        <View style={styles.challengeHeader}>
-          <Image source={{ uri: item.badgeUrl }} style={styles.challengeBadge} />
-          <View style={styles.challengeMeta}>
-            <Text style={styles.challengeTitle}>{item.title}</Text>
-            <Text style={styles.challengeSub}>
+      <View className="bg-white rounded-xl mb-3 border border-gray-200 overflow-hidden">
+        <View className="flex-row items-center p-4 pb-1">
+          <Image source={{ uri: item.badgeUrl }} className="w-12 h-12 rounded-full mr-3 bg-gray-100" />
+          <View className="flex-1">
+            <Text className="text-base font-bold text-gray-900">{item.title}</Text>
+            <Text className="text-xs text-gray-500 mt-0.5">
               {item.sportType} · {item.daysRemaining} days remaining
             </Text>
           </View>
         </View>
 
-        <Text style={styles.challengeDescription}>{item.description}</Text>
+        <Text className="text-xs text-gray-600 px-4 leading-5 mb-3">{item.description}</Text>
 
         {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressLabelRow}>
-            <Text style={styles.progressLabel}>
+        <View className="px-4 mb-3">
+          <View className="flex-row justify-between mb-1">
+            <Text className="text-xs font-semibold text-gray-600">
               {(item.currentMeters / 1000).toFixed(1)} / {(item.targetMeters / 1000).toFixed(0)} km
             </Text>
-            <Text style={styles.progressPercent}>{progressPercent}%</Text>
+            <Text className="text-xs font-black text-[#FC4C02]">{progressPercent}%</Text>
           </View>
-          <View style={styles.progressBarBg}>
+          <View className="h-2 bg-gray-100 rounded-full overflow-hidden">
             <View
-              style={[
-                styles.progressBarFill,
-                { width: `${progressPercent}%` },
-                item.isCompleted && { backgroundColor: Colors.success },
-              ]}
+              className={`h-full rounded-full ${item.isCompleted ? 'bg-emerald-500' : 'bg-[#FC4C02]'}`}
+              style={{ width: `${progressPercent}%` }}
             />
           </View>
         </View>
 
-        <View style={styles.challengeFooter}>
+        <View className="px-4 pb-4 items-end">
           {item.isCompleted ? (
-            <View style={styles.completedBadge}>
+            <View className="flex-row items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-full">
               <Ionicons name="trophy" size={16} color="#059669" />
-              <Text style={styles.completedText}>Trophy Awarded!</Text>
+              <Text className="text-xs font-bold text-emerald-700">Trophy Awarded!</Text>
             </View>
           ) : (
             <TouchableOpacity
-              style={[styles.actionButton, item.isJoined && styles.actionButtonActive]}
+              className={`px-3.5 py-1.5 rounded-lg border ${
+                item.isJoined
+                  ? 'bg-gray-100 border-gray-200'
+                  : 'bg-[#FC4C02] border-[#FC4C02]'
+              }`}
               onPress={() => toggleJoinChallenge(item.id)}>
-              <Text style={[styles.actionButtonText, item.isJoined && styles.actionButtonTextActive]}>
+              <Text
+                className={`text-xs font-bold ${
+                  item.isJoined ? 'text-gray-600' : 'text-white'
+                }`}>
                 {item.isJoined ? 'Participating' : 'Join Challenge'}
               </Text>
             </TouchableOpacity>
@@ -122,49 +138,63 @@ export default function GroupsScreen() {
 
   // Render Group Event Item
   const renderEventItem = ({ item }: { item: GroupEvent }) => (
-    <View style={styles.card}>
-      <View style={styles.eventHeader}>
-        <View style={styles.eventDateBox}>
-          <Text style={styles.eventDateDay}>{item.dateFormatted.split(',')[0]}</Text>
-          <Text style={styles.eventDateTime}>{item.timeFormatted}</Text>
+    <View className="bg-white rounded-xl mb-3 border border-gray-200 overflow-hidden">
+      <View className="flex-row p-4 pb-2">
+        <View className="bg-[#FFF2EB] p-2 rounded-lg items-center justify-center min-w-[64px] mr-3">
+          <Text className="text-xs font-black text-[#FC4C02]">{item.dateFormatted.split(',')[0]}</Text>
+          <Text className="text-[10px] text-[#E34402] mt-0.5">{item.timeFormatted}</Text>
         </View>
-        <View style={styles.eventMeta}>
-          <Text style={styles.eventTitle}>{item.title}</Text>
-          <Text style={styles.eventClub}>{item.clubName}</Text>
+        <View className="flex-1 justify-center">
+          <Text className="text-base font-bold text-gray-900">{item.title}</Text>
+          <Text className="text-xs text-gray-500 mt-0.5">{item.clubName}</Text>
         </View>
       </View>
 
-      <View style={styles.eventDetailsBox}>
-        <View style={styles.eventDetailRow}>
-          <Ionicons name="location-outline" size={16} color={Colors.textSecondary} />
-          <Text style={styles.eventDetailText}>{item.meetingPoint}</Text>
+      <View className="px-4 pb-3 gap-1.5">
+        <View className="flex-row items-center gap-2">
+          <Ionicons name="location-outline" size={15} color="#4B5563" />
+          <Text className="text-xs text-gray-600">{item.meetingPoint}</Text>
         </View>
-        <View style={styles.eventDetailRow}>
-          <Ionicons name="speedometer-outline" size={16} color={Colors.textSecondary} />
-          <Text style={styles.eventDetailText}>
+        <View className="flex-row items-center gap-2">
+          <Ionicons name="speedometer-outline" size={15} color="#4B5563" />
+          <Text className="text-xs text-gray-600">
             {(item.distanceMeters / 1000).toFixed(0)} km · {item.paceDescription}
           </Text>
         </View>
-        <View style={styles.eventDetailRow}>
-          <Ionicons name="people-outline" size={16} color={Colors.textSecondary} />
-          <Text style={styles.eventDetailText}>{item.attendeesCount} athletes attending</Text>
+        <View className="flex-row items-center gap-2">
+          <Ionicons name="people-outline" size={15} color="#4B5563" />
+          <Text className="text-xs text-gray-600">{item.attendeesCount} athletes attending</Text>
         </View>
       </View>
 
       {/* RSVP Action Buttons */}
-      <View style={styles.rsvpRow}>
+      <View className="flex-row gap-2 px-4 pb-4">
         <TouchableOpacity
-          style={[styles.rsvpBtn, item.rsvpStatus === 'GOING' && styles.rsvpBtnActive]}
+          className={`flex-1 py-2 items-center rounded-lg border ${
+            item.rsvpStatus === 'GOING'
+              ? 'bg-[#FC4C02] border-[#FC4C02]'
+              : 'bg-gray-50 border-gray-200'
+          }`}
           onPress={() => toggleRsvp(item.id, 'GOING')}>
-          <Text style={[styles.rsvpText, item.rsvpStatus === 'GOING' && styles.rsvpTextActive]}>
+          <Text
+            className={`text-xs font-bold ${
+              item.rsvpStatus === 'GOING' ? 'text-white' : 'text-gray-600'
+            }`}>
             {item.rsvpStatus === 'GOING' ? 'Going ✓' : 'I\'m Going'}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.rsvpBtn, item.rsvpStatus === 'MAYBE' && styles.rsvpBtnActive]}
+          className={`flex-1 py-2 items-center rounded-lg border ${
+            item.rsvpStatus === 'MAYBE'
+              ? 'bg-[#FC4C02] border-[#FC4C02]'
+              : 'bg-gray-50 border-gray-200'
+          }`}
           onPress={() => toggleRsvp(item.id, 'MAYBE')}>
-          <Text style={[styles.rsvpText, item.rsvpStatus === 'MAYBE' && styles.rsvpTextActive]}>
+          <Text
+            className={`text-xs font-bold ${
+              item.rsvpStatus === 'MAYBE' ? 'text-white' : 'text-gray-600'
+            }`}>
             Maybe
           </Text>
         </TouchableOpacity>
@@ -173,32 +203,47 @@ export default function GroupsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Clubs & Community</Text>
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <View className="bg-white px-4 pt-3 pb-2 border-b border-gray-200">
+        <Text className="text-xl font-black text-gray-900 mb-3">Clubs & Community</Text>
 
         {/* Tab Switcher */}
-        <View style={styles.segmentControl}>
+        <View className="flex-row bg-gray-100 rounded-lg p-1">
           <TouchableOpacity
-            style={[styles.segmentBtn, activeTab === 'CLUBS' && styles.segmentBtnActive]}
+            className={`flex-1 py-1.5 items-center rounded-md ${
+              activeTab === 'CLUBS' ? 'bg-white shadow-sm' : ''
+            }`}
             onPress={() => setActiveTab('CLUBS')}>
-            <Text style={[styles.segmentText, activeTab === 'CLUBS' && styles.segmentTextActive]}>
+            <Text
+              className={`text-xs font-semibold ${
+                activeTab === 'CLUBS' ? 'text-[#FC4C02]' : 'text-gray-600'
+              }`}>
               Clubs ({clubs.length})
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.segmentBtn, activeTab === 'CHALLENGES' && styles.segmentBtnActive]}
+            className={`flex-1 py-1.5 items-center rounded-md ${
+              activeTab === 'CHALLENGES' ? 'bg-white shadow-sm' : ''
+            }`}
             onPress={() => setActiveTab('CHALLENGES')}>
-            <Text style={[styles.segmentText, activeTab === 'CHALLENGES' && styles.segmentTextActive]}>
+            <Text
+              className={`text-xs font-semibold ${
+                activeTab === 'CHALLENGES' ? 'text-[#FC4C02]' : 'text-gray-600'
+              }`}>
               Challenges ({challenges.length})
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.segmentBtn, activeTab === 'EVENTS' && styles.segmentBtnActive]}
+            className={`flex-1 py-1.5 items-center rounded-md ${
+              activeTab === 'EVENTS' ? 'bg-white shadow-sm' : ''
+            }`}
             onPress={() => setActiveTab('EVENTS')}>
-            <Text style={[styles.segmentText, activeTab === 'EVENTS' && styles.segmentTextActive]}>
+            <Text
+              className={`text-xs font-semibold ${
+                activeTab === 'EVENTS' ? 'text-[#FC4C02]' : 'text-gray-600'
+              }`}>
               Events ({events.length})
             </Text>
           </TouchableOpacity>
@@ -210,7 +255,7 @@ export default function GroupsScreen() {
           data={clubs}
           keyExtractor={(item) => item.id}
           renderItem={renderClubItem}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
         />
       )}
 
@@ -219,7 +264,7 @@ export default function GroupsScreen() {
           data={challenges}
           keyExtractor={(item) => item.id}
           renderItem={renderChallengeItem}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
         />
       )}
 
@@ -228,313 +273,9 @@ export default function GroupsScreen() {
           data={events}
           keyExtractor={(item) => item.id}
           renderItem={renderEventItem}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
         />
       )}
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-  },
-  header: {
-    backgroundColor: Colors.background,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
-  },
-  title: {
-    fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.heavy,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
-  },
-  segmentControl: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.md,
-    padding: 3,
-  },
-  segmentBtn: {
-    flex: 1,
-    paddingVertical: 7,
-    alignItems: 'center',
-    borderRadius: BorderRadius.sm,
-  },
-  segmentBtnActive: {
-    backgroundColor: Colors.background,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  segmentText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.textSecondary,
-  },
-  segmentTextActive: {
-    color: Colors.primary,
-  },
-  listContent: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.xxl,
-  },
-  card: {
-    backgroundColor: Colors.background,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
-    overflow: 'hidden',
-  },
-  clubBanner: {
-    width: '100%',
-    height: 110,
-    backgroundColor: Colors.surface,
-  },
-  clubContent: {
-    padding: Spacing.lg,
-  },
-  clubHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: -32,
-    marginBottom: Spacing.sm,
-  },
-  clubAvatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    borderWidth: 3,
-    borderColor: Colors.background,
-    backgroundColor: Colors.surface,
-    marginRight: Spacing.md,
-  },
-  clubMeta: {
-    flex: 1,
-    paddingTop: 18,
-  },
-  clubTitle: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  clubSub: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  clubDescription: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    lineHeight: 18,
-    marginBottom: Spacing.md,
-  },
-  clubStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.borderLight,
-    paddingTop: Spacing.sm,
-  },
-  statLabel: {
-    fontSize: 10,
-    color: Colors.textMuted,
-    textTransform: 'uppercase',
-  },
-  statValue: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-    marginTop: 1,
-  },
-  actionButton: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 7,
-    borderRadius: BorderRadius.sm,
-  },
-  actionButtonActive: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  actionButtonText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textInverse,
-  },
-  actionButtonTextActive: {
-    color: Colors.textSecondary,
-  },
-  challengeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xs,
-  },
-  challengeBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: Spacing.md,
-    backgroundColor: Colors.surface,
-  },
-  challengeMeta: {
-    flex: 1,
-  },
-  challengeTitle: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  challengeSub: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  challengeDescription: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    paddingHorizontal: Spacing.lg,
-    lineHeight: 18,
-    marginBottom: Spacing.md,
-  },
-  progressContainer: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  progressLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  progressLabel: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.textSecondary,
-  },
-  progressPercent: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.heavy,
-    color: Colors.primary,
-  },
-  progressBarBg: {
-    height: 8,
-    backgroundColor: Colors.surface,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: Colors.primary,
-    borderRadius: 4,
-  },
-  challengeFooter: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
-    alignItems: 'flex-end',
-  },
-  completedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-  },
-  completedText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
-    color: '#059669',
-  },
-  eventHeader: {
-    flexDirection: 'row',
-    padding: Spacing.lg,
-    paddingBottom: Spacing.sm,
-  },
-  eventDateBox: {
-    backgroundColor: Colors.primaryLight,
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 64,
-    marginRight: Spacing.md,
-  },
-  eventDateDay: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.heavy,
-    color: Colors.primary,
-  },
-  eventDateTime: {
-    fontSize: 10,
-    color: Colors.primaryDark,
-    marginTop: 2,
-  },
-  eventMeta: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  eventTitle: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  eventClub: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  eventDetailsBox: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.md,
-    gap: 6,
-  },
-  eventDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  eventDetailText: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-  },
-  rsvpRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
-  },
-  rsvpBtn: {
-    flex: 1,
-    paddingVertical: 7,
-    alignItems: 'center',
-    borderRadius: BorderRadius.sm,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  rsvpBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  rsvpText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textSecondary,
-  },
-  rsvpTextActive: {
-    color: Colors.textInverse,
-  },
-});
-

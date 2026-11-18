@@ -4,13 +4,11 @@ import {
   Image,
   SafeAreaView,
   ScrollView,
-  StyleSheet,
   Switch,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { BorderRadius, Colors, Spacing, Typography } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
 
 export default function ProfileScreen() {
@@ -18,7 +16,6 @@ export default function ProfileScreen() {
   const [beaconEnabled, setBeaconEnabled] = useState(true);
   const [privacyZoneActive, setPrivacyZoneActive] = useState(true);
 
-  // Compute total user stats
   const totalKm = activities
     .reduce((acc, curr) => acc + curr.distanceMeters / 1000, 0)
     .toFixed(1);
@@ -28,155 +25,165 @@ export default function ProfileScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
         {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <View style={styles.topRow}>
-            <Image source={{ uri: currentUser.avatarUrl }} style={styles.avatar} />
-            <TouchableOpacity style={styles.settingsBtn}>
-              <Ionicons name="settings-outline" size={20} color={Colors.textPrimary} />
+        <View className="bg-white p-4 border-b border-gray-200">
+          <View className="flex-row justify-between items-start mb-3">
+            <Image
+              source={{ uri: currentUser.avatarUrl }}
+              className="w-18 h-18 rounded-full border-2 border-[#FC4C02] bg-gray-100"
+              style={{ width: 72, height: 72, borderRadius: 36 }}
+            />
+            <TouchableOpacity className="p-1">
+              <Ionicons name="settings-outline" size={20} color="#111827" />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.displayName}>{currentUser.displayName}</Text>
-          <Text style={styles.username}>@{currentUser.username}</Text>
-          <Text style={styles.location}>
+          <Text className="text-xl font-black text-gray-900">{currentUser.displayName}</Text>
+          <Text className="text-sm font-semibold text-[#FC4C02] mb-1">@{currentUser.username}</Text>
+          <Text className="text-xs text-gray-400 mb-2">
             📍 {currentUser.city}, {currentUser.country}
           </Text>
 
-          {currentUser.bio && <Text style={styles.bio}>{currentUser.bio}</Text>}
+          {currentUser.bio && (
+            <Text className="text-sm text-gray-600 leading-5 mb-3">{currentUser.bio}</Text>
+          )}
 
           {/* Followers / Following counts */}
-          <View style={styles.socialCounts}>
-            <View style={styles.countItem}>
-              <Text style={styles.countNumber}>{currentUser.followingCount}</Text>
-              <Text style={styles.countLabel}>Following</Text>
+          <View className="flex-row justify-around border-t border-gray-100 pt-3">
+            <View className="items-center">
+              <Text className="text-base font-black text-gray-900">{currentUser.followingCount}</Text>
+              <Text className="text-xs text-gray-400 mt-0.5">Following</Text>
             </View>
-            <View style={styles.divider} />
-            <View style={styles.countItem}>
-              <Text style={styles.countNumber}>{currentUser.followersCount}</Text>
-              <Text style={styles.countLabel}>Followers</Text>
+            <View className="w-[1px] h-4/5 bg-gray-200 self-center" />
+            <View className="items-center">
+              <Text className="text-base font-black text-gray-900">{currentUser.followersCount}</Text>
+              <Text className="text-xs text-gray-400 mt-0.5">Followers</Text>
             </View>
-            <View style={styles.divider} />
-            <View style={styles.countItem}>
-              <Text style={styles.countNumber}>{activities.length}</Text>
-              <Text style={styles.countLabel}>Activities</Text>
+            <View className="w-[1px] h-4/5 bg-gray-200 self-center" />
+            <View className="items-center">
+              <Text className="text-base font-black text-gray-900">{activities.length}</Text>
+              <Text className="text-xs text-gray-400 mt-0.5">Activities</Text>
             </View>
           </View>
         </View>
 
         {/* 4-Week Volume Summary */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Last 4 Weeks</Text>
-          <View style={styles.statsGrid}>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Total Distance</Text>
-              <Text style={styles.statValue}>{totalKm} km</Text>
+        <View className="bg-white mt-3 p-4 border-y border-gray-200">
+          <Text className="text-sm font-bold text-gray-900 mb-3">Last 4 Weeks</Text>
+          <View className="flex-row justify-between bg-gray-50 p-3 rounded-lg">
+            <View className="flex-1 items-center">
+              <Text className="text-[10px] text-gray-400 uppercase mb-0.5">Total Distance</Text>
+              <Text className="text-base font-black text-gray-900">{totalKm} km</Text>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Moving Time</Text>
-              <Text style={styles.statValue}>{totalHours}h 45m</Text>
+            <View className="flex-1 items-center">
+              <Text className="text-[10px] text-gray-400 uppercase mb-0.5">Moving Time</Text>
+              <Text className="text-base font-black text-gray-900">{totalHours}h 45m</Text>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Elev Gain</Text>
-              <Text style={styles.statValue}>+{totalElev} m</Text>
+            <View className="flex-1 items-center">
+              <Text className="text-[10px] text-gray-400 uppercase mb-0.5">Elev Gain</Text>
+              <Text className="text-base font-black text-gray-900">+{totalElev} m</Text>
             </View>
           </View>
         </View>
 
-        {/* Trophy Case (KOMs, Medals, Badges) */}
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Trophy Case</Text>
-            <Text style={styles.seeAllText}>3 Unlocked</Text>
+        {/* Trophy Case */}
+        <View className="bg-white mt-3 p-4 border-y border-gray-200">
+          <View className="flex-row justify-between items-center mb-3">
+            <Text className="text-sm font-bold text-gray-900">Trophy Case</Text>
+            <Text className="text-xs font-semibold text-[#FC4C02]">3 Unlocked</Text>
           </View>
-          <View style={styles.trophyRow}>
-            <View style={styles.trophyItem}>
-              <View style={[styles.trophyIcon, { backgroundColor: '#FEF3C7' }]}>
+          <View className="flex-row justify-between">
+            <View className="flex-1 items-center">
+              <View className="w-12 h-12 rounded-full items-center justify-center bg-amber-100 mb-1">
                 <Ionicons name="trophy" size={24} color="#D97706" />
               </View>
-              <Text style={styles.trophyName}>👑 KOM Crown</Text>
-              <Text style={styles.trophySub}>Lakeside Dash</Text>
+              <Text className="text-xs font-bold text-gray-900 text-center">👑 KOM Crown</Text>
+              <Text className="text-[10px] text-gray-400 mt-0.5">Lakeside Dash</Text>
             </View>
 
-            <View style={styles.trophyItem}>
-              <View style={[styles.trophyIcon, { backgroundColor: '#ECFDF5' }]}>
+            <View className="flex-1 items-center">
+              <View className="w-12 h-12 rounded-full items-center justify-center bg-emerald-100 mb-1">
                 <Ionicons name="ribbon" size={24} color="#059669" />
               </View>
-              <Text style={styles.trophyName}>10k PR Medal</Text>
-              <Text style={styles.trophySub}>44:12</Text>
+              <Text className="text-xs font-bold text-gray-900 text-center">10k PR Medal</Text>
+              <Text className="text-[10px] text-gray-400 mt-0.5">44:12</Text>
             </View>
 
-            <View style={styles.trophyItem}>
-              <View style={[styles.trophyIcon, { backgroundColor: Colors.primaryLight }]}>
-                <Ionicons name="medal" size={24} color={Colors.primary} />
+            <View className="flex-1 items-center">
+              <View className="w-12 h-12 rounded-full items-center justify-center bg-[#FFF2EB] mb-1">
+                <Ionicons name="medal" size={24} color="#FC4C02" />
               </View>
-              <Text style={styles.trophyName}>Nov Elevation</Text>
-              <Text style={styles.trophySub}>2,000m Climb</Text>
+              <Text className="text-xs font-bold text-gray-900 text-center">Nov Elevation</Text>
+              <Text className="text-[10px] text-gray-400 mt-0.5">2,000m Climb</Text>
             </View>
           </View>
         </View>
 
-        {/* Gear & Shoes Mileage Tracker */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Gear & Shoe Mileage</Text>
-          <View style={styles.gearItem}>
-            <View style={styles.gearIconBox}>
-              <Ionicons name="footsteps-outline" size={20} color={Colors.primary} />
+        {/* Gear & Shoes Tracker */}
+        <View className="bg-white mt-3 p-4 border-y border-gray-200">
+          <Text className="text-sm font-bold text-gray-900 mb-3">Gear & Shoe Mileage</Text>
+          <View className="flex-row items-center mb-3">
+            <View className="w-10 h-10 rounded-lg bg-[#FFF2EB] items-center justify-center mr-3">
+              <Ionicons name="footsteps-outline" size={20} color="#FC4C02" />
             </View>
-            <View style={styles.gearMeta}>
-              <Text style={styles.gearName}>Nike Air Zoom Pegasus 41</Text>
-              <Text style={styles.gearSub}>Daily Road Trainer · 242.8 / 600 km</Text>
-              <View style={styles.gearProgressBg}>
-                <View style={[styles.gearProgressFill, { width: '40%' }]} />
+            <View className="flex-1">
+              <Text className="text-sm font-bold text-gray-900">Nike Air Zoom Pegasus 41</Text>
+              <Text className="text-xs text-gray-400 mt-0.5 mb-1">
+                Daily Road Trainer · 242.8 / 600 km
+              </Text>
+              <View className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                <View className="h-full bg-[#FC4C02] rounded-full" style={{ width: '40%' }} />
               </View>
             </View>
           </View>
 
-          <View style={styles.gearItem}>
-            <View style={styles.gearIconBox}>
-              <Ionicons name="bicycle-outline" size={20} color={Colors.primary} />
+          <View className="flex-row items-center">
+            <View className="w-10 h-10 rounded-lg bg-[#FFF2EB] items-center justify-center mr-3">
+              <Ionicons name="bicycle-outline" size={20} color="#FC4C02" />
             </View>
-            <View style={styles.gearMeta}>
-              <Text style={styles.gearName}>Specialized Allez Sprint Road</Text>
-              <Text style={styles.gearSub}>Road Bike · 1,280 km logged</Text>
-              <View style={styles.gearProgressBg}>
-                <View style={[styles.gearProgressFill, { width: '65%' }]} />
+            <View className="flex-1">
+              <Text className="text-sm font-bold text-gray-900">Specialized Allez Sprint</Text>
+              <Text className="text-xs text-gray-400 mt-0.5 mb-1">
+                Road Bike · 1,280 km logged
+              </Text>
+              <View className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                <View className="h-full bg-[#FC4C02] rounded-full" style={{ width: '65%' }} />
               </View>
             </View>
           </View>
         </View>
 
         {/* Privacy & Safety Settings */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Privacy & Safety Controls</Text>
+        <View className="bg-white mt-3 p-4 border-y border-gray-200">
+          <Text className="text-sm font-bold text-gray-900 mb-3">Privacy & Safety Controls</Text>
 
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleMeta}>
-              <Text style={styles.toggleTitle}>Privacy Zones (Start/End Masking)</Text>
-              <Text style={styles.toggleSub}>
+          <View className="flex-row justify-between items-center mb-3">
+            <View className="flex-1 mr-3">
+              <Text className="text-sm font-bold text-gray-900">Privacy Zones (Start/End Masking)</Text>
+              <Text className="text-xs text-gray-500 leading-4 mt-0.5">
                 Hides your GPS track within a 500m radius of your Home address.
               </Text>
             </View>
             <Switch
               value={privacyZoneActive}
               onValueChange={setPrivacyZoneActive}
-              trackColor={{ false: Colors.border, true: Colors.primary }}
+              trackColor={{ false: '#E5E7EB', true: '#FC4C02' }}
             />
           </View>
 
-          <View style={[styles.toggleRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.borderLight, paddingTop: Spacing.md }]}>
-            <View style={styles.toggleMeta}>
-              <Text style={styles.toggleTitle}>Beacon Live Safety Tracking</Text>
-              <Text style={styles.toggleSub}>
+          <View className="flex-row justify-between items-center border-t border-gray-100 pt-3">
+            <View className="flex-1 mr-3">
+              <Text className="text-sm font-bold text-gray-900">Beacon Live Safety Tracking</Text>
+              <Text className="text-xs text-gray-500 leading-4 mt-0.5">
                 Broadcasts your live GPS & battery to emergency contacts during workouts.
               </Text>
             </View>
             <Switch
               value={beaconEnabled}
               onValueChange={setBeaconEnabled}
-              trackColor={{ false: Colors.border, true: Colors.primary }}
+              trackColor={{ false: '#E5E7EB', true: '#FC4C02' }}
             />
           </View>
         </View>
@@ -184,219 +191,3 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-  },
-  scrollContent: {
-    paddingBottom: Spacing.xxl,
-  },
-  profileHeader: {
-    backgroundColor: Colors.background,
-    padding: Spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
-  },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing.md,
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    backgroundColor: Colors.surface,
-  },
-  settingsBtn: {
-    padding: Spacing.xs,
-  },
-  displayName: {
-    fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.heavy,
-    color: Colors.textPrimary,
-  },
-  username: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.primary,
-    fontWeight: Typography.fontWeight.semibold,
-    marginBottom: 4,
-  },
-  location: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textMuted,
-    marginBottom: Spacing.sm,
-  },
-  bio: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: Spacing.md,
-  },
-  socialCounts: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.borderLight,
-    paddingTop: Spacing.md,
-  },
-  countItem: {
-    alignItems: 'center',
-  },
-  countNumber: {
-    fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.heavy,
-    color: Colors.textPrimary,
-  },
-  countLabel: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  divider: {
-    width: StyleSheet.hairlineWidth,
-    height: '80%',
-    backgroundColor: Colors.border,
-    alignSelf: 'center',
-  },
-  sectionCard: {
-    backgroundColor: Colors.background,
-    marginTop: Spacing.md,
-    padding: Spacing.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  sectionTitle: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
-  },
-  seeAllText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.primary,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.surface,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.sm,
-  },
-  statBox: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statLabel: {
-    fontSize: 10,
-    color: Colors.textMuted,
-    textTransform: 'uppercase',
-    marginBottom: 2,
-  },
-  statValue: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.heavy,
-    color: Colors.textPrimary,
-  },
-  trophyRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  trophyItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  trophyIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.xs,
-  },
-  trophyName: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  trophySub: {
-    fontSize: 10,
-    color: Colors.textMuted,
-    marginTop: 1,
-  },
-  gearItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  gearIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.sm,
-    backgroundColor: Colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-  },
-  gearMeta: {
-    flex: 1,
-  },
-  gearName: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  gearSub: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textMuted,
-    marginTop: 2,
-    marginBottom: 4,
-  },
-  gearProgressBg: {
-    height: 4,
-    backgroundColor: Colors.surface,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  gearProgressFill: {
-    height: '100%',
-    backgroundColor: Colors.primary,
-    borderRadius: 2,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  toggleMeta: {
-    flex: 1,
-    marginRight: Spacing.md,
-  },
-  toggleTitle: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  toggleSub: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    lineHeight: 16,
-    marginTop: 2,
-  },
-});
-

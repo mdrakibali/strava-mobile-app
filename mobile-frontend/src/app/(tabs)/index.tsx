@@ -5,14 +5,12 @@ import {
   RefreshControl,
   SafeAreaView,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { ActivityCard } from '../../components/common/ActivityCard';
 import { Header } from '../../components/common/Header';
-import { BorderRadius, Colors, Spacing, Typography } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
 
 export default function FeedScreen() {
@@ -35,35 +33,59 @@ export default function FeedScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-gray-50">
       <Header />
 
       {/* Filter Chips Bar */}
-      <View style={styles.filterBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+      <View className="bg-white border-b border-gray-200 py-2">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="flex-row px-4 gap-2">
           <TouchableOpacity
-            style={[styles.filterChip, selectedFilter === 'ALL' && styles.filterChipActive]}
+            className={`px-3.5 py-1.5 rounded-full border ${
+              selectedFilter === 'ALL'
+                ? 'bg-[#FC4C02] border-[#FC4C02]'
+                : 'bg-gray-50 border-gray-200'
+            }`}
             onPress={() => setSelectedFilter('ALL')}
             activeOpacity={0.7}>
-            <Text style={[styles.filterChipText, selectedFilter === 'ALL' && styles.filterChipTextActive]}>
+            <Text
+              className={`text-xs font-semibold ${
+                selectedFilter === 'ALL' ? 'text-white' : 'text-gray-600'
+              }`}>
               All Activities
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.filterChip, selectedFilter === 'FOLLOWING' && styles.filterChipActive]}
+            className={`px-3.5 py-1.5 rounded-full border ${
+              selectedFilter === 'FOLLOWING'
+                ? 'bg-[#FC4C02] border-[#FC4C02]'
+                : 'bg-gray-50 border-gray-200'
+            }`}
             onPress={() => setSelectedFilter('FOLLOWING')}
             activeOpacity={0.7}>
-            <Text style={[styles.filterChipText, selectedFilter === 'FOLLOWING' && styles.filterChipTextActive]}>
+            <Text
+              className={`text-xs font-semibold ${
+                selectedFilter === 'FOLLOWING' ? 'text-white' : 'text-gray-600'
+              }`}>
               Following
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.filterChip, selectedFilter === 'CLUBS' && styles.filterChipActive]}
+            className={`px-3.5 py-1.5 rounded-full border ${
+              selectedFilter === 'CLUBS'
+                ? 'bg-[#FC4C02] border-[#FC4C02]'
+                : 'bg-gray-50 border-gray-200'
+            }`}
             onPress={() => setSelectedFilter('CLUBS')}
             activeOpacity={0.7}>
-            <Text style={[styles.filterChipText, selectedFilter === 'CLUBS' && styles.filterChipTextActive]}>
+            <Text
+              className={`text-xs font-semibold ${
+                selectedFilter === 'CLUBS' ? 'text-white' : 'text-gray-600'
+              }`}>
               My Clubs
             </Text>
           </TouchableOpacity>
@@ -75,138 +97,41 @@ export default function FeedScreen() {
         data={filteredActivities}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <ActivityCard activity={item} />}
-        contentContainerStyle={styles.feedContent}
+        contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />
         }
         ListHeaderComponent={
-          <View style={styles.weeklyBanner}>
-            <View style={styles.bannerLeft}>
-              <View style={styles.bannerIcon}>
-                <Ionicons name="flame" size={20} color={Colors.primary} />
+          <View className="flex-row justify-between items-center bg-white p-3.5 rounded-xl mb-3 border border-gray-200">
+            <View className="flex-row items-center gap-3">
+              <View className="w-9 h-9 rounded-full bg-[#FFF2EB] items-center justify-center">
+                <Ionicons name="flame" size={20} color="#FC4C02" />
               </View>
               <View>
-                <Text style={styles.bannerTitle}>Weekly Volume</Text>
-                <Text style={styles.bannerSubtitle}>18.6 km logged · 2 runs completed</Text>
+                <Text className="text-sm font-bold text-gray-900">Weekly Volume</Text>
+                <Text className="text-xs text-gray-500 mt-0.5">
+                  18.6 km logged · 2 runs completed
+                </Text>
               </View>
             </View>
-            <View style={styles.bannerBadge}>
-              <Text style={styles.bannerBadgeText}>+14% vs last week</Text>
+            <View className="bg-emerald-50 px-2.5 py-1 rounded-full">
+              <Text className="text-[10px] font-bold text-emerald-700">
+                +14% vs last week
+              </Text>
             </View>
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="fitness-outline" size={48} color={Colors.textMuted} />
-            <Text style={styles.emptyTitle}>No activities found</Text>
-            <Text style={styles.emptySubtitle}>Follow more athletes or record your first workout!</Text>
+          <View className="items-center justify-center py-16 gap-2">
+            <Ionicons name="fitness-outline" size={48} color="#9CA3AF" />
+            <Text className="text-base font-bold text-gray-900">No activities found</Text>
+            <Text className="text-xs text-gray-500 text-center">
+              Follow more athletes or record your first workout!
+            </Text>
           </View>
         }
       />
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-  },
-  filterBar: {
-    backgroundColor: Colors.background,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
-    paddingVertical: Spacing.sm,
-  },
-  filterScroll: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  filterChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  filterChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  filterChipText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.textSecondary,
-  },
-  filterChipTextActive: {
-    color: Colors.textInverse,
-  },
-  feedContent: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.xxl,
-  },
-  weeklyBanner: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
-  },
-  bannerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  bannerIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bannerTitle: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  bannerSubtitle: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 1,
-  },
-  bannerBadge: {
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-  },
-  bannerBadgeText: {
-    fontSize: 10,
-    fontWeight: Typography.fontWeight.bold,
-    color: '#059669',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.xxxl,
-    gap: Spacing.sm,
-  },
-  emptyTitle: {
-    fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  emptySubtitle: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-});
-

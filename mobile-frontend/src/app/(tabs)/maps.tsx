@@ -3,14 +3,12 @@ import React, { useState } from 'react';
 import {
   FlatList,
   SafeAreaView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { RouteMapPreview } from '../../components/common/RouteMapPreview';
-import { BorderRadius, Colors, Spacing, Typography } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
 import { Segment } from '../../types';
 
@@ -26,34 +24,36 @@ export default function MapsScreen() {
   });
 
   const renderSegmentItem = ({ item }: { item: Segment }) => (
-    <View style={styles.segmentCard}>
-      <View style={styles.segmentHeader}>
-        <View style={styles.segmentMeta}>
-          <Text style={styles.segmentName}>{item.name}</Text>
-          <Text style={styles.segmentDetails}>
+    <View className="bg-white rounded-xl p-4 mb-3 border border-gray-200 gap-2">
+      <View className="flex-row justify-between items-start">
+        <View className="flex-1">
+          <Text className="text-base font-bold text-gray-900 mb-0.5">
+            {item.name}
+          </Text>
+          <Text className="text-xs text-gray-500">
             {item.sportType} · {(item.distanceMeters / 1000).toFixed(2)} km · Avg {item.averageGradePercent}% grade · +{item.elevationGainMeters}m
           </Text>
         </View>
-        <View style={styles.rankBadge}>
-          <Ionicons name="trophy" size={14} color={Colors.gold} />
-          <Text style={styles.rankText}>#{item.rank || 1}</Text>
+        <View className="flex-row items-center bg-amber-100 px-2.5 py-1 rounded-full gap-1">
+          <Ionicons name="trophy" size={14} color="#D97706" />
+          <Text className="text-xs font-bold text-amber-900">#{item.rank || 1}</Text>
         </View>
       </View>
 
       <RouteMapPreview points={item.polylinePoints} height={120} />
 
-      <View style={styles.leaderboardPreview}>
-        <View style={styles.komBlock}>
-          <Text style={styles.komLabel}>👑 KOM Crown</Text>
-          <Text style={styles.komValue}>
-            {item.komAthleteName} · <Text style={{ fontWeight: '700' }}>{item.komTimeFormatted}</Text>
+      <View className="flex-row justify-between bg-gray-50 p-2.5 rounded-lg mt-1">
+        <View className="flex-1">
+          <Text className="text-[10px] font-bold text-gray-500 mb-0.5">👑 KOM Crown</Text>
+          <Text className="text-xs text-gray-900">
+            {item.komAthleteName} · <Text className="font-bold">{item.komTimeFormatted}</Text>
           </Text>
         </View>
 
         {item.userPrTimeFormatted && (
-          <View style={styles.prBlock}>
-            <Text style={styles.prLabel}>Your PR</Text>
-            <Text style={styles.prValue}>{item.userPrTimeFormatted}</Text>
+          <View className="items-end">
+            <Text className="text-[10px] font-bold text-gray-500 mb-0.5">Your PR</Text>
+            <Text className="text-xs font-bold text-[#FC4C02]">{item.userPrTimeFormatted}</Text>
           </View>
         )}
       </View>
@@ -61,34 +61,43 @@ export default function MapsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-gray-50">
       {/* Top Search & Filter Bar */}
-      <View style={styles.searchHeader}>
-        <Text style={styles.screenTitle}>Maps & Segments</Text>
-        <View style={styles.searchBox}>
-          <Ionicons name="search-outline" size={18} color={Colors.textMuted} />
+      <View className="bg-white px-4 pt-3 pb-2 border-b border-gray-200">
+        <Text className="text-xl font-black text-gray-900 mb-2">
+          Maps & Segments
+        </Text>
+        <View className="flex-row items-center bg-gray-50 px-3 h-10 rounded-lg border border-gray-200 gap-2 mb-2">
+          <Ionicons name="search-outline" size={18} color="#9CA3AF" />
           <TextInput
             placeholder="Search segments, routes, climbs..."
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor="#9CA3AF"
             value={searchQuery}
             onChangeText={setSearchQuery}
-            style={styles.searchInput}
+            className="flex-1 text-sm text-gray-900"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
+              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
             </TouchableOpacity>
           )}
         </View>
 
         {/* Sport Type Filters */}
-        <View style={styles.sportFilterRow}>
+        <View className="flex-row gap-2 py-1">
           {(['ALL', 'Run', 'Ride'] as const).map((sport) => (
             <TouchableOpacity
               key={sport}
-              style={[styles.sportChip, selectedSport === sport && styles.sportChipActive]}
+              className={`px-3 py-1 rounded-full border ${
+                selectedSport === sport
+                  ? 'bg-primary border-primary'
+                  : 'bg-gray-50 border-gray-200'
+              }`}
               onPress={() => setSelectedSport(sport)}>
-              <Text style={[styles.sportChipText, selectedSport === sport && styles.sportChipTextActive]}>
+              <Text
+                className={`text-xs font-semibold ${
+                  selectedSport === sport ? 'text-white' : 'text-gray-600'
+                }`}>
                 {sport === 'ALL' ? 'All Sports' : sport === 'Run' ? '🏃 Running' : '🚴 Cycling'}
               </Text>
             </TouchableOpacity>
@@ -101,18 +110,20 @@ export default function MapsScreen() {
         data={filteredSegments}
         keyExtractor={(item) => item.id}
         renderItem={renderSegmentItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <View style={styles.heroRouteCard}>
-            <View style={styles.heroTextContainer}>
-              <Text style={styles.heroTitle}>Discover Popular Routes</Text>
-              <Text style={styles.heroSubtitle}>
+          <View className="bg-white rounded-xl p-4 mb-3 border border-gray-200">
+            <View className="gap-1">
+              <Text className="text-base font-bold text-gray-900">Discover Popular Routes</Text>
+              <Text className="text-xs text-gray-500 leading-5 mb-1">
                 Community-curated routes with verified road quality and elevation profiles.
               </Text>
-              <TouchableOpacity style={styles.ctaButton} activeOpacity={0.8}>
-                <Ionicons name="navigate-outline" size={16} color={Colors.textInverse} />
-                <Text style={styles.ctaButtonText}>Create Custom Route</Text>
+              <TouchableOpacity
+                className="flex-row items-center justify-center bg-[#FC4C02] py-2 px-3.5 rounded-lg gap-1.5 self-start mt-1"
+                activeOpacity={0.8}>
+                <Ionicons name="navigate-outline" size={16} color="#FFFFFF" />
+                <Text className="text-xs font-bold text-white">Create Custom Route</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -121,186 +132,3 @@ export default function MapsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-  },
-  searchHeader: {
-    backgroundColor: Colors.background,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
-  },
-  screenTitle: {
-    fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.heavy,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    paddingHorizontal: Spacing.md,
-    height: 42,
-    borderRadius: BorderRadius.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textPrimary,
-  },
-  sportFilterRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    paddingVertical: 4,
-  },
-  sportChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  sportChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  sportChipText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.textSecondary,
-  },
-  sportChipTextActive: {
-    color: Colors.textInverse,
-  },
-  listContent: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.xxl,
-  },
-  heroRouteCard: {
-    backgroundColor: Colors.background,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
-  },
-  heroTextContainer: {
-    gap: Spacing.xs,
-  },
-  heroTitle: {
-    fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  heroSubtitle: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    lineHeight: 18,
-    marginBottom: Spacing.xs,
-  },
-  ctaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.primary,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.sm,
-    gap: 6,
-    alignSelf: 'flex-start',
-    marginTop: 4,
-  },
-  ctaButtonText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textInverse,
-  },
-  segmentCard: {
-    backgroundColor: Colors.background,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
-    gap: Spacing.sm,
-  },
-  segmentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  segmentMeta: {
-    flex: 1,
-  },
-  segmentName: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-    marginBottom: 2,
-  },
-  segmentDetails: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-  },
-  rankBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-    gap: 4,
-  },
-  rankText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
-    color: '#92400E',
-  },
-  leaderboardPreview: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.surface,
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.sm,
-    marginTop: 4,
-  },
-  komBlock: {
-    flex: 1,
-  },
-  komLabel: {
-    fontSize: 10,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textSecondary,
-    marginBottom: 1,
-  },
-  komValue: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textPrimary,
-  },
-  prBlock: {
-    alignItems: 'flex-end',
-  },
-  prLabel: {
-    fontSize: 10,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textSecondary,
-    marginBottom: 1,
-  },
-  prValue: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.primary,
-  },
-});
-

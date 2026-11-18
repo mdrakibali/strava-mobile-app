@@ -5,13 +5,11 @@ import {
   FlatList,
   Image,
   SafeAreaView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { BorderRadius, Colors, Spacing, Typography } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { MOCK_ATHLETES } from '../mock/data';
 import { Athlete } from '../types';
@@ -37,20 +35,27 @@ export default function SearchScreen() {
   };
 
   const renderAthleteItem = ({ item }: { item: Athlete }) => (
-    <View style={styles.athleteCard}>
-      <Image source={{ uri: item.avatarUrl }} style={styles.avatar} />
+    <View className="flex-row items-center px-4 py-3.5 border-b border-gray-100">
+      <Image source={{ uri: item.avatarUrl }} className="w-12 h-12 rounded-full bg-gray-100 mr-3" />
 
-      <View style={styles.metaBox}>
-        <Text style={styles.name}>{item.displayName}</Text>
-        <Text style={styles.username}>@{item.username}</Text>
-        <Text style={styles.location}>📍 {item.city}, {item.country}</Text>
-        {item.bio && <Text style={styles.bio} numberOfLines={1}>{item.bio}</Text>}
+      <View className="flex-1">
+        <Text className="text-sm font-bold text-gray-900">{item.displayName}</Text>
+        <Text className="text-xs text-[#FC4C02] mt-0.5">@{item.username}</Text>
+        <Text className="text-[10px] text-gray-400 mt-0.5">📍 {item.city}, {item.country}</Text>
+        {item.bio && <Text className="text-xs text-gray-600 mt-1" numberOfLines={1}>{item.bio}</Text>}
       </View>
 
       <TouchableOpacity
-        style={[styles.followBtn, item.isFollowing && styles.followingBtn]}
+        className={`px-3.5 py-1.5 rounded-lg border ${
+          item.isFollowing
+            ? 'bg-gray-100 border-gray-200'
+            : 'bg-[#FC4C02] border-[#FC4C02]'
+        }`}
         onPress={() => handleToggleFollow(item.id)}>
-        <Text style={[styles.followBtnText, item.isFollowing && styles.followingBtnText]}>
+        <Text
+          className={`text-xs font-bold ${
+            item.isFollowing ? 'text-gray-600' : 'text-white'
+          }`}>
           {item.isFollowing ? 'Following' : 'Follow'}
         </Text>
       </TouchableOpacity>
@@ -58,26 +63,26 @@ export default function SearchScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-white">
       {/* Top Search Bar */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+      <View className="flex-row items-center px-3 py-2 border-b border-gray-200 gap-2">
+        <TouchableOpacity onPress={() => router.back()} className="p-1">
+          <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
 
-        <View style={styles.searchBox}>
-          <Ionicons name="search-outline" size={18} color={Colors.textMuted} />
+        <View className="flex-1 flex-row items-center bg-gray-100 px-3 h-10 rounded-lg gap-2">
+          <Ionicons name="search-outline" size={18} color="#9CA3AF" />
           <TextInput
-            style={styles.searchInput}
+            className="flex-1 text-sm text-gray-900"
             placeholder="Search athletes by name or city..."
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor="#9CA3AF"
             value={query}
             onChangeText={setQuery}
             autoFocus
           />
           {query.length > 0 && (
             <TouchableOpacity onPress={() => setQuery('')}>
-              <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
+              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
             </TouchableOpacity>
           )}
         </View>
@@ -87,127 +92,15 @@ export default function SearchScreen() {
         data={filtered}
         keyExtractor={(item) => item.id}
         renderItem={renderAthleteItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={{ paddingVertical: 4 }}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={48} color={Colors.textMuted} />
-            <Text style={styles.emptyTitle}>No athletes found</Text>
-            <Text style={styles.emptySub}>Try searching for a different name or city.</Text>
+          <View className="items-center justify-center py-20 gap-2">
+            <Ionicons name="people-outline" size={48} color="#9CA3AF" />
+            <Text className="text-base font-bold text-gray-900">No athletes found</Text>
+            <Text className="text-xs text-gray-400">Try searching for a different name or city.</Text>
           </View>
         }
       />
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
-    gap: Spacing.sm,
-  },
-  backBtn: {
-    padding: Spacing.xs,
-  },
-  searchBox: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    paddingHorizontal: Spacing.md,
-    height: 42,
-    borderRadius: BorderRadius.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: Spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textPrimary,
-  },
-  listContent: {
-    paddingVertical: Spacing.sm,
-  },
-  athleteCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.borderLight,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.surface,
-    marginRight: Spacing.md,
-  },
-  metaBox: {
-    flex: 1,
-  },
-  name: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  username: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.primary,
-    marginTop: 1,
-  },
-  location: {
-    fontSize: 10,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  bio: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  followBtn: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.sm,
-  },
-  followingBtn: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  followBtnText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textInverse,
-  },
-  followingBtnText: {
-    color: Colors.textSecondary,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.xxxl,
-    gap: Spacing.xs,
-  },
-  emptyTitle: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  emptySub: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textMuted,
-  },
-});
-

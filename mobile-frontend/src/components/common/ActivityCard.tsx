@@ -4,12 +4,10 @@ import React from 'react';
 import {
   Image,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { BorderRadius, Colors, Spacing, Typography } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
 import { Activity, SportType } from '../../types';
 import { RouteMapPreview } from './RouteMapPreview';
@@ -49,23 +47,25 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
   };
 
   return (
-    <View style={styles.card}>
+    <View className="bg-white rounded-xl p-4 mb-3 border border-gray-200">
       {/* Header: Athlete info & Sport */}
-      <View style={styles.header}>
-        <View style={styles.athleteRow}>
+      <View className="flex-row justify-between items-center mb-3">
+        <View className="flex-row items-center">
           <Image
             source={{ uri: activity.athlete.avatarUrl }}
-            style={styles.avatar}
+            className="w-11 h-11 rounded-full mr-3 bg-gray-100"
           />
-          <View style={styles.athleteMeta}>
-            <Text style={styles.athleteName}>{activity.athlete.displayName}</Text>
-            <View style={styles.subMeta}>
+          <View className="justify-center">
+            <Text className="text-base font-bold text-gray-900">
+              {activity.athlete.displayName}
+            </Text>
+            <View className="flex-row items-center mt-0.5">
               <Ionicons
                 name={getSportIcon(activity.sportType)}
                 size={13}
-                color={Colors.primary}
+                color="#FC4C02"
               />
-              <Text style={styles.timeAgo}>
+              <Text className="text-xs text-gray-400">
                 {' '}
                 {activity.sportType} · {activity.athlete.city || 'Athletic Track'}
               </Text>
@@ -73,16 +73,18 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.moreButton}>
-          <Ionicons name="ellipsis-horizontal" size={18} color={Colors.textMuted} />
+        <TouchableOpacity className="p-1">
+          <Ionicons name="ellipsis-horizontal" size={18} color="#9CA3AF" />
         </TouchableOpacity>
       </View>
 
       {/* Title & Description */}
       <TouchableOpacity onPress={handleCardPress} activeOpacity={0.8}>
-        <Text style={styles.title}>{activity.title}</Text>
+        <Text className="text-lg font-black text-gray-900 mb-1">
+          {activity.title}
+        </Text>
         {activity.description && (
-          <Text style={styles.description} numberOfLines={2}>
+          <Text className="text-xs text-gray-600 mb-3 leading-5" numberOfLines={2}>
             {activity.description}
           </Text>
         )}
@@ -90,7 +92,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
 
       {/* Metrics Row */}
       <TouchableOpacity
-        style={styles.statsContainer}
+        className="flex-row justify-between bg-gray-50 p-3 rounded-lg mb-3"
         onPress={handleCardPress}
         activeOpacity={0.8}>
         <StatBox label="Distance" value={activity.distanceFormatted} />
@@ -101,18 +103,20 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
 
       {/* Advanced Algorithmic Parity Badges (GAP & Relative Effort) */}
       {(activity.gapFormatted || activity.relativeEffortScore) && (
-        <View style={styles.badgesContainer}>
+        <View className="flex-row gap-2 mb-3">
           {activity.gapFormatted && (
-            <View style={styles.badge}>
-              <Ionicons name="trending-up-outline" size={13} color={Colors.primary} />
-              <Text style={styles.badgeText}>GAP {activity.gapFormatted}</Text>
+            <View className="flex-row items-center bg-primary-light px-2.5 py-1 rounded-full gap-1">
+              <Ionicons name="trending-up-outline" size={13} color="#FC4C02" />
+              <Text className="text-xs font-semibold text-[#FC4C02]">
+                GAP {activity.gapFormatted}
+              </Text>
             </View>
           )}
 
           {activity.relativeEffortScore && (
-            <View style={[styles.badge, styles.relativeEffortBadge]}>
+            <View className="flex-row items-center bg-amber-100 px-2.5 py-1 rounded-full gap-1">
               <Ionicons name="flash-outline" size={13} color="#D97706" />
-              <Text style={[styles.badgeText, { color: '#B45309' }]}>
+              <Text className="text-xs font-semibold text-amber-800">
                 {activity.relativeEffortScore} Relative Effort
               </Text>
             </View>
@@ -122,13 +126,17 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
 
       {/* Visual Media (Photos or Route Polyline Map) */}
       <TouchableOpacity
-        style={styles.mediaContainer}
+        className="mb-3 rounded-xl overflow-hidden"
         onPress={handleCardPress}
         activeOpacity={0.9}>
         {activity.photos && activity.photos.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoScroll}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
             {activity.photos.map((photo, index) => (
-              <Image key={index} source={{ uri: photo }} style={styles.photo} />
+              <Image
+                key={index}
+                source={{ uri: photo }}
+                className="w-[280px] h-[190px] rounded-xl mr-2 bg-gray-100"
+              />
             ))}
           </ScrollView>
         ) : (
@@ -137,193 +145,54 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
       </TouchableOpacity>
 
       {/* Social Actions (Kudos, Comments, Share) */}
-      <View style={styles.socialBar}>
+      <View className="flex-row justify-around border-t border-gray-100 pt-3">
         <TouchableOpacity
-          style={styles.socialAction}
+          className="flex-row items-center gap-1.5 py-1 px-2"
           onPress={() => toggleKudos(activity.id)}
           activeOpacity={0.7}>
           <Ionicons
             name={activity.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'}
             size={18}
-            color={activity.hasKudos ? Colors.primary : Colors.textSecondary}
+            color={activity.hasKudos ? '#FC4C02' : '#4B5563'}
           />
           <Text
-            style={[
-              styles.socialActionText,
-              activity.hasKudos && { color: Colors.primary, fontWeight: '700' },
-            ]}>
+            className={`text-xs font-medium ${
+              activity.hasKudos ? 'text-[#FC4C02] font-bold' : 'text-gray-600'
+            }`}>
             {activity.kudosCount > 0 ? `${activity.kudosCount} Kudos` : 'Kudos'}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.socialAction}
+          className="flex-row items-center gap-1.5 py-1 px-2"
           onPress={handleCardPress}
           activeOpacity={0.7}>
-          <Ionicons name="chatbubble-outline" size={17} color={Colors.textSecondary} />
-          <Text style={styles.socialActionText}>
+          <Ionicons name="chatbubble-outline" size={17} color="#4B5563" />
+          <Text className="text-xs font-medium text-gray-600">
             {activity.commentsCount > 0 ? `${activity.commentsCount} Comments` : 'Comment'}
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.socialAction} activeOpacity={0.7}>
-          <Ionicons name="share-social-outline" size={18} color={Colors.textSecondary} />
-          <Text style={styles.socialActionText}>Share</Text>
+        <TouchableOpacity className="flex-row items-center gap-1.5 py-1 px-2" activeOpacity={0.7}>
+          <Ionicons name="share-social-outline" size={18} color="#4B5563" />
+          <Text className="text-xs font-medium text-gray-600">Share</Text>
         </TouchableOpacity>
       </View>
 
       {/* Mini Comment Preview */}
       {activity.comments && activity.comments.length > 0 && (
         <TouchableOpacity
-          style={styles.commentSnippet}
+          className="mt-2 pt-2 border-t border-gray-100"
           onPress={handleCardPress}
           activeOpacity={0.8}>
-          <Text style={styles.commentAuthor}>
+          <Text className="text-xs font-bold text-gray-900">
             {activity.comments[0].athlete.displayName}:{' '}
-            <Text style={styles.commentText}>{activity.comments[0].content}</Text>
+            <Text className="font-normal text-gray-600">
+              {activity.comments[0].content}
+            </Text>
           </Text>
         </TouchableOpacity>
       )}
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  athleteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: Spacing.md,
-    backgroundColor: Colors.surface,
-  },
-  athleteMeta: {
-    justifyContent: 'center',
-  },
-  athleteName: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  subMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  timeAgo: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textMuted,
-  },
-  moreButton: {
-    padding: Spacing.xs,
-  },
-  title: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.heavy,
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  description: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.md,
-    lineHeight: 18,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.surface,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.sm,
-    marginBottom: Spacing.md,
-  },
-  badgesContainer: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.full,
-    gap: 4,
-  },
-  relativeEffortBadge: {
-    backgroundColor: '#FEF3C7',
-  },
-  badgeText: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.primary,
-    fontWeight: Typography.fontWeight.semibold,
-  },
-  mediaContainer: {
-    marginBottom: Spacing.md,
-    borderRadius: BorderRadius.md,
-    overflow: 'hidden',
-  },
-  photoScroll: {
-    flexDirection: 'row',
-  },
-  photo: {
-    width: 290,
-    height: 190,
-    borderRadius: BorderRadius.md,
-    marginRight: Spacing.sm,
-    backgroundColor: Colors.surface,
-  },
-  socialBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.borderLight,
-    paddingTop: Spacing.md,
-  },
-  socialAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: Spacing.sm,
-  },
-  socialActionText: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
-    fontWeight: Typography.fontWeight.medium,
-  },
-  commentSnippet: {
-    marginTop: Spacing.sm,
-    paddingTop: Spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.borderLight,
-  },
-  commentAuthor: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  commentText: {
-    fontWeight: Typography.fontWeight.normal,
-    color: Colors.textSecondary,
-  },
-});
-

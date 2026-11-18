@@ -1,3 +1,15 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+@import "nativewind/theme";
+
+@theme {
+  --color-primary: #FC4C02;
+  --color-primary-dark: #E34402;
+  --color-primary-light: #FFF2EB;
+  --color-surface: #F8F9FA;
+  --color-surface-hover: #F1F3F5;
+  --color-border: #E5E7EB;
+  --color-border-light: #F3F4F6;
+  --color-gold: #F59E0B;
+}
