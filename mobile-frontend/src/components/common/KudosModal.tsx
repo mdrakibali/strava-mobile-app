@@ -58,3 +58,4 @@ export const KudosModal: React.FC<KudosModalProps> = ({ visible, onClose, athlet
     </Modal>
   );
 };
+

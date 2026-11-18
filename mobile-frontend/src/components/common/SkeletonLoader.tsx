@@ -28,3 +28,4 @@ export const SkeletonCard: React.FC = () => {
     </View>
   );
 };
+

@@ -84,3 +84,4 @@
 - **TypeScript**: 0 compiler errors on `npx tsc --noEmit`. No untyped `any` usage in application logic.
 - **File Size Guidelines**: All UI screen and component files are kept strictly within 60–240 lines (hard max: 250 lines).
 - **Navigation Flows**: All 49 screens and routes are wired end-to-end with zero dead-ends.
+

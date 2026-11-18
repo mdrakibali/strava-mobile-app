@@ -73,3 +73,4 @@ export const ClubsList: React.FC<ClubsListProps> = ({ clubs, onToggleJoin }) => 
     </View>
   );
 };
+

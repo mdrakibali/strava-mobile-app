@@ -94,3 +94,4 @@ export const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, onTo
     </View>
   );
 };
+

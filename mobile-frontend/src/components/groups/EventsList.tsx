@@ -90,3 +90,4 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onToggleRsvp }) 
     </View>
   );
 };
+
