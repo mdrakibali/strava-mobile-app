@@ -116,31 +116,46 @@ export default function EventDetailScreen() {
       <View className="absolute bottom-0 left-0 right-0 bg-white p-4 border-t border-gray-200 flex-row justify-between">
         <TouchableOpacity
           onPress={() => handleRsvp('GOING')}
-          className={`flex-1 py-3.5 rounded-2xl items-center mr-2 shadow-sm ${
+          className={`flex-1 py-3.5 rounded-2xl flex-row items-center justify-center mr-2 shadow-sm ${
             rsvpStatus === 'GOING' ? 'bg-[#FC4C02]' : 'bg-gray-100'
           }`}>
-          <Text className={`text-xs font-black ${rsvpStatus === 'GOING' ? 'text-white' : 'text-gray-700'}`}>
-            ✓ I'm Going
+          <Ionicons
+            name="checkmark"
+            size={14}
+            color={rsvpStatus === 'GOING' ? '#ffffff' : '#374151'}
+          />
+          <Text className={`text-xs font-black ml-1 ${rsvpStatus === 'GOING' ? 'text-white' : 'text-gray-700'}`}>
+            Going
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => handleRsvp('MAYBE')}
-          className={`flex-1 py-3.5 rounded-2xl items-center mx-1 ${
+          className={`flex-1 py-3.5 rounded-2xl flex-row items-center justify-center mx-1 ${
             rsvpStatus === 'MAYBE' ? 'bg-[#FC4C02]' : 'bg-gray-100'
           }`}>
-          <Text className={`text-xs font-black ${rsvpStatus === 'MAYBE' ? 'text-white' : 'text-gray-700'}`}>
-            ? Maybe
+          <Ionicons
+            name="help-circle-outline"
+            size={14}
+            color={rsvpStatus === 'MAYBE' ? '#ffffff' : '#374151'}
+          />
+          <Text className={`text-xs font-black ml-1 ${rsvpStatus === 'MAYBE' ? 'text-white' : 'text-gray-700'}`}>
+            Maybe
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => handleRsvp('DECLINED')}
-          className={`flex-1 py-3.5 rounded-2xl items-center ml-2 ${
+          className={`flex-1 py-3.5 rounded-2xl flex-row items-center justify-center ml-2 ${
             rsvpStatus === 'DECLINED' ? 'bg-[#FC4C02]' : 'bg-gray-100'
           }`}>
-          <Text className={`text-xs font-black ${rsvpStatus === 'DECLINED' ? 'text-white' : 'text-gray-700'}`}>
-            ✕ Can't Go
+          <Ionicons
+            name="close"
+            size={14}
+            color={rsvpStatus === 'DECLINED' ? '#ffffff' : '#374151'}
+          />
+          <Text className={`text-xs font-black ml-1 ${rsvpStatus === 'DECLINED' ? 'text-white' : 'text-gray-700'}`}>
+            Can't Go
           </Text>
         </TouchableOpacity>
       </View>

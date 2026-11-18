@@ -146,9 +146,10 @@ export default function PrivacySettingsScreen() {
             />
           </View>
 
-          <TouchableOpacity className="bg-gray-100 p-3 rounded-lg border border-gray-200 items-center">
-            <Text className="text-xs font-semibold text-gray-700">
-              🔗 Test Spectator Web Link (Demo Token)
+          <TouchableOpacity className="bg-gray-100 p-3 rounded-lg border border-gray-200 flex-row items-center justify-center">
+            <Ionicons name="link-outline" size={14} color="#374151" />
+            <Text className="text-xs font-semibold text-gray-700 ml-1.5">
+              Test Spectator Web Link (Demo Token)
             </Text>
           </TouchableOpacity>
         </View>

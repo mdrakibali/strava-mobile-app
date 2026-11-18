@@ -94,9 +94,10 @@ export default function LoginScreen() {
           {/* Quick Demo Athlete Bypass */}
           <TouchableOpacity
             onPress={handleSubmit}
-            className="w-full py-3 bg-orange-50 border border-orange-200 rounded-2xl items-center mb-6">
-            <Text className="text-xs font-black text-[#FC4C02]">
-              ⚡ Quick Demo Athlete Login (Instant Access)
+            className="w-full py-3 bg-orange-50 border border-orange-200 rounded-2xl flex-row items-center justify-center mb-6">
+            <Ionicons name="flash" size={14} color="#FC4C02" />
+            <Text className="text-xs font-black text-[#FC4C02] ml-1.5">
+              Quick Demo Athlete Login (Instant Access)
             </Text>
           </TouchableOpacity>
 

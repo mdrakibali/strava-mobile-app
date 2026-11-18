@@ -27,9 +27,12 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onToggleRsvp }) 
               <View className="bg-orange-50 px-2 py-0.5 rounded-md">
                 <Text className="text-[10px] font-bold text-[#FC4C02]">{event.sportType}</Text>
               </View>
-              <Text className="text-xs font-bold text-gray-500">
-                👥 {event.attendeesCount} Going
-              </Text>
+              <View className="flex-row items-center">
+                <Ionicons name="people-outline" size={13} color="#6B7280" />
+                <Text className="text-xs font-bold text-gray-500 ml-1">
+                  {event.attendeesCount} Going
+                </Text>
+              </View>
             </View>
 
             <Text className="text-base font-black text-gray-900 mb-1 leading-5">
@@ -73,7 +76,7 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onToggleRsvp }) 
                   className={`text-xs font-bold ${
                     isGoing ? 'text-gray-700' : 'text-white'
                   }`}>
-                  {isGoing ? '✓ You Are Going' : 'RSVP Going'}
+                  {isGoing ? 'Attending' : 'RSVP Going'}
                 </Text>
               </TouchableOpacity>
             </View>

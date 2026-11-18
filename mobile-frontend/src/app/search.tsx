@@ -41,7 +41,10 @@ export default function SearchScreen() {
       <View className="flex-1">
         <Text className="text-sm font-bold text-gray-900">{item.displayName}</Text>
         <Text className="text-xs text-[#FC4C02] mt-0.5">@{item.username}</Text>
-        <Text className="text-[10px] text-gray-400 mt-0.5">📍 {item.city}, {item.country}</Text>
+        <View className="flex-row items-center mt-0.5">
+          <Ionicons name="location-outline" size={11} color="#9CA3AF" />
+          <Text className="text-[10px] text-gray-400 ml-0.5">{item.city}, {item.country}</Text>
+        </View>
         {item.bio && <Text className="text-xs text-gray-600 mt-1" numberOfLines={1}>{item.bio}</Text>}
       </View>
 

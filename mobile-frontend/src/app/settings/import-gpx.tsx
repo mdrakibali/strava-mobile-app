@@ -32,7 +32,7 @@ export default function ImportGpxScreen() {
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900 ml-3">Import Activity File 📂</Text>
+        <Text className="text-base font-black text-gray-900 ml-3">Import Activity File</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} className="p-4" contentContainerClassName="pb-24">

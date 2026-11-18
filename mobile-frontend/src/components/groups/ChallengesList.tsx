@@ -38,9 +38,12 @@ export const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, onTo
                   <View className="bg-gray-100 px-2 py-0.5 rounded-full mr-2">
                     <Text className="text-[10px] font-bold text-gray-600">{challenge.sportType}</Text>
                   </View>
-                  <Text className="text-xs text-orange-600 font-semibold">
-                    ⏱ {challenge.daysRemaining} days left
-                  </Text>
+                  <View className="flex-row items-center">
+                    <Ionicons name="time-outline" size={13} color="#EA580C" />
+                    <Text className="text-xs text-orange-600 font-semibold ml-1">
+                      {challenge.daysRemaining} days left
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>

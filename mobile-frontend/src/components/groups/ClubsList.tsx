@@ -34,9 +34,12 @@ export const ClubsList: React.FC<ClubsListProps> = ({ clubs, onToggleJoin }) => 
                   <Text className="text-[10px] font-bold text-[#FC4C02]">{club.sportType}</Text>
                 </View>
               </View>
-              <Text className="text-xs text-gray-500 mt-0.5">
-                📍 {club.city} · {club.memberCount.toLocaleString()} Members
-              </Text>
+              <View className="flex-row items-center mt-0.5">
+                <Ionicons name="location-outline" size={12} color="#9CA3AF" />
+                <Text className="text-xs text-gray-500 ml-1">
+                  {club.city} · {club.memberCount.toLocaleString()} Members
+                </Text>
+              </View>
             </View>
           </View>
 

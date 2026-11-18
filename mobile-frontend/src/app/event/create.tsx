@@ -36,7 +36,7 @@ export default function CreateEventScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text className="text-2xl font-black text-gray-900 mb-2">Plan a Group Meetup 📅</Text>
+        <Text className="text-2xl font-black text-gray-900 mb-2">Plan a Group Meetup</Text>
         <Text className="text-xs text-gray-500 mb-6">
           Rally your club or friends for an organized group run, social cycling spin, or weekend trail adventure.
         </Text>

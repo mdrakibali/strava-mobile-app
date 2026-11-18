@@ -22,7 +22,7 @@ export default function GearListScreen() {
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900">My Gear 👟🚴</Text>
+        <Text className="text-base font-black text-gray-900">My Gear</Text>
         <TouchableOpacity onPress={() => router.push('/gear/add')} className="p-1">
           <Ionicons name="add" size={24} color="#FC4C02" />
         </TouchableOpacity>
