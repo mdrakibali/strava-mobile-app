@@ -1,9 +1,34 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RouteMapPreview } from '../../components/common/RouteMapPreview';
+import { StravaMapView } from '../../components/map/StravaMapView';
+
+const generateGeographicLoop = (
+  centerLon: number,
+  centerLat: number,
+  distanceKm: number,
+  heading: string
+): [number, number][] => {
+  const points: [number, number][] = [];
+  const radius = (distanceKm / (2 * Math.PI)) * 0.009;
+  const offsets: Record<string, number> = {
+    North: Math.PI / 2,
+    East: 0,
+    South: -Math.PI / 2,
+    West: Math.PI,
+  };
+  const baseAngle = offsets[heading] || 0;
+  const steps = 16;
+  for (let i = 0; i <= steps; i++) {
+    const theta = baseAngle + (i / steps) * 2 * Math.PI;
+    const lon = centerLon + radius * Math.cos(theta) * 1.15;
+    const lat = centerLat + radius * Math.sin(theta);
+    points.push([+lon.toFixed(5), +lat.toFixed(5)]);
+  }
+  return points;
+};
 
 export default function RouteBuilderScreen() {
   const router = useRouter();
@@ -11,11 +36,30 @@ export default function RouteBuilderScreen() {
   const [routeName, setRouteName] = useState('My Custom Loop');
   const [targetDistanceKm, setTargetDistanceKm] = useState(10);
   const [heading, setHeading] = useState<'North' | 'East' | 'South' | 'West'>('North');
-  const [surfacePreference, setSurfacePreference] = useState<'Paved' | 'Gravel' | 'Any'>('Paved');
-  const [waypointCount, setWaypointCount] = useState(4);
+  const [manualPoints, setManualPoints] = useState<[number, number][]>([
+    [90.4125, 23.7745],
+    [90.418, 23.779],
+    [90.422, 23.773],
+  ]);
+
+  const centerLon = 90.4125;
+  const centerLat = 23.7745;
+
+  const activeRouteCoords = useMemo(() => {
+    if (mode === 'loop') {
+      return generateGeographicLoop(centerLon, centerLat, targetDistanceKm, heading);
+    }
+    return manualPoints;
+  }, [mode, targetDistanceKm, heading, manualPoints]);
 
   const estimatedClimb = Math.round(targetDistanceKm * 6.5);
   const estimatedTimeMins = Math.round(targetDistanceKm * 5.2);
+
+  const handleMapTap = (coord: [number, number]) => {
+    if (mode === 'manual') {
+      setManualPoints((prev) => [...prev, coord]);
+    }
+  };
 
   const handleSaveRoute = () => {
     alert(`Route "${routeName}" (${targetDistanceKm} km) saved to your routes!`);
@@ -23,157 +67,124 @@ export default function RouteBuilderScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+    <SafeAreaView className="flex-1 bg-stone-900 justify-between">
+      {/* Top Header */}
+      <View className="flex-row items-center justify-between px-4 py-3 bg-stone-900 border-b border-stone-800 z-30">
         <TouchableOpacity onPress={() => router.back()} className="p-1">
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900">Route Builder 🗺️</Text>
+        <Text className="text-base font-black text-white">Route Builder 🗺️</Text>
         <TouchableOpacity onPress={handleSaveRoute} className="p-1">
           <Text className="text-sm font-black text-[#FC4C02]">Save</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-24">
-        {/* Interactive Map Preview */}
-        <View className="p-4 bg-white border-b border-gray-200">
-          <RouteMapPreview height={220} />
-          <View className="flex-row justify-between items-center mt-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
-            <View>
-              <Text className="text-[10px] uppercase font-bold text-gray-400">Total Distance</Text>
-              <Text className="text-lg font-black text-gray-900">{targetDistanceKm}.0 km</Text>
-            </View>
-            <View>
-              <Text className="text-[10px] uppercase font-bold text-gray-400">Est. Climb</Text>
-              <Text className="text-lg font-black text-gray-900">+{estimatedClimb} m</Text>
-            </View>
-            <View>
-              <Text className="text-[10px] uppercase font-bold text-gray-400">Est. Duration</Text>
-              <Text className="text-lg font-black text-gray-900">{estimatedTimeMins} min</Text>
-            </View>
+      {/* Real Full-Screen MapLibre Map with Route Geometry */}
+      <View className="flex-1 relative">
+        <StravaMapView
+          routeCoordinates={activeRouteCoords}
+          onMapPress={handleMapTap}
+          showControls={true}
+          showUserLocation={true}
+          className="w-full h-full">
+          {/* Floating Telemetry Badge */}
+          <View className="absolute top-4 left-4 bg-stone-900/95 rounded-2xl p-3 border border-stone-800 shadow-xl z-20">
+            <Text className="text-[10px] uppercase font-bold text-gray-400">Total Route</Text>
+            <Text className="text-xl font-black text-white">{targetDistanceKm}.0 km</Text>
+            <Text className="text-[10px] font-semibold text-[#FC4C02]">
+              +{estimatedClimb}m climb · {estimatedTimeMins} min est.
+            </Text>
           </View>
-        </View>
+        </StravaMapView>
+      </View>
+
+      {/* Bottom Route Config Drawer */}
+      <View className="bg-white rounded-t-3xl p-5 shadow-2xl border-t border-gray-100 z-30">
+        <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-3" />
 
         {/* Route Name Input */}
-        <View className="bg-white p-4 border-b border-gray-200 mt-3">
-          <Text className="text-xs font-bold text-gray-600 mb-1">Route Name</Text>
-          <TextInput
-            value={routeName}
-            onChangeText={setRouteName}
-            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-900"
-          />
-        </View>
+        <TextInput
+          value={routeName}
+          onChangeText={setRouteName}
+          className="bg-gray-100 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-900 mb-3"
+          placeholder="Route Name"
+        />
 
         {/* Mode Selector */}
-        <View className="flex-row bg-white px-4 py-3 border-b border-gray-200 mt-3">
+        <View className="flex-row bg-gray-100 p-1 rounded-xl mb-3">
           <TouchableOpacity
             onPress={() => setMode('loop')}
-            className={`flex-1 py-2.5 items-center rounded-xl mr-2 ${
-              mode === 'loop' ? 'bg-[#FC4C02]' : 'bg-gray-100'
-            }`}>
+            className={`flex-1 py-2 items-center rounded-lg ${mode === 'loop' ? 'bg-[#FC4C02]' : ''}`}>
             <Text className={`text-xs font-black ${mode === 'loop' ? 'text-white' : 'text-gray-700'}`}>
-              🔄 Instant Loop Generator
+              🔄 Loop Generator
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setMode('manual')}
-            className={`flex-1 py-2.5 items-center rounded-xl ml-2 ${
-              mode === 'manual' ? 'bg-[#FC4C02]' : 'bg-gray-100'
-            }`}>
+            className={`flex-1 py-2 items-center rounded-lg ${mode === 'manual' ? 'bg-[#FC4C02]' : ''}`}>
             <Text className={`text-xs font-black ${mode === 'manual' ? 'text-white' : 'text-gray-700'}`}>
-              📍 Custom Waypoints ({waypointCount})
+              📍 Tap to Place ({manualPoints.length} pts)
             </Text>
           </TouchableOpacity>
         </View>
 
         {mode === 'loop' ? (
-          <View className="bg-white p-4 border-b border-gray-200 mt-3 space-y-4">
-            <Text className="text-xs font-bold text-gray-600 mb-2">Target Loop Distance</Text>
-            <View className="flex-row justify-between mb-4">
+          <View>
+            {/* Distance Pills */}
+            <View className="flex-row justify-between mb-3">
               {[5, 10, 15, 21, 42].map((km) => (
                 <TouchableOpacity
                   key={km}
                   onPress={() => setTargetDistanceKm(km)}
-                  className={`px-4 py-2 rounded-xl border ${
+                  className={`px-3.5 py-1.5 rounded-xl border ${
                     targetDistanceKm === km
                       ? 'border-[#FC4C02] bg-[#FC4C02]'
                       : 'border-gray-200 bg-gray-50'
                   }`}>
                   <Text className={`text-xs font-bold ${targetDistanceKm === km ? 'text-white' : 'text-gray-700'}`}>
-                    {km} km
+                    {km}k
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text className="text-xs font-bold text-gray-600 mb-2">Heading Direction</Text>
-            <View className="flex-row justify-between mb-4">
+            {/* Heading Selector */}
+            <View className="flex-row justify-between mb-3">
               {(['North', 'East', 'South', 'West'] as const).map((dir) => (
                 <TouchableOpacity
                   key={dir}
                   onPress={() => setHeading(dir)}
-                  className={`flex-1 py-2 items-center mx-1 rounded-xl border ${
+                  className={`flex-1 py-1.5 items-center mx-1 rounded-xl border ${
                     heading === dir
-                      ? 'border-[#FC4C02] bg-[#FC4C02]'
+                      ? 'border-[#FC4C02] bg-orange-50'
                       : 'border-gray-200 bg-gray-50'
                   }`}>
-                  <Text className={`text-xs font-bold ${heading === dir ? 'text-white' : 'text-gray-700'}`}>
+                  <Text className={`text-xs font-bold ${heading === dir ? 'text-[#FC4C02]' : 'text-gray-700'}`}>
                     {dir}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text className="text-xs font-bold text-gray-600 mb-2">Surface Preference</Text>
-            <View className="flex-row justify-between">
-              {(['Paved', 'Gravel', 'Any'] as const).map((surf) => (
-                <TouchableOpacity
-                  key={surf}
-                  onPress={() => setSurfacePreference(surf)}
-                  className={`flex-1 py-2 items-center mx-1 rounded-xl border ${
-                    surfacePreference === surf
-                      ? 'border-[#FC4C02] bg-[#FC4C02]'
-                      : 'border-gray-200 bg-gray-50'
-                  }`}>
-                  <Text className={`text-xs font-bold ${surfacePreference === surf ? 'text-white' : 'text-gray-700'}`}>
-                    {surf}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
         ) : (
-          <View className="bg-white p-4 border-b border-gray-200 mt-3">
-            <Text className="text-sm font-black text-gray-900 mb-2">Waypoint Path Editor</Text>
-            <Text className="text-xs text-gray-500 mb-4">
-              Tap anywhere on the map to add road and trail junctions. The router auto-snaps to OSM footpaths.
+          <View className="flex-row justify-between items-center mb-3">
+            <Text className="text-xs font-semibold text-gray-500">
+              Tap anywhere on map to add waypoints.
             </Text>
-            <View className="flex-row justify-between">
-              <TouchableOpacity
-                onPress={() => setWaypointCount(waypointCount + 1)}
-                className="flex-1 py-3 bg-orange-50 rounded-xl items-center mr-2 border border-orange-200">
-                <Text className="text-xs font-bold text-[#FC4C02]">+ Add Next Waypoint</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setWaypointCount(Math.max(2, waypointCount - 1))}
-                className="py-3 px-4 bg-gray-100 rounded-xl items-center">
-                <Ionicons name="trash-outline" size={18} color="#EF4444" />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              onPress={() => setManualPoints([manualPoints[0]])}
+              className="px-3 py-1 bg-red-50 rounded-lg">
+              <Text className="text-xs font-bold text-red-600">Clear</Text>
+            </TouchableOpacity>
           </View>
         )}
-      </ScrollView>
 
-      {/* Action Footer */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white p-4 border-t border-gray-200">
         <TouchableOpacity
           onPress={handleSaveRoute}
-          className="w-full py-4 bg-[#FC4C02] rounded-2xl items-center shadow-md">
-          <Text className="text-base font-black text-white">Save & Follow Route</Text>
+          className="w-full py-3.5 bg-[#FC4C02] rounded-2xl items-center shadow-md">
+          <Text className="text-base font-black text-white">Save Route</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
-

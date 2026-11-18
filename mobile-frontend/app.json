@@ -25,6 +25,13 @@
     },
     "plugins": [
       "expo-router",
+      "@maplibre/maplibre-react-native",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Open Strava to use your location to record athletic routes, distance, pace, and live Beacon safety tracking in the background."
+        }
+      ],
       [
         "expo-splash-screen",
         {

@@ -99,15 +99,30 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
         )}
       </TouchableOpacity>
 
-      {/* Metrics Row */}
+      {/* Metrics Grid — Clean Strava-style Typography */}
       <TouchableOpacity
-        className="flex-row justify-between bg-gray-50 p-3 rounded-lg mb-3"
+        className="flex-row justify-between py-2.5 mb-3 border-y border-gray-100"
         onPress={handleCardPress}
         activeOpacity={0.8}>
-        <StatBox label="Distance" value={activity.distanceFormatted} />
-        <StatBox label="Pace / Speed" value={activity.paceFormatted} />
-        <StatBox label="Time" value={activity.movingTimeFormatted} />
-        <StatBox label="Elev Gain" value={activity.elevationFormatted} />
+        <View>
+          <Text className="text-[10px] uppercase font-bold text-gray-400">Distance</Text>
+          <Text className="text-xl font-black text-gray-900">{activity.distanceFormatted}</Text>
+        </View>
+
+        <View>
+          <Text className="text-[10px] uppercase font-bold text-gray-400">Pace</Text>
+          <Text className="text-xl font-black text-gray-900">{activity.paceFormatted}</Text>
+        </View>
+
+        <View>
+          <Text className="text-[10px] uppercase font-bold text-gray-400">Time</Text>
+          <Text className="text-xl font-black text-gray-900">{activity.movingTimeFormatted}</Text>
+        </View>
+
+        <View>
+          <Text className="text-[10px] uppercase font-bold text-gray-400">Elev</Text>
+          <Text className="text-xl font-black text-gray-900">{activity.elevationFormatted}</Text>
+        </View>
       </TouchableOpacity>
 
       {/* Advanced Algorithmic Parity Badges (GAP & Relative Effort) */}

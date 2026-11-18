@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { ElevationChart } from '../../components/common/ElevationChart';
-import { RouteMapPreview } from '../../components/common/RouteMapPreview';
+import { StravaMapView } from '../../components/map/StravaMapView';
 import { useApp } from '../../context/AppContext';
 
 export default function SegmentDetailScreen() {
@@ -18,6 +18,7 @@ export default function SegmentDetailScreen() {
   const router = useRouter();
   const { segments } = useApp();
   const [filter, setFilter] = useState<'OVERALL' | 'MEN' | 'WOMEN'>('OVERALL');
+  const [isStarred, setIsStarred] = useState(false);
 
   const segment = segments.find((s) => s.id === id) || segments[0];
 
@@ -29,20 +30,41 @@ export default function SegmentDetailScreen() {
     { rank: 5, name: 'Sophie Chen', time: '3:52', speed: '18.6 km/h', date: 'Nov 15', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100' },
   ];
 
+  const segCoords = segment.polylinePoints.map(
+    (p) => [p.longitude, p.latitude] as [number, number]
+  );
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
-      <View className="flex-row justify-between items-center bg-white px-3 py-2 border-b border-gray-200">
+      <View className="flex-row justify-between items-center bg-white px-4 py-3 border-b border-gray-200">
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-sm font-bold text-gray-900">Segment Details</Text>
-        <TouchableOpacity className="p-1">
-          <Ionicons name="star-outline" size={22} color="#111827" />
+        <Text className="text-base font-black text-gray-900">Segment Details</Text>
+        <TouchableOpacity onPress={() => setIsStarred(!isStarred)} className="p-1">
+          <Ionicons
+            name={isStarred ? 'star' : 'star-outline'}
+            size={22}
+            color={isStarred ? '#FC4C02' : '#111827'}
+          />
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        className="flex-1"
+        contentContainerClassName="pb-20">
+        {/* Real Full-Featured Segment Map */}
+        <View className="h-56 w-full border-b border-gray-200">
+          <StravaMapView
+            routeCoordinates={segCoords}
+            showControls={false}
+            showUserLocation={false}
+            className="w-full h-full"
+          />
+        </View>
+
         {/* Title & Stats */}
         <View className="bg-white p-4 border-b border-gray-200">
           <Text className="text-xl font-black text-gray-900 mb-1">{segment.name}</Text>
@@ -50,7 +72,7 @@ export default function SegmentDetailScreen() {
             {segment.sportType} Segment · {(segment.distanceMeters / 1000).toFixed(2)} km
           </Text>
 
-          <View className="flex-row justify-between bg-gray-50 p-3 rounded-lg">
+          <View className="flex-row justify-between bg-gray-50 p-3 rounded-xl border border-gray-100">
             <View className="items-center flex-1">
               <Text className="text-[10px] text-gray-400 uppercase font-bold">AVG GRADE</Text>
               <Text className="text-base font-black text-gray-900 mt-0.5">{segment.averageGradePercent}%</Text>
@@ -60,86 +82,66 @@ export default function SegmentDetailScreen() {
               <Text className="text-base font-black text-gray-900 mt-0.5">+{segment.elevationGainMeters} m</Text>
             </View>
             <View className="items-center flex-1">
-              <Text className="text-[10px] text-gray-400 uppercase font-bold">YOUR RANK</Text>
-              <Text className="text-base font-black text-[#FC4C02] mt-0.5">#{segment.rank || 4}</Text>
+              <Text className="text-[10px] text-gray-400 uppercase font-bold">YOUR PR</Text>
+              <Text className="text-base font-black text-[#FC4C02] mt-0.5">{segment.userPrTimeFormatted || '3:45'}</Text>
             </View>
           </View>
         </View>
 
-        {/* Route & Elevation Preview */}
-        <View className="bg-white p-4 border-y border-gray-200 mt-2">
-          <RouteMapPreview points={segment.polylinePoints} height={160} />
-          <View className="mt-2">
-            <ElevationChart elevations={[10, 18, 32, 45, 62, 58, 40]} height={70} />
-          </View>
+        {/* Elevation Profile */}
+        <View className="bg-white mt-3 p-4 border-y border-gray-200">
+          <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+            Segment Climb Profile
+          </Text>
+          <ElevationChart />
         </View>
 
-        {/* Unfiltered Leaderboard Section */}
-        <View className="bg-white p-4 border-y border-gray-200 mt-2">
+        {/* Leaderboard Section */}
+        <View className="bg-white mt-3 p-4 border-y border-gray-200">
           <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-sm font-bold text-gray-900 uppercase tracking-wider">
-              Segment Leaderboard (Full & Free)
-            </Text>
-          </View>
-
-          {/* Filter Bar */}
-          <View className="flex-row bg-gray-100 p-1 rounded-lg mb-3">
-            {(['OVERALL', 'MEN', 'WOMEN'] as const).map((f) => (
-              <TouchableOpacity
-                key={f}
-                className={`flex-1 py-1.5 items-center rounded-md ${
-                  filter === f ? 'bg-white shadow-sm' : ''
-                }`}
-                onPress={() => setFilter(f)}>
-                <Text
-                  className={`text-xs font-semibold ${
-                    filter === f ? 'text-[#FC4C02]' : 'text-gray-600'
-                  }`}>
-                  {f === 'OVERALL' ? 'Overall' : f === 'MEN' ? 'Men' : 'Women'}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            <Text className="text-sm font-black text-gray-900">Leaderboard</Text>
+            <View className="flex-row bg-gray-100 p-0.5 rounded-lg">
+              {(['OVERALL', 'MEN', 'WOMEN'] as const).map((tab) => (
+                <TouchableOpacity
+                  key={tab}
+                  onPress={() => setFilter(tab)}
+                  className={`px-2.5 py-1 rounded-md ${filter === tab ? 'bg-white shadow-sm' : ''}`}>
+                  <Text className={`text-[10px] font-bold ${filter === tab ? 'text-gray-900' : 'text-gray-500'}`}>
+                    {tab}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           {/* Leaderboard Rows */}
-          <View className="gap-2">
-            {mockLeaderboard.map((row) => (
-              <View
-                key={row.rank}
-                className={`flex-row items-center p-2.5 rounded-lg border ${
-                  row.isYou
-                    ? 'bg-[#FFF2EB] border-[#FC4C02]'
-                    : 'bg-white border-gray-100'
-                }`}>
+          {mockLeaderboard.map((item) => (
+            <View
+              key={item.rank}
+              className={`flex-row items-center justify-between py-2.5 border-b border-gray-50 ${
+                item.isYou ? 'bg-orange-50/50 px-2 rounded-xl my-0.5' : ''
+              }`}>
+              <View className="flex-row items-center flex-1 mr-3">
                 <Text
-                  className={`w-6 font-black text-center text-xs ${
-                    row.rank === 1
-                      ? 'text-amber-500'
-                      : row.rank === 2
-                      ? 'text-gray-400'
-                      : row.rank === 3
-                      ? 'text-amber-700'
-                      : 'text-gray-600'
+                  className={`text-xs font-black w-6 ${
+                    item.rank === 1 ? 'text-amber-500' : item.isYou ? 'text-[#FC4C02]' : 'text-gray-400'
                   }`}>
-                  {row.rank === 1 ? '👑' : `#${row.rank}`}
+                  {item.rank === 1 ? '👑 1' : `#${item.rank}`}
                 </Text>
-
-                <Image source={{ uri: row.avatar }} className="w-8 h-8 rounded-full mx-2 bg-gray-100" />
-
+                <Image source={{ uri: item.avatar }} className="w-8 h-8 rounded-full mr-2.5 bg-gray-100" />
                 <View className="flex-1">
-                  <Text className={`text-xs font-bold ${row.isYou ? 'text-[#FC4C02]' : 'text-gray-900'}`}>
-                    {row.name}
+                  <Text className={`text-xs font-bold ${item.isYou ? 'text-[#FC4C02]' : 'text-gray-900'}`}>
+                    {item.name}
                   </Text>
-                  <Text className="text-[10px] text-gray-400">{row.speed} · {row.date}</Text>
+                  <Text className="text-[10px] text-gray-400">{item.speed} · {item.date}</Text>
                 </View>
-
-                <Text className="text-sm font-black text-gray-900 font-mono">{row.time}</Text>
               </View>
-            ))}
-          </View>
+
+              <Text className="text-sm font-black text-gray-900">{item.time}</Text>
+            </View>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
