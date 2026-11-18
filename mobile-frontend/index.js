@@ -45,3 +45,4 @@ if (typeof globalThis !== 'undefined') {
 }
 
 import 'expo-router/entry';
+
