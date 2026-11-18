@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
+import { useGpsRecorder, ActiveRecordingState } from '../hooks/use-gps-recorder';
 import {
   CURRENT_USER,
   MOCK_ACTIVITIES,
@@ -19,18 +20,7 @@ import {
   SportType,
 } from '../types';
 
-export interface ActiveRecordingState {
-  isRecording: boolean;
-  isPaused: boolean;
-  sportType: SportType;
-  elapsedSeconds: number;
-  movingSeconds: number;
-  distanceMeters: number;
-  currentSpeedMps: number;
-  elevationGainMeters: number;
-  currentHeartRate: number;
-  routeCoordinates: { latitude: number; longitude: number }[];
-}
+export { ActiveRecordingState };
 
 interface AppContextType {
   currentUser: Athlete;
@@ -59,7 +49,11 @@ interface AppContextType {
   resumeRecording: () => void;
   discardRecording: () => void;
   finishRecording: () => ActiveRecordingState;
-  saveNewActivity: (title: string, description: string, visibility: 'PUBLIC' | 'FOLLOWERS_ONLY' | 'ONLY_ME') => void;
+  saveNewActivity: (
+    title: string,
+    description: string,
+    visibility: 'PUBLIC' | 'FOLLOWERS_ONLY' | 'ONLY_ME'
+  ) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -73,48 +67,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [segments] = useState<Segment[]>(MOCK_SEGMENTS);
   const [notifications, setNotifications] = useState<NotificationItem[]>(MOCK_NOTIFICATIONS);
 
-  // Active recording state
-  const [activeRecording, setActiveRecording] = useState<ActiveRecordingState>({
-    isRecording: false,
-    isPaused: false,
-    sportType: 'Run',
-    elapsedSeconds: 0,
-    movingSeconds: 0,
-    distanceMeters: 0,
-    currentSpeedMps: 0,
-    elevationGainMeters: 0,
-    currentHeartRate: 0,
-    routeCoordinates: [],
-  });
+  const {
+    activeRecording,
+    startRecording,
+    pauseRecording,
+    resumeRecording,
+    discardRecording,
+    finishRecording,
+  } = useGpsRecorder();
 
-  // Ticking timer for active recording
-  useEffect(() => {
-    let interval: any;
-    if (activeRecording.isRecording && !activeRecording.isPaused) {
-      interval = setInterval(() => {
-        setActiveRecording((prev) => {
-          const speed = prev.sportType === 'Ride' ? 7.8 + Math.random() * 2 : 3.2 + Math.random() * 0.4;
-          const addDist = speed;
-          const newDist = prev.distanceMeters + addDist;
-          const newElev = prev.elevationGainMeters + (Math.random() > 0.8 ? 1 : 0);
-          const newHr = prev.sportType === 'Ride' ? 142 + Math.floor(Math.random() * 10) : 158 + Math.floor(Math.random() * 8);
-
-          return {
-            ...prev,
-            elapsedSeconds: prev.elapsedSeconds + 1,
-            movingSeconds: prev.movingSeconds + 1,
-            distanceMeters: newDist,
-            currentSpeedMps: speed,
-            elevationGainMeters: newElev,
-            currentHeartRate: newHr,
-          };
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [activeRecording.isRecording, activeRecording.isPaused]);
-
-  // Social Kudos toggle
   const toggleKudos = (activityId: string) => {
     setActivities((prev) =>
       prev.map((act) => {
@@ -131,7 +92,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
-  // Add Comment
   const addComment = (activityId: string, content: string) => {
     if (!content.trim()) return;
     setActivities((prev) =>
@@ -141,14 +101,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             id: `c_${Date.now()}`,
             activityId,
             athlete: currentUser,
-            content: content.trim(),
+            content,
             createdAt: 'Just now',
           };
-          const updatedComments = act.comments ? [...act.comments, newComment] : [newComment];
           return {
             ...act,
             commentsCount: act.commentsCount + 1,
-            comments: updatedComments,
+            comments: [...(act.comments || []), newComment],
           };
         }
         return act;
@@ -156,21 +115,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
-  // Follow/Unfollow athlete
+  const toggleJoinClub = (clubId: string) => {
+    setClubs((prev) =>
+      prev.map((c) =>
+        c.id === clubId
+          ? {
+              ...c,
+              isMember: !c.isMember,
+              memberCount: c.isMember ? c.memberCount - 1 : c.memberCount + 1,
+            }
+          : c
+      )
+    );
+  };
+
+  const toggleJoinChallenge = (challengeId: string) => {
+    setChallenges((prev) =>
+      prev.map((ch) =>
+        ch.id === challengeId ? { ...ch, isJoined: !ch.isJoined } : ch
+      )
+    );
+  };
+
+  const toggleRsvp = (eventId: string, status: 'GOING' | 'MAYBE' | 'DECLINED') => {
+    setEvents((prev) =>
+      prev.map((ev) =>
+        ev.id === eventId
+          ? {
+              ...ev,
+              rsvpStatus: status,
+              attendeesCount: status === 'GOING' ? ev.attendeesCount + 1 : ev.attendeesCount,
+            }
+          : ev
+      )
+    );
+  };
+
   const toggleFollowAthlete = (athleteId: string) => {
     setActivities((prev) =>
       prev.map((act) => {
         if (act.athlete.id === athleteId) {
-          const nextFollow = !act.athlete.isFollowing;
           return {
             ...act,
-            athlete: {
-              ...act.athlete,
-              isFollowing: nextFollow,
-              followersCount: nextFollow
-                ? act.athlete.followersCount + 1
-                : Math.max(0, act.athlete.followersCount - 1),
-            },
+            athlete: { ...act.athlete, isFollowing: !act.athlete.isFollowing },
           };
         }
         return act;
@@ -178,60 +165,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
-  // Club Join/Leave
-  const toggleJoinClub = (clubId: string) => {
-    setClubs((prev) =>
-      prev.map((club) => {
-        if (club.id === clubId) {
-          const nextMember = !club.isMember;
-          return {
-            ...club,
-            isMember: nextMember,
-            memberCount: nextMember ? club.memberCount + 1 : Math.max(0, club.memberCount - 1),
-          };
-        }
-        return club;
-      })
-    );
-  };
-
-  // Challenge Join/Leave
-  const toggleJoinChallenge = (challengeId: string) => {
-    setChallenges((prev) =>
-      prev.map((ch) => {
-        if (ch.id === challengeId) {
-          return {
-            ...ch,
-            isJoined: !ch.isJoined,
-          };
-        }
-        return ch;
-      })
-    );
-  };
-
-  // Event RSVP
-  const toggleRsvp = (eventId: string, status: 'GOING' | 'MAYBE' | 'DECLINED') => {
-    setEvents((prev) =>
-      prev.map((ev) => {
-        if (ev.id === eventId) {
-          const wasGoing = ev.rsvpStatus === 'GOING';
-          const isNowGoing = status === 'GOING';
-          let newCount = ev.attendeesCount;
-          if (!wasGoing && isNowGoing) newCount += 1;
-          if (wasGoing && !isNowGoing) newCount = Math.max(0, newCount - 1);
-          return {
-            ...ev,
-            rsvpStatus: ev.rsvpStatus === status ? null : status,
-            attendeesCount: newCount,
-          };
-        }
-        return ev;
-      })
-    );
-  };
-
-  // Notification actions
   const markNotificationAsRead = (notificationId: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n))
@@ -240,59 +173,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const markAllNotificationsAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-  };
-
-  const unreadNotificationCount = notifications.filter((n) => !n.isRead).length;
-
-  // Recording controls
-  const startRecording = (sport: SportType = 'Run') => {
-    setActiveRecording({
-      isRecording: true,
-      isPaused: false,
-      sportType: sport,
-      elapsedSeconds: 0,
-      movingSeconds: 0,
-      distanceMeters: 0,
-      currentSpeedMps: sport === 'Ride' ? 8.2 : 3.4,
-      elevationGainMeters: 0,
-      currentHeartRate: sport === 'Ride' ? 144 : 155,
-      routeCoordinates: [
-        { latitude: 23.771, longitude: 90.412 },
-        { latitude: 23.773, longitude: 90.415 },
-      ],
-    });
-  };
-
-  const pauseRecording = () => {
-    setActiveRecording((prev) => ({ ...prev, isPaused: true, currentSpeedMps: 0 }));
-  };
-
-  const resumeRecording = () => {
-    setActiveRecording((prev) => ({
-      ...prev,
-      isPaused: false,
-      currentSpeedMps: prev.sportType === 'Ride' ? 8.0 : 3.3,
-    }));
-  };
-
-  const discardRecording = () => {
-    setActiveRecording({
-      isRecording: false,
-      isPaused: false,
-      sportType: 'Run',
-      elapsedSeconds: 0,
-      movingSeconds: 0,
-      distanceMeters: 0,
-      currentSpeedMps: 0,
-      elevationGainMeters: 0,
-      currentHeartRate: 0,
-      routeCoordinates: [],
-    });
-  };
-
-  const finishRecording = () => {
-    pauseRecording();
-    return activeRecording;
   };
 
   const saveNewActivity = (
@@ -304,14 +184,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const mins = Math.floor(activeRecording.movingSeconds / 60);
     const secs = activeRecording.movingSeconds % 60;
     const timeFormatted = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-    const paceSeconds = activeRecording.distanceMeters > 0
-      ? Math.round(activeRecording.movingSeconds / (activeRecording.distanceMeters / 1000))
-      : 300;
+    const paceSeconds =
+      activeRecording.distanceMeters > 0
+        ? Math.round(activeRecording.movingSeconds / (activeRecording.distanceMeters / 1000))
+        : 300;
     const paceMin = Math.floor(paceSeconds / 60);
     const paceSec = paceSeconds % 60;
-    const paceFormatted = activeRecording.sportType === 'Ride'
-      ? `${(activeRecording.currentSpeedMps * 3.6).toFixed(1)} km/h`
-      : `${paceMin}:${paceSec < 10 ? '0' : ''}${paceSec} /km`;
+    const paceFormatted =
+      activeRecording.sportType === 'Ride'
+        ? `${(activeRecording.currentSpeedMps * 3.6).toFixed(1)} km/h`
+        : `${paceMin}:${paceSec < 10 ? '0' : ''}${paceSec} /km`;
 
     const newActivity: Activity = {
       id: `act_${Date.now()}`,
@@ -352,6 +234,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     discardRecording();
   };
 
+  const unreadNotificationCount = notifications.filter((n) => !n.isRead).length;
+
   return (
     <AppContext.Provider
       value={{
@@ -391,4 +275,3 @@ export const useApp = () => {
   }
   return context;
 };
-
