@@ -59,9 +59,7 @@ export const RouteMapPreview: React.FC<RouteMapPreviewProps> = ({
   }
 
   return (
-    <View
-      className="w-full rounded-xl overflow-hidden bg-gray-50 border border-gray-200"
-      style={{ height }}>
+    <View className="w-full h-40 rounded-xl overflow-hidden bg-gray-50 border border-gray-200">
       <Svg width="100%" height={height} viewBox={`0 0 ${svgWidth} ${svgHeight}`}>
         <Defs>
           <LinearGradient id="routeGradient" x1="0" y1="0" x2="1" y2="1">

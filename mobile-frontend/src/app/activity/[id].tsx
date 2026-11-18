@@ -54,11 +54,12 @@ export default function ActivityDetailScreen() {
       </View>
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 80 }}>
+          className="flex-1"
+          contentContainerClassName="pb-20">
           {/* Title & Description */}
           <View className="bg-white p-4 border-b border-gray-200">
             <Text className="text-xl font-black text-gray-900 mb-1">{activity.title}</Text>

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   FlatList,
@@ -12,6 +13,7 @@ import { useApp } from '../../context/AppContext';
 import { Challenge, Club, GroupEvent } from '../../types';
 
 export default function GroupsScreen() {
+  const router = useRouter();
   const {
     clubs,
     challenges,
@@ -26,23 +28,29 @@ export default function GroupsScreen() {
   // Render Club Item
   const renderClubItem = ({ item }: { item: Club }) => (
     <View className="bg-white rounded-xl mb-3 border border-gray-200 overflow-hidden">
-      <Image source={{ uri: item.bannerUrl }} className="w-full h-28 bg-gray-100" />
-      <View className="p-4">
-        <View className="flex-row items-center -mt-8 mb-2">
-          <Image
-            source={{ uri: item.avatarUrl }}
-            className="w-14 h-14 rounded-full border-2 border-white bg-gray-100 mr-3"
-          />
-          <View className="flex-1 pt-4">
-            <Text className="text-base font-bold text-gray-900">{item.name}</Text>
-            <Text className="text-xs text-gray-500 mt-0.5">
-              {item.sportType} · {item.city} · {item.memberCount} Athletes
-            </Text>
+      <TouchableOpacity
+        onPress={() => router.push({ pathname: '/club/[id]', params: { id: item.id } })}
+        activeOpacity={0.85}>
+        <Image source={{ uri: item.bannerUrl }} className="w-full h-28 bg-gray-100" />
+        <View className="p-4 pb-2">
+          <View className="flex-row items-center -mt-8 mb-2">
+            <Image
+              source={{ uri: item.avatarUrl }}
+              className="w-14 h-14 rounded-full border-2 border-white bg-gray-100 mr-3"
+            />
+            <View className="flex-1 pt-4">
+              <Text className="text-base font-bold text-gray-900">{item.name}</Text>
+              <Text className="text-xs text-gray-500 mt-0.5">
+                {item.sportType} · {item.city} · {item.memberCount} Athletes
+              </Text>
+            </View>
           </View>
+
+          <Text className="text-xs text-gray-600 leading-5 mb-2">{item.description}</Text>
         </View>
+      </TouchableOpacity>
 
-        <Text className="text-xs text-gray-600 leading-5 mb-3">{item.description}</Text>
-
+      <View className="p-4 pt-0">
         <View className="flex-row justify-between items-center border-t border-gray-100 pt-2.5">
           <View>
             <Text className="text-[10px] text-gray-400 uppercase">Weekly Volume</Text>

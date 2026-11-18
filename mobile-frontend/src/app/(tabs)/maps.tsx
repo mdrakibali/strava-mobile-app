@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   FlatList,
@@ -13,6 +14,7 @@ import { useApp } from '../../context/AppContext';
 import { Segment } from '../../types';
 
 export default function MapsScreen() {
+  const router = useRouter();
   const { segments } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState<'ALL' | 'Run' | 'Ride'>('ALL');
@@ -24,7 +26,10 @@ export default function MapsScreen() {
   });
 
   const renderSegmentItem = ({ item }: { item: Segment }) => (
-    <View className="bg-white rounded-xl p-4 mb-3 border border-gray-200 gap-2">
+    <TouchableOpacity
+      className="bg-white rounded-xl p-4 mb-3 border border-gray-200 gap-2"
+      onPress={() => router.push({ pathname: '/segment/[id]', params: { id: item.id } })}
+      activeOpacity={0.8}>
       <View className="flex-row justify-between items-start">
         <View className="flex-1">
           <Text className="text-base font-bold text-gray-900 mb-0.5">
@@ -57,7 +62,7 @@ export default function MapsScreen() {
           </View>
         )}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (

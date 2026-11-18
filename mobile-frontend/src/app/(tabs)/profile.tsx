@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Image,
@@ -12,6 +13,7 @@ import {
 import { useApp } from '../../context/AppContext';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { currentUser, activities } = useApp();
   const [beaconEnabled, setBeaconEnabled] = useState(true);
   const [privacyZoneActive, setPrivacyZoneActive] = useState(true);
@@ -32,10 +34,9 @@ export default function ProfileScreen() {
           <View className="flex-row justify-between items-start mb-3">
             <Image
               source={{ uri: currentUser.avatarUrl }}
-              className="w-18 h-18 rounded-full border-2 border-[#FC4C02] bg-gray-100"
-              style={{ width: 72, height: 72, borderRadius: 36 }}
+              className="w-[72px] h-[72px] rounded-full border-2 border-[#FC4C02] bg-gray-100"
             />
-            <TouchableOpacity className="p-1">
+            <TouchableOpacity className="p-1" onPress={() => router.push('/settings/privacy')}>
               <Ionicons name="settings-outline" size={20} color="#111827" />
             </TouchableOpacity>
           </View>
@@ -134,7 +135,7 @@ export default function ProfileScreen() {
                 Daily Road Trainer · 242.8 / 600 km
               </Text>
               <View className="h-1 bg-gray-100 rounded-full overflow-hidden">
-                <View className="h-full bg-[#FC4C02] rounded-full" style={{ width: '40%' }} />
+                <View className="h-full bg-[#FC4C02] rounded-full w-[40%]" />
               </View>
             </View>
           </View>
@@ -149,7 +150,7 @@ export default function ProfileScreen() {
                 Road Bike · 1,280 km logged
               </Text>
               <View className="h-1 bg-gray-100 rounded-full overflow-hidden">
-                <View className="h-full bg-[#FC4C02] rounded-full" style={{ width: '65%' }} />
+                <View className="h-full bg-[#FC4C02] rounded-full w-[65%]" />
               </View>
             </View>
           </View>

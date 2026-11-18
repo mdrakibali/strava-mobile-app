@@ -9,6 +9,6 @@ export default function RecordTabPlaceholder() {
     router.replace('/record');
   }, []);
 
-  return <View style={{ flex: 1, backgroundColor: '#FFFFFF' }} />;
+  return <View className="flex-1 bg-white" />;
 }
 
