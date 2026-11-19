@@ -2,195 +2,251 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Alert,
   ScrollView,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StravaMapView } from '../components/map/StravaMapView';
+import { SportPickerModal } from '../components/record/SportPickerModal';
 import { useApp } from '../context/AppContext';
+import { SportType } from '../types';
 
 export default function SaveActivityScreen() {
   const router = useRouter();
   const { activeRecording, saveNewActivity } = useApp();
 
-  const defaultTitle = `${activeRecording.sportType} Workout`;
-  const [title, setTitle] = useState(defaultTitle);
+  const [title, setTitle] = useState(`${activeRecording.sportType || 'Workout'}`);
   const [description, setDescription] = useState('');
+  const [sport, setSport] = useState<SportType>(activeRecording.sportType || 'Workout');
+  const [showSportPicker, setShowSportPicker] = useState(false);
+  const [activityTag, setActivityTag] = useState<string>('Normal');
+  const [showTagPicker, setShowTagPicker] = useState(false);
+  const [perceivedExertion, setPerceivedExertion] = useState<string>('Moderate');
+  const [showExertionPicker, setShowExertionPicker] = useState(false);
+  const [privateNotes, setPrivateNotes] = useState('');
   const [visibility, setVisibility] = useState<'PUBLIC' | 'FOLLOWERS_ONLY' | 'ONLY_ME'>('PUBLIC');
-  const [applyPrivacyZone, setApplyPrivacyZone] = useState(true);
-  const [excludeFromFeed, setExcludeFromFeed] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    saveNewActivity(title, description, visibility);
-    router.replace('/(tabs)');
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await saveNewActivity(title, description, visibility);
+      router.replace('/(tabs)');
+    } catch (err: any) {
+      Alert.alert('Save Failed', err.message || 'Could not save workout to database');
+    } finally {
+      setIsSaving(false);
+    }
   };
-
-  const routeCoords = activeRecording.routeCoordinates.map(
-    (c) => [c.longitude, c.latitude] as [number, number]
-  );
-  const centerCoord = routeCoords[0] || [90.4125, 23.7745];
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      {/* Top Header */}
-      <View className="flex-row justify-between items-center px-4 py-3 border-b border-gray-200">
-        <TouchableOpacity onPress={() => router.back()} className="p-1">
+      {/* Header */}
+      <View className="flex-row items-center px-4 py-3 border-b border-gray-100">
+        <TouchableOpacity onPress={() => router.back()} className="p-1 mr-3">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900">Save Activity</Text>
-        <TouchableOpacity onPress={handleSave} className="p-1">
-          <Text className="text-base font-black text-[#FC4C02]">Save</Text>
-        </TouchableOpacity>
+        <Text className="text-xl font-black text-gray-900">Save Activity</Text>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerClassName="p-4 pb-20 space-y-4">
-        {/* Real Route Map Preview Thumbnail */}
-        <View className="w-full h-44 rounded-2xl overflow-hidden border border-gray-200 bg-stone-100 mb-3" pointerEvents="none">
-          <StravaMapView
-            styleKey="positron"
-            centerCoordinate={centerCoord}
-            routeCoordinates={routeCoords.length > 0 ? routeCoords : undefined}
-            zoomLevel={13}
-            showControls={false}
-            showUserLocation={false}
-            className="w-full h-full"
-          />
-        </View>
-
-        {/* Workout Quick Summary */}
-        <View className="flex-row justify-between bg-gray-50 p-4 rounded-2xl border border-gray-100 mb-3">
-          <View className="items-center">
-            <Text className="text-[10px] text-gray-400 font-bold uppercase">DISTANCE</Text>
-            <Text className="text-base font-black text-gray-900 mt-0.5">
-              {(activeRecording.distanceMeters / 1000).toFixed(2)} km
-            </Text>
-          </View>
-          <View className="items-center">
-            <Text className="text-[10px] text-gray-400 font-bold uppercase">TIME</Text>
-            <Text className="text-base font-black text-gray-900 mt-0.5">
-              {Math.floor(activeRecording.movingSeconds / 60)}m {activeRecording.movingSeconds % 60}s
-            </Text>
-          </View>
-          <View className="items-center">
-            <Text className="text-[10px] text-gray-400 font-bold uppercase">ELEVATION</Text>
-            <Text className="text-base font-black text-gray-900 mt-0.5">
-              +{activeRecording.elevationGainMeters} m
-            </Text>
-          </View>
-        </View>
-
+        className="flex-1 px-4"
+        contentContainerClassName="pt-4 pb-28">
         {/* Title Input */}
-        <View className="mb-3">
-          <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-            Activity Title
-          </Text>
+        <View className="bg-white border border-gray-200 rounded-2xl px-4 py-3.5 mb-3 shadow-xs">
           <TextInput
-            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
             value={title}
             onChangeText={setTitle}
-            placeholder="Give your workout an epic title"
+            placeholder="Title your activity"
             placeholderTextColor="#9CA3AF"
+            className="text-base font-semibold text-gray-900"
           />
         </View>
 
         {/* Description Input */}
-        <View className="mb-3">
-          <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-            Description
-          </Text>
+        <View className="bg-white border border-gray-200 rounded-2xl px-4 py-3.5 mb-3 h-28 shadow-xs">
           <TextInput
-            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 h-20"
             value={description}
             onChangeText={setDescription}
-            placeholder="How did the pace and elevation feel?"
+            placeholder="How'd it go? Share more about your activity and use @ to tag someone."
             placeholderTextColor="#9CA3AF"
             multiline
-            numberOfLines={3}
+            numberOfLines={4}
+            className="text-sm text-gray-900 h-full"
+            textAlignVertical="top"
           />
         </View>
 
-        {/* Visibility Controls */}
-        <View className="mb-3">
-          <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-            Who Can See This Activity?
+        {/* Sport Picker Dropdown */}
+        <TouchableOpacity
+          onPress={() => setShowSportPicker(true)}
+          className="flex-row items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-4 mb-4 shadow-xs">
+          <View className="flex-row items-center">
+            <Ionicons name="fitness-outline" size={20} color="#111827" />
+            <Text className="text-base font-bold text-gray-900 ml-3">{sport}</Text>
+          </View>
+          <Ionicons name="chevron-down" size={18} color="#6B7280" />
+        </TouchableOpacity>
+
+        {/* Add Photos/Videos Dashed Box */}
+        <TouchableOpacity
+          onPress={() => Alert.alert('Photos & Media', 'Photos are synced directly to your cloud workout gallery.')}
+          className="w-full py-8 border-2 border-dashed border-[#FC4C02]/60 rounded-3xl items-center justify-center mb-6 bg-orange-50/20">
+          <Ionicons name="image-outline" size={32} color="#FC4C02" />
+          <Text className="text-sm font-black text-[#FC4C02] mt-2 tracking-wide">
+            Add Photos/Videos
           </Text>
-          <View className="space-y-2">
-            {(
-              [
-                { id: 'PUBLIC', label: 'Everyone', desc: 'Visible on feeds, segments, and leaderboards' },
-                { id: 'FOLLOWERS_ONLY', label: 'Followers Only', desc: 'Only athletes who follow you' },
-                { id: 'ONLY_ME', label: 'Only You', desc: 'Private training log entry' },
-              ] as const
-            ).map((opt) => (
+        </TouchableOpacity>
+
+        {/* Section: Details */}
+        <Text className="text-xl font-black text-gray-900 mb-3">Details</Text>
+
+        {/* Activity Tag */}
+        <TouchableOpacity
+          onPress={() => setShowTagPicker(!showTagPicker)}
+          className="flex-row items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-4 mb-3 shadow-xs">
+          <View className="flex-row items-center">
+            <Ionicons name="pricetag-outline" size={18} color="#6B7280" />
+            <Text className="text-sm font-bold text-gray-800 ml-3">
+              Activity Tag: <Text className="font-semibold text-gray-500">{activityTag}</Text>
+            </Text>
+          </View>
+          <Ionicons name="chevron-down" size={18} color="#6B7280" />
+        </TouchableOpacity>
+
+        {showTagPicker && (
+          <View className="flex-row flex-wrap mb-3 pl-2">
+            {['Normal', 'Race', 'Long Run', 'Workout', 'Commute'].map((t) => (
               <TouchableOpacity
-                key={opt.id}
-                className={`flex-row items-center justify-between p-3.5 rounded-xl border mb-2 ${
-                  visibility === opt.id ? 'border-[#FC4C02] bg-orange-50/50' : 'border-gray-200 bg-gray-50'
-                }`}
-                onPress={() => setVisibility(opt.id)}>
-                <View className="flex-1 mr-2">
-                  <Text
-                    className={`text-sm font-bold ${
-                      visibility === opt.id ? 'text-[#FC4C02]' : 'text-gray-900'
-                    }`}>
-                    {opt.label}
-                  </Text>
-                  <Text className="text-xs text-gray-500 mt-0.5">{opt.desc}</Text>
-                </View>
-                {visibility === opt.id && (
-                  <Ionicons name="checkmark-circle" size={20} color="#FC4C02" />
-                )}
+                key={t}
+                onPress={() => {
+                  setActivityTag(t);
+                  setShowTagPicker(false);
+                }}
+                className={`px-3 py-1.5 rounded-full mr-2 mb-2 border ${
+                  activityTag === t
+                    ? 'bg-[#FC4C02] border-[#FC4C02]'
+                    : 'bg-gray-100 border-gray-200'
+                }`}>
+                <Text
+                  className={`text-xs font-bold ${
+                    activityTag === t ? 'text-white' : 'text-gray-700'
+                  }`}>
+                  {t}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
-        </View>
+        )}
 
-        {/* Privacy Zone Masking */}
-        <View className="flex-row justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200 mb-3">
-          <View className="flex-1 mr-3">
-            <Text className="text-sm font-bold text-gray-900">Privacy Zone Masking</Text>
-            <Text className="text-xs text-gray-500 mt-0.5">
-              Hides start and finish GPS points within 500m of your home.
-            </Text>
-          </View>
-          <Switch
-            value={applyPrivacyZone}
-            onValueChange={setApplyPrivacyZone}
-            trackColor={{ false: '#E5E7EB', true: '#FC4C02' }}
-          />
-        </View>
-
-        {/* Exclude From Home Feed Toggle */}
-        <View className="flex-row justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4">
-          <View className="flex-1 mr-3">
-            <Text className="text-sm font-bold text-gray-900">Mute Activity</Text>
-            <Text className="text-xs text-gray-500 mt-0.5">
-              Don't publish this activity to followers' home or club feeds.
-            </Text>
-          </View>
-          <Switch
-            value={excludeFromFeed}
-            onValueChange={setExcludeFromFeed}
-            trackColor={{ false: '#E5E7EB', true: '#FC4C02' }}
-          />
-        </View>
-
-        {/* Big Save Button */}
+        {/* How did that activity feel? */}
         <TouchableOpacity
-          className="bg-[#FC4C02] py-4 rounded-2xl items-center justify-center shadow-lg"
+          onPress={() => setShowExertionPicker(!showExertionPicker)}
+          className="flex-row items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-4 mb-3 shadow-xs">
+          <View className="flex-row items-center">
+            <Ionicons name="speedometer-outline" size={18} color="#6B7280" />
+            <Text className="text-sm font-bold text-gray-800 ml-3">
+              How did that activity feel?{' '}
+              <Text className="font-semibold text-gray-500">{perceivedExertion}</Text>
+            </Text>
+          </View>
+          <Ionicons name="chevron-down" size={18} color="#6B7280" />
+        </TouchableOpacity>
+
+        {showExertionPicker && (
+          <View className="flex-row flex-wrap mb-3 pl-2">
+            {[
+              { label: 'Easy (1-3)', val: 'Easy' },
+              { label: 'Moderate (4-6)', val: 'Moderate' },
+              { label: 'Hard (7-8)', val: 'Hard' },
+              { label: 'Max Effort (9-10)', val: 'Max Effort' },
+            ].map((e) => (
+              <TouchableOpacity
+                key={e.val}
+                onPress={() => {
+                  setPerceivedExertion(e.val);
+                  setShowExertionPicker(false);
+                }}
+                className={`px-3 py-1.5 rounded-full mr-2 mb-2 border ${
+                  perceivedExertion === e.val
+                    ? 'bg-[#FC4C02] border-[#FC4C02]'
+                    : 'bg-gray-100 border-gray-200'
+                }`}>
+                <Text
+                  className={`text-xs font-bold ${
+                    perceivedExertion === e.val ? 'text-white' : 'text-gray-700'
+                  }`}>
+                  {e.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Private Notes Input */}
+        <View className="flex-row items-start bg-white border border-gray-200 rounded-2xl px-4 py-3.5 mb-6 shadow-xs">
+          <Ionicons name="lock-closed-outline" size={18} color="#6B7280" className="mt-1 mr-2" />
+          <TextInput
+            value={privateNotes}
+            onChangeText={setPrivateNotes}
+            placeholder="Jot down private notes here. Only you can see these."
+            placeholderTextColor="#9CA3AF"
+            multiline
+            className="flex-1 text-sm text-gray-900 h-16 ml-1"
+            textAlignVertical="top"
+          />
+        </View>
+
+        {/* Section: Visibility */}
+        <Text className="text-xl font-black text-gray-900 mb-3">Visibility</Text>
+        <View className="bg-gray-50 border border-gray-200 rounded-2xl p-2 mb-8">
+          {(
+            [
+              { id: 'PUBLIC', label: 'Everyone', desc: 'Visible to all athletes and leaderboards' },
+              { id: 'FOLLOWERS_ONLY', label: 'Followers Only', desc: 'Only approved followers' },
+              { id: 'ONLY_ME', label: 'Only You', desc: 'Hidden private log entry' },
+            ] as const
+          ).map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              onPress={() => setVisibility(item.id)}
+              className={`p-3 rounded-xl flex-row items-center justify-between ${
+                visibility === item.id ? 'bg-white shadow-xs' : ''
+              }`}>
+              <View>
+                <Text className="text-sm font-bold text-gray-900">{item.label}</Text>
+                <Text className="text-xs text-gray-400">{item.desc}</Text>
+              </View>
+              {visibility === item.id && (
+                <Ionicons name="checkmark-circle" size={20} color="#FC4C02" />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Full-Width Black Save Activity Button */}
+        <TouchableOpacity
+          disabled={isSaving}
           onPress={handleSave}
-          activeOpacity={0.85}>
-          <Text className="text-base font-black text-white tracking-wider uppercase">
-            Save Activity
-          </Text>
+          className="w-full py-4 bg-black rounded-full items-center justify-center shadow-lg active:opacity-80">
+          <Text className="text-base font-black text-white">Save Activity</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Sport Picker Modal */}
+      <SportPickerModal
+        visible={showSportPicker}
+        selectedSport={sport}
+        onSelectSport={(s: SportType) => {
+          setSport(s);
+          setShowSportPicker(false);
+        }}
+        onClose={() => setShowSportPicker(false)}
+      />
     </SafeAreaView>
   );
 }

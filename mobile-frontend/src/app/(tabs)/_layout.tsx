@@ -1,14 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs } from 'expo-router';
 import React from 'react';
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 
 export default function TabLayout() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { activeRecording } = useApp();
+  const { activeRecording, currentUser } = useApp();
 
   return (
     <Tabs
@@ -19,50 +18,66 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
-          borderTopColor: '#E5E7EB',
+          borderTopColor: '#F3F4F6',
           height: 56 + Math.max(insets.bottom, 8),
           paddingBottom: Math.max(insets.bottom, 8),
           paddingTop: 6,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
+          fontSize: 10,
+          fontWeight: '700',
         },
       }}>
+      {/* 1. Home Feed */}
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
           tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name={focused ? 'home' : 'home-outline'}
-              size={22}
-              color={focused ? '#FC4C02' : '#9CA3AF'}
-            />
+            <View
+              className={`px-3 py-1 rounded-full items-center justify-center ${
+                focused ? 'bg-orange-100/60' : ''
+              }`}>
+              <Ionicons
+                name={focused ? 'home' : 'home-outline'}
+                size={22}
+                color={focused ? '#FC4C02' : '#9CA3AF'}
+              />
+            </View>
           ),
         }}
       />
 
+      {/* 2. Maps Hub */}
       <Tabs.Screen
         name="maps"
         options={{
           title: 'Maps',
           tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name={focused ? 'map' : 'map-outline'}
-              size={22}
-              color={focused ? '#FC4C02' : '#9CA3AF'}
-            />
+            <View
+              className={`px-3 py-1 rounded-full items-center justify-center ${
+                focused ? 'bg-orange-100/60' : ''
+              }`}>
+              <Ionicons
+                name={focused ? 'map' : 'map-outline'}
+                size={22}
+                color={focused ? '#FC4C02' : '#9CA3AF'}
+              />
+            </View>
           ),
         }}
       />
 
+      {/* 3. Workout Hub */}
       <Tabs.Screen
         name="record-tab"
         options={{
-          title: 'Record',
+          title: 'Workout',
           tabBarIcon: ({ focused }) => (
-            <View className="relative items-center justify-center">
+            <View
+              className={`px-3 py-1 rounded-full items-center justify-center relative ${
+                focused ? 'bg-orange-100/60' : ''
+              }`}>
               <Ionicons
                 name={
                   activeRecording.isRecording
@@ -81,43 +96,52 @@ export default function TabLayout() {
                 }
               />
               {activeRecording.isRecording && (
-                <View className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 border border-white" />
+                <View className="absolute top-1 right-2 w-2 h-2 rounded-full bg-red-500 border border-white" />
               )}
             </View>
           ),
         }}
-        listeners={{
-          tabPress: (e) => {
-            e.preventDefault();
-            router.push('/record');
-          },
-        }}
       />
 
+      {/* 4. Groups */}
       <Tabs.Screen
         name="groups"
         options={{
           title: 'Groups',
           tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name={focused ? 'people' : 'people-outline'}
-              size={22}
-              color={focused ? '#FC4C02' : '#9CA3AF'}
-            />
+            <View
+              className={`px-3 py-1 rounded-full items-center justify-center ${
+                focused ? 'bg-orange-100/60' : ''
+              }`}>
+              <Ionicons
+                name={focused ? 'grid' : 'grid-outline'}
+                size={21}
+                color={focused ? '#FC4C02' : '#9CA3AF'}
+              />
+            </View>
           ),
         }}
       />
 
+      {/* 5. You (Profile with User Avatar Thumbnail) */}
       <Tabs.Screen
         name="profile"
         options={{
           title: 'You',
           tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name={focused ? 'person' : 'person-outline'}
-              size={22}
-              color={focused ? '#FC4C02' : '#9CA3AF'}
-            />
+            <View
+              className={`p-0.5 rounded-full items-center justify-center ${
+                focused ? 'border-2 border-[#FC4C02]' : 'border border-gray-200'
+              }`}>
+              <Image
+                source={{
+                  uri:
+                    currentUser?.avatarUrl ||
+                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
+                }}
+                className="w-5 h-5 rounded-full bg-gray-200"
+              />
+            </View>
           ),
         }}
       />
