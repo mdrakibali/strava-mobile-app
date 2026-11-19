@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StravaMapView } from '../components/map/StravaMapView';
 import { RecordSettingsModal } from '../components/record/RecordSettingsModal';
 import { SportPickerModal } from '../components/record/SportPickerModal';
 import { useApp } from '../context/AppContext';
+import { api } from '../services/api';
 import { SportType } from '../types';
 
 export default function RecordCockpitScreen() {
@@ -26,6 +27,46 @@ export default function RecordCockpitScreen() {
   const [showSportPicker, setShowSportPicker] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [lapCount, setLapCount] = useState(1);
+  const [beaconToken, setBeaconToken] = useState<string | null>(null);
+  const [isBeaconActive, setIsBeaconActive] = useState(false);
+  const lastPingTimeRef = useRef<number>(0);
+
+  // Auto-start beacon if enabled when recording begins
+  useEffect(() => {
+    if (activeRecording.isRecording && !beaconToken && isBeaconActive) {
+      api.beacon
+        .start(selectedSport)
+        .then((res) => {
+          if (res?.token) {
+            setBeaconToken(res.token);
+          }
+        })
+        .catch(console.warn);
+    }
+  }, [activeRecording.isRecording, isBeaconActive, beaconToken, selectedSport]);
+
+  // Periodic Beacon Ping every 5 seconds with live GPS coordinates
+  useEffect(() => {
+    if (
+      activeRecording.isRecording &&
+      !activeRecording.isPaused &&
+      beaconToken &&
+      activeRecording.routeCoordinates.length > 0
+    ) {
+      const now = Date.now();
+      if (now - lastPingTimeRef.current >= 5000) {
+        lastPingTimeRef.current = now;
+        const last = activeRecording.routeCoordinates[activeRecording.routeCoordinates.length - 1];
+        api.beacon
+          .ping(beaconToken, {
+            latitude: last.latitude,
+            longitude: last.longitude,
+            speedMps: activeRecording.currentSpeedMps,
+          })
+          .catch(console.warn);
+      }
+    }
+  }, [activeRecording.routeCoordinates, activeRecording.isRecording, activeRecording.isPaused, beaconToken]);
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -55,6 +96,10 @@ export default function RecordCockpitScreen() {
         text: 'Discard',
         style: 'destructive',
         onPress: () => {
+          if (beaconToken) {
+            api.beacon.stop(beaconToken).catch(console.warn);
+            setBeaconToken(null);
+          }
           discardRecording();
           router.back();
         },
@@ -63,6 +108,10 @@ export default function RecordCockpitScreen() {
   };
 
   const handleFinish = () => {
+    if (beaconToken) {
+      api.beacon.stop(beaconToken).catch(console.warn);
+      setBeaconToken(null);
+    }
     finishRecording();
     router.push('/save-activity');
   };
@@ -266,6 +315,8 @@ export default function RecordCockpitScreen() {
         onClose={() => setShowSettings(false)}
         isSimulated={activeRecording.isSimulated}
         onToggleSimulation={toggleSimulation}
+        beacon={isBeaconActive}
+        onToggleBeacon={setIsBeaconActive}
       />
     </View>
   );

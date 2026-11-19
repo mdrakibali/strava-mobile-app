@@ -11,6 +11,14 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { currentUser, activities } = useApp();
 
+  const userActivities = activities.filter((a) => a.athlete.id === currentUser.id);
+  const totalMeters = userActivities.reduce((acc, a) => acc + (Number(a.distanceMeters) || 0), 0);
+  const totalKm = (totalMeters / 1000).toFixed(1);
+  const totalSeconds = userActivities.reduce((acc, a) => acc + (Number(a.movingTimeSeconds) || 0), 0);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const totalElevation = userActivities.reduce((acc, a) => acc + (Number(a.elevationGainMeters) || 0), 0);
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Top Bar */}
@@ -89,11 +97,11 @@ export default function ProfileScreen() {
 
         {/* 4-Week Training Volume */}
         <View className="bg-white p-4 border-b border-gray-200 mt-3">
-          <Text className="text-sm font-black text-gray-900 mb-3">Last 4 Weeks Volume</Text>
+          <Text className="text-sm font-black text-gray-900 mb-3">Overall Training Volume</Text>
           <View className="flex-row justify-between">
-            <StatBox label="Total Distance" value="164.2 km" />
-            <StatBox label="Moving Time" value="14h 22m" />
-            <StatBox label="Elevation Gain" value="1,840 m" />
+            <StatBox label="Total Distance" value={`${totalKm} km`} />
+            <StatBox label="Moving Time" value={`${hours}h ${minutes}m`} />
+            <StatBox label="Elevation Gain" value={`${totalElevation} m`} />
           </View>
         </View>
 

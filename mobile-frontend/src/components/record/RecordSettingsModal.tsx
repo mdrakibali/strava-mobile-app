@@ -7,6 +7,8 @@ interface RecordSettingsModalProps {
   onClose: () => void;
   isSimulated?: boolean;
   onToggleSimulation?: () => void;
+  beacon?: boolean;
+  onToggleBeacon?: (val: boolean) => void;
 }
 
 export const RecordSettingsModal: React.FC<RecordSettingsModalProps> = ({
@@ -14,10 +16,11 @@ export const RecordSettingsModal: React.FC<RecordSettingsModalProps> = ({
   onClose,
   isSimulated = false,
   onToggleSimulation,
+  beacon = false,
+  onToggleBeacon,
 }) => {
   const [autoPause, setAutoPause] = useState(true);
   const [audioCues, setAudioCues] = useState(true);
-  const [beacon, setBeacon] = useState(false);
   const [offRouteAlert, setOffRouteAlert] = useState(true);
 
   return (
@@ -63,7 +66,11 @@ export const RecordSettingsModal: React.FC<RecordSettingsModalProps> = ({
                 <Text className="text-sm font-bold text-gray-900">Beacon Live Safety</Text>
                 <Text className="text-xs text-gray-500">Share real-time GPS location with trusted contacts</Text>
               </View>
-              <Switch value={beacon} onValueChange={setBeacon} trackColor={{ true: '#FC4C02', false: '#E5E7EB' }} />
+              <Switch
+                value={beacon}
+                onValueChange={(val) => onToggleBeacon?.(val)}
+                trackColor={{ true: '#FC4C02', false: '#E5E7EB' }}
+              />
             </View>
 
             {/* Test Simulation Mode Toggle */}

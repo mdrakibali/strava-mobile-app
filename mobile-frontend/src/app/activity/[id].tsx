@@ -28,8 +28,95 @@ export default function ActivityDetailScreen() {
   const { activities, toggleKudos, addComment } = useApp();
   const [commentInput, setCommentInput] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
+  const [serverActivity, setServerActivity] = useState<any>(null);
 
-  const activity = activities.find((act) => act.id === id) || activities[0];
+  const localActivity = activities.find((act) => act.id === id);
+  const activity = serverActivity || localActivity || activities[0];
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!id) return;
+
+    const fetchDetail = async () => {
+      try {
+        const res = await api.activities.get(id);
+        if (isMounted && res?.activity) {
+          const item = res.activity;
+          const distKm = (Number(item.distanceMeters) / 1000).toFixed(2);
+          const mins = Math.floor(item.movingTimeSeconds / 60);
+          const secs = item.movingTimeSeconds % 60;
+          const timeFormatted = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+          const paceSeconds =
+            item.distanceMeters > 0
+              ? Math.round(item.movingTimeSeconds / (item.distanceMeters / 1000))
+              : 300;
+          const paceMin = Math.floor(paceSeconds / 60);
+          const paceSec = paceSeconds % 60;
+          const paceFormatted =
+            item.sportType === 'Ride'
+              ? `${((item.averageSpeedMps || 0) * 3.6).toFixed(1)} km/h`
+              : `${paceMin}:${paceSec < 10 ? '0' : ''}${paceSec} /km`;
+
+          setServerActivity({
+            id: item.id,
+            athlete: {
+              id: item.athlete?.id || 'ath_1',
+              displayName: item.athlete?.displayName || 'Athlete',
+              username: item.athlete?.username || 'athlete',
+              avatarUrl: item.athlete?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
+              city: item.athlete?.city || 'Dhaka',
+              country: 'Bangladesh',
+              followersCount: 0,
+              followingCount: 0,
+              isFollowing: false,
+            },
+            title: item.title,
+            description: item.description || '',
+            sportType: item.sportType,
+            visibility: item.visibility,
+            startTime: item.startTime,
+            distanceMeters: Number(item.distanceMeters),
+            movingTimeSeconds: item.movingTimeSeconds,
+            elapsedTimeSeconds: item.elapsedTimeSeconds,
+            elevationGainMeters: item.elevationGainMeters,
+            averageSpeedMps: item.averageSpeedMps || 3.0,
+            maxSpeedMps: item.maxSpeedMps || 4.5,
+            averageHeartRate: item.averageHeartRate || 150,
+            maxHeartRate: 175,
+            distanceFormatted: `${distKm} km`,
+            movingTimeFormatted: timeFormatted,
+            paceFormatted,
+            elevationFormatted: `${item.elevationGainMeters} m`,
+            gapFormatted: item.gapFormatted || paceFormatted,
+            relativeEffortScore: item.relativeEffortScore || 45,
+            kudosCount: item.kudosCount || 0,
+            hasKudos: item.hasKudos || false,
+            commentsCount: item.commentsCount || 0,
+            comments: item.comments || [],
+            routePoints: item.polyline || [],
+            photos: item.photos,
+            splits: item.splits,
+            elevationProfile: item.elevationProfile,
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to fetch activity detail:', err);
+      }
+    };
+
+    fetchDetail();
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  if (!activity) {
+    return (
+      <SafeAreaView className="flex-1 bg-white items-center justify-center">
+        <Text className="text-xs text-gray-400">Activity not found</Text>
+      </SafeAreaView>
+    );
+  }
 
   const handlePostComment = () => {
     if (commentInput.trim()) {
