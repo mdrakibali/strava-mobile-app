@@ -21,7 +21,6 @@ import { useApp } from '../../context/AppContext';
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
-  console.log('>>> [LOGIN_SCREEN] Rendering LoginScreen');
   const router = useRouter();
   const { loginWithGoogle, loginAsGuest } = useApp();
   const [isLoading, setIsLoading] = useState(false);

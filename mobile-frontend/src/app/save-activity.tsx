@@ -43,7 +43,7 @@ export default function SaveActivityScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       {/* Header */}
       <View className="flex-row items-center px-4 py-3 border-b border-gray-100">
         <TouchableOpacity onPress={() => router.back()} className="p-1 mr-3">
@@ -54,8 +54,9 @@ export default function SaveActivityScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        className="flex-1 px-4"
-        contentContainerClassName="pt-4 pb-28">
+        style={{ flex: 1 }}
+        className="px-4"
+        contentContainerStyle={{ paddingTop: 16, paddingBottom: 110 }}>
         {/* Title Input */}
         <View className="bg-white border border-gray-200 rounded-2xl px-4 py-3.5 mb-3 shadow-xs">
           <TextInput

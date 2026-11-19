@@ -14,15 +14,11 @@ function NavigationRoot() {
   const segments = useSegments();
   const router = useRouter();
 
-  console.log('>>> [NAV_ROOT]', { isAuthenticated, isAuthLoading, segments });
-
   useEffect(() => {
     if (isAuthLoading) return;
 
     const inAuthGroup = segments[0] === 'auth';
     const inOnboarding = segments[0] === 'onboarding';
-
-    console.log('>>> [NAV_EFFECT]', { isAuthenticated, inAuthGroup, inOnboarding, segments });
 
     if (!isAuthenticated && !inAuthGroup && !inOnboarding) {
       router.replace('/auth/login');

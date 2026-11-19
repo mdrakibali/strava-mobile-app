@@ -140,7 +140,7 @@ export default function RecordCockpitScreen() {
     const isRecording = activeRecording.isRecording;
 
     return (
-      <SafeAreaView className="flex-1 bg-white justify-between">
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF', justifyContent: 'space-between' }}>
         {/* Top Header Bar (Yellow if Paused/Stopped matching Screenshot 8) */}
         <View
           className={`px-5 py-4 ${
