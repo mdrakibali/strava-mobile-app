@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ActiveRecordingState, useGpsRecorder } from '../hooks/use-gps-recorder';
 import {
-  CURRENT_USER,
   MOCK_EVENTS,
   MOCK_SEGMENTS,
 } from '../mock/data';
@@ -19,10 +18,23 @@ import { AppContextType } from './appContextTypes';
 
 export { ActiveRecordingState, AppContextType };
 
+const INITIAL_ATHLETE: Athlete = {
+  id: 'ath_initial',
+  displayName: 'Athlete',
+  username: 'athlete',
+  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
+  city: 'Dhaka',
+  country: 'Bangladesh',
+  bio: 'Open Strava Runner',
+  followersCount: 0,
+  followingCount: 0,
+  isFollowing: false,
+};
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<Athlete>(CURRENT_USER);
+  const [currentUser, setCurrentUser] = useState<Athlete>(INITIAL_ATHLETE);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [clubs, setClubs] = useState<Club[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);

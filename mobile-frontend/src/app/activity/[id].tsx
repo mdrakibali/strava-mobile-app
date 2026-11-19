@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -21,6 +21,7 @@ import { ShareModal } from '../../components/common/ShareModal';
 import { StatBox } from '../../components/common/StatBox';
 import { StravaMapView } from '../../components/map/StravaMapView';
 import { useApp } from '../../context/AppContext';
+import { api } from '../../services/api';
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -126,7 +127,7 @@ export default function ActivityDetailScreen() {
   };
 
   const routeCoords = activity.routePoints?.map(
-    (p) => [p.longitude, p.latitude] as [number, number]
+    (p: any) => [p.longitude, p.latitude] as [number, number]
   );
 
   return (
@@ -261,7 +262,7 @@ export default function ActivityDetailScreen() {
             {/* Comments Stream */}
             <View className="mt-3 space-y-3">
               {activity.comments && activity.comments.length > 0 ? (
-                activity.comments.map((c) => (
+                activity.comments.map((c: any) => (
                   <View key={c.id} className="flex-row space-x-2.5 mb-2">
                     <Image source={{ uri: c.athlete.avatarUrl }} className="w-8 h-8 rounded-full bg-gray-100 mr-2" />
                     <View className="flex-1 bg-gray-50 p-2.5 rounded-xl border border-gray-100">

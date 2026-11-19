@@ -16,14 +16,37 @@ import { RouteItem } from '../../types';
 
 export default function MapsScreen() {
   const router = useRouter();
-  const { segments } = useApp();
+  const { segments, activities } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState<'All' | 'Run' | 'Ride'>('All');
   const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
 
+  // Dynamic routes created from real recorded workouts
+  const activityRoutes: RouteItem[] = activities
+    .filter((a) => a.routePoints && a.routePoints.length > 0)
+    .map((a) => ({
+      id: a.id,
+      name: a.title,
+      sportType: (a.sportType as any) || 'Run',
+      distanceMeters: a.distanceMeters,
+      elevationGainMeters: a.elevationGainMeters,
+      estimatedTimeSeconds: a.movingTimeSeconds,
+      polylinePoints: a.routePoints || [],
+      surfacePavedPercent: 95,
+      surfaceGravelPercent: 5,
+      surfaceDirtPercent: 0,
+      elevationProfile: a.elevationProfile || [10, 15, 20, 15, 10],
+      turns: [],
+      isSaved: true,
+      authorName: a.athlete?.displayName || 'Community Athlete',
+      climbCategory: a.elevationGainMeters > 50 ? 'Moderate Climb' : 'Flat Grade',
+    }));
+
+  const allRoutes = activityRoutes.length > 0 ? activityRoutes : MOCK_ROUTES;
+
   // Convert routes and segments to map markers
   const mapMarkers: MapMarkerItem[] = [
-    ...MOCK_ROUTES.map((r) => ({
+    ...allRoutes.map((r) => ({
       id: r.id,
       coordinate: [r.polylinePoints[0]?.longitude || 90.412, r.polylinePoints[0]?.latitude || 23.774] as [number, number],
       title: r.name,
@@ -40,7 +63,7 @@ export default function MapsScreen() {
   ];
 
   const handleMarkerSelect = (marker: MapMarkerItem) => {
-    const foundRoute = MOCK_ROUTES.find((r) => r.id === marker.id);
+    const foundRoute = allRoutes.find((r) => r.id === marker.id);
     if (foundRoute) {
       setSelectedRoute(foundRoute);
     } else {
