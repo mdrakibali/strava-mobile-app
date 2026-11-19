@@ -37,6 +37,9 @@ export interface StravaMapViewProps {
   onMapPress?: (coordinate: [number, number]) => void;
   showControls?: boolean;
   showUserLocation?: boolean;
+  mode?: 'live-record' | 'view-route' | 'explore';
+  followUser?: boolean;
+  autoFitRoute?: boolean;
   className?: string;
   children?: React.ReactNode;
 }

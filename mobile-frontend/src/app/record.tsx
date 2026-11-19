@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StravaMapView } from '../components/map/StravaMapView';
+import { MapStyleKey, StravaMapView } from '../components/map/StravaMapView';
 import { RecordSettingsModal } from '../components/record/RecordSettingsModal';
 import { SportPickerModal } from '../components/record/SportPickerModal';
 import { useApp } from '../context/AppContext';
@@ -23,17 +23,18 @@ export default function RecordCockpitScreen() {
     toggleSimulation,
   } = useApp();
 
-  const [selectedSport, setSelectedSport] = useState<SportType>(activeRecording.sportType || 'Workout');
+  const [selectedSport, setSelectedSport] = useState<SportType>(activeRecording.sportType || 'Run');
   const [showSportPicker, setShowSportPicker] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [viewMode, setViewMode] = useState<'cockpit' | 'map'>('cockpit');
+  const [mapStyle, setMapStyle] = useState<MapStyleKey>('positron');
   const [beaconToken, setBeaconToken] = useState<string | null>(null);
   const [isBeaconActive, setIsBeaconActive] = useState(false);
   const [previewLocation, setPreviewLocation] = useState<[number, number] | null>(null);
   const lastPingTimeRef = useRef<number>(0);
 
-  // Pre-fetch device GPS location
+  // Fetch initial GPS coordinate immediately when opening screen
   useEffect(() => {
+    let sub: Location.LocationSubscription | null = null;
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -44,28 +45,23 @@ export default function RecordCockpitScreen() {
           if (loc) {
             setPreviewLocation([loc.coords.longitude, loc.coords.latitude]);
           }
+          sub = await Location.watchPositionAsync(
+            { accuracy: Location.Accuracy.High, distanceInterval: 5 },
+            (newLoc) => {
+              setPreviewLocation([newLoc.coords.longitude, newLoc.coords.latitude]);
+            }
+          );
         }
       } catch (err) {
         console.warn('Pre-record location error:', err);
       }
     })();
+    return () => {
+      sub?.remove();
+    };
   }, []);
 
-  // Auto-start beacon if enabled when recording begins
-  useEffect(() => {
-    if (activeRecording.isRecording && !beaconToken && isBeaconActive) {
-      api.beacon
-        .start(selectedSport)
-        .then((res) => {
-          if (res?.token) {
-            setBeaconToken(res.token);
-          }
-        })
-        .catch(console.warn);
-    }
-  }, [activeRecording.isRecording, isBeaconActive, beaconToken, selectedSport]);
-
-  // Periodic Beacon Ping every 5 seconds
+  // Periodic Beacon Ping every 5 seconds if Beacon is active
   useEffect(() => {
     if (
       activeRecording.isRecording &&
@@ -88,7 +84,7 @@ export default function RecordCockpitScreen() {
     }
   }, [activeRecording.routeCoordinates, activeRecording.isRecording, activeRecording.isPaused, beaconToken]);
 
-  // Timer formatted as HH:MM:SS
+  // Format timer into HH:MM:SS
   const formatTimerDigits = (secs: number) => {
     const h = Math.floor(secs / 3600);
     const m = Math.floor((secs % 3600) / 60);
@@ -126,184 +122,246 @@ export default function RecordCockpitScreen() {
     router.push('/save-activity');
   };
 
-  const liveCoords = activeRecording.routeCoordinates.map(
+  const liveCoords: [number, number][] = activeRecording.routeCoordinates.map(
     (c) => [c.longitude, c.latitude] as [number, number]
   );
-  const currentFix =
-    liveCoords.length > 0 ? liveCoords[liveCoords.length - 1] : previewLocation;
-  const centerCoord =
-    currentFix || ([90.4125, 23.7745] as [number, number]);
+  const currentFix: [number, number] =
+    liveCoords.length > 0
+      ? liveCoords[liveCoords.length - 1]
+      : previewLocation || [90.4125, 23.7745];
 
-  // Cockpit View (Matches Strava Screenshot 7 & 8)
-  if (viewMode === 'cockpit') {
-    const isPaused = activeRecording.isPaused;
-    const isRecording = activeRecording.isRecording;
+  const isPaused = activeRecording.isPaused;
+  const isRecording = activeRecording.isRecording;
 
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF', justifyContent: 'space-between' }}>
-        {/* Top Header Bar (Yellow if Paused/Stopped matching Screenshot 8) */}
-        <View
-          className={`px-5 py-4 ${
-            isPaused && isRecording ? 'bg-[#FFC700]' : 'bg-white'
-          }`}>
-          {isPaused && isRecording && (
-            <Text className="text-center text-xs font-black text-gray-900 uppercase tracking-widest mb-1">
-              Stopped
+  // Pace calculations
+  const paceSeconds =
+    activeRecording.distanceMeters > 50 && activeRecording.movingSeconds > 0
+      ? Math.round(activeRecording.movingSeconds / (activeRecording.distanceMeters / 1000))
+      : 0;
+  const paceM = Math.floor(paceSeconds / 60);
+  const paceS = paceSeconds % 60;
+  const currentPaceFormatted = paceSeconds > 0 ? `${paceM}:${String(paceS).padStart(2, '0')}` : '-:--';
+
+  const speedKmh = (activeRecording.currentSpeedMps * 3.6).toFixed(1);
+
+  return (
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      {/* Top Navigation & Status Bar (Turns Yellow when Stopped/Paused) */}
+      <View
+        className={`px-4 py-3 flex-row items-center justify-between border-b ${
+          isPaused && isRecording
+            ? 'bg-[#FFC700] border-amber-400'
+            : 'bg-white border-gray-100'
+        }`}>
+        <TouchableOpacity
+          onPress={() => {
+            if (isRecording) {
+              Alert.alert('Recording in Progress', 'Pause or finish your activity to exit, or navigate back while tracking continues in background.', [
+                { text: 'Keep Recording', style: 'cancel' },
+                { text: 'Discard', style: 'destructive', onPress: handleDiscard },
+              ]);
+            } else {
+              router.back();
+            }
+          }}
+          className="p-1">
+          <Ionicons name="chevron-back" size={26} color="#111827" />
+        </TouchableOpacity>
+
+        <View className="items-center">
+          {isPaused && isRecording ? (
+            <Text className="text-[10px] font-black uppercase tracking-widest text-gray-900">
+              STOPPED
             </Text>
+          ) : (
+            <TouchableOpacity
+              onPress={() => setShowSportPicker(true)}
+              className="flex-row items-center bg-gray-100 px-3 py-1 rounded-full">
+              <Text className="text-xs font-black text-gray-900 mr-1">{selectedSport}</Text>
+              <Ionicons name="chevron-down" size={12} color="#4B5563" />
+            </TouchableOpacity>
           )}
+          {/* Big Bold Digital Timer */}
+          <Text className="text-3xl font-black text-gray-900 tracking-tight mt-0.5">
+            {formatTimerDigits(activeRecording.movingSeconds)}
+          </Text>
+        </View>
 
-          <View className="flex-row items-center justify-between">
-            <TouchableOpacity onPress={() => router.back()} className="p-1">
-              <Ionicons name="chevron-back" size={28} color="#111827" />
-            </TouchableOpacity>
+        <TouchableOpacity onPress={() => setShowSettings(true)} className="p-1">
+          <Ionicons name="settings-outline" size={24} color="#111827" />
+        </TouchableOpacity>
+      </View>
 
-            {/* Giant Bold Digital Timer */}
-            <Text className="text-5xl font-black text-gray-900 tracking-tight">
-              {formatTimerDigits(activeRecording.movingSeconds)}
+      {/* Main Container: Map (Top) + Telemetry HUD (Bottom) */}
+      <View className="flex-1 relative bg-stone-100">
+        {/* Real Live Map View */}
+        <View className="flex-1 w-full relative">
+          <StravaMapView
+            styleKey={mapStyle}
+            centerCoordinate={currentFix}
+            userLocation={currentFix}
+            routeCoordinates={liveCoords.length >= 2 ? liveCoords : undefined}
+            showControls={false}
+            showUserLocation={true}
+            mode="live-record"
+            followUser={true}
+            autoFitRoute={false}
+            zoomLevel={17}
+            className="w-full h-full"
+          />
+
+          {/* Floating GPS Signal Status Badge */}
+          <View className="absolute top-3 left-4 bg-white/95 px-3 py-1.5 rounded-full border border-gray-200 flex-row items-center shadow-md">
+            <View
+              className={`w-2.5 h-2.5 rounded-full mr-2 ${
+                activeRecording.gpsSignal === 'strong' || activeRecording.gpsSignal === 'good'
+                  ? 'bg-emerald-500'
+                  : 'bg-amber-500'
+              }`}
+            />
+            <Text className="text-[11px] font-bold text-gray-800">
+              {activeRecording.gpsSignal === 'strong'
+                ? 'GPS Strong'
+                : activeRecording.gpsSignal === 'good'
+                ? 'GPS Good'
+                : 'Locating GPS...'}
             </Text>
-
-            <TouchableOpacity onPress={() => setShowSettings(true)} className="p-1">
-              <Ionicons name="settings-outline" size={24} color="#111827" />
-            </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Center: Live Heart Rate or Telemetry (Matches Screenshot 7 & 8) */}
-        <View className="items-center justify-center py-12">
-          <Text className="text-6xl font-black text-gray-900 mb-2">
-            {activeRecording.currentHeartRate > 0 ? activeRecording.currentHeartRate : '— —'}
-          </Text>
-          <Ionicons name="heart" size={26} color="#EF4444" />
-          <Text className="text-xs font-bold text-gray-400 mt-2 uppercase tracking-widest">
-            {activeRecording.currentHeartRate > 0 ? 'BPM' : 'Heart Rate'}
-          </Text>
-
-          {/* Quick Metrics (Distance & Speed/Pace) */}
-          <View className="flex-row justify-around w-full px-8 mt-10">
-            <View className="items-center">
-              <Text className="text-2xl font-black text-gray-900">
-                {(activeRecording.distanceMeters / 1000).toFixed(2)}
-              </Text>
-              <Text className="text-[11px] font-bold text-gray-400 uppercase">Kilometers</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-2xl font-black text-gray-900">
-                {activeRecording.currentSpeedMps > 0.5
-                  ? `${(1000 / activeRecording.currentSpeedMps / 60).toFixed(1)}`
-                  : '-:--'}
-              </Text>
-              <Text className="text-[11px] font-bold text-gray-400 uppercase">Avg Pace</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Bottom Drawer & Buttons */}
-        <View className="px-5 pb-6">
-          {/* Drawer Handle (Tapping switches to Map view) */}
+          {/* Floating Map Style Selector */}
           <TouchableOpacity
-            onPress={() => setViewMode('map')}
-            className="items-center justify-center py-2 mb-3">
-            <View className="w-12 h-1.5 bg-gray-300 rounded-full mb-1" />
-            <Text className="text-[11px] font-bold text-gray-400">View Map Track</Text>
+            onPress={() =>
+              setMapStyle((prev) =>
+                prev === 'positron' ? 'voyager' : prev === 'voyager' ? 'dark' : 'positron'
+              )
+            }
+            className="absolute top-3 right-4 w-10 h-10 bg-white/95 rounded-full items-center justify-center border border-gray-200 shadow-md">
+            <Ionicons name="layers-outline" size={20} color="#111827" />
           </TouchableOpacity>
 
-          {/* Action Buttons */}
+          {/* Floating Recenter / Locate Button */}
+          <TouchableOpacity
+            onPress={() => {
+              if (currentFix) {
+                setPreviewLocation([currentFix[0], currentFix[1]]);
+              }
+            }}
+            className="absolute bottom-4 right-4 w-11 h-11 bg-white rounded-full items-center justify-center border border-gray-200 shadow-lg">
+            <Ionicons name="locate" size={22} color="#FC4C02" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Bottom Telemetry HUD Card & Controls */}
+        <View className="bg-white px-5 pt-4 pb-6 border-t border-gray-200 shadow-2xl">
+          {/* Key Metrics Grid */}
+          <View className="flex-row justify-between items-center py-2 border-b border-gray-100 mb-4">
+            {/* Metric 1: Distance */}
+            <View className="items-center flex-1">
+              <Text className="text-3xl font-black text-gray-900">
+                {(activeRecording.distanceMeters / 1000).toFixed(2)}
+              </Text>
+              <Text className="text-[10px] font-black uppercase tracking-wider text-gray-400 mt-0.5">
+                Kilometers
+              </Text>
+            </View>
+
+            <View className="w-[1px] h-10 bg-gray-200" />
+
+            {/* Metric 2: Speed or Pace */}
+            <View className="items-center flex-1">
+              <Text className="text-3xl font-black text-gray-900">
+                {selectedSport === 'Ride' ? speedKmh : currentPaceFormatted}
+              </Text>
+              <Text className="text-[10px] font-black uppercase tracking-wider text-gray-400 mt-0.5">
+                {selectedSport === 'Ride' ? 'Speed (km/h)' : 'Pace (/km)'}
+              </Text>
+            </View>
+
+            <View className="w-[1px] h-10 bg-gray-200" />
+
+            {/* Metric 3: Heart Rate */}
+            <View className="items-center flex-1">
+              <View className="flex-row items-center">
+                <Text className="text-3xl font-black text-gray-900">
+                  {activeRecording.currentHeartRate > 0 ? activeRecording.currentHeartRate : '--'}
+                </Text>
+                <Ionicons name="heart" size={16} color="#EF4444" style={{ marginLeft: 3 }} />
+              </View>
+              <Text className="text-[10px] font-black uppercase tracking-wider text-gray-400 mt-0.5">
+                Heart Rate
+              </Text>
+            </View>
+          </View>
+
+          {/* Secondary Telemetry: Elevation & Moving Time */}
+          <View className="flex-row justify-around mb-5">
+            <View className="flex-row items-center">
+              <Ionicons name="trending-up" size={14} color="#6B7280" />
+              <Text className="text-xs font-bold text-gray-700 ml-1.5">
+                {activeRecording.elevationGainMeters} m Elevation
+              </Text>
+            </View>
+            <View className="flex-row items-center">
+              <Ionicons name="speedometer-outline" size={14} color="#6B7280" />
+              <Text className="text-xs font-bold text-gray-700 ml-1.5">
+                Avg: {selectedSport === 'Ride' ? `${(activeRecording.averageSpeedMps * 3.6).toFixed(1)} km/h` : currentPaceFormatted}
+              </Text>
+            </View>
+          </View>
+
+          {/* Primary Action Buttons */}
           {!isRecording ? (
+            /* Start Workout Button */
             <TouchableOpacity
               onPress={() => startRecording(selectedSport)}
-              className="w-full py-4.5 bg-[#FC4C02] rounded-full items-center justify-center shadow-lg active:bg-[#E03A00]">
-              <Text className="text-lg font-black text-white tracking-wide">
+              className="w-full py-4.5 bg-[#FC4C02] rounded-full flex-row items-center justify-center shadow-lg active:bg-[#E03A00]">
+              <Ionicons name="play" size={24} color="#FFFFFF" />
+              <Text className="text-lg font-black text-white ml-2 tracking-wide">
                 Start {selectedSport}
               </Text>
             </TouchableOpacity>
           ) : !isPaused ? (
-            /* Screenshot 7: Full-Width Orange Pause Button */
+            /* Active Recording: Pause Button */
             <TouchableOpacity
               onPress={pauseRecording}
               className="w-full py-4.5 bg-[#FC4C02] rounded-full flex-row items-center justify-center shadow-lg active:bg-[#E03A00]">
-              <Ionicons name="pause" size={22} color="#FFFFFF" />
+              <Ionicons name="pause" size={24} color="#FFFFFF" />
               <Text className="text-lg font-black text-white ml-2 tracking-wide">Pause</Text>
             </TouchableOpacity>
           ) : (
-            /* Screenshot 8: Resume (Orange) and Finish (Black) Buttons side-by-side */
-            <View className="flex-row space-x-3">
-              <TouchableOpacity
-                onPress={resumeRecording}
-                className="flex-1 py-4.5 bg-[#FC4C02] rounded-full flex-row items-center justify-center shadow-md mr-3 active:bg-[#E03A00]">
-                <Ionicons name="play" size={20} color="#FFFFFF" />
-                <Text className="text-base font-black text-white ml-2">Resume</Text>
-              </TouchableOpacity>
+            /* Paused State: Resume (Orange) and Finish (Black) side-by-side */
+            <View className="space-y-3">
+              <View className="flex-row space-x-3">
+                <TouchableOpacity
+                  onPress={resumeRecording}
+                  className="flex-1 py-4 bg-[#FC4C02] rounded-full flex-row items-center justify-center shadow-md mr-3 active:bg-[#E03A00]">
+                  <Ionicons name="play" size={20} color="#FFFFFF" />
+                  <Text className="text-base font-black text-white ml-2">Resume</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={handleFinish}
-                className="flex-1 py-4.5 bg-black rounded-full flex-row items-center justify-center shadow-md active:opacity-80">
-                <Ionicons name="square" size={18} color="#FFFFFF" />
-                <Text className="text-base font-black text-white ml-2">Finish</Text>
+                <TouchableOpacity
+                  onPress={handleFinish}
+                  className="flex-1 py-4 bg-black rounded-full flex-row items-center justify-center shadow-md active:opacity-80">
+                  <Ionicons name="square" size={18} color="#FFFFFF" />
+                  <Text className="text-base font-black text-white ml-2">Finish</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Discard Workout Link */}
+              <TouchableOpacity onPress={handleDiscard} className="items-center py-1 mt-2">
+                <Text className="text-xs font-bold text-red-600">Discard Activity</Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
+      </View>
 
-        {/* Settings & Sport Modals */}
-        <SportPickerModal
-          visible={showSportPicker}
-          onClose={() => setShowSportPicker(false)}
-          selectedSport={selectedSport}
-          onSelectSport={setSelectedSport}
-        />
-        <RecordSettingsModal
-          visible={showSettings}
-          onClose={() => setShowSettings(false)}
-          isSimulated={activeRecording.isSimulated}
-          onToggleSimulation={toggleSimulation}
-          beacon={isBeaconActive}
-          onToggleBeacon={setIsBeaconActive}
-        />
-      </SafeAreaView>
-    );
-  }
-
-  // Full Map View
-  return (
-    <View className="flex-1 bg-stone-900 relative">
-      <StravaMapView
-        styleKey="positron"
-        centerCoordinate={centerCoord}
-        userLocation={centerCoord}
-        routeCoordinates={liveCoords.length > 0 ? liveCoords : undefined}
-        showControls={false}
-        showUserLocation={true}
-        className="w-full h-full">
-        {/* Top HUD */}
-        <SafeAreaView className="absolute top-0 left-0 right-0 z-30 px-4 pt-2">
-          <View className="flex-row items-center justify-between bg-white/95 rounded-2xl p-3 border border-gray-100 shadow-xl">
-            <TouchableOpacity onPress={() => setViewMode('cockpit')} className="p-1">
-              <Text className="text-sm font-bold text-gray-800">Timer</Text>
-            </TouchableOpacity>
-            <Text className="text-base font-black text-gray-900">
-              {formatTimerDigits(activeRecording.movingSeconds)}
-            </Text>
-            <TouchableOpacity onPress={() => setShowSettings(true)} className="p-1">
-              <Ionicons name="settings-outline" size={20} color="#111827" />
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-
-        {/* Bottom Floating Bar */}
-        <SafeAreaView className="absolute bottom-4 left-0 right-0 z-40 px-6">
-          <TouchableOpacity
-            onPress={() => setViewMode('cockpit')}
-            className="w-full py-4 bg-[#FC4C02] rounded-full items-center justify-center shadow-xl">
-            <Text className="text-base font-black text-white">Back to Cockpit</Text>
-          </TouchableOpacity>
-        </SafeAreaView>
-      </StravaMapView>
-
+      {/* Sport Picker & Settings Modals */}
       <SportPickerModal
         visible={showSportPicker}
         onClose={() => setShowSportPicker(false)}
         selectedSport={selectedSport}
-        onSelectSport={setSelectedSport}
+        onSelectSport={(s) => setSelectedSport(s)}
       />
       <RecordSettingsModal
         visible={showSettings}
@@ -313,6 +371,6 @@ export default function RecordCockpitScreen() {
         beacon={isBeaconActive}
         onToggleBeacon={setIsBeaconActive}
       />
-    </View>
+    </SafeAreaView>
   );
 }

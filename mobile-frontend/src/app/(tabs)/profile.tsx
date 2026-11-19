@@ -113,9 +113,6 @@ export default function ProfileScreen() {
                 <Text className="text-xl font-black text-gray-900 mr-1.5">
                   {currentUser.displayName}
                 </Text>
-                <View className="bg-[#FC4C02] px-1.5 py-0.2 rounded">
-                  <Text className="text-[9px] font-black text-white">PRO</Text>
-                </View>
               </View>
               <Text className="text-xs text-gray-500">
                 {currentUser.city || 'Dhaka'}, {currentUser.country || 'Bangladesh'}

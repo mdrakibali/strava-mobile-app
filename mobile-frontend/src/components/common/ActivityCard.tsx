@@ -69,9 +69,6 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
               <Text className="text-base font-bold text-gray-900 mr-2" numberOfLines={1}>
                 {activity.athlete.displayName}
               </Text>
-              <View className="bg-black px-1.5 py-0.5 rounded">
-                <Text className="text-[9px] font-black text-white tracking-widest">PRO</Text>
-              </View>
             </View>
             <View className="flex-row items-center mt-0.5">
               <Ionicons

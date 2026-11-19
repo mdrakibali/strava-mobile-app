@@ -52,6 +52,9 @@ export const StravaMapView: React.FC<StravaMapViewProps> = ({
   onMapPress,
   showControls = true,
   showUserLocation = true,
+  mode = 'explore',
+  followUser = mode === 'live-record',
+  autoFitRoute = mode === 'view-route',
   className = 'w-full h-full',
   children,
 }) => {
@@ -211,6 +214,9 @@ export const StravaMapView: React.FC<StravaMapViewProps> = ({
           terrainType={terrainType}
           is3D={is3D}
           showUserLocation={showUserLocation}
+          mode={mode}
+          followUser={followUser}
+          autoFitRoute={autoFitRoute}
         />
       )}
 
