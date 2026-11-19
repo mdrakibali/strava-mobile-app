@@ -62,6 +62,7 @@ export class BeaconController {
       const view = await service.getSpectatorView(token);
       if (!view) return c.json({ error: 'Live Beacon session not found or expired' }, 404);
 
+      c.header('Cache-Control', 'no-store, no-cache, must-revalidate');
       return c.json(view);
     } catch (err: any) {
       return c.json({ error: err.message }, 500);
