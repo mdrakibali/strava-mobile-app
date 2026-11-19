@@ -220,3 +220,4 @@ challengesRouter.post('/', requireAuth, async (c) => {
 
   return c.json({ message: 'Challenge created', challenge: newChallenge }, 201);
 });
+

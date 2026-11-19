@@ -166,3 +166,4 @@ athletesRouter.post('/:id/follow', requireAuth, async (c) => {
     return c.json({ following: true, message: 'Followed athlete' });
   }
 });
+

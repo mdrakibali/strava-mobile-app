@@ -147,3 +147,4 @@ feedRouter.get('/', optionalAuth, async (c) => {
     hasMore: feedItems.length === limit,
   });
 });
+

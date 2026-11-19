@@ -16,3 +16,4 @@ declare module 'hono' {
     user: AuthContext;
   }
 }
+

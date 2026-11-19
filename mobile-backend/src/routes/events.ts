@@ -214,3 +214,4 @@ eventsRouter.post('/:id/rsvp', requireAuth, async (c) => {
     goingCount: Number(countRow?.count || 0),
   });
 });
+

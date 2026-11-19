@@ -136,3 +136,4 @@ gearRouter.delete('/:id', requireAuth, async (c) => {
 
   return c.json({ message: 'Gear deleted successfully' });
 });
+

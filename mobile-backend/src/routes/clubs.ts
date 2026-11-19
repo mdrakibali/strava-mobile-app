@@ -295,3 +295,4 @@ clubsRouter.get('/:id/members', optionalAuth, async (c) => {
 
   return c.json({ members, count: members.length });
 });
+

@@ -182,3 +182,4 @@ authRouter.get('/me', requireAuth, async (c) => {
   const { passwordHash: _, ...safeAthlete } = athlete;
   return c.json({ athlete: safeAthlete });
 });
+

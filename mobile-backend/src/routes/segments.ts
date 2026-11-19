@@ -152,3 +152,4 @@ segmentsRouter.post('/', requireAuth, async (c) => {
 
   return c.json({ message: 'Segment created', segment: newSegment }, 201);
 });
+

@@ -121,3 +121,4 @@ privacyZonesRouter.delete('/:id', requireAuth, async (c) => {
 
   return c.json({ message: 'Privacy zone deleted' });
 });
+
