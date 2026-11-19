@@ -156,5 +156,17 @@ export const api = {
         method: 'POST',
       }),
   },
+
+  // 8. Athletes & Social Graph
+  athletes: {
+    search: (query = '') =>
+      request<{ athletes: any[]; count: number }>(`/athletes/search?q=${encodeURIComponent(query)}`),
+    getProfile: (id: string) =>
+      request<{ athlete: any; recentActivities: any[] }>(`/athletes/${id}`),
+    toggleFollow: (id: string) =>
+      request<{ isFollowing: boolean; followersCount: number }>(`/athletes/${id}/follow`, {
+        method: 'POST',
+      }),
+  },
 };
 

@@ -15,19 +15,17 @@ import { ActivityCard } from '../../components/common/ActivityCard';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Header } from '../../components/common/Header';
 import { useApp } from '../../context/AppContext';
-import { MOCK_ATHLETES } from '../../mock/data';
 
 export default function FeedScreen() {
   const router = useRouter();
-  const { activities } = useApp();
+  const { activities, isSyncing, refreshFeed } = useApp();
   const [selectedFilter, setSelectedFilter] = useState<'ALL' | 'FOLLOWING' | 'CLUBS'>('ALL');
   const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 800);
+    await refreshFeed();
+    setRefreshing(false);
   };
 
   const filteredActivities = activities.filter((act) => {
@@ -76,7 +74,7 @@ export default function FeedScreen() {
         contentContainerClassName="p-3 pb-24"
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />
+          <RefreshControl refreshing={refreshing || isSyncing} onRefresh={onRefresh} colors={['#FC4C02']} />
         }
         ListHeaderComponent={
           <View>
@@ -88,7 +86,9 @@ export default function FeedScreen() {
                 </View>
                 <View>
                   <Text className="text-sm font-black text-gray-900">Weekly Volume</Text>
-                  <Text className="text-xs text-gray-500 mt-0.5">38.4 km logged · 3 runs</Text>
+                  <Text className="text-xs text-gray-500 mt-0.5">
+                    {(activities.reduce((acc, a) => acc + (a.distanceMeters || 0), 0) / 1000).toFixed(1)} km logged · {activities.length} workouts
+                  </Text>
                 </View>
               </View>
               <TouchableOpacity
@@ -98,32 +98,6 @@ export default function FeedScreen() {
                 <Ionicons name="chevron-forward" size={10} color="#FC4C02" />
               </TouchableOpacity>
             </View>
-
-            {/* Suggested Athletes Quick Carousel */}
-            <View className="bg-white p-3.5 rounded-2xl mb-3 border border-gray-200 shadow-sm">
-              <View className="flex-row justify-between items-center mb-2">
-                <Text className="text-xs font-black text-gray-900">Connect with Athletes</Text>
-                <TouchableOpacity onPress={() => router.push('/athlete/suggested')}>
-                  <Text className="text-[11px] font-bold text-[#FC4C02]">See All</Text>
-                </TouchableOpacity>
-              </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {MOCK_ATHLETES.map((athlete) => (
-                  <TouchableOpacity
-                    key={athlete.id}
-                    onPress={() => router.push(`/athlete/${athlete.id}`)}
-                    className="items-center mr-3 w-16">
-                    <Image
-                      source={{ uri: athlete.avatarUrl }}
-                      className="w-12 h-12 rounded-full bg-gray-100 border border-gray-200"
-                    />
-                    <Text className="text-[10px] font-bold text-gray-800 text-center mt-1" numberOfLines={1}>
-                      {athlete.displayName.split(' ')[0]}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
           </View>
         }
         ListEmptyComponent={
@@ -132,7 +106,7 @@ export default function FeedScreen() {
             title="No Activities Yet"
             description="Follow active athletes or record your first workout to see it in your personal feed."
             actionLabel="Discover Athletes"
-            onAction={() => router.push('/athlete/suggested')}
+            onAction={() => router.push('/search')}
           />
         }
       />

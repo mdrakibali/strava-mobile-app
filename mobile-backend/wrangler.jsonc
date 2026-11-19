@@ -16,9 +16,6 @@
   "vars": {
     "ENVIRONMENT": "production",
     "CORS_ORIGIN": "*",
-    "JWT_SECRET": "open-strava-prod-secret-jwt-key-2026-auth",
-    "DATABASE_URL": "postgresql://neondb_owner:npg_chTDF35Axdla@ep-nameless-meadow-biyayy82-pooler.c-5.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
     "GOOGLE_CLIENT_ID": "923419495380-p8senmhosq66vltjdviijc08dbunhmsd.apps.googleusercontent.com"
   }
 }
-

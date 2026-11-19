@@ -2,11 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ActiveRecordingState, useGpsRecorder } from '../hooks/use-gps-recorder';
 import {
   CURRENT_USER,
-  MOCK_ACTIVITIES,
-  MOCK_CHALLENGES,
-  MOCK_CLUBS,
   MOCK_EVENTS,
-  MOCK_NOTIFICATIONS,
   MOCK_SEGMENTS,
 } from '../mock/data';
 import { api, setAuthToken } from '../services/api';
@@ -27,13 +23,13 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<Athlete>(CURRENT_USER);
-  const [activities, setActivities] = useState<Activity[]>(MOCK_ACTIVITIES);
-  const [clubs, setClubs] = useState<Club[]>(MOCK_CLUBS);
-  const [challenges, setChallenges] = useState<Challenge[]>(MOCK_CHALLENGES);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [clubs, setClubs] = useState<Club[]>([]);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [events, setEvents] = useState<GroupEvent[]>(MOCK_EVENTS);
   const [segments] = useState<Segment[]>(MOCK_SEGMENTS);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(MOCK_NOTIFICATIONS);
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [isSyncing, setIsSyncing] = useState<boolean>(true);
 
   const {
     activeRecording,
@@ -134,11 +130,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     daysRemaining: item.daysRemaining || 10,
   });
 
-  // Initial Sync from Live Backend
+  // Initial Sync: Load REAL data from Neon PostgreSQL via Cloudflare Workers
   const syncWithBackend = async () => {
     setIsSyncing(true);
     try {
-      // 1. Initial auth check / demo login to get session token
+      // 1. Authenticate with backend and retrieve real athlete session
       const authRes = await api.auth.demoLogin().catch(() => null);
       if (authRes?.token) {
         setAuthToken(authRes.token);
@@ -158,25 +154,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      // 2. Fetch live timeline feed
+      // 2. Fetch REAL timeline feed from Database
       const feedRes = await api.feed.getFeed('all').catch(() => null);
-      if (feedRes?.feed && feedRes.feed.length > 0) {
+      if (feedRes?.feed) {
         setActivities(feedRes.feed.map(mapBackendActivity));
       }
 
-      // 3. Fetch live clubs
+      // 3. Fetch REAL clubs from Database
       const clubsRes = await api.clubs.list().catch(() => null);
-      if (clubsRes?.clubs && clubsRes.clubs.length > 0) {
+      if (clubsRes?.clubs) {
         setClubs(clubsRes.clubs.map(mapBackendClub));
       }
 
-      // 4. Fetch live challenges
+      // 4. Fetch REAL challenges from Database
       const chRes = await api.challenges.list().catch(() => null);
-      if (chRes?.challenges && chRes.challenges.length > 0) {
+      if (chRes?.challenges) {
         setChallenges(chRes.challenges.map(mapBackendChallenge));
       }
+
+      // 5. Fetch REAL notifications from Database
+      const notifRes = await api.notifications.list().catch(() => null);
+      if (notifRes?.notifications) {
+        setNotifications(
+          notifRes.notifications.map((n: any) => ({
+            id: n.id,
+            type: n.actionType?.toLowerCase() || 'kudos',
+            actor: {
+              id: n.actor?.id || 'ath_unknown',
+              displayName: n.actor?.displayName || 'Athlete',
+              username: n.actor?.username || 'athlete',
+              avatarUrl: n.actor?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
+              city: 'Dhaka',
+              country: 'Bangladesh',
+              followersCount: 0,
+              followingCount: 0,
+            },
+            message: n.message,
+            targetActivityId: n.targetActivityId,
+            createdAt: n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently',
+            isRead: n.isRead,
+          }))
+        );
+      }
     } catch (err) {
-      console.warn('Initial backend sync error (offline fallback used):', err);
+      console.warn('Backend sync failed:', err);
     } finally {
       setIsSyncing(false);
     }
@@ -190,7 +211,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsSyncing(true);
     try {
       const feedRes = await api.feed.getFeed('all');
-      if (feedRes?.feed && feedRes.feed.length > 0) {
+      if (feedRes?.feed) {
         setActivities(feedRes.feed.map(mapBackendActivity));
       }
     } catch (err) {
@@ -220,6 +241,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             isFollowing: false,
           });
         }
+        await refreshFeed();
       }
     } finally {
       setIsSyncing(false);
