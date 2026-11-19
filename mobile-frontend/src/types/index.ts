@@ -47,8 +47,9 @@ export interface CommentItem {
 export interface LatLngPoint {
   latitude: number;
   longitude: number;
-  altitude?: number;
+  altitude?: number | null;
   timestamp?: number;
+  speed?: number | null;
 }
 
 export interface Activity {
