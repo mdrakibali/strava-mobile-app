@@ -138,6 +138,7 @@ export interface Challenge {
   isJoined: boolean;
   isCompleted: boolean;
   badgeUrl: string;
+  participantsCount?: number;
 }
 
 export interface GroupEvent {
