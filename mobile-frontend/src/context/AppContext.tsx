@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ActiveRecordingState, useGpsRecorder } from '../hooks/use-gps-recorder';
 import {
@@ -35,6 +36,8 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<Athlete>(INITIAL_ATHLETE);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [clubs, setClubs] = useState<Club[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
@@ -142,49 +145,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     daysRemaining: item.daysRemaining || 10,
   });
 
-  // Initial Sync: Load REAL data from Neon PostgreSQL via Cloudflare Workers
-  const syncWithBackend = async () => {
+  // Load data from Neon PostgreSQL via Cloudflare Workers
+  const loadFeedData = async () => {
     setIsSyncing(true);
     try {
-      // 1. Authenticate with backend and retrieve real athlete session
-      const authRes = await api.auth.demoLogin().catch(() => null);
-      if (authRes?.token) {
-        setAuthToken(authRes.token);
-        if (authRes.athlete) {
-          setCurrentUser({
-            id: authRes.athlete.id,
-            displayName: authRes.athlete.displayName,
-            username: authRes.athlete.username,
-            avatarUrl: authRes.athlete.avatarUrl,
-            city: authRes.athlete.city || 'Dhaka',
-            country: authRes.athlete.country || 'Bangladesh',
-            bio: authRes.athlete.bio || '',
-            followersCount: authRes.athlete.followersCount || 0,
-            followingCount: authRes.athlete.followingCount || 0,
-            isFollowing: false,
-          });
-        }
-      }
-
-      // 2. Fetch REAL timeline feed from Database
+      // 1. Fetch REAL timeline feed from Database
       const feedRes = await api.feed.getFeed('all').catch(() => null);
       if (feedRes?.feed) {
         setActivities(feedRes.feed.map(mapBackendActivity));
       }
 
-      // 3. Fetch REAL clubs from Database
+      // 2. Fetch REAL clubs from Database
       const clubsRes = await api.clubs.list().catch(() => null);
       if (clubsRes?.clubs) {
         setClubs(clubsRes.clubs.map(mapBackendClub));
       }
 
-      // 4. Fetch REAL challenges from Database
+      // 3. Fetch REAL challenges from Database
       const chRes = await api.challenges.list().catch(() => null);
       if (chRes?.challenges) {
         setChallenges(chRes.challenges.map(mapBackendChallenge));
       }
 
-      // 5. Fetch REAL notifications from Database
+      // 4. Fetch REAL notifications from Database
       const notifRes = await api.notifications.list().catch(() => null);
       if (notifRes?.notifications) {
         setNotifications(
@@ -215,45 +198,95 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Check stored auth session on startup
   useEffect(() => {
-    syncWithBackend();
+    const initAuthSession = async () => {
+      try {
+        setIsAuthLoading(true);
+        const storedToken = await AsyncStorage.getItem('@open_strava_token');
+        const storedAthlete = await AsyncStorage.getItem('@open_strava_athlete');
+
+        if (storedToken && storedAthlete) {
+          setAuthToken(storedToken);
+          setCurrentUser(JSON.parse(storedAthlete));
+          setIsAuthenticated(true);
+          await loadFeedData();
+        } else {
+          setIsAuthenticated(false);
+          setIsSyncing(false);
+        }
+      } catch (err) {
+        console.warn('Auth session check failed:', err);
+        setIsAuthenticated(false);
+        setIsSyncing(false);
+      } finally {
+        setIsAuthLoading(false);
+      }
+    };
+
+    initAuthSession();
   }, []);
 
   const refreshFeed = async () => {
-    setIsSyncing(true);
-    try {
-      const feedRes = await api.feed.getFeed('all');
-      if (feedRes?.feed) {
-        setActivities(feedRes.feed.map(mapBackendActivity));
-      }
-    } catch (err) {
-      console.warn('Refresh feed failed:', err);
-    } finally {
-      setIsSyncing(false);
-    }
+    await loadFeedData();
   };
 
   const loginWithGoogle = async (idToken: string) => {
     setIsSyncing(true);
     try {
       const res = await api.auth.googleLogin(idToken);
-      if (res.token) {
+      if (res?.token && res?.athlete) {
+        const athleteProfile: Athlete = {
+          id: res.athlete.id,
+          displayName: res.athlete.displayName,
+          username: res.athlete.username,
+          avatarUrl: res.athlete.avatarUrl,
+          city: res.athlete.city || 'Dhaka',
+          country: res.athlete.country || 'Bangladesh',
+          bio: res.athlete.bio || '',
+          followersCount: res.athlete.followersCount || 0,
+          followingCount: res.athlete.followingCount || 0,
+          isFollowing: false,
+        };
+
+        await AsyncStorage.setItem('@open_strava_token', res.token);
+        await AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(athleteProfile));
+
         setAuthToken(res.token);
-        if (res.athlete) {
-          setCurrentUser({
-            id: res.athlete.id,
-            displayName: res.athlete.displayName,
-            username: res.athlete.username,
-            avatarUrl: res.athlete.avatarUrl,
-            city: res.athlete.city || 'Dhaka',
-            country: res.athlete.country || 'Bangladesh',
-            bio: res.athlete.bio || '',
-            followersCount: res.athlete.followersCount || 0,
-            followingCount: res.athlete.followingCount || 0,
-            isFollowing: false,
-          });
-        }
-        await refreshFeed();
+        setCurrentUser(athleteProfile);
+        setIsAuthenticated(true);
+        await loadFeedData();
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const loginAsGuest = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await api.auth.demoLogin();
+      if (res?.token && res?.athlete) {
+        const guestProfile: Athlete = {
+          id: res.athlete.id,
+          displayName: res.athlete.displayName,
+          username: res.athlete.username,
+          avatarUrl: res.athlete.avatarUrl,
+          city: res.athlete.city || 'Dhaka',
+          country: res.athlete.country || 'Bangladesh',
+          bio: res.athlete.bio || '',
+          followersCount: res.athlete.followersCount || 0,
+          followingCount: res.athlete.followingCount || 0,
+          isFollowing: false,
+        };
+
+        await AsyncStorage.setItem('@open_strava_token', res.token);
+        await AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(guestProfile));
+
+        setAuthToken(res.token);
+        setCurrentUser(guestProfile);
+        setIsAuthenticated(true);
+        await loadFeedData();
       }
     } finally {
       setIsSyncing(false);
@@ -261,7 +294,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const loginWithDemo = async () => {
-    await syncWithBackend();
+    await loginAsGuest();
+  };
+
+  const logout = async () => {
+    try {
+      await AsyncStorage.multiRemove(['@open_strava_token', '@open_strava_athlete']);
+      setAuthToken(null);
+      setCurrentUser(INITIAL_ATHLETE);
+      setIsAuthenticated(false);
+      setActivities([]);
+      setNotifications([]);
+    } catch (err) {
+      console.warn('Logout error:', err);
+    }
   };
 
   const toggleKudos = (activityId: string) => {
@@ -493,6 +539,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider
       value={{
         currentUser,
+        isAuthenticated,
+        isAuthLoading,
         activities,
         clubs,
         challenges,
@@ -513,6 +561,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refreshFeed,
         loginWithGoogle,
         loginWithDemo,
+        loginAsGuest,
+        logout,
         startRecording,
         pauseRecording,
         resumeRecording,

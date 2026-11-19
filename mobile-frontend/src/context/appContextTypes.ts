@@ -12,6 +12,8 @@ import {
 
 export interface AppContextType {
   currentUser: Athlete;
+  isAuthenticated: boolean;
+  isAuthLoading: boolean;
   activities: Activity[];
   clubs: Club[];
   challenges: Challenge[];
@@ -34,6 +36,8 @@ export interface AppContextType {
   refreshFeed: () => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
   loginWithDemo: () => Promise<void>;
+  loginAsGuest: () => Promise<void>;
+  logout: () => Promise<void>;
 
   // Recording Controls
   startRecording: (sport?: SportType, simulate?: boolean) => void;

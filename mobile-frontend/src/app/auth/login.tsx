@@ -17,7 +17,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { loginWithGoogle, loginWithDemo } = useApp();
+  const { loginWithGoogle, loginAsGuest } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -57,14 +57,14 @@ export default function LoginScreen() {
     }
   };
 
-  const handleDemoLogin = async () => {
+  const handleGuestLogin = async () => {
     setIsLoading(true);
-    setStatusMessage('Connecting instant athlete session...');
+    setStatusMessage('Connecting secure guest session...');
     try {
-      await loginWithDemo();
+      await loginAsGuest();
       router.replace('/(tabs)');
     } catch (err: any) {
-      Alert.alert('Demo Login Failed', err.message || 'Could not initialize session');
+      Alert.alert('Guest Login Failed', err.message || 'Could not initialize guest session');
     } finally {
       setIsLoading(false);
       setStatusMessage(null);
@@ -140,16 +140,16 @@ export default function LoginScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* Quick Demo Athlete Bypass */}
+        {/* Continue as Guest Athlete */}
         <TouchableOpacity
           disabled={isLoading}
-          onPress={handleDemoLogin}
-          className={`w-full py-3.5 bg-orange-50 border border-orange-200 rounded-2xl flex-row items-center justify-center mb-6 ${
-            isLoading ? 'opacity-60' : 'active:bg-orange-100'
+          onPress={handleGuestLogin}
+          className={`w-full py-3.5 bg-gray-50 border border-gray-200 rounded-2xl flex-row items-center justify-center mb-6 ${
+            isLoading ? 'opacity-60' : 'active:bg-gray-100'
           }`}>
-          <Ionicons name="flash" size={16} color="#FC4C02" />
-          <Text className="text-xs font-black text-[#FC4C02] ml-2">
-            Quick Demo Athlete Login (Instant Preview)
+          <Ionicons name="person-outline" size={16} color="#4B5563" />
+          <Text className="text-xs font-bold text-gray-700 ml-2">
+            Continue as Guest Athlete
           </Text>
         </TouchableOpacity>
 
