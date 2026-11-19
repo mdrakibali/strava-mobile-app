@@ -1,22 +1,33 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CURRENT_USER } from '../../mock/data';
+import { useApp } from '../../context/AppContext';
 
 export default function ProfileEditScreen() {
   const router = useRouter();
-  const [displayName, setDisplayName] = useState(CURRENT_USER.displayName);
-  const [bio, setBio] = useState(CURRENT_USER.bio || '');
-  const [city, setCity] = useState(CURRENT_USER.city);
-  const [country, setCountry] = useState(CURRENT_USER.country);
+  const { currentUser } = useApp();
+
+  const [displayName, setDisplayName] = useState(currentUser.displayName || '');
+  const [bio, setBio] = useState(currentUser.bio || '');
+  const [city, setCity] = useState(currentUser.city || 'Dhaka');
+  const [country, setCountry] = useState(currentUser.country || 'Bangladesh');
   const [weightKg, setWeightKg] = useState('68');
   const [maxHr, setMaxHr] = useState('188');
 
   const handleSave = () => {
-    alert('Profile updated successfully!');
-    router.back();
+    Alert.alert('Profile Updated', 'Your athlete profile details have been updated successfully!', [
+      { text: 'OK', onPress: () => router.back() },
+    ]);
   };
 
   return (
@@ -35,11 +46,13 @@ export default function ProfileEditScreen() {
         {/* Avatar Section */}
         <View className="items-center mb-6">
           <Image
-            source={{ uri: CURRENT_USER.avatarUrl }}
-            className="w-20 h-20 rounded-full border-2 border-[#FC4C02] mb-2"
+            source={{ uri: currentUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400' }}
+            className="w-20 h-20 rounded-full border-2 border-[#FC4C02] mb-2 bg-gray-100"
           />
-          <TouchableOpacity className="bg-gray-100 px-3 py-1 rounded-full">
-            <Text className="text-xs font-bold text-gray-600">Change Photo</Text>
+          <TouchableOpacity
+            onPress={() => Alert.alert('Avatar', 'Google profile avatar is linked automatically.')}
+            className="bg-gray-100 px-3 py-1 rounded-full">
+            <Text className="text-xs font-bold text-gray-600">Google Linked Photo</Text>
           </TouchableOpacity>
         </View>
 
@@ -114,4 +127,3 @@ export default function ProfileEditScreen() {
     </SafeAreaView>
   );
 }
-

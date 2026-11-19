@@ -174,9 +174,10 @@ export const api = {
     list: () => request<{ gear: any[] }>('/gear'),
     create: (data: {
       name: string;
-      type: 'shoes' | 'bike' | 'other';
-      brand?: string;
-      model?: string;
+      brand: string;
+      model: string;
+      sportType?: string;
+      maxDistanceMeters?: number;
       isDefault?: boolean;
     }) =>
       request<{ message: string; gear: any }>('/gear', {

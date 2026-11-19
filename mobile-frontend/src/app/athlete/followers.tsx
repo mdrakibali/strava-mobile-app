@@ -1,25 +1,55 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MOCK_ATHLETES } from '../../mock/data';
+import { api } from '../../services/api';
 
 export default function FollowersScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [followers, setFollowers] = useState(MOCK_ATHLETES);
+  const [athletes, setAthletes] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filtered = followers.filter(
-    (a) =>
-      a.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.username.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    let isMounted = true;
+    const fetchAthletes = async () => {
+      setIsLoading(true);
+      try {
+        const res = await api.athletes.search(searchQuery);
+        if (isMounted && res?.athletes) {
+          setAthletes(res.athletes);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch athletes:', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
 
-  const toggleFollow = (id: string) => {
-    setFollowers((prev) =>
+    fetchAthletes();
+    return () => {
+      isMounted = false;
+    };
+  }, [searchQuery]);
+
+  const toggleFollow = async (id: string) => {
+    setAthletes((prev) =>
       prev.map((a) => (a.id === id ? { ...a, isFollowing: !a.isFollowing } : a))
     );
+    try {
+      await api.athletes.toggleFollow(id);
+    } catch (err) {
+      console.warn('Follow toggle error:', err);
+    }
   };
 
   return (
@@ -28,7 +58,9 @@ export default function FollowersScreen() {
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900 ml-3">Followers ({followers.length})</Text>
+        <Text className="text-base font-black text-gray-900 ml-3">
+          Community Athletes ({athletes.length})
+        </Text>
       </View>
 
       <View className="p-4 bg-white border-b border-gray-200">
@@ -37,44 +69,63 @@ export default function FollowersScreen() {
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search followers..."
+            placeholder="Search athletes in community..."
             className="flex-1 ml-2 text-sm text-gray-900"
           />
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="p-4">
-        {filtered.map((athlete) => (
-          <View
-            key={athlete.id}
-            className="flex-row items-center justify-between p-3 bg-white rounded-2xl mb-2.5 border border-gray-100 shadow-sm">
-            <TouchableOpacity
-              onPress={() => router.push(`/athlete/${athlete.id}`)}
-              className="flex-row items-center flex-1 mr-3">
-              <Image source={{ uri: athlete.avatarUrl }} className="w-12 h-12 rounded-full mr-3 bg-gray-100" />
-              <View className="flex-1">
-                <Text className="text-sm font-bold text-gray-900">{athlete.displayName}</Text>
-                <Text className="text-xs text-gray-400">@{athlete.username}</Text>
-                <View className="flex-row items-center mt-0.5">
-                  <Ionicons name="location-outline" size={10} color="#9CA3AF" />
-                  <Text className="text-[10px] text-gray-400 ml-0.5">{athlete.city}</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => toggleFollow(athlete.id)}
-              className={`px-4 py-1.5 rounded-full ${
-                athlete.isFollowing ? 'bg-gray-100' : 'bg-[#FC4C02]'
-              }`}>
-              <Text className={`text-xs font-bold ${athlete.isFollowing ? 'text-gray-700' : 'text-white'}`}>
-                {athlete.isFollowing ? 'Following' : 'Follow Back'}
-              </Text>
-            </TouchableOpacity>
+      <ScrollView showsVerticalScrollIndicator={false} className="p-4" contentContainerClassName="pb-24">
+        {isLoading ? (
+          <View className="py-12 items-center">
+            <ActivityIndicator size="small" color="#FC4C02" />
+            <Text className="text-xs text-gray-400 mt-2">Loading athletes...</Text>
           </View>
-        ))}
+        ) : athletes.length === 0 ? (
+          <View className="bg-white p-8 rounded-2xl border border-gray-200 items-center justify-center mt-4">
+            <Ionicons name="people-outline" size={32} color="#D1D5DB" />
+            <Text className="text-sm font-bold text-gray-800 mt-2">No athletes found</Text>
+          </View>
+        ) : (
+          athletes.map((athlete) => (
+            <View
+              key={athlete.id}
+              className="flex-row items-center justify-between p-3 bg-white rounded-2xl mb-2.5 border border-gray-100 shadow-sm">
+              <TouchableOpacity
+                onPress={() => router.push(`/athlete/${athlete.id}`)}
+                className="flex-row items-center flex-1 mr-3">
+                <Image
+                  source={{ uri: athlete.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}
+                  className="w-12 h-12 rounded-full mr-3 bg-gray-100"
+                />
+                <View className="flex-1">
+                  <Text className="text-sm font-bold text-gray-900">{athlete.displayName}</Text>
+                  <Text className="text-xs text-gray-400">@{athlete.username || 'athlete'}</Text>
+                  <View className="flex-row items-center mt-0.5">
+                    <Ionicons name="location-outline" size={10} color="#9CA3AF" />
+                    <Text className="text-[10px] text-gray-400 ml-0.5">{athlete.city || 'Dhaka'}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => toggleFollow(athlete.id)}
+                className={`px-3.5 py-1.5 rounded-full border ${
+                  athlete.isFollowing
+                    ? 'border-gray-200 bg-gray-50'
+                    : 'border-[#FC4C02] bg-[#FC4C02]'
+                }`}>
+                <Text
+                  className={`text-xs font-bold ${
+                    athlete.isFollowing ? 'text-gray-700' : 'text-white'
+                  }`}>
+                  {athlete.isFollowing ? 'Following' : 'Follow'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
-

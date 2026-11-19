@@ -1,8 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { api } from '../../services/api';
 
 export default function AddGearScreen() {
   const router = useRouter();
@@ -13,14 +22,42 @@ export default function AddGearScreen() {
   const [initialKm, setInitialKm] = useState('0');
   const [maxKm, setMaxKm] = useState('600');
   const [isDefault, setIsDefault] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
-      alert('Please enter a gear nickname');
+      Alert.alert('Missing Field', 'Please enter a gear nickname');
       return;
     }
-    alert(`Gear "${name}" added to your profile!`);
-    router.back();
+    if (!brand.trim()) {
+      Alert.alert('Missing Field', 'Please enter a brand name (e.g. Nike, Trek)');
+      return;
+    }
+    if (!model.trim()) {
+      Alert.alert('Missing Field', 'Please enter a model name');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const maxDistanceMeters = (Number(maxKm) || 600) * 1000;
+      await api.gear.create({
+        name: name.trim(),
+        brand: brand.trim(),
+        model: model.trim(),
+        sportType,
+        maxDistanceMeters,
+        isDefault,
+      });
+
+      Alert.alert('Success', `"${name.trim()}" added to your gear!`, [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch (err: any) {
+      Alert.alert('Save Failed', err.message || 'Could not save gear to backend');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -31,8 +68,12 @@ export default function AddGearScreen() {
             <Ionicons name="close" size={24} color="#111827" />
           </TouchableOpacity>
           <Text className="text-base font-black text-gray-900">Add New Gear</Text>
-          <TouchableOpacity onPress={handleSave}>
-            <Text className="text-sm font-black text-[#FC4C02]">Save</Text>
+          <TouchableOpacity onPress={handleSave} disabled={isSaving}>
+            {isSaving ? (
+              <ActivityIndicator size="small" color="#FC4C02" />
+            ) : (
+              <Text className="text-sm font-black text-[#FC4C02]">Save</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -83,7 +124,7 @@ export default function AddGearScreen() {
               <TextInput
                 value={brand}
                 onChangeText={setBrand}
-                placeholder="e.g. Saucony"
+                placeholder="e.g. Nike, Saucony, Trek"
                 className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
               />
             </View>
@@ -92,7 +133,7 @@ export default function AddGearScreen() {
               <TextInput
                 value={model}
                 onChangeText={setModel}
-                placeholder="e.g. Endorphin Speed 4"
+                placeholder="e.g. Vaporfly 3, Domane"
                 className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
               />
             </View>
@@ -138,10 +179,12 @@ export default function AddGearScreen() {
 
       <TouchableOpacity
         onPress={handleSave}
-        className="w-full py-4 bg-[#FC4C02] rounded-2xl items-center shadow-md">
+        disabled={isSaving}
+        className={`w-full py-4 bg-[#FC4C02] rounded-2xl items-center shadow-md ${
+          isSaving ? 'opacity-60' : ''
+        }`}>
         <Text className="text-base font-black text-white">Save Gear</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
 }
-
