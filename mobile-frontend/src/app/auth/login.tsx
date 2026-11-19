@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { makeRedirectUri } from 'expo-auth-session';
+import * as Google from 'expo-auth-session/providers/google';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,6 +17,24 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
+
+WebBrowser.maybeCompleteAuthSession();
+
+/**
+ * Safely probes for native @react-native-google-signin/google-signin TurboModule.
+ * Prevents red-screen crash in Expo Go where custom TurboModules are not compiled into the APK.
+ */
+const loadNativeGoogleSignin = () => {
+  try {
+    const mod = require('@react-native-google-signin/google-signin');
+    if (mod && mod.GoogleSignin) {
+      return { GoogleSignin: mod.GoogleSignin, statusCodes: mod.statusCodes || {} };
+    }
+  } catch (err) {
+    // Native TurboModule 'RNGoogleSignin' not registered in Expo Go binary
+  }
+  return null;
+};
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -33,61 +53,114 @@ export default function LoginScreen() {
     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
     '923419495380-p8senmhosq66vltjdviijc08dbunhmsd.apps.googleusercontent.com';
 
-  // Configure native Google Sign-In on mount
+  // Fallback Google Auth Request for Expo Go environments
+  const redirectUri = makeRedirectUri({
+    preferLocalhost: false,
+  });
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: googleClientId,
+    webClientId: googleClientId,
+    redirectUri,
+  });
+
+  // Configure native Google Sign-In on mount if native module is present in the binary
   useEffect(() => {
-    try {
-      GoogleSignin.configure({
-        webClientId: googleClientId,
-        offlineAccess: true,
-        scopes: ['profile', 'email'],
-      });
-    } catch (err) {
-      console.warn('Native GoogleSignin configuration warning:', err);
+    const native = loadNativeGoogleSignin();
+    if (native) {
+      try {
+        native.GoogleSignin.configure({
+          webClientId: googleClientId,
+          offlineAccess: true,
+          scopes: ['profile', 'email'],
+        });
+      } catch (err) {
+        console.warn('Native GoogleSignin configuration warning:', err);
+      }
     }
   }, [googleClientId]);
 
-  // Native Google Sign-In using @react-native-google-signin/google-signin
-  const handleNativeGoogleSignIn = async () => {
-    setIsLoading(true);
-    setStatusMessage('Connecting to Google Play Services...');
-
-    try {
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      const response = await GoogleSignin.signIn();
-
-      // Retrieve verified ID token from native sign-in response
-      const idToken =
-        (response as any).data?.idToken ||
-        (response as any).idToken;
-
+  // Handle Expo Go Google Auth response
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const idToken = response.params?.id_token || (response as any).authentication?.idToken;
       if (idToken) {
-        setStatusMessage('Authenticating athlete account on Neon DB...');
-        await loginWithGoogle(idToken);
-        router.replace('/(tabs)');
-      } else {
-        Alert.alert('Google Sign-In', 'No ID token received from Google.');
+        handleServerVerification(idToken);
       }
-    } catch (error: any) {
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        // User closed or dismissed the Google account prompt
-        console.log('User cancelled Google Sign-In');
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        console.log('Google Sign-In is already running');
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        Alert.alert(
-          'Google Play Services',
-          'Google Play Services is not available or needs to be updated on your device.'
-        );
-      } else {
-        console.error('Google Sign-In Error:', error);
-        Alert.alert(
-          'Google Sign-In',
-          error.message || 'Unable to authenticate with Google. Please try again or use email.'
-        );
-      }
+    }
+  }, [response]);
+
+  const handleServerVerification = async (idToken: string) => {
+    setIsLoading(true);
+    setStatusMessage('Authenticating athlete account on Neon DB...');
+    try {
+      await loginWithGoogle(idToken);
+      router.replace('/(tabs)');
+    } catch (err: any) {
+      Alert.alert('Login Failed', err.message || 'Could not verify Google ID token with backend');
     } finally {
       setIsLoading(false);
       setStatusMessage(null);
+    }
+  };
+
+  // Smart Google Sign-In: Native Google Play Services when built natively, Expo Go fallback otherwise
+  const handleGoogleSignInPress = async () => {
+    const native = loadNativeGoogleSignin();
+
+    if (native) {
+      // 1. Native @react-native-google-signin/google-signin flow
+      setIsLoading(true);
+      setStatusMessage('Connecting to Google Play Services...');
+      try {
+        await native.GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+        const res = await native.GoogleSignin.signIn();
+        const idToken = (res as any).data?.idToken || (res as any).idToken;
+
+        if (idToken) {
+          await handleServerVerification(idToken);
+        } else {
+          Alert.alert('Google Sign-In', 'No ID token received from Google.');
+        }
+      } catch (error: any) {
+        if (error.code === native.statusCodes.SIGN_IN_CANCELLED) {
+          console.log('User cancelled Google Sign-In');
+        } else if (error.code === native.statusCodes.IN_PROGRESS) {
+          console.log('Google Sign-In is already running');
+        } else if (error.code === native.statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+          Alert.alert(
+            'Google Play Services',
+            'Google Play Services is not available or outdated on this device.'
+          );
+        } else {
+          console.error('Google Sign-In Error:', error);
+          Alert.alert(
+            'Google Sign-In',
+            error.message || 'Unable to authenticate with Google. Please try email or dev build.'
+          );
+        }
+      } finally {
+        setIsLoading(false);
+        setStatusMessage(null);
+      }
+    } else {
+      // 2. Safe Expo Go flow (prevents TurboModule red screen)
+      setIsLoading(true);
+      setStatusMessage('Opening Google Sign-In in Expo Go...');
+      try {
+        const result = await promptAsync();
+        if (result.type !== 'success') {
+          setIsLoading(false);
+          setStatusMessage(null);
+        }
+      } catch (err: any) {
+        setIsLoading(false);
+        setStatusMessage(null);
+        Alert.alert(
+          'Google Sign-In Notice',
+          'For native Google Play prompt without browser, an Expo Development Build (npx expo run:android) is required. You can also log in directly using Email.'
+        );
+      }
     }
   };
 
@@ -261,10 +334,10 @@ export default function LoginScreen() {
             <View className="flex-1 h-px bg-gray-200" />
           </View>
 
-          {/* Native Google Sign-In Button (Option A: @react-native-google-signin/google-signin) */}
+          {/* Google Sign-In Button */}
           <TouchableOpacity
             disabled={isLoading}
-            onPress={handleNativeGoogleSignIn}
+            onPress={handleGoogleSignInPress}
             activeOpacity={0.85}
             className="w-full py-3.5 px-4 bg-white border border-gray-300 rounded-2xl flex-row items-center justify-center shadow-xs mb-4">
             <Ionicons name="logo-google" size={18} color="#EA4335" />

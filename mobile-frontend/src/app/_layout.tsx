@@ -96,10 +96,6 @@ function NavigationRoot() {
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
       <Stack.Screen
-        name="gear/add"
-        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-      />
-      <Stack.Screen
         name="settings/profile-edit"
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
