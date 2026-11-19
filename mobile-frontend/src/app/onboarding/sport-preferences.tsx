@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SPORTS = [
   { id: 'Run', label: 'Outdoor Running', icon: 'footsteps-outline' as const },
@@ -14,6 +14,7 @@ const SPORTS = [
 
 export default function SportPreferencesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [selectedSports, setSelectedSports] = useState<string[]>(['Run']);
   const [weeklyTarget, setWeeklyTarget] = useState<number>(3);
 
@@ -28,27 +29,35 @@ export default function SportPreferencesScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white justify-between p-6">
-      <View>
-        <TouchableOpacity onPress={() => router.back()} className="mb-4">
+    <SafeAreaView className="flex-1 bg-white">
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+        className="flex-1 px-6 pt-2 pb-6">
+        
+        {/* Navigation Bar */}
+        <TouchableOpacity onPress={() => router.back()} className="p-1 mb-4 self-start">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
 
-        <Text className="text-2xl font-black text-gray-900 mb-2">
+        {/* Heading */}
+        <Text className="text-2xl font-black text-gray-900 mb-1.5">
           What moves you?
         </Text>
-        <Text className="text-xs text-gray-500 mb-6">
+        <Text className="text-xs text-gray-500 mb-6 leading-4">
           Choose your primary activities so we can tailor your feed, routes, and challenges.
         </Text>
 
-        <ScrollView showsVerticalScrollIndicator={false} className="space-y-3 mb-6">
+        {/* Sports List */}
+        <View className="mb-6">
           {SPORTS.map((sport) => {
             const isSelected = selectedSports.includes(sport.id);
             return (
               <TouchableOpacity
                 key={sport.id}
                 onPress={() => toggleSport(sport.id)}
-                className={`flex-row items-center justify-between p-4 rounded-2xl border mb-3 ${
+                activeOpacity={0.8}
+                className={`flex-row items-center justify-between p-3.5 rounded-2xl border mb-2.5 ${
                   isSelected
                     ? 'border-[#FC4C02] bg-orange-50/50'
                     : 'border-gray-200 bg-white'
@@ -70,17 +79,18 @@ export default function SportPreferencesScreen() {
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
 
-        <Text className="text-sm font-black text-gray-900 mb-3">
+        {/* Target Frequency */}
+        <Text className="text-sm font-black text-gray-900 mb-2">
           Weekly Workout Goal
         </Text>
-        <View className="flex-row justify-between mb-4">
+        <View className="flex-row justify-between mb-8">
           {[2, 3, 4, 5, 6].map((days) => (
             <TouchableOpacity
               key={days}
               onPress={() => setWeeklyTarget(days)}
-              className={`w-12 h-12 rounded-2xl items-center justify-center border ${
+              className={`w-13 h-12 rounded-2xl items-center justify-center border ${
                 weeklyTarget === days
                   ? 'border-[#FC4C02] bg-[#FC4C02]'
                   : 'border-gray-200 bg-gray-50'
@@ -94,14 +104,17 @@ export default function SportPreferencesScreen() {
             </TouchableOpacity>
           ))}
         </View>
-      </View>
 
-      <TouchableOpacity
-        onPress={() => router.push('/onboarding/profile-setup')}
-        className="w-full py-4 bg-[#FC4C02] rounded-2xl items-center shadow-md">
-        <Text className="text-base font-black text-white">Next: Athlete Profile</Text>
-      </TouchableOpacity>
+        {/* Bottom Continue Button */}
+        <View className="mt-auto pt-4" style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
+          <TouchableOpacity
+            onPress={() => router.push('/onboarding/profile-setup')}
+            activeOpacity={0.85}
+            className="w-full py-4 bg-[#FC4C02] rounded-full items-center justify-center shadow-lg">
+            <Text className="text-base font-black text-white">Continue</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
-
