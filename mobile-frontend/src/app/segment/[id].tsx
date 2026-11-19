@@ -3,12 +3,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Image,
-  SafeAreaView,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ElevationChart } from '../../components/common/ElevationChart';
 import { StravaMapView } from '../../components/map/StravaMapView';
 import { useApp } from '../../context/AppContext';

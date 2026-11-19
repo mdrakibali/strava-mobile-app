@@ -5,12 +5,12 @@ import {
   FlatList,
   Image,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityCard } from '../../components/common/ActivityCard';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Header } from '../../components/common/Header';
