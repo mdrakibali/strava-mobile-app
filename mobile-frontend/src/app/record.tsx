@@ -18,6 +18,7 @@ export default function RecordCockpitScreen() {
     resumeRecording,
     discardRecording,
     finishRecording,
+    toggleSimulation,
   } = useApp();
 
   const [selectedSport, setSelectedSport] = useState<SportType>(activeRecording.sportType || 'Run');
@@ -33,7 +34,7 @@ export default function RecordCockpitScreen() {
   };
 
   const formatPace = () => {
-    if (activeRecording.distanceMeters <= 20 || activeRecording.currentSpeedMps <= 0.1) {
+    if (activeRecording.distanceMeters <= 10 || activeRecording.currentSpeedMps <= 0.2) {
       return '-:--';
     }
     if (selectedSport === 'Ride') {
@@ -69,12 +70,38 @@ export default function RecordCockpitScreen() {
   const liveCoords = activeRecording.routeCoordinates.map(
     (c) => [c.longitude, c.latitude] as [number, number]
   );
+  const centerCoord =
+    liveCoords.length > 0 ? liveCoords[liveCoords.length - 1] : ([90.4125, 23.7745] as [number, number]);
+
+  const getGpsStatusDisplay = () => {
+    if (activeRecording.isSimulated) {
+      return { label: 'DEV SIMULATION MODE', color: 'bg-amber-500' };
+    }
+    if (activeRecording.isAutoPaused && activeRecording.isRecording) {
+      return { label: 'AUTO-PAUSED', color: 'bg-orange-500' };
+    }
+    switch (activeRecording.gpsSignal) {
+      case 'strong':
+        return { label: `GPS LOCKED (±${activeRecording.accuracyMeters || 3}m)`, color: 'bg-emerald-500' };
+      case 'good':
+        return { label: `GPS ACTIVE (±${activeRecording.accuracyMeters || 8}m)`, color: 'bg-emerald-400' };
+      case 'denied':
+        return { label: 'LOCATION PERMISSION DENIED', color: 'bg-red-500' };
+      case 'disabled':
+        return { label: 'LOCATION SERVICES OFF', color: 'bg-red-500' };
+      default:
+        return { label: 'SEARCHING GPS...', color: 'bg-amber-400' };
+    }
+  };
+
+  const gpsStatus = getGpsStatusDisplay();
 
   return (
     <View className="flex-1 bg-stone-900 relative">
       {/* Real Full-Screen MapLibre Map Behind HUD */}
       <StravaMapView
         styleKey="positron"
+        centerCoordinate={centerCoord}
         routeCoordinates={liveCoords.length > 0 ? liveCoords : undefined}
         showControls={false}
         showUserLocation={true}
@@ -101,11 +128,15 @@ export default function RecordCockpitScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* GPS Locked Status Pill */}
-          <View className="self-center mt-2 flex-row items-center bg-stone-900/80 px-3 py-1 rounded-full border border-stone-800">
-            <View className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5" />
-            <Text className="text-[10px] font-black text-white">GPS LOCKED (±3m)</Text>
-          </View>
+          {/* Dynamic GPS Signal / Auto-Pause Status Pill */}
+          <TouchableOpacity
+            onPress={() => setShowSettings(true)}
+            className="self-center mt-2 flex-row items-center bg-stone-900/90 px-3.5 py-1.5 rounded-full border border-stone-800 shadow-md">
+            <View className={`w-2 h-2 rounded-full ${gpsStatus.color} mr-1.5 animate-pulse`} />
+            <Text className="text-[10px] font-black text-white tracking-wider">
+              {gpsStatus.label}
+            </Text>
+          </TouchableOpacity>
         </SafeAreaView>
 
         {/* Athletic Performance Telemetry HUD */}
@@ -114,7 +145,7 @@ export default function RecordCockpitScreen() {
             <View className="flex-row justify-between items-baseline mb-4 pb-3 border-b border-stone-800">
               <View>
                 <Text className="text-[10px] uppercase font-black text-gray-400 tracking-wider">
-                  Time
+                  Moving Time
                 </Text>
                 <Text className="text-4xl font-black text-white tracking-tight">
                   {formatTime(activeRecording.movingSeconds)}
@@ -136,7 +167,9 @@ export default function RecordCockpitScreen() {
 
             <View className="flex-row justify-between">
               <View>
-                <Text className="text-[10px] uppercase font-bold text-gray-400">Pace</Text>
+                <Text className="text-[10px] uppercase font-bold text-gray-400">
+                  {selectedSport === 'Ride' ? 'Speed' : 'Pace'}
+                </Text>
                 <Text className="text-lg font-black text-white">{formatPace()}</Text>
               </View>
 
@@ -202,6 +235,7 @@ export default function RecordCockpitScreen() {
                 onPress={handleDiscard}
                 className="w-16 h-16 rounded-2xl bg-stone-800 border border-stone-700 items-center justify-center mr-2">
                 <Ionicons name="trash-outline" size={24} color="#EF4444" />
+                <Text className="text-[8px] font-bold text-red-400 mt-0.5">Discard</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -230,6 +264,8 @@ export default function RecordCockpitScreen() {
       <RecordSettingsModal
         visible={showSettings}
         onClose={() => setShowSettings(false)}
+        isSimulated={activeRecording.isSimulated}
+        onToggleSimulation={toggleSimulation}
       />
     </View>
   );

@@ -32,11 +32,12 @@ export interface AppContextType {
   toggleFollowAthlete: (athleteId: string) => void;
 
   // Recording Controls
-  startRecording: (sport?: SportType) => void;
+  startRecording: (sport?: SportType, simulate?: boolean) => void;
   pauseRecording: () => void;
   resumeRecording: () => void;
   discardRecording: () => void;
   finishRecording: () => ActiveRecordingState;
+  toggleSimulation?: () => void;
   saveNewActivity: (
     title: string,
     description: string,

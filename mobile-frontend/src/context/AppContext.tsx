@@ -41,6 +41,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     resumeRecording,
     discardRecording,
     finishRecording,
+    toggleSimulation,
   } = useGpsRecorder();
 
   const toggleKudos = (activityId: string) => {
@@ -175,7 +176,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       elapsedTimeSeconds: activeRecording.elapsedSeconds,
       elevationGainMeters: activeRecording.elevationGainMeters,
       averageSpeedMps: activeRecording.currentSpeedMps,
-      maxSpeedMps: activeRecording.currentSpeedMps * 1.3,
+      maxSpeedMps: activeRecording.maxSpeedMps || activeRecording.currentSpeedMps * 1.3,
       averageHeartRate: activeRecording.currentHeartRate || 152,
       maxHeartRate: (activeRecording.currentHeartRate || 152) + 18,
       distanceFormatted: `${distKm} km`,
@@ -183,18 +184,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       paceFormatted,
       elevationFormatted: `${activeRecording.elevationGainMeters} m`,
       gapFormatted: activeRecording.sportType === 'Run' ? paceFormatted : undefined,
-      relativeEffortScore: Math.round(activeRecording.movingSeconds / 45),
+      relativeEffortScore: Math.max(1, Math.round(activeRecording.movingSeconds / 45)),
       kudosCount: 0,
       hasKudos: false,
       commentsCount: 0,
       comments: [],
-      routePoints: [
-        { latitude: 23.771, longitude: 90.412 },
-        { latitude: 23.774, longitude: 90.416 },
-        { latitude: 23.778, longitude: 90.422 },
-        { latitude: 23.782, longitude: 90.428 },
-      ],
-      elevationProfile: [10, 15, 22, 18, 25, 30, 24, 18],
+      routePoints:
+        activeRecording.routeCoordinates.length > 0
+          ? activeRecording.routeCoordinates
+          : [
+              { latitude: 23.771, longitude: 90.412 },
+              { latitude: 23.774, longitude: 90.416 },
+              { latitude: 23.778, longitude: 90.422 },
+              { latitude: 23.782, longitude: 90.428 },
+            ],
+      splits: activeRecording.splits.length > 0 ? activeRecording.splits : undefined,
+      elevationProfile:
+        activeRecording.elevationProfile.length > 0
+          ? activeRecording.elevationProfile
+          : [10, 15, 22, 18, 25, 30, 24, 18],
     };
 
     setActivities((prev) => [newActivity, ...prev]);
@@ -228,6 +236,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         resumeRecording,
         discardRecording,
         finishRecording,
+        toggleSimulation,
         saveNewActivity,
       }}>
       {children}
