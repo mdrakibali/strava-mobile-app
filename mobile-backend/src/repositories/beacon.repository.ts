@@ -60,3 +60,4 @@ export class BeaconRepository {
       .where(and(eq(beaconSessions.token, token), eq(beaconSessions.athleteId, athleteId)));
   }
 }
+

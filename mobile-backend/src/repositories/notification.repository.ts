@@ -47,3 +47,4 @@ export class NotificationRepository {
       .where(eq(notifications.recipientId, recipientId));
   }
 }
+

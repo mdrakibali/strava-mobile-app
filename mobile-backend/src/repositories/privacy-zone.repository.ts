@@ -54,3 +54,4 @@ export class PrivacyZoneRepository {
       .where(and(eq(privacyZones.id, id), eq(privacyZones.athleteId, athleteId)));
   }
 }
+

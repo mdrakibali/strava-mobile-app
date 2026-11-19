@@ -59,3 +59,4 @@ export async function verifyGoogleToken(
     throw new Error(`Invalid Google ID Token: ${error.message || 'Signature verification failed'}`);
   }
 }
+

@@ -10,3 +10,4 @@ const controller = new AuthController();
 authRouter.post('/google', (c) => controller.googleLogin(c));
 authRouter.post('/demo-login', (c) => controller.demoLogin(c));
 authRouter.get('/me', requireAuth, (c) => controller.getMe(c));
+

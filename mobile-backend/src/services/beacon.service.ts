@@ -69,3 +69,4 @@ export class BeaconService {
     return { success: true };
   }
 }
+

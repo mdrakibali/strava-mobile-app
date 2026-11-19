@@ -54,3 +54,4 @@ export class GearRepository {
       .where(and(eq(gear.id, id), eq(gear.athleteId, athleteId)));
   }
 }
+

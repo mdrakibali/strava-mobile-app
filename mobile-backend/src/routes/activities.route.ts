@@ -11,3 +11,4 @@ activitiesRouter.get('/:id', optionalAuth, (c) => controller.getDetail(c));
 activitiesRouter.post('/:id/kudos', requireAuth, (c) => controller.toggleKudos(c));
 activitiesRouter.post('/:id/comments', requireAuth, (c) => controller.addComment(c));
 activitiesRouter.get('/:id/export', (c) => controller.exportGpx(c));
+

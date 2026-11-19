@@ -53,3 +53,4 @@ export class AuthController {
     return c.json({ athlete });
   }
 }
+

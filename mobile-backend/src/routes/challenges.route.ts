@@ -10,3 +10,4 @@ challengesRouter.get('/', optionalAuth, (c) => controller.list(c));
 challengesRouter.get('/:id', optionalAuth, (c) => controller.getDetail(c));
 challengesRouter.post('/', requireAuth, (c) => controller.create(c));
 challengesRouter.post('/:id/join', requireAuth, (c) => controller.toggleJoin(c));
+

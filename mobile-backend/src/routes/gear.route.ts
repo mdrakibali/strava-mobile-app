@@ -10,3 +10,4 @@ gearRouter.get('/', requireAuth, (c) => controller.list(c));
 gearRouter.post('/', requireAuth, (c) => controller.create(c));
 gearRouter.patch('/:id', requireAuth, (c) => controller.update(c));
 gearRouter.delete('/:id', requireAuth, (c) => controller.delete(c));
+

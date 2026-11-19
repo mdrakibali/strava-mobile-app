@@ -10,3 +10,4 @@ clubsRouter.get('/', optionalAuth, (c) => controller.list(c));
 clubsRouter.get('/:id', optionalAuth, (c) => controller.getDetail(c));
 clubsRouter.post('/', requireAuth, (c) => controller.create(c));
 clubsRouter.post('/:id/join', requireAuth, (c) => controller.toggleMembership(c));
+
