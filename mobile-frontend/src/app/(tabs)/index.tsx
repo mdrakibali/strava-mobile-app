@@ -18,7 +18,7 @@ import { useApp } from '../../context/AppContext';
 
 export default function FeedScreen() {
   const router = useRouter();
-  const { activities, isSyncing, refreshFeed } = useApp();
+  const { activities, isSyncing, refreshFeed, currentUser } = useApp();
   const [selectedFilter, setSelectedFilter] = useState<'ALL' | 'FOLLOWING' | 'CLUBS'>('ALL');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -30,7 +30,7 @@ export default function FeedScreen() {
 
   const filteredActivities = activities.filter((act) => {
     if (selectedFilter === 'FOLLOWING') {
-      return act.athlete.isFollowing || act.athlete.id === 'user_current';
+      return act.athlete.isFollowing || act.athlete.id === currentUser?.id;
     }
     return true;
   });

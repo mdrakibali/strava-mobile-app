@@ -143,6 +143,8 @@ export default function RouteDetailScreen() {
             routeCoordinates={coords}
             showControls={false}
             showUserLocation={false}
+            mode="view-route"
+            autoFitRoute={true}
             className="w-full h-full"
           />
         </View>

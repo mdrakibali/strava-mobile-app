@@ -61,7 +61,7 @@ export default function ActivityDetailScreen() {
           setServerActivity({
             id: item.id,
             athlete: {
-              id: item.athlete?.id || 'ath_1',
+              id: item.athlete?.id || item.athleteId || 'ath_athlete',
               displayName: item.athlete?.displayName || 'Athlete',
               username: item.athlete?.username || 'athlete',
               avatarUrl:
@@ -174,6 +174,8 @@ export default function ActivityDetailScreen() {
               routeCoordinates={routeCoords}
               showControls={false}
               showUserLocation={false}
+              mode="view-route"
+              autoFitRoute={true}
               className="w-full h-full"
             />
             {/* Flyover Replay Button on bottom right of map (Screenshot 2) */}
