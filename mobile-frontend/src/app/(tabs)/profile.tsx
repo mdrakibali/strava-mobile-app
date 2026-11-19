@@ -225,78 +225,6 @@ export default function ProfileScreen() {
                 7.5 km remaining by Sunday to reach your target!
               </Text>
             </View>
-
-            {/* Unlocked Pro Analytics Suite (100% Free on Open Strava) */}
-            <View className="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs mb-4">
-              <View className="flex-row items-center justify-between mb-3">
-                <View>
-                  <Text className="text-sm font-black text-gray-900">
-                    Subscriber Features
-                  </Text>
-                  <Text className="text-[10px] font-bold text-emerald-600">
-                    100% Unlocked & Lifetime Free
-                  </Text>
-                </View>
-                <View className="bg-emerald-100 px-2 py-0.5 rounded-full">
-                  <Text className="text-[10px] font-black text-emerald-700">UNLOCKED</Text>
-                </View>
-              </View>
-
-              <View className="space-y-2.5">
-                {[
-                  {
-                    title: 'Fitness & Freshness',
-                    desc: 'Track fitness (CTL), fatigue (ATL), and form (TSB) over time',
-                    route: '/analytics/fitness-freshness',
-                    icon: 'trending-up',
-                  },
-                  {
-                    title: 'Relative Effort',
-                    desc: 'Heart rate TRIMP cardio workload analysis for every workout',
-                    route: '/analytics/relative-effort',
-                    icon: 'flash',
-                  },
-                  {
-                    title: 'Race Predictor',
-                    desc: 'Projected 5K, 10K, Half Marathon, and Marathon times',
-                    route: '/analytics/race-predictions',
-                    icon: 'trophy',
-                  },
-                  {
-                    title: 'Matched Activities',
-                    desc: 'Compare pace & cadence automatically on recurring routes',
-                    route: '/analytics/matched-activities',
-                    icon: 'git-compare',
-                  },
-                  {
-                    title: 'Personal & Global Heatmaps',
-                    desc: 'Full 3D heat trace of every kilometer you have explored',
-                    route: '/analytics/heatmap',
-                    icon: 'flame',
-                  },
-                  {
-                    title: 'Full Segment Leaderboards',
-                    desc: 'Unrestricted ranking filters: Overall, Age Group, Weight & Clubs',
-                    route: '/segments',
-                    icon: 'podium',
-                  },
-                ].map((item) => (
-                  <TouchableOpacity
-                    key={item.title}
-                    onPress={() => router.push(item.route as any)}
-                    className="flex-row items-center p-3 bg-gray-50 rounded-xl active:bg-orange-50 border border-gray-100 mb-2">
-                    <View className="w-9 h-9 rounded-full bg-orange-100 items-center justify-center mr-3">
-                      <Ionicons name={item.icon as any} size={18} color="#FC4C02" />
-                    </View>
-                    <View className="flex-1 mr-2">
-                      <Text className="text-xs font-black text-gray-900">{item.title}</Text>
-                      <Text className="text-[10px] text-gray-500">{item.desc}</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
           </View>
         )}
 
@@ -317,31 +245,9 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Tab 3: More (Gear, Stats, Settings) */}
+        {/* Tab 3: More (Settings & Safety) */}
         {activeSubTab === 'more' && (
           <View className="p-4 space-y-3">
-            <View className="bg-white rounded-2xl p-4 border border-gray-200 mb-3 shadow-xs">
-              <Text className="text-sm font-black text-gray-900 mb-3">Athletic Gear</Text>
-              <TouchableOpacity
-                onPress={() => router.push('/settings/gear' as any)}
-                className="flex-row items-center justify-between py-2 border-b border-gray-100">
-                <View className="flex-row items-center">
-                  <Ionicons name="footsteps-outline" size={18} color="#4B5563" />
-                  <Text className="text-xs font-bold text-gray-800 ml-2">Running Shoes</Text>
-                </View>
-                <Text className="text-xs font-semibold text-gray-400">Nike Vaporfly (342 km) ›</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => router.push('/settings/gear' as any)}
-                className="flex-row items-center justify-between py-2">
-                <View className="flex-row items-center">
-                  <Ionicons name="bicycle-outline" size={18} color="#4B5563" />
-                  <Text className="text-xs font-bold text-gray-800 ml-2">Bikes</Text>
-                </View>
-                <Text className="text-xs font-semibold text-gray-400">Trek Emonda SL 6 ›</Text>
-              </TouchableOpacity>
-            </View>
-
             <View className="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs">
               <Text className="text-sm font-black text-gray-900 mb-3">Account & Safety</Text>
               <TouchableOpacity

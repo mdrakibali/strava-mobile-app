@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivitySplitsTable } from '../../components/activity/ActivitySplitsTable';
-import { AthleteIntelligenceCard } from '../../components/activity/AthleteIntelligenceCard';
 import { HeartRateIntensityCard } from '../../components/activity/HeartRateIntensityCard';
 import { MatchedSegmentsSection } from '../../components/activity/MatchedSegmentsSection';
 import { ElevationChart } from '../../components/common/ElevationChart';
@@ -288,21 +287,7 @@ export default function ActivityDetailScreen() {
               </View>
             </View>
 
-            {/* Device & Hardware Sensor Badge (Screenshot 2) */}
-            <View className="flex-row items-center py-2.5">
-              <Ionicons name="watch-outline" size={18} color="#111827" />
-              <Text className="text-xs font-bold text-gray-900 ml-2">COROS APEX 4 / GPS Device</Text>
-            </View>
-
-            {/* Weather Sensor Widget (Screenshot 2) */}
-            <View className="flex-row items-center py-2.5">
-              <Ionicons name="sunny-outline" size={18} color="#111827" />
-              <Text className="text-xs font-medium text-gray-700 ml-2">
-                Clear, 24 °C. Feels like 24 °C. Humidity 52%. Wind 8 km/h from NW.
-              </Text>
-            </View>
-
-            {/* Social Kudos & Comments Counter (Screenshot 2) */}
+            {/* Social Kudos & Comments Counter */}
             <View className="flex-row justify-between items-center pt-3 border-t border-gray-100 mt-2">
               <Text className="text-xs text-gray-500 font-medium">
                 {activity.kudosCount > 0 ? `${activity.kudosCount} gave kudos` : 'No kudos yet'}
@@ -342,12 +327,6 @@ export default function ActivityDetailScreen() {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Athlete Intelligence (AI Coaching & Insights) */}
-          <AthleteIntelligenceCard
-            activityTitle={activity.title}
-            sportType={activity.sportType}
-          />
 
           {/* Elevation Profile Area Chart */}
           <View className="bg-white mt-3 p-5 border-y border-gray-100">

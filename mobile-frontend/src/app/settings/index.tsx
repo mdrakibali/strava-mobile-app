@@ -48,20 +48,10 @@ export default function SettingsHubScreen() {
         <View className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-4 overflow-hidden">
           <TouchableOpacity
             onPress={() => router.push('/settings/profile-edit')}
-            className="flex-row items-center justify-between p-4 border-b border-gray-50">
+            className="flex-row items-center justify-between p-4">
             <View className="flex-row items-center">
               <Ionicons name="person-outline" size={20} color="#4B5563" />
               <Text className="text-sm font-bold text-gray-900 ml-3">Edit Profile & Bio</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.push('/gear')}
-            className="flex-row items-center justify-between p-4">
-            <View className="flex-row items-center">
-              <Ionicons name="footsteps-outline" size={20} color="#4B5563" />
-              <Text className="text-sm font-bold text-gray-900 ml-3">My Gear & Shoes</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
           </TouchableOpacity>
