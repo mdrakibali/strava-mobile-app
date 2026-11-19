@@ -5,21 +5,38 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StravaMapView } from '../../components/map/StravaMapView';
-import { MOCK_ROUTES } from '../../mock/data';
+import { useApp } from '../../context/AppContext';
+import { api } from '../../services/api';
 
 export default function RouteNavigationScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams<{ routeId?: string }>();
+  const { activities } = useApp();
   
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
-  const [distanceRemainingMeters, setDistanceRemainingMeters] = useState(5200);
+  const [distanceRemainingMeters, setDistanceRemainingMeters] = useState(5000);
   const [distanceToTurnMeters, setDistanceToTurnMeters] = useState(120);
   const [currentSpeedKmh, setCurrentSpeedKmh] = useState(0);
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const [serverRoute, setServerRoute] = useState<any>(null);
 
-  // Pick route from param or fallback to first route
-  const route = MOCK_ROUTES.find((r) => r.id === params.routeId) || MOCK_ROUTES[0];
-  const routeCoords = route.polylinePoints.map((p) => [p.longitude, p.latitude] as [number, number]);
+  // Pick route from activities or server
+  const activityRoute = activities.find((a) => a.id === params.routeId);
+
+  useEffect(() => {
+    if (params.routeId) {
+      api.routes.get(params.routeId).then((res) => {
+        if (res?.route) setServerRoute(res.route);
+      }).catch(() => null);
+    }
+  }, [params.routeId]);
+
+  const routeName = serverRoute?.name || activityRoute?.title || 'Selected Route';
+  const routeDistance = serverRoute?.distanceMeters || activityRoute?.distanceMeters || 5000;
+  const activePoints = serverRoute?.polylinePoints || activityRoute?.routePoints || [];
+  const routeCoords = activePoints.map((p: any) =>
+    Array.isArray(p) ? p : ([p.longitude, p.latitude] as [number, number])
+  );
 
   // Live GPS tracking during navigation
   useEffect(() => {
@@ -111,7 +128,7 @@ export default function RouteNavigationScreen() {
                 <View className="flex-1">
                   <Text className="text-xl font-black text-white">In {distanceToTurnMeters}m</Text>
                   <Text className="text-xs font-semibold text-gray-300" numberOfLines={1}>
-                    Turn Right onto {route.name}
+                    Turn Right onto {routeName}
                   </Text>
                 </View>
               </View>
@@ -132,7 +149,7 @@ export default function RouteNavigationScreen() {
                 <View className="w-2 h-2 rounded-full bg-emerald-400 mr-1.5" />
                 <Text className="text-[11px] font-bold text-emerald-400">GPS On Course</Text>
               </View>
-              <Text className="text-[11px] font-bold text-gray-400">Target: {(route.distanceMeters / 1000).toFixed(1)} km</Text>
+              <Text className="text-[11px] font-bold text-gray-400">Target: {(routeDistance / 1000).toFixed(1)} km</Text>
             </View>
           </View>
         </SafeAreaView>

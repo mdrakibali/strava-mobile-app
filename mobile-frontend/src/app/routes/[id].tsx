@@ -1,24 +1,75 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ElevationChart } from '../../components/common/ElevationChart';
 import { StatBox } from '../../components/common/StatBox';
 import { StravaMapView } from '../../components/map/StravaMapView';
-import { MOCK_ROUTES } from '../../mock/data';
+import { api } from '../../services/api';
 
 export default function RouteDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
-  const route = MOCK_ROUTES.find((r) => r.id === id) || MOCK_ROUTES[0];
-  const [isSaved, setIsSaved] = useState(route.isSaved);
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [route, setRoute] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaved, setIsSaved] = useState(false);
 
-  const distKm = (route.distanceMeters / 1000).toFixed(1);
-  const timeHours = (route.estimatedTimeSeconds / 3600).toFixed(1);
+  useEffect(() => {
+    if (!id) return;
+    setIsLoading(true);
+    api.routes
+      .get(id)
+      .then((res) => {
+        if (res?.route) {
+          setRoute(res.route);
+        }
+      })
+      .catch((err) => {
+        console.warn('Fetch route error:', err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [id]);
 
-  const routeCoords = route.polylinePoints.map(
-    (p) => [p.longitude, p.latitude] as [number, number]
+  const handleToggleSave = async () => {
+    if (!id) return;
+    try {
+      const res = await api.routes.toggleSave(id);
+      setIsSaved(res.isSaved);
+    } catch (err) {
+      console.warn('Toggle save route error:', err);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator size="large" color="#FC4C02" />
+      </SafeAreaView>
+    );
+  }
+
+  if (!route) {
+    return (
+      <SafeAreaView className="flex-1 bg-white items-center justify-center p-6">
+        <Ionicons name="map-outline" size={48} color="#9CA3AF" />
+        <Text className="text-base font-bold text-gray-900 mt-3">Route not found</Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="mt-4 px-6 py-2.5 bg-primary rounded-full">
+          <Text className="text-xs font-black text-white">Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  const distKm = (Number(route.distanceMeters || 0) / 1000).toFixed(1);
+  const timeHours = (Number(route.estimatedTimeSeconds || 0) / 3600).toFixed(1);
+  const polyPoints = route.polylinePoints || [];
+  const routeCoords = polyPoints.map((p: any) =>
+    Array.isArray(p) ? p : ([p.longitude, p.latitude] as [number, number])
   );
 
   return (
@@ -31,7 +82,7 @@ export default function RouteDetailScreen() {
         <Text className="text-base font-black text-gray-900 flex-1 text-center mx-2" numberOfLines={1}>
           {route.name}
         </Text>
-        <TouchableOpacity onPress={() => setIsSaved(!isSaved)} className="p-1">
+        <TouchableOpacity onPress={handleToggleSave} className="p-1">
           <Ionicons
             name={isSaved ? 'bookmark' : 'bookmark-outline'}
             size={22}
@@ -44,7 +95,7 @@ export default function RouteDetailScreen() {
         showsVerticalScrollIndicator={false}
         className="flex-1"
         contentContainerClassName="pb-28">
-        {/* Real Full-Featured Route Map */}
+        {/* Real Route Map */}
         <View className="h-60 w-full border-b border-gray-200">
           <StravaMapView
             routeCoordinates={routeCoords}
@@ -59,39 +110,27 @@ export default function RouteDetailScreen() {
           <View className="flex-row justify-between items-center mb-1">
             <View className="flex-row items-center">
               <View className="bg-orange-50 px-2.5 py-1 rounded-full mr-2">
-                <Text className="text-xs font-bold text-[#FC4C02]">{route.sportType}</Text>
+                <Text className="text-xs font-bold text-[#FC4C02]">{route.sportType || 'Run'}</Text>
               </View>
               <View className="bg-gray-100 px-2.5 py-1 rounded-full">
-                <Text className="text-xs font-bold text-gray-700">{route.climbCategory}</Text>
+                <Text className="text-xs font-bold text-gray-700">Moderate Grade</Text>
               </View>
             </View>
-            <Text className="text-xs text-gray-400 font-medium">By {route.authorName}</Text>
+            <Text className="text-xs text-gray-400 font-medium">
+              By {route.creator?.displayName || 'Community Athlete'}
+            </Text>
           </View>
           <Text className="text-lg font-black text-gray-900 mt-1">{route.name}</Text>
+          {route.description ? (
+            <Text className="text-xs text-gray-600 mt-1">{route.description}</Text>
+          ) : null}
         </View>
 
         {/* Stats Grid */}
         <View className="flex-row justify-between bg-white px-4 py-3 border-b border-gray-200">
           <StatBox label="Distance" value={`${distKm} km`} />
-          <StatBox label="Elevation Gain" value={`+${route.elevationGainMeters} m`} />
+          <StatBox label="Elevation Gain" value={`+${route.elevationGainMeters || 0} m`} />
           <StatBox label="Est. Moving Time" value={`${timeHours} hrs`} />
-        </View>
-
-        {/* Surface Breakdown */}
-        <View className="bg-white p-4 border-b border-gray-200 mt-3">
-          <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-            Surface Composition
-          </Text>
-          <View className="h-2.5 bg-gray-100 rounded-full flex-row overflow-hidden mb-2">
-            <View style={{ width: `${route.surfacePavedPercent}%` }} className="bg-gray-800" />
-            <View style={{ width: `${route.surfaceGravelPercent}%` }} className="bg-amber-600" />
-            <View style={{ width: `${route.surfaceDirtPercent}%` }} className="bg-emerald-600" />
-          </View>
-          <View className="flex-row justify-between">
-            <Text className="text-xs font-semibold text-gray-700">● Paved {route.surfacePavedPercent}%</Text>
-            <Text className="text-xs font-semibold text-amber-700">● Gravel {route.surfaceGravelPercent}%</Text>
-            <Text className="text-xs font-semibold text-emerald-700">● Trail {route.surfaceDirtPercent}%</Text>
-          </View>
         </View>
 
         {/* Elevation Profile */}
@@ -100,26 +139,6 @@ export default function RouteDetailScreen() {
             Elevation Profile
           </Text>
           <ElevationChart />
-        </View>
-
-        {/* Turn-by-Turn Cue Sheet */}
-        <View className="bg-white p-4 border-b border-gray-200 mt-3">
-          <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-            Cue Sheet ({route.turns.length} turns)
-          </Text>
-          {route.turns.map((turn) => (
-            <View key={turn.id} className="flex-row items-center py-2.5 border-b border-gray-100">
-              <View className="w-8 h-8 rounded-full bg-orange-50 items-center justify-center mr-3">
-                <Ionicons name={turn.iconName} size={16} color="#FC4C02" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-xs font-bold text-gray-900">{turn.instruction}</Text>
-                <Text className="text-[10px] text-gray-400 mt-0.5">
-                  {(turn.distanceFromStartMeters / 1000).toFixed(1)} km from start
-                </Text>
-              </View>
-            </View>
-          ))}
         </View>
       </ScrollView>
 

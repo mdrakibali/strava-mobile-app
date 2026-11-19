@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StravaMapView } from '../../components/map/StravaMapView';
+import { api } from '../../services/api';
 
 const generateGeographicLoop = (
   centerLon: number,
@@ -61,9 +62,31 @@ export default function RouteBuilderScreen() {
     }
   };
 
-  const handleSaveRoute = () => {
-    alert(`Route "${routeName}" (${targetDistanceKm} km) saved to your routes!`);
-    router.back();
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSaveRoute = async () => {
+    if (!routeName.trim()) {
+      Alert.alert('Route Name Required', 'Please enter a name for your route.');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const polylinePoints = activeRouteCoords.map(([lon, lat]) => ({ latitude: lat, longitude: lon }));
+      await api.routes.create({
+        name: routeName.trim(),
+        sportType: 'Run',
+        distanceMeters: targetDistanceKm * 1000,
+        elevationGainMeters: estimatedClimb,
+        estimatedTimeSeconds: estimatedTimeMins * 60,
+        polylinePoints,
+      });
+      Alert.alert('Success', `Route "${routeName}" (${targetDistanceKm} km) saved to database!`);
+      router.back();
+    } catch (err: any) {
+      Alert.alert('Save Failed', err.message || 'Could not save route to database');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

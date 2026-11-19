@@ -1,26 +1,56 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteMapPreview } from '../../components/common/RouteMapPreview';
 import { StatBox } from '../../components/common/StatBox';
-import { MOCK_ATHLETES, MOCK_EVENTS } from '../../mock/data';
+import { api } from '../../services/api';
+import { useApp } from '../../context/AppContext';
 
 export default function EventDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
-  const event = MOCK_EVENTS.find((e) => e.id === id) || MOCK_EVENTS[0];
-  const [rsvpStatus, setRsvpStatus] = useState<'GOING' | 'MAYBE' | 'DECLINED'>(event.rsvpStatus || 'GOING');
-  const [attendeeCount, setAttendeeCount] = useState(event.attendeesCount);
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { events } = useApp();
+  const localEvent = events.find((e) => e.id === id);
+  const [serverEvent, setServerEvent] = useState<any>(null);
+  const [attendees, setAttendees] = useState<any[]>([]);
 
-  const handleRsvp = (status: 'GOING' | 'MAYBE' | 'DECLINED') => {
+  const event = serverEvent || localEvent || {
+    id: id || 'ev_1',
+    title: 'Community Group Event',
+    clubName: 'City Striders',
+    sportType: 'Run',
+    dateFormatted: 'Sat, Nov 22',
+    timeFormatted: '06:30 AM',
+    meetingPoint: 'Hatirjheel Gate 3',
+    distanceMeters: 10000,
+    attendeesCount: 12,
+    rsvpStatus: 'GOING',
+    paceDescription: '5:30 /km conversational pace',
+  };
+
+  const [rsvpStatus, setRsvpStatus] = useState<'GOING' | 'MAYBE' | 'DECLINED'>('GOING');
+  const [attendeeCount, setAttendeeCount] = useState(event.attendeesCount || 1);
+
+  useEffect(() => {
+    if (!id) return;
+    api.events.get(id).then((res) => {
+      if (res?.event) setServerEvent(res.event);
+      if (res?.attendees) setAttendees(res.attendees);
+    }).catch(() => null);
+  }, [id]);
+
+  const handleRsvp = async (status: 'GOING' | 'MAYBE' | 'DECLINED') => {
     if (rsvpStatus !== 'GOING' && status === 'GOING') {
-      setAttendeeCount((prev) => prev + 1);
+      setAttendeeCount((prev: number) => prev + 1);
     } else if (rsvpStatus === 'GOING' && status !== 'GOING') {
-      setAttendeeCount((prev) => prev - 1);
+      setAttendeeCount((prev: number) => Math.max(0, prev - 1));
     }
     setRsvpStatus(status);
+    if (id) {
+      api.events.rsvp(id, status).catch(() => null);
+    }
   };
 
   const distKm = (event.distanceMeters / 1000).toFixed(0);
@@ -97,17 +127,29 @@ export default function EventDetailScreen() {
             Attending Athletes ({attendeeCount})
           </Text>
           <View className="flex-row flex-wrap gap-2">
-            {MOCK_ATHLETES.map((athlete) => (
+            {attendees.map((attendee) => (
               <TouchableOpacity
-                key={athlete.id}
-                onPress={() => router.push(`/athlete/${athlete.id}`)}
+                key={attendee.id || attendee.athleteId}
+                onPress={() => router.push(`/athlete/${attendee.id || attendee.athleteId}`)}
                 className="items-center mr-3 mb-2">
-                <Image source={{ uri: athlete.avatarUrl }} className="w-12 h-12 rounded-full bg-gray-100 border border-gray-200" />
+                <Image
+                  source={{
+                    uri:
+                      attendee.avatarUrl ||
+                      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
+                  }}
+                  className="w-12 h-12 rounded-full bg-gray-100 border border-gray-200"
+                />
                 <Text className="text-[10px] font-bold text-gray-700 mt-1" numberOfLines={1}>
-                  {athlete.displayName.split(' ')[0]}
+                  {(attendee.displayName || attendee.name || 'Athlete').split(' ')[0]}
                 </Text>
               </TouchableOpacity>
             ))}
+            {attendees.length === 0 && (
+              <Text className="text-xs text-gray-400 py-2">
+                Be the first athlete to RSVP for this event!
+              </Text>
+            )}
           </View>
         </View>
       </ScrollView>

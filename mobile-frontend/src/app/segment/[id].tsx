@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
   ScrollView,
@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ElevationChart } from '../../components/common/ElevationChart';
 import { StravaMapView } from '../../components/map/StravaMapView';
 import { useApp } from '../../context/AppContext';
+import { api } from '../../services/api';
 
 export default function SegmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -19,19 +20,37 @@ export default function SegmentDetailScreen() {
   const { segments } = useApp();
   const [filter, setFilter] = useState<'OVERALL' | 'THIS MONTH' | 'FOLLOWING'>('OVERALL');
   const [isStarred, setIsStarred] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [serverSegment, setServerSegment] = useState<any>(null);
 
-  const segment = segments.find((s) => s.id === id) || segments[0];
+  const localSegment = segments.find((s) => s.id === id);
+  const segment = serverSegment || localSegment || {
+    id: id || 'seg_default',
+    name: 'Segment',
+    sportType: 'Run',
+    distanceMeters: 1000,
+    averageGradePercent: 1.0,
+    elevationGainMeters: 10,
+    komAthleteName: 'Community Leader',
+    komTimeFormatted: '3:20',
+    polylinePoints: [],
+  };
 
-  const mockLeaderboard = [
-    { rank: 1, name: segment.komAthleteName, time: segment.komTimeFormatted, speed: '21.4 km/h', date: 'Oct 14', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100' },
-    { rank: 2, name: 'Elena Rostova', time: '3:34', speed: '20.2 km/h', date: 'Nov 02', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100' },
-    { rank: 3, name: 'Marcus Vance', time: '3:40', speed: '19.6 km/h', date: 'Nov 12', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100' },
-    { rank: 4, name: 'Rakib Ahmed (You)', time: segment.userPrTimeFormatted || '3:45', speed: '19.2 km/h', date: 'Yesterday', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100', isYou: true },
-    { rank: 5, name: 'Sophie Chen', time: '3:52', speed: '18.6 km/h', date: 'Nov 15', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100' },
-  ];
+  useEffect(() => {
+    if (!id) return;
+    api.segments.get(id).then((res) => {
+      if (res?.segment) setServerSegment(res.segment);
+    }).catch(() => null);
 
-  const segCoords = segment.polylinePoints.map(
-    (p) => [p.longitude, p.latitude] as [number, number]
+    api.segments.getLeaderboard(id).then((res) => {
+      if (res?.leaderboard && res.leaderboard.length > 0) {
+        setLeaderboard(res.leaderboard);
+      }
+    }).catch(() => null);
+  }, [id]);
+
+  const segCoords = (segment.polylinePoints || []).map(
+    (p: any) => [p.longitude, p.latitude] as [number, number]
   );
 
   return (
@@ -145,37 +164,45 @@ export default function SegmentDetailScreen() {
           </View>
 
           {/* Leaderboard Rows */}
-          {mockLeaderboard.map((item) => (
-            <View
-              key={item.rank}
-              className={`flex-row items-center justify-between py-2.5 border-b border-gray-50 ${
-                item.isYou ? 'bg-orange-50/50 px-2 rounded-xl my-0.5' : ''
-              }`}>
-              <View className="flex-row items-center flex-1 mr-3">
-                <View className="w-6 flex-row items-center">
-                  {item.rank === 1 ? (
-                    <Ionicons name="trophy" size={14} color="#F59E0B" />
-                  ) : (
-                    <Text
-                      className={`text-xs font-black ${
-                        item.isYou ? 'text-[#FC4C02]' : 'text-gray-400'
-                      }`}>
-                      #{item.rank}
+          {leaderboard.length > 0 ? (
+            leaderboard.map((item) => (
+              <View
+                key={item.rank}
+                className="flex-row items-center justify-between py-2.5 border-b border-gray-50">
+                <View className="flex-row items-center flex-1 mr-3">
+                  <View className="w-6 flex-row items-center">
+                    {item.rank === 1 ? (
+                      <Ionicons name="trophy" size={14} color="#F59E0B" />
+                    ) : (
+                      <Text className="text-xs font-black text-gray-400">
+                        #{item.rank}
+                      </Text>
+                    )}
+                  </View>
+                  <Image
+                    source={{
+                      uri: item.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
+                    }}
+                    className="w-8 h-8 rounded-full mr-2.5 bg-gray-100"
+                  />
+                  <View className="flex-1">
+                    <Text className="text-xs font-bold text-gray-900">
+                      {item.name}
                     </Text>
-                  )}
+                    <Text className="text-[10px] text-gray-400">{item.speed} · {item.achievedAt ? new Date(item.achievedAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'Recent'}</Text>
+                  </View>
                 </View>
-                <Image source={{ uri: item.avatar }} className="w-8 h-8 rounded-full mr-2.5 bg-gray-100" />
-                <View className="flex-1">
-                  <Text className={`text-xs font-bold ${item.isYou ? 'text-[#FC4C02]' : 'text-gray-900'}`}>
-                    {item.name}
-                  </Text>
-                  <Text className="text-[10px] text-gray-400">{item.speed} · {item.date}</Text>
-                </View>
-              </View>
 
-              <Text className="text-sm font-black text-gray-900">{item.time}</Text>
+                <Text className="text-sm font-black text-gray-900">{item.time}</Text>
+              </View>
+            ))
+          ) : (
+            <View className="py-8 items-center justify-center">
+              <Ionicons name="trophy-outline" size={32} color="#D1D5DB" />
+              <Text className="text-xs font-bold text-gray-400 mt-2">No recorded efforts yet</Text>
+              <Text className="text-[10px] text-gray-400 mt-0.5">Record a workout on this route to claim the KOM!</Text>
             </View>
-          ))}
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

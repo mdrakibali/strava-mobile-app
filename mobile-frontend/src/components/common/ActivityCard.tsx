@@ -65,9 +65,14 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
             className="w-11 h-11 rounded-full mr-3 bg-gray-100"
           />
           <View className="justify-center flex-1">
-            <Text className="text-base font-bold text-gray-900" numberOfLines={1}>
-              {activity.athlete.displayName}
-            </Text>
+            <View className="flex-row items-center">
+              <Text className="text-base font-bold text-gray-900 mr-2" numberOfLines={1}>
+                {activity.athlete.displayName}
+              </Text>
+              <View className="bg-black px-1.5 py-0.5 rounded">
+                <Text className="text-[9px] font-black text-white tracking-widest">PRO</Text>
+              </View>
+            </View>
             <View className="flex-row items-center mt-0.5">
               <Ionicons
                 name={getSportIcon(activity.sportType)}
@@ -168,41 +173,43 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
         )}
       </TouchableOpacity>
 
+      {/* Kudos & Comments Summary Counter Row (Screenshot 1 & 2) */}
+      {(activity.kudosCount > 0 || activity.commentsCount > 0) && (
+        <View className="flex-row justify-between items-center py-2 px-1 border-t border-gray-100">
+          <Text className="text-xs text-gray-500 font-medium">
+            {activity.kudosCount > 0 ? `${activity.kudosCount} gave kudos` : ''}
+          </Text>
+          <Text className="text-xs text-gray-500 font-medium">
+            {activity.commentsCount > 0 ? `${activity.commentsCount} comments` : ''}
+          </Text>
+        </View>
+      )}
+
       {/* Social Actions (Kudos, Comments, Share) */}
-      <View className="flex-row justify-around border-t border-gray-100 pt-3">
+      <View className="flex-row justify-around border-t border-gray-100 pt-2.5">
         <TouchableOpacity
-          className="flex-row items-center gap-1.5 py-1 px-2"
+          className="flex-row items-center gap-1.5 py-1 px-4"
           onPress={() => toggleKudos(activity.id)}
           activeOpacity={0.7}>
           <Ionicons
             name={activity.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'}
-            size={18}
-            color={activity.hasKudos ? '#FC4C02' : '#4B5563'}
+            size={20}
+            color={activity.hasKudos ? '#FC4C02' : '#111827'}
           />
-          <Text
-            className={`text-xs font-medium ${
-              activity.hasKudos ? 'text-[#FC4C02] font-bold' : 'text-gray-600'
-            }`}>
-            {activity.kudosCount > 0 ? `${activity.kudosCount} Kudos` : 'Kudos'}
-          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          className="flex-row items-center gap-1.5 py-1 px-2"
+          className="flex-row items-center gap-1.5 py-1 px-4"
           onPress={handleCardPress}
           activeOpacity={0.7}>
-          <Ionicons name="chatbubble-outline" size={17} color="#4B5563" />
-          <Text className="text-xs font-medium text-gray-600">
-            {activity.commentsCount > 0 ? `${activity.commentsCount} Comments` : 'Comment'}
-          </Text>
+          <Ionicons name="chatbubble-outline" size={19} color="#111827" />
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => setShowShareModal(true)}
-          className="flex-row items-center gap-1.5 py-1 px-2"
+          className="flex-row items-center gap-1.5 py-1 px-4"
           activeOpacity={0.7}>
-          <Ionicons name="share-social-outline" size={18} color="#4B5563" />
-          <Text className="text-xs font-medium text-gray-600">Share</Text>
+          <Ionicons name="share-social-outline" size={20} color="#111827" />
         </TouchableOpacity>
       </View>
 

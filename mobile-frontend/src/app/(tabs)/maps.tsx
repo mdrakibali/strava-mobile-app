@@ -20,7 +20,7 @@ import {
   TerrainTypeOption,
 } from '../../components/map/StravaMapView';
 import { useApp } from '../../context/AppContext';
-import { MOCK_ROUTES } from '../../mock/data';
+import { api } from '../../services/api';
 import { RouteItem, SportType } from '../../types';
 
 const calculateHaversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -117,8 +117,36 @@ export default function MapsScreen() {
       climbCategory: a.elevationGainMeters > 50 ? 'Moderate Climb' : 'Flat Grade',
     }));
 
-  const allRoutes = activityRoutes.length > 0 ? activityRoutes : MOCK_ROUTES;
-  const currentPreviewRoute = selectedRoute || allRoutes[0];
+  const [serverRoutes, setServerRoutes] = useState<RouteItem[]>([]);
+
+  useEffect(() => {
+    api.routes.list().then((res) => {
+      if (res?.routes && res.routes.length > 0) {
+        setServerRoutes(
+          res.routes.map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            sportType: r.sportType || 'Run',
+            distanceMeters: Number(r.distanceMeters || 5000),
+            elevationGainMeters: r.elevationGainMeters || 20,
+            estimatedTimeSeconds: r.estimatedTimeSeconds || 1800,
+            polylinePoints: r.polylinePoints || [],
+            surfacePavedPercent: 90,
+            surfaceGravelPercent: 10,
+            surfaceDirtPercent: 0,
+            elevationProfile: r.elevationProfile || [10, 15, 20, 15, 10],
+            turns: [],
+            isSaved: false,
+            authorName: r.creator?.displayName || 'Community Athlete',
+            climbCategory: 'Moderate',
+          }))
+        );
+      }
+    }).catch(() => null);
+  }, []);
+
+  const allRoutes = [...activityRoutes, ...serverRoutes];
+  const currentPreviewRoute = selectedRoute || allRoutes[0] || null;
 
   // Convert routes and segments to map markers
   const mapMarkers: MapMarkerItem[] = [
@@ -153,9 +181,11 @@ export default function MapsScreen() {
     }
   };
 
-  const activeRouteCoords = currentPreviewRoute?.polylinePoints.map(
-    (p) => [p.longitude, p.latitude] as [number, number]
-  );
+  const activeRouteCoords = currentPreviewRoute?.polylinePoints
+    ? currentPreviewRoute.polylinePoints.map(
+        (p) => [p.longitude, p.latitude] as [number, number]
+      )
+    : undefined;
 
   const toggle3DMode = () => {
     setIs3D((prev) => !prev);

@@ -5,11 +5,35 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 import { StatBox } from '../../components/common/StatBox';
-import { MOCK_FITNESS_TRENDS } from '../../mock/data';
+import { useApp } from '../../context/AppContext';
 
 export default function FitnessFreshnessScreen() {
   const router = useRouter();
-  const current = MOCK_FITNESS_TRENDS[MOCK_FITNESS_TRENDS.length - 1];
+  const { activities, currentUser } = useApp();
+
+  const userActivities = activities.filter((a) => a.athlete.id === currentUser.id);
+
+  // Compute real Banister Impulse-Response Fitness & Fatigue
+  let ctl = 0; // Chronic Training Load (42-day rolling)
+  let atl = 0; // Acute Training Load (7-day rolling)
+
+  userActivities.forEach((a) => {
+    const mins = (a.movingTimeSeconds || 0) / 60;
+    const elev = a.elevationGainMeters || 0;
+    const tss = Math.round(mins * 0.9 + elev * 0.1);
+    ctl += (tss - ctl) / 42;
+    atl += (tss - atl) / 7;
+  });
+
+  const fitnessCtl = Math.round(ctl);
+  const fatigueAtl = Math.round(atl);
+  const formTsb = fitnessCtl - fatigueAtl;
+
+  const current = {
+    fitnessCtl,
+    fatigueAtl,
+    formTsb,
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -80,8 +104,10 @@ export default function FitnessFreshnessScreen() {
           </View>
 
           <View className="flex-row justify-between mt-3 px-2">
-            {MOCK_FITNESS_TRENDS.map((pt, i) => (
-              <Text key={i} className="text-[10px] font-semibold text-gray-400">{pt.date}</Text>
+            {['4w ago', '3w ago', '2w ago', '1w ago', 'Today'].map((label, i) => (
+              <Text key={i} className="text-[10px] font-semibold text-gray-400">
+                {label}
+              </Text>
             ))}
           </View>
         </View>

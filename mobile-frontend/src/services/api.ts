@@ -302,5 +302,25 @@ export const api = {
         body: JSON.stringify({ status }),
       }),
   },
+
+  // 15. Training Goals
+  goals: {
+    list: () => request<{ goals: any[] }>('/goals'),
+    create: (data: {
+      title: string;
+      targetValue: number;
+      unit?: string;
+      period?: string;
+      sportType?: string;
+    }) =>
+      request<{ goal: any }>('/goals', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      request<{ message: string }>(`/goals/${id}`, {
+        method: 'DELETE',
+      }),
+  },
 };
 

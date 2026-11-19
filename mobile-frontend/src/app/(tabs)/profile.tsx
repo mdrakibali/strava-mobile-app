@@ -27,21 +27,33 @@ export default function ProfileScreen() {
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const totalElevation = userActivities.reduce((acc, a) => acc + (Number(a.elevationGainMeters) || 0), 0);
 
-  // Past 12 Weeks Simulated Data Points (Matching Screenshot 11)
-  const past12WeeksData = [
-    { week: 'W1', km: 18.2, heightPercent: 45 },
-    { week: 'W2', km: 24.5, heightPercent: 60 },
-    { week: 'W3', km: 21.0, heightPercent: 50 },
-    { week: 'W4', km: 31.8, heightPercent: 78 },
-    { week: 'W5', km: 28.4, heightPercent: 70 },
-    { week: 'W6', km: 35.0, heightPercent: 88 },
-    { week: 'W7', km: 22.1, heightPercent: 55 },
-    { week: 'W8', km: 40.2, heightPercent: 100 },
-    { week: 'W9', km: 36.5, heightPercent: 90 },
-    { week: 'W10', km: 29.0, heightPercent: 72 },
-    { week: 'W11', km: 33.4, heightPercent: 82 },
-    { week: 'W12', km: 38.6, heightPercent: 95 },
-  ];
+  // Dynamically calculate past 12 weeks volume from user's real recorded activities
+  const now = new Date();
+  const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+  const past12WeeksData = Array.from({ length: 12 }).map((_, idx) => {
+    const weekOffset = 11 - idx; // idx 11 is current week
+    const weekStart = new Date(now.getTime() - (weekOffset + 1) * oneWeekMs);
+    const weekEnd = new Date(now.getTime() - weekOffset * oneWeekMs);
+
+    const weekMeters = userActivities
+      .filter((a) => {
+        const t = new Date(a.startTime).getTime();
+        return t >= weekStart.getTime() && t < weekEnd.getTime();
+      })
+      .reduce((sum, a) => sum + (Number(a.distanceMeters) || 0), 0);
+
+    const km = +(weekMeters / 1000).toFixed(1);
+    return {
+      week: `W${idx + 1}`,
+      km,
+      heightPercent: 0,
+    };
+  });
+
+  const maxKm = Math.max(...past12WeeksData.map((w) => w.km), 5);
+  past12WeeksData.forEach((w) => {
+    w.heightPercent = Math.max(10, Math.round((w.km / maxKm) * 100));
+  });
 
   const handleShareProfile = async () => {
     try {

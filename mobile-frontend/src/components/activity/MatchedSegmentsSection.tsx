@@ -2,10 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { MOCK_SEGMENTS } from '../../mock/data';
+import { useApp } from '../../context/AppContext';
 
 export const MatchedSegmentsSection: React.FC = () => {
   const router = useRouter();
+  const { segments } = useApp();
+
+  if (segments.length === 0) return null;
 
   return (
     <View className="bg-white mt-3 p-4 border-y border-gray-200">
@@ -13,11 +16,11 @@ export const MatchedSegmentsSection: React.FC = () => {
         <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider">
           Matched Segments & Best Efforts
         </Text>
-        <Text className="text-[10px] font-bold text-[#FC4C02]">3 Matched</Text>
+        <Text className="text-[10px] font-bold text-[#FC4C02]">{segments.length} Matched</Text>
       </View>
 
       <View className="space-y-2">
-        {MOCK_SEGMENTS.slice(0, 2).map((seg, idx) => (
+        {segments.slice(0, 3).map((seg, idx) => (
           <TouchableOpacity
             key={seg.id}
             onPress={() => router.push(`/segment/${seg.id}`)}

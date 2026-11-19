@@ -5,20 +5,19 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivitySplitsTable } from '../../components/activity/ActivitySplitsTable';
 import { AthleteIntelligenceCard } from '../../components/activity/AthleteIntelligenceCard';
 import { HeartRateIntensityCard } from '../../components/activity/HeartRateIntensityCard';
 import { MatchedSegmentsSection } from '../../components/activity/MatchedSegmentsSection';
 import { ElevationChart } from '../../components/common/ElevationChart';
 import { ShareModal } from '../../components/common/ShareModal';
-import { StatBox } from '../../components/common/StatBox';
 import { StravaMapView } from '../../components/map/StravaMapView';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
@@ -26,10 +25,11 @@ import { api } from '../../services/api';
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { activities, toggleKudos, addComment } = useApp();
+  const { activities, toggleKudos, addComment, currentUser } = useApp();
   const [commentInput, setCommentInput] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
   const [serverActivity, setServerActivity] = useState<any>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   const localActivity = activities.find((act) => act.id === id);
   const activity = serverActivity || localActivity || activities[0];
@@ -64,9 +64,11 @@ export default function ActivityDetailScreen() {
               id: item.athlete?.id || 'ath_1',
               displayName: item.athlete?.displayName || 'Athlete',
               username: item.athlete?.username || 'athlete',
-              avatarUrl: item.athlete?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
-              city: item.athlete?.city || 'Dhaka',
-              country: 'Bangladesh',
+              avatarUrl:
+                item.athlete?.avatarUrl ||
+                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
+              city: item.athlete?.city || 'Manhattan',
+              country: item.athlete?.country || 'USA',
               followersCount: 0,
               followingCount: 0,
               isFollowing: false,
@@ -79,15 +81,16 @@ export default function ActivityDetailScreen() {
             distanceMeters: Number(item.distanceMeters),
             movingTimeSeconds: item.movingTimeSeconds,
             elapsedTimeSeconds: item.elapsedTimeSeconds,
-            elevationGainMeters: item.elevationGainMeters,
+            elevationGainMeters: item.elevationGainMeters || 0,
             averageSpeedMps: item.averageSpeedMps || 3.0,
             maxSpeedMps: item.maxSpeedMps || 4.5,
-            averageHeartRate: item.averageHeartRate || 150,
+            averageHeartRate: item.averageHeartRate || 0,
             maxHeartRate: 175,
+            calories: item.calories || Math.round((Number(item.distanceMeters) / 1000) * 65),
             distanceFormatted: `${distKm} km`,
             movingTimeFormatted: timeFormatted,
             paceFormatted,
-            elevationFormatted: `${item.elevationGainMeters} m`,
+            elevationFormatted: `${item.elevationGainMeters || 0} m`,
             gapFormatted: item.gapFormatted || paceFormatted,
             relativeEffortScore: item.relativeEffortScore || 45,
             kudosCount: item.kudosCount || 0,
@@ -126,30 +129,36 @@ export default function ActivityDetailScreen() {
     }
   };
 
-  const routeCoords = activity.routePoints?.map(
-    (p: any) => [p.longitude, p.latitude] as [number, number]
+  const routeCoords: [number, number][] = (activity.routePoints || []).map(
+    (p: any) => (Array.isArray(p) ? p : [p.longitude, p.latitude]) as [number, number]
   );
 
+  const formattedDate = new Date(activity.startTime || Date.now()).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Top Header */}
-      <View className="flex-row justify-between items-center bg-white px-4 py-3 border-b border-gray-200">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      {/* Top Header Bar */}
+      <View className="flex-row justify-between items-center bg-white px-4 py-3 border-b border-gray-100 z-30">
         <TouchableOpacity onPress={() => router.back()} className="p-1">
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="chevron-back" size={28} color="#111827" />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => router.push(`/athlete/${activity.athlete.id}`)}
-          className="items-center">
-          <Text className="text-sm font-black text-gray-900">{activity.athlete.displayName}</Text>
-          <Text className="text-[11px] text-[#FC4C02] font-bold">
-            {activity.sportType} · {activity.distanceFormatted}
-          </Text>
-        </TouchableOpacity>
+        <Text className="text-base font-black text-gray-900" numberOfLines={1}>
+          {activity.title}
+        </Text>
 
-        <TouchableOpacity onPress={() => setShowShareModal(true)} className="p-1">
-          <Ionicons name="share-social-outline" size={22} color="#111827" />
-        </TouchableOpacity>
+        <View className="flex-row items-center gap-3">
+          <TouchableOpacity onPress={() => setShowShareModal(true)} className="p-1">
+            <Ionicons name="bookmark-outline" size={22} color="#111827" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowShareModal(true)} className="p-1">
+            <Ionicons name="ellipsis-horizontal" size={22} color="#111827" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <KeyboardAvoidingView
@@ -157,36 +166,179 @@ export default function ActivityDetailScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          className="flex-1"
-          contentContainerClassName="pb-24">
-          {/* Title & Caption */}
-          <View className="bg-white p-4 border-b border-gray-200">
-            <Text className="text-xl font-black text-gray-900 mb-1">{activity.title}</Text>
-            {activity.description && (
-              <Text className="text-xs text-gray-600 leading-4">{activity.description}</Text>
-            )}
-
-            {/* Weather & Gear Pills */}
-            <View className="flex-row flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100">
-              <View className="bg-orange-50 px-2.5 py-1 rounded-full flex-row items-center border border-orange-100">
-                <Ionicons name="sunny-outline" size={13} color="#FC4C02" />
-                <Text className="text-[10px] font-bold text-[#FC4C02] ml-1">24°C · Wind 8 km/h NW</Text>
-              </View>
-              <View className="bg-gray-100 px-2.5 py-1 rounded-full flex-row items-center">
-                <Ionicons name="footsteps-outline" size={13} color="#4B5563" />
-                <Text className="text-[10px] font-bold text-gray-700 ml-1">Nike Vaporfly 3 (342 km)</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Real Full-Featured Map View */}
-          <View className="h-56 w-full border-b border-gray-200">
+          className="flex-1 bg-gray-50"
+          contentContainerStyle={{ paddingBottom: 110 }}>
+          {/* Interactive Map View with Route */}
+          <View className="h-72 w-full bg-gray-100 relative">
             <StravaMapView
               routeCoordinates={routeCoords}
               showControls={false}
               showUserLocation={false}
               className="w-full h-full"
             />
+            {/* Flyover Replay Button on bottom right of map (Screenshot 2) */}
+            <TouchableOpacity
+              onPress={() =>
+                alert('3D Aerial Flyover: Replays your GPS effort with realistic elevation curves.')
+              }
+              className="absolute bottom-4 right-4 w-12 h-12 bg-white rounded-full items-center justify-center shadow-lg border border-gray-200 active:scale-95">
+              <Ionicons name="play" size={22} color="#111827" style={{ marginLeft: 3 }} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Activity Information Card (Matching Screenshot 2) */}
+          <View className="bg-white px-5 pt-5 pb-6 border-b border-gray-100">
+            {/* Athlete Profile Header */}
+            <View className="flex-row items-center justify-between mb-4">
+              <TouchableOpacity
+                onPress={() => router.push(`/athlete/${activity.athlete.id}`)}
+                className="flex-row items-center flex-1 mr-3">
+                <Image
+                  source={{ uri: activity.athlete.avatarUrl }}
+                  className="w-12 h-12 rounded-full mr-3 bg-gray-100 border border-gray-200"
+                />
+                <View>
+                  <Text className="text-base font-black text-gray-900">
+                    {activity.athlete.displayName}
+                  </Text>
+                  <Text className="text-xs text-gray-500 mt-0.5">
+                    {formattedDate} · {activity.athlete.city || 'Athletic Course'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {activity.athlete.id !== currentUser.id && (
+                <TouchableOpacity
+                  onPress={() => setIsFollowing(!isFollowing)}
+                  className={`px-5 py-2 rounded-full ${
+                    isFollowing ? 'bg-gray-100' : 'bg-[#FC4C02]'
+                  }`}>
+                  <Text
+                    className={`text-xs font-black ${
+                      isFollowing ? 'text-gray-700' : 'text-white'
+                    }`}>
+                    {isFollowing ? 'Following' : 'Follow'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Title & Description */}
+            <Text className="text-2xl font-black text-gray-900 mb-1">{activity.title}</Text>
+            {activity.description ? (
+              <Text className="text-sm text-gray-600 mb-4 leading-relaxed">
+                {activity.description}
+              </Text>
+            ) : null}
+
+            {/* 6-Grid Performance Telemetry (Exact Screenshot 2 Match) */}
+            <View className="border-t border-b border-gray-100 py-4 my-2">
+              {/* Row 1 */}
+              <View className="flex-row justify-between mb-4">
+                <View className="w-[48%]">
+                  <Text className="text-[11px] font-bold text-gray-400 uppercase">Distance</Text>
+                  <Text className="text-2xl font-black text-gray-900 mt-0.5">
+                    {activity.distanceFormatted}
+                  </Text>
+                </View>
+                <View className="w-[48%]">
+                  <Text className="text-[11px] font-bold text-gray-400 uppercase">Avg Pace</Text>
+                  <Text className="text-2xl font-black text-gray-900 mt-0.5">
+                    {activity.paceFormatted}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Row 2 */}
+              <View className="flex-row justify-between mb-4">
+                <View className="w-[48%]">
+                  <Text className="text-[11px] font-bold text-gray-400 uppercase">Moving Time</Text>
+                  <Text className="text-2xl font-black text-gray-900 mt-0.5">
+                    {activity.movingTimeFormatted}
+                  </Text>
+                </View>
+                <View className="w-[48%]">
+                  <Text className="text-[11px] font-bold text-gray-400 uppercase">
+                    Elevation Gain
+                  </Text>
+                  <Text className="text-2xl font-black text-gray-900 mt-0.5">
+                    {activity.elevationFormatted}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Row 3 */}
+              <View className="flex-row justify-between">
+                <View className="w-[48%]">
+                  <Text className="text-[11px] font-bold text-gray-400 uppercase">Calories</Text>
+                  <Text className="text-2xl font-black text-gray-900 mt-0.5">
+                    {activity.calories ? `${activity.calories.toLocaleString()} Cal` : '— —'}
+                  </Text>
+                </View>
+                <View className="w-[48%]">
+                  <Text className="text-[11px] font-bold text-gray-400 uppercase">
+                    Avg Heart Rate
+                  </Text>
+                  <Text className="text-2xl font-black text-gray-900 mt-0.5">
+                    {activity.averageHeartRate > 0 ? `${activity.averageHeartRate} bpm` : '— —'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Device & Hardware Sensor Badge (Screenshot 2) */}
+            <View className="flex-row items-center py-2.5">
+              <Ionicons name="watch-outline" size={18} color="#111827" />
+              <Text className="text-xs font-bold text-gray-900 ml-2">COROS APEX 4 / GPS Device</Text>
+            </View>
+
+            {/* Weather Sensor Widget (Screenshot 2) */}
+            <View className="flex-row items-center py-2.5">
+              <Ionicons name="sunny-outline" size={18} color="#111827" />
+              <Text className="text-xs font-medium text-gray-700 ml-2">
+                Clear, 24 °C. Feels like 24 °C. Humidity 52%. Wind 8 km/h from NW.
+              </Text>
+            </View>
+
+            {/* Social Kudos & Comments Counter (Screenshot 2) */}
+            <View className="flex-row justify-between items-center pt-3 border-t border-gray-100 mt-2">
+              <Text className="text-xs text-gray-500 font-medium">
+                {activity.kudosCount > 0 ? `${activity.kudosCount} gave kudos` : 'No kudos yet'}
+              </Text>
+              <Text className="text-xs text-gray-500 font-medium">
+                {activity.commentsCount > 0
+                  ? `${activity.commentsCount} comments`
+                  : '0 comments'}
+              </Text>
+            </View>
+
+            {/* Action Bar (Thumbs up, Comment, Share) */}
+            <View className="flex-row justify-around border-t border-gray-100 pt-3 mt-3">
+              <TouchableOpacity
+                onPress={() => toggleKudos(activity.id)}
+                className="flex-row items-center px-4 py-1"
+                activeOpacity={0.7}>
+                <Ionicons
+                  name={activity.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'}
+                  size={22}
+                  color={activity.hasKudos ? '#FC4C02' : '#111827'}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => null}
+                className="flex-row items-center px-4 py-1"
+                activeOpacity={0.7}>
+                <Ionicons name="chatbubble-outline" size={21} color="#111827" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setShowShareModal(true)}
+                className="flex-row items-center px-4 py-1"
+                activeOpacity={0.7}>
+                <Ionicons name="share-social-outline" size={22} color="#111827" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Athlete Intelligence (AI Coaching & Insights) */}
@@ -195,37 +347,12 @@ export default function ActivityDetailScreen() {
             sportType={activity.sportType}
           />
 
-          {/* Primary Performance Metrics */}
-          <View className="bg-white p-4 border-b border-gray-200">
-            <View className="flex-row justify-between mb-3">
-              <StatBox label="Distance" value={activity.distanceFormatted} />
-              <StatBox label="Avg Pace" value={activity.paceFormatted} />
-              <StatBox label="Moving Time" value={activity.movingTimeFormatted} />
-            </View>
-
-            <View className="flex-row justify-between pt-3 border-t border-gray-100">
-              <StatBox label="Elevation Gain" value={activity.elevationFormatted} />
-              <StatBox
-                label="Grade Adjusted (GAP)"
-                value={activity.gapFormatted || activity.paceFormatted}
-                highlight
-                highlightColor="#FC4C02"
-              />
-              <StatBox
-                label="Relative Effort"
-                value={`${activity.relativeEffortScore || 45}`}
-                highlight
-                highlightColor="#D97706"
-              />
-            </View>
-          </View>
-
           {/* Elevation Profile Area Chart */}
-          <View className="bg-white mt-3 p-4 border-y border-gray-200">
-            <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+          <View className="bg-white mt-3 p-5 border-y border-gray-100">
+            <Text className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
               Elevation Profile
             </Text>
-            <ElevationChart elevations={activity.elevationProfile} height={110} />
+            <ElevationChart elevations={activity.elevationProfile} height={120} />
           </View>
 
           {/* Heart Rate Intensity Distribution */}
@@ -241,36 +368,28 @@ export default function ActivityDetailScreen() {
           {/* Matched Segments & Leaderboards */}
           <MatchedSegmentsSection />
 
-          {/* Social Kudos & Comments */}
-          <View className="bg-white mt-3 p-4 border-y border-gray-200">
-            <View className="flex-row justify-between items-center pb-3 border-b border-gray-100">
-              <TouchableOpacity
-                onPress={() => toggleKudos(activity.id)}
-                className="flex-row items-center">
-                <Ionicons
-                  name={activity.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'}
-                  size={20}
-                  color={activity.hasKudos ? '#FC4C02' : '#4B5563'}
-                />
-                <Text className={`text-sm ml-1.5 ${activity.hasKudos ? 'text-[#FC4C02] font-black' : 'text-gray-700 font-bold'}`}>
-                  {activity.kudosCount} Kudos
-                </Text>
-              </TouchableOpacity>
-              <Text className="text-xs text-gray-400">{activity.commentsCount} Comments</Text>
-            </View>
+          {/* Comments Stream */}
+          <View className="bg-white mt-3 p-5 border-y border-gray-100">
+            <Text className="text-sm font-black text-gray-900 mb-3">
+              Comments ({activity.commentsCount || 0})
+            </Text>
 
-            {/* Comments Stream */}
-            <View className="mt-3 space-y-3">
+            <View className="space-y-3">
               {activity.comments && activity.comments.length > 0 ? (
                 activity.comments.map((c: any) => (
-                  <View key={c.id} className="flex-row space-x-2.5 mb-2">
-                    <Image source={{ uri: c.athlete.avatarUrl }} className="w-8 h-8 rounded-full bg-gray-100 mr-2" />
-                    <View className="flex-1 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
-                      <View className="flex-row justify-between items-center mb-0.5">
-                        <Text className="text-xs font-black text-gray-900">{c.athlete.displayName}</Text>
+                  <View key={c.id} className="flex-row space-x-2.5 mb-3">
+                    <Image
+                      source={{ uri: c.athlete.avatarUrl }}
+                      className="w-8 h-8 rounded-full bg-gray-100 mr-2.5"
+                    />
+                    <View className="flex-1 bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                      <View className="flex-row justify-between items-center mb-1">
+                        <Text className="text-xs font-black text-gray-900">
+                          {c.athlete.displayName}
+                        </Text>
                         <Text className="text-[10px] text-gray-400">{c.createdAt}</Text>
                       </View>
-                      <Text className="text-xs text-gray-700 leading-4">{c.content}</Text>
+                      <Text className="text-xs text-gray-700 leading-relaxed">{c.content}</Text>
                     </View>
                   </View>
                 ))
@@ -284,9 +403,9 @@ export default function ActivityDetailScreen() {
         </ScrollView>
 
         {/* Comment Posting Input Bar */}
-        <View className="flex-row items-center bg-white px-4 py-2.5 border-t border-gray-200">
+        <View className="flex-row items-center bg-white px-4 py-3 border-t border-gray-200">
           <TextInput
-            className="flex-1 h-10 bg-gray-100 rounded-full px-4 text-xs text-gray-900 mr-2"
+            className="flex-1 h-11 bg-gray-100 rounded-full px-4 text-xs text-gray-900 mr-2.5"
             placeholder="Write a comment or cheer..."
             placeholderTextColor="#9CA3AF"
             value={commentInput}
@@ -294,20 +413,17 @@ export default function ActivityDetailScreen() {
           />
           <TouchableOpacity
             onPress={handlePostComment}
-            disabled={!commentInput.trim()}
-            className={`w-9 h-9 rounded-full bg-[#FC4C02] items-center justify-center ${
-              !commentInput.trim() ? 'opacity-40' : ''
-            }`}>
-            <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
+            className="w-10 h-10 bg-[#FC4C02] rounded-full items-center justify-center active:bg-[#E03A00]">
+            <Ionicons name="send" size={16} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
-
-        <ShareModal
-          visible={showShareModal}
-          onClose={() => setShowShareModal(false)}
-          activityTitle={activity.title}
-        />
       </KeyboardAvoidingView>
+
+      <ShareModal
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        activityTitle={activity.title}
+      />
     </SafeAreaView>
   );
 }

@@ -15,6 +15,7 @@ import { messagesRouter } from './routes/messages.route';
 import { segmentsRouter } from './routes/segments.route';
 import { routesRouter } from './routes/routes.route';
 import { eventsRouter } from './routes/events.route';
+import { goalsRouter } from './routes/goals.route';
 import { Env } from './types';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -64,6 +65,7 @@ api.route('/messages', messagesRouter);
 api.route('/segments', segmentsRouter);
 api.route('/routes', routesRouter);
 api.route('/events', eventsRouter);
+api.route('/goals', goalsRouter);
 
 app.route('/api/v1', api);
 
