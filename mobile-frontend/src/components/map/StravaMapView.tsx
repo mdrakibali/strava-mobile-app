@@ -25,6 +25,7 @@ try {
 export const StravaMapView: React.FC<StravaMapViewProps> = ({
   styleKey = 'positron',
   centerCoordinate = [90.4125, 23.7745],
+  userLocation,
   zoomLevel = 13,
   routeCoordinates,
   markers = [],
@@ -38,7 +39,7 @@ export const StravaMapView: React.FC<StravaMapViewProps> = ({
 }) => {
   const [currentStyle, setCurrentStyle] = useState<MapStyleKey>(styleKey);
   const [zoom, setZoom] = useState(zoomLevel);
-  const [center, setCenter] = useState<[number, number]>(centerCoordinate);
+  const [center, setCenter] = useState<[number, number]>(userLocation || centerCoordinate);
   const cameraRef = useRef<any>(null);
 
   useEffect(() => {
@@ -46,8 +47,12 @@ export const StravaMapView: React.FC<StravaMapViewProps> = ({
   }, [styleKey]);
 
   useEffect(() => {
-    setCenter(centerCoordinate);
-  }, [centerCoordinate[0], centerCoordinate[1]]);
+    if (userLocation) {
+      setCenter(userLocation);
+    } else {
+      setCenter(centerCoordinate);
+    }
+  }, [centerCoordinate[0], centerCoordinate[1], userLocation?.[0], userLocation?.[1]]);
 
   const routeGeoJSON: any = routeCoordinates && routeCoordinates.length > 1
     ? {
@@ -66,10 +71,11 @@ export const StravaMapView: React.FC<StravaMapViewProps> = ({
     : null;
 
   const handleRecenter = () => {
-    setCenter(centerCoordinate);
+    const target = userLocation || centerCoordinate;
+    setCenter(target);
     if (cameraRef.current?.setCamera) {
       cameraRef.current.setCamera({
-        centerCoordinate,
+        centerCoordinate: target,
         zoomLevel: 14,
         animationDuration: 600,
       });
@@ -176,6 +182,8 @@ export const StravaMapView: React.FC<StravaMapViewProps> = ({
           routeCoordinates={routeCoordinates}
           markers={markers}
           onMarkerPress={onMarkerPress}
+          userLocation={userLocation}
+          centerCoordinate={center}
         />
       )}
 

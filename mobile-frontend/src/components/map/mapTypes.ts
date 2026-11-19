@@ -17,6 +17,7 @@ export interface MapMarkerItem {
 export interface StravaMapViewProps {
   styleKey?: MapStyleKey;
   centerCoordinate?: [number, number];
+  userLocation?: [number, number];
   zoomLevel?: number;
   routeCoordinates?: [number, number][];
   heatmapRoutes?: [number, number][][];

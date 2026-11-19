@@ -1,18 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient, Path, Pattern, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { MapMarkerItem } from './mapTypes';
 
 interface MapFallbackViewProps {
   routeCoordinates?: [number, number][];
   markers?: MapMarkerItem[];
+  userLocation?: [number, number];
+  centerCoordinate?: [number, number];
   onMarkerPress?: (marker: MapMarkerItem) => void;
 }
 
 export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
   routeCoordinates,
   markers = [],
+  userLocation,
+  centerCoordinate,
   onMarkerPress,
 }) => {
   const svgWidth = 360;
@@ -121,16 +125,40 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
             )}
           </Svg>
         </View>
-      ) : (
-        /* Standalone User Location Puck when no route has started yet */
-        <View className="w-6 h-6 rounded-full bg-blue-500/20 items-center justify-center">
-          <View className="w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow-md items-center justify-center">
-            <View className="w-1.5 h-1.5 rounded-full bg-white" />
+      ) : null}
+
+      {/* Prominent Live GPS Location Beacon */}
+      {userLocation ? (
+        <View className="items-center justify-center z-30">
+          <View className="w-16 h-16 rounded-full bg-blue-500/15 items-center justify-center">
+            <View className="w-9 h-9 rounded-full bg-blue-500/30 items-center justify-center">
+              <View className="w-5 h-5 rounded-full bg-blue-600 border-2 border-white shadow-xl items-center justify-center">
+                <View className="w-1.5 h-1.5 rounded-full bg-white" />
+              </View>
+            </View>
           </View>
+          <View className="bg-stone-900/90 border border-stone-700 px-2.5 py-1 rounded-full shadow-md mt-1 flex-row items-center">
+            <View className="w-2 h-2 rounded-full bg-emerald-400 mr-1.5" />
+            <Text className="text-[10px] font-black text-white tracking-wide">
+              GPS Active · {userLocation[1].toFixed(4)}, {userLocation[0].toFixed(4)}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        /* Standalone Location Puck when GPS fix is being acquired */
+        <View className="items-center justify-center z-20">
+          <View className="w-8 h-8 rounded-full bg-blue-500/20 items-center justify-center">
+            <View className="w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow-md items-center justify-center">
+              <View className="w-1.5 h-1.5 rounded-full bg-white" />
+            </View>
+          </View>
+          <Text className="text-[10px] font-bold text-gray-500 bg-white/80 px-2 py-0.5 rounded-full shadow-sm mt-1">
+            Acquiring GPS Signal...
+          </Text>
         </View>
       )}
 
-      {/* Interactive Markers */}
+      {/* Interactive Route and Segment Markers */}
       {markers.map((m, idx) => (
         <TouchableOpacity
           key={m.id}

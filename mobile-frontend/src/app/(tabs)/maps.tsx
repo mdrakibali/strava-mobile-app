@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ScrollView,
   Text,
@@ -20,6 +21,26 @@ export default function MapsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState<'All' | 'Run' | 'Ride'>('All');
   const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+
+  // Fetch real device location on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          }).catch(() => null);
+          if (loc) {
+            setUserLocation([loc.coords.longitude, loc.coords.latitude]);
+          }
+        }
+      } catch (err) {
+        console.warn('Location query error on maps tab:', err);
+      }
+    })();
+  }, []);
 
   // Dynamic routes created from real recorded workouts
   const activityRoutes: RouteItem[] = activities
@@ -84,6 +105,8 @@ export default function MapsScreen() {
         selectedMarkerId={selectedRoute?.id}
         onMarkerPress={handleMarkerSelect}
         routeCoordinates={activeRouteCoords}
+        userLocation={userLocation || undefined}
+        centerCoordinate={userLocation || [90.4125, 23.7745]}
         showControls={true}
         showUserLocation={true}>
         {/* Floating Top Search & Filter HUD */}

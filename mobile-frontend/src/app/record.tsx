@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
@@ -29,7 +30,27 @@ export default function RecordCockpitScreen() {
   const [lapCount, setLapCount] = useState(1);
   const [beaconToken, setBeaconToken] = useState<string | null>(null);
   const [isBeaconActive, setIsBeaconActive] = useState(false);
+  const [previewLocation, setPreviewLocation] = useState<[number, number] | null>(null);
   const lastPingTimeRef = useRef<number>(0);
+
+  // Pre-fetch device GPS location before recording starts
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          }).catch(() => null);
+          if (loc) {
+            setPreviewLocation([loc.coords.longitude, loc.coords.latitude]);
+          }
+        }
+      } catch (err) {
+        console.warn('Pre-record location error:', err);
+      }
+    })();
+  }, []);
 
   // Auto-start beacon if enabled when recording begins
   useEffect(() => {
@@ -119,8 +140,10 @@ export default function RecordCockpitScreen() {
   const liveCoords = activeRecording.routeCoordinates.map(
     (c) => [c.longitude, c.latitude] as [number, number]
   );
+  const currentFix =
+    liveCoords.length > 0 ? liveCoords[liveCoords.length - 1] : previewLocation;
   const centerCoord =
-    liveCoords.length > 0 ? liveCoords[liveCoords.length - 1] : ([90.4125, 23.7745] as [number, number]);
+    currentFix || ([90.4125, 23.7745] as [number, number]);
 
   const getGpsStatusDisplay = () => {
     if (activeRecording.isSimulated) {
@@ -147,10 +170,11 @@ export default function RecordCockpitScreen() {
 
   return (
     <View className="flex-1 bg-stone-900 relative">
-      {/* Real Full-Screen MapLibre Map Behind HUD */}
+      {/* Real Full-Screen Map Behind HUD */}
       <StravaMapView
         styleKey="positron"
         centerCoordinate={centerCoord}
+        userLocation={centerCoord}
         routeCoordinates={liveCoords.length > 0 ? liveCoords : undefined}
         showControls={false}
         showUserLocation={true}

@@ -3,9 +3,11 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useApp } from '../../context/AppContext';
 
 export default function SettingsHubScreen() {
   const router = useRouter();
+  const { logout } = useApp();
   const [unitSystem, setUnitSystem] = useState<'metric' | 'imperial'>('metric');
 
   const handleLogout = () => {
@@ -14,7 +16,14 @@ export default function SettingsHubScreen() {
       'Your recorded workouts and saved routes are safely synced.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Log Out', style: 'destructive', onPress: () => router.replace('/auth/login') },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/auth/login');
+          },
+        },
       ]
     );
   };

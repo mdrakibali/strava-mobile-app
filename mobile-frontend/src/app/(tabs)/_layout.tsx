@@ -2,9 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
 import React from 'react';
 import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useApp } from '../../context/AppContext';
 
 export default function TabLayout() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { activeRecording } = useApp();
 
   return (
     <Tabs
@@ -16,8 +20,8 @@ export default function TabLayout() {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#E5E7EB',
-          height: 60,
-          paddingBottom: 6,
+          height: 56 + Math.max(insets.bottom, 8),
+          paddingBottom: Math.max(insets.bottom, 8),
           paddingTop: 6,
         },
         tabBarLabelStyle: {
@@ -57,9 +61,28 @@ export default function TabLayout() {
         name="record-tab"
         options={{
           title: 'Record',
-          tabBarIcon: () => (
-            <View className="w-11 h-11 rounded-full bg-[#FC4C02] items-center justify-center -mb-1 shadow-md">
-              <Ionicons name="radio-button-on" size={24} color="#FFFFFF" />
+          tabBarIcon: ({ focused }) => (
+            <View className="relative items-center justify-center">
+              <Ionicons
+                name={
+                  activeRecording.isRecording
+                    ? 'radio-button-on'
+                    : focused
+                    ? 'radio-button-on'
+                    : 'radio-button-off'
+                }
+                size={24}
+                color={
+                  activeRecording.isRecording
+                    ? '#EF4444'
+                    : focused
+                    ? '#FC4C02'
+                    : '#9CA3AF'
+                }
+              />
+              {activeRecording.isRecording && (
+                <View className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 border border-white" />
+              )}
             </View>
           ),
         }}
