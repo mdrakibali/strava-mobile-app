@@ -6,7 +6,29 @@ export class ChallengeRepository {
   constructor(private db: AppDatabase) {}
 
   async list() {
-    return this.db.select().from(challenges).orderBy(desc(challenges.startDate));
+    const rows = await this.db
+      .select({
+        id: challenges.id,
+        title: challenges.title,
+        description: challenges.description,
+        sportType: challenges.sportType,
+        targetMeters: challenges.targetMeters,
+        badgeUrl: challenges.badgeUrl,
+        startDate: challenges.startDate,
+        endDate: challenges.endDate,
+        creatorId: challenges.creatorId,
+        createdAt: challenges.createdAt,
+        participantsCount: sql<number>`count(${challengeParticipants.athleteId})`,
+      })
+      .from(challenges)
+      .leftJoin(challengeParticipants, eq(challenges.id, challengeParticipants.challengeId))
+      .groupBy(challenges.id)
+      .orderBy(desc(challenges.startDate));
+
+    return rows.map((r) => ({
+      ...r,
+      participantsCount: Number(r.participantsCount || 0),
+    }));
   }
 
   async findById(id: string) {
@@ -39,6 +61,13 @@ export class ChallengeRepository {
       )
       .limit(1);
     return participation || null;
+  }
+
+  async getUserParticipations(athleteId: string) {
+    return this.db
+      .select()
+      .from(challengeParticipants)
+      .where(eq(challengeParticipants.athleteId, athleteId));
   }
 
   async join(challengeId: string, athleteId: string) {

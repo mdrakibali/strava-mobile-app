@@ -10,18 +10,20 @@ export class ClubService {
     }
     const clubs = await this.clubRepo.list(query, clubIds);
 
-    return Promise.all(
-      clubs.map(async (club) => {
-        const membersCount = await this.clubRepo.getMemberCount(club.id);
-        const membership = athleteId ? await this.clubRepo.getMembership(club.id, athleteId) : null;
-        return {
-          ...club,
-          membersCount,
-          isMember: Boolean(membership),
-          userRole: membership?.role || null,
-        };
-      })
-    );
+    let userMembershipsMap = new Map<string, string>();
+    if (athleteId) {
+      const memberships = await this.clubRepo.getUserMemberships(athleteId);
+      userMembershipsMap = new Map(memberships.map((m) => [m.clubId, m.role]));
+    }
+
+    return clubs.map((club) => {
+      const userRole = userMembershipsMap.get(club.id) || null;
+      return {
+        ...club,
+        isMember: Boolean(userRole),
+        userRole,
+      };
+    });
   }
 
   async getClubDetail(clubId: string, athleteId?: string) {

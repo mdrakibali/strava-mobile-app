@@ -33,7 +33,7 @@ export const verifyToken = async (
 ): Promise<AuthContext | null> => {
   try {
     const secretKey = new TextEncoder().encode(secret);
-    const { payload } = await jwtVerify(secretKey, token);
+    const { payload } = await jwtVerify(token, secretKey);
     return {
       athleteId: (payload.athleteId as string) || (payload.sub as string),
       username: payload.username as string,

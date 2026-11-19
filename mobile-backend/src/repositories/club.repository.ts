@@ -11,7 +11,6 @@ export class ClubRepository {
   }
 
   async list(query?: string, clubIds?: string[]) {
-    let baseQuery = this.db.select().from(clubs);
     const conditions = [];
 
     if (query && query.trim()) {
@@ -24,11 +23,33 @@ export class ClubRepository {
       conditions.push(inArray(clubs.id, clubIds));
     }
 
-    if (conditions.length > 0) {
-      baseQuery = baseQuery.where(and(...conditions)) as any;
-    }
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    return baseQuery.limit(30);
+    const rows = await this.db
+      .select({
+        id: clubs.id,
+        name: clubs.name,
+        sportType: clubs.sportType,
+        city: clubs.city,
+        country: clubs.country,
+        description: clubs.description,
+        avatarUrl: clubs.avatarUrl,
+        bannerUrl: clubs.bannerUrl,
+        isPrivate: clubs.isPrivate,
+        creatorId: clubs.creatorId,
+        createdAt: clubs.createdAt,
+        membersCount: sql<number>`count(${clubMembers.athleteId})`,
+      })
+      .from(clubs)
+      .leftJoin(clubMembers, eq(clubs.id, clubMembers.clubId))
+      .where(whereClause)
+      .groupBy(clubs.id)
+      .limit(30);
+
+    return rows.map((r) => ({
+      ...r,
+      membersCount: Number(r.membersCount || 0),
+    }));
   }
 
   async create(data: typeof clubs.$inferInsert) {
@@ -51,6 +72,16 @@ export class ClubRepository {
       .where(and(eq(clubMembers.clubId, clubId), eq(clubMembers.athleteId, athleteId)))
       .limit(1);
     return membership || null;
+  }
+
+  async getUserMemberships(athleteId: string) {
+    return this.db
+      .select({
+        clubId: clubMembers.clubId,
+        role: clubMembers.role,
+      })
+      .from(clubMembers)
+      .where(eq(clubMembers.athleteId, athleteId));
   }
 
   async addMember(clubId: string, athleteId: string, role = 'MEMBER') {

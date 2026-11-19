@@ -30,8 +30,9 @@ export class ClubController {
   async getDetail(c: Context<{ Bindings: Env }>) {
     try {
       const id = c.req.param('id');
-      const user = c.get('user');
+      if (!id) return c.json({ error: 'Club ID is required' }, 400);
 
+      const user = c.get('user');
       const service = this.getService(c);
       const detail = await service.getClubDetail(id, user?.athleteId);
 
@@ -65,8 +66,9 @@ export class ClubController {
   async toggleMembership(c: Context<{ Bindings: Env }>) {
     try {
       const id = c.req.param('id');
-      const user = c.get('user');
+      if (!id) return c.json({ error: 'Club ID is required' }, 400);
 
+      const user = c.get('user');
       const service = this.getService(c);
       const result = await service.toggleMembership(id, user.athleteId);
 

@@ -48,6 +48,8 @@ export class ActivityController {
   async getDetail(c: Context<{ Bindings: Env }>) {
     try {
       const id = c.req.param('id');
+      if (!id) return c.json({ error: 'Activity ID is required' }, 400);
+
       const user = c.get('user');
       const service = this.getService(c);
 
@@ -64,6 +66,8 @@ export class ActivityController {
   async toggleKudos(c: Context<{ Bindings: Env }>) {
     try {
       const id = c.req.param('id');
+      if (!id) return c.json({ error: 'Activity ID is required' }, 400);
+
       const user = c.get('user');
       const service = this.getService(c);
 
@@ -78,6 +82,8 @@ export class ActivityController {
   async addComment(c: Context<{ Bindings: Env }>) {
     try {
       const id = c.req.param('id');
+      if (!id) return c.json({ error: 'Activity ID is required' }, 400);
+
       const user = c.get('user');
       const body = await c.req.json();
 
@@ -104,6 +110,8 @@ export class ActivityController {
   async exportGpx(c: Context<{ Bindings: Env }>) {
     try {
       const id = c.req.param('id');
+      if (!id) return c.json({ error: 'Activity ID is required' }, 400);
+
       const service = this.getService(c);
       const gpxXml = await service.generateGpx(id);
 
