@@ -34,3 +34,4 @@ try {
     console.log('[patch-asset] Patched expo-asset Asset.js successfully');
   }
 }
+
