@@ -314,7 +314,7 @@ export const useGpsRecorder = () => {
               maxSpeedMps: Math.max(prev.maxSpeedMps, computedSpeed),
               elevationGainMeters: newTotalElev,
               currentAltitudeMeters: altitude,
-              currentHeartRate: prev.sportType === 'Ride' ? 142 : 156,
+              currentHeartRate: prev.currentHeartRate || 0,
               routeCoordinates: [...prev.routeCoordinates, newCoord],
               splits: updatedSplits,
               elevationProfile: altitude != null ? [...prev.elevationProfile, Math.round(altitude)] : prev.elevationProfile,

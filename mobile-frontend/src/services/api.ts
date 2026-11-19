@@ -223,5 +223,84 @@ export const api = {
         method: 'DELETE',
       }),
   },
+
+  // 11. Direct Messages (1-on-1 Chat)
+  messages: {
+    getConversations: () =>
+      request<{ conversations: any[] }>('/messages/conversations'),
+    getThread: (participantId: string) =>
+      request<{ messages: any[] }>(`/messages/${participantId}`),
+    send: (recipientId: string, text: string) =>
+      request<{ message: string; directMessage: any }>('/messages/send', {
+        method: 'POST',
+        body: JSON.stringify({ recipientId, text }),
+      }),
+  },
+
+  // 12. Segments & Leaderboards
+  segments: {
+    list: (sportType?: string) => {
+      const q = sportType ? `?sportType=${sportType}` : '';
+      return request<{ segments: any[] }>(`/segments${q}`);
+    },
+    get: (id: string) => request<{ segment: any }>(`/segments/${id}`),
+    getLeaderboard: (id: string) =>
+      request<{ leaderboard: any[] }>(`/segments/${id}/leaderboard`),
+    create: (data: {
+      name: string;
+      sportType: string;
+      distanceMeters: number;
+      averageGradePercent?: number;
+      elevationGainMeters?: number;
+      polylinePoints: any[];
+    }) =>
+      request<{ message: string; segment: any }>('/segments', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  },
+
+  // 13. Routes & Builder
+  routes: {
+    list: (sportType?: string, search?: string) => {
+      const params = new URLSearchParams();
+      if (sportType) params.set('sportType', sportType);
+      if (search) params.set('search', search);
+      const q = params.toString() ? `?${params.toString()}` : '';
+      return request<{ routes: any[] }>(`/routes${q}`);
+    },
+    getSaved: () => request<{ savedRoutes: any[] }>('/routes/saved'),
+    get: (id: string) => request<{ route: any }>(`/routes/${id}`),
+    create: (data: {
+      name: string;
+      description?: string;
+      sportType: string;
+      distanceMeters: number;
+      elevationGainMeters?: number;
+      estimatedTimeSeconds?: number;
+      polylinePoints: any[];
+      elevationProfile?: number[];
+      surfaceTypes?: any;
+    }) =>
+      request<{ message: string; route: any }>('/routes', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    toggleSave: (id: string) =>
+      request<{ message: string; isSaved: boolean }>(`/routes/${id}/toggle-save`, {
+        method: 'POST',
+      }),
+  },
+
+  // 14. Group Events & RSVPs
+  events: {
+    list: () => request<{ events: any[] }>('/events'),
+    get: (id: string) => request<{ event: any; attendees: any[] }>(`/events/${id}`),
+    rsvp: (id: string, status: 'GOING' | 'MAYBE' | 'DECLINED') =>
+      request<{ message: string; status: string | null }>(`/events/${id}/rsvp`, {
+        method: 'POST',
+        body: JSON.stringify({ status }),
+      }),
+  },
 };
 

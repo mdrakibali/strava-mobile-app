@@ -39,7 +39,7 @@ export const LeafletMapView: React.FC<LeafletMapViewProps> = ({
   onMapPress,
   showUserLocation = true,
 }) => {
-  const webViewRef = useRef<WebView>(null);
+  const webViewRef = useRef<any>(null);
 
   // Determine tile URL based on map type and styleKey
   const getTileUrl = () => {

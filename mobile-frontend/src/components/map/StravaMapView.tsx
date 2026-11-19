@@ -3,6 +3,7 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import { MapFallbackView } from './MapFallbackView';
+import { LeafletMapView } from './LeafletMapView';
 import {
   HeatmapTypeOption,
   MAP_STYLES,
@@ -195,18 +196,21 @@ export const StravaMapView: React.FC<StravaMapViewProps> = ({
           })}
         </MapLibreGL.MapView>
       ) : (
-        <MapFallbackView
+        <LeafletMapView
           routeCoordinates={routeCoordinates}
           markers={markers}
+          selectedMarkerId={selectedMarkerId}
           onMarkerPress={onMarkerPress}
+          onMapPress={onMapPress}
           userLocation={userLocation}
           centerCoordinate={center}
+          zoomLevel={zoom}
+          styleKey={currentStyle}
           mapType={mapType}
           heatmapType={heatmapType}
           terrainType={terrainType}
           is3D={is3D}
-          poiEnabled={poiEnabled}
-          bikeLanesEnabled={bikeLanesEnabled}
+          showUserLocation={showUserLocation}
         />
       )}
 

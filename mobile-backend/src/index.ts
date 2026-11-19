@@ -11,6 +11,10 @@ import { feedRouter } from './routes/feed.route';
 import { gearRouter } from './routes/gear.route';
 import { notificationsRouter } from './routes/notifications.route';
 import { privacyZonesRouter } from './routes/privacy-zones.route';
+import { messagesRouter } from './routes/messages.route';
+import { segmentsRouter } from './routes/segments.route';
+import { routesRouter } from './routes/routes.route';
+import { eventsRouter } from './routes/events.route';
 import { Env } from './types';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -56,6 +60,10 @@ api.route('/beacon', beaconRouter);
 api.route('/notifications', notificationsRouter);
 api.route('/gear', gearRouter);
 api.route('/privacy-zones', privacyZonesRouter);
+api.route('/messages', messagesRouter);
+api.route('/segments', segmentsRouter);
+api.route('/routes', routesRouter);
+api.route('/events', eventsRouter);
 
 app.route('/api/v1', api);
 

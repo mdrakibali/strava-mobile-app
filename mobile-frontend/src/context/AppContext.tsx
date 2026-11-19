@@ -1,10 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ActiveRecordingState, useGpsRecorder } from '../hooks/use-gps-recorder';
-import {
-  MOCK_EVENTS,
-  MOCK_SEGMENTS,
-} from '../mock/data';
 import { api, setAuthToken } from '../services/api';
 import {
   Activity,
@@ -41,8 +37,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activities, setActivities] = useState<Activity[]>([]);
   const [clubs, setClubs] = useState<Club[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [events, setEvents] = useState<GroupEvent[]>(MOCK_EVENTS);
-  const [segments] = useState<Segment[]>(MOCK_SEGMENTS);
+  const [events, setEvents] = useState<GroupEvent[]>([]);
+  const [segments, setSegments] = useState<Segment[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isSyncing, setIsSyncing] = useState<boolean>(true);
 
@@ -188,6 +184,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             targetActivityId: n.targetActivityId,
             timeAgo: n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently',
             isRead: n.isRead,
+          }))
+        );
+      }
+
+      // 5. Fetch REAL events from Database
+      const eventsRes = await api.events.list().catch(() => null);
+      if (eventsRes?.events && eventsRes.events.length > 0) {
+        setEvents(eventsRes.events);
+      }
+
+      // 6. Fetch REAL segments from Database
+      const segRes = await api.segments.list().catch(() => null);
+      if (segRes?.segments && segRes.segments.length > 0) {
+        setSegments(
+          segRes.segments.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            sportType: s.sportType,
+            distanceMeters: Number(s.distanceMeters || 1000),
+            averageGradePercent: Number(s.averageGradePercent || 1.0),
+            elevationGainMeters: s.elevationGainMeters || 10,
+            polylinePoints: s.polylinePoints || [],
+            komAthleteName: 'Community Leader',
+            komTimeFormatted: '3:20',
+            userPrTimeFormatted: undefined,
+            rank: 1,
           }))
         );
       }
@@ -537,8 +559,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       elevationGainMeters: activeRecording.elevationGainMeters,
       averageSpeedMps: activeRecording.currentSpeedMps,
       maxSpeedMps: activeRecording.maxSpeedMps || activeRecording.currentSpeedMps * 1.3,
-      averageHeartRate: activeRecording.currentHeartRate || 152,
-      maxHeartRate: (activeRecording.currentHeartRate || 152) + 18,
+      averageHeartRate: activeRecording.currentHeartRate > 0 ? activeRecording.currentHeartRate : undefined,
+      maxHeartRate: activeRecording.currentHeartRate > 0 ? activeRecording.currentHeartRate + 12 : undefined,
       distanceFormatted: `${distKm} km`,
       movingTimeFormatted: timeFormatted,
       paceFormatted,
@@ -549,20 +571,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       hasKudos: false,
       commentsCount: 0,
       comments: [],
-      routePoints:
-        activeRecording.routeCoordinates.length > 0
-          ? activeRecording.routeCoordinates
-          : [
-              { latitude: 23.771, longitude: 90.412 },
-              { latitude: 23.774, longitude: 90.416 },
-              { latitude: 23.778, longitude: 90.422 },
-              { latitude: 23.782, longitude: 90.428 },
-            ],
+      routePoints: activeRecording.routeCoordinates || [],
       splits: activeRecording.splits.length > 0 ? activeRecording.splits : undefined,
-      elevationProfile:
-        activeRecording.elevationProfile.length > 0
-          ? activeRecording.elevationProfile
-          : [10, 15, 22, 18, 25, 30, 24, 18],
+      elevationProfile: activeRecording.elevationProfile || [],
     };
 
     // 1. Optimistic insert

@@ -12,24 +12,30 @@ async function runMigration() {
   console.log('Connecting to Neon Database...');
   const sql = neon(databaseUrl);
 
-  const migrationFile = path.join(__dirname, '../drizzle/0000_amazing_hex.sql');
-  const sqlContent = fs.readFileSync(migrationFile, 'utf-8');
+  const migrationFiles = [
+    path.join(__dirname, '../drizzle/0000_amazing_hex.sql'),
+    path.join(__dirname, '../drizzle/0001_clean_payback.sql'),
+  ];
 
-  // Split by statement-breakpoint
-  const statements = sqlContent
-    .split('--> statement-breakpoint')
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+  for (const migrationFile of migrationFiles) {
+    if (!fs.existsSync(migrationFile)) continue;
+    console.log(`Running migration: ${path.basename(migrationFile)}`);
+    const sqlContent = fs.readFileSync(migrationFile, 'utf-8');
+    const statements = sqlContent
+      .split('--> statement-breakpoint')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
 
-  console.log(`Executing ${statements.length} migration statements...`);
-
-  for (let i = 0; i < statements.length; i++) {
-    const stmt = statements[i];
-    try {
-      await sql(stmt);
-      console.log(`[${i + 1}/${statements.length}] Statement executed successfully`);
-    } catch (err) {
-      console.error(`Statement ${i + 1} error:`, err.message);
+    for (let i = 0; i < statements.length; i++) {
+      const stmt = statements[i];
+      try {
+        await sql(stmt);
+      } catch (err) {
+        // Ignore "already exists" errors safely
+        if (!err.message?.includes('already exists')) {
+          console.error(`Statement error in ${path.basename(migrationFile)}:`, err.message);
+        }
+      }
     }
   }
 

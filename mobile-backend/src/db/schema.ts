@@ -335,4 +335,55 @@ export const beaconSessions = pgTable('beacon_sessions', {
   endedAt: timestamp('ended_at', { withTimezone: true }),
 });
 
+// 19. Routes Table (Community and User Created Routes)
+export const routes = pgTable('routes', {
+  id: text('id').primaryKey(),
+  creatorId: text('creator_id')
+    .notNull()
+    .references(() => athletes.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  sportType: varchar('sport_type', { length: 50 }).default('Run').notNull(),
+  distanceMeters: decimal('distance_meters', { precision: 12, scale: 2 }).notNull(),
+  elevationGainMeters: integer('elevation_gain_meters').default(0).notNull(),
+  estimatedTimeSeconds: integer('estimated_time_seconds').notNull(),
+  polylinePoints: jsonb('polyline_points').notNull(),
+  elevationProfile: jsonb('elevation_profile'),
+  surfaceTypes: jsonb('surface_types'),
+  isPublic: boolean('is_public').default(true).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// 20. Saved Routes Table (Bookmarks & Favorites)
+export const savedRoutes = pgTable(
+  'saved_routes',
+  {
+    athleteId: text('athlete_id')
+      .notNull()
+      .references(() => athletes.id, { onDelete: 'cascade' }),
+    routeId: text('route_id')
+      .notNull()
+      .references(() => routes.id, { onDelete: 'cascade' }),
+    savedAt: timestamp('saved_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.athleteId, table.routeId] }),
+  ]
+);
+
+// 21. Training Goals Table
+export const trainingGoals = pgTable('training_goals', {
+  id: text('id').primaryKey(),
+  athleteId: text('athlete_id')
+    .notNull()
+    .references(() => athletes.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  sportType: varchar('sport_type', { length: 50 }).default('Run').notNull(),
+  targetValue: decimal('target_value', { precision: 10, scale: 2 }).notNull(),
+  unit: varchar('unit', { length: 20 }).default('km').notNull(),
+  period: varchar('period', { length: 20 }).default('WEEKLY').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+
 

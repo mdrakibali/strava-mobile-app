@@ -48,18 +48,18 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 2. Maps Hub */}
+      {/* 2. Explore Hub */}
       <Tabs.Screen
         name="maps"
         options={{
-          title: 'Maps',
+          title: 'Explore',
           tabBarIcon: ({ focused }) => (
             <View
               className={`px-3 py-1 rounded-full items-center justify-center ${
                 focused ? 'bg-orange-100/60' : ''
               }`}>
               <Ionicons
-                name={focused ? 'map' : 'map-outline'}
+                name={focused ? 'compass' : 'compass-outline'}
                 size={22}
                 color={focused ? '#FC4C02' : '#9CA3AF'}
               />
@@ -68,11 +68,11 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 3. Workout Hub */}
+      {/* 3. Record Cockpit Hub */}
       <Tabs.Screen
         name="record-tab"
         options={{
-          title: 'Workout',
+          title: 'Record',
           tabBarIcon: ({ focused }) => (
             <View
               className={`px-3 py-1 rounded-full items-center justify-center relative ${
