@@ -4,13 +4,24 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import { MapFallbackView } from './MapFallbackView';
 import {
+  HeatmapTypeOption,
   MAP_STYLES,
   MapMarkerItem,
   MapStyleKey,
+  MapTypeOption,
   StravaMapViewProps,
+  TerrainTypeOption,
 } from './mapTypes';
 
-export { MAP_STYLES, MapMarkerItem, MapStyleKey, StravaMapViewProps };
+export {
+  HeatmapTypeOption,
+  MAP_STYLES,
+  MapMarkerItem,
+  MapStyleKey,
+  MapTypeOption,
+  StravaMapViewProps,
+  TerrainTypeOption,
+};
 
 let MapLibreGL: any = null;
 try {
@@ -24,6 +35,12 @@ try {
 
 export const StravaMapView: React.FC<StravaMapViewProps> = ({
   styleKey = 'positron',
+  mapType = 'standard',
+  heatmapType = 'global_run',
+  terrainType = 'none',
+  is3D = false,
+  poiEnabled = true,
+  bikeLanesEnabled = false,
   centerCoordinate = [90.4125, 23.7745],
   userLocation,
   zoomLevel = 13,
@@ -184,6 +201,12 @@ export const StravaMapView: React.FC<StravaMapViewProps> = ({
           onMarkerPress={onMarkerPress}
           userLocation={userLocation}
           centerCoordinate={center}
+          mapType={mapType}
+          heatmapType={heatmapType}
+          terrainType={terrainType}
+          is3D={is3D}
+          poiEnabled={poiEnabled}
+          bikeLanesEnabled={bikeLanesEnabled}
         />
       )}
 

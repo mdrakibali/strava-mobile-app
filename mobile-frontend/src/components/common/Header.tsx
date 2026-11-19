@@ -100,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
             <TouchableOpacity
               onPress={() => {
                 setShowAddMenu(false);
-                router.push('/manual-entry');
+                router.push('/manual-entry' as any);
               }}
               className="flex-row items-center p-3 rounded-xl active:bg-gray-100">
               <View className="w-8 h-8 rounded-full bg-blue-100 items-center justify-center mr-3">
@@ -124,7 +124,7 @@ export const Header: React.FC<HeaderProps> = ({
             <TouchableOpacity
               onPress={() => {
                 setShowAddMenu(false);
-                router.push('/post/create');
+                router.push('/post/create' as any);
               }}
               className="flex-row items-center p-3 rounded-xl active:bg-gray-100">
               <View className="w-8 h-8 rounded-full bg-purple-100 items-center justify-center mr-3">

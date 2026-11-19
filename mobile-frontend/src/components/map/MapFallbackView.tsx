@@ -2,13 +2,24 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
-import { MapMarkerItem } from './mapTypes';
+import {
+  HeatmapTypeOption,
+  MapMarkerItem,
+  MapTypeOption,
+  TerrainTypeOption,
+} from './mapTypes';
 
 interface MapFallbackViewProps {
   routeCoordinates?: [number, number][];
   markers?: MapMarkerItem[];
   userLocation?: [number, number];
   centerCoordinate?: [number, number];
+  mapType?: MapTypeOption;
+  heatmapType?: HeatmapTypeOption;
+  terrainType?: TerrainTypeOption;
+  is3D?: boolean;
+  poiEnabled?: boolean;
+  bikeLanesEnabled?: boolean;
   onMarkerPress?: (marker: MapMarkerItem) => void;
 }
 
@@ -17,6 +28,12 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
   markers = [],
   userLocation,
   centerCoordinate,
+  mapType = 'standard',
+  heatmapType = 'global_run',
+  terrainType = 'none',
+  is3D = false,
+  poiEnabled = true,
+  bikeLanesEnabled = false,
   onMarkerPress,
 }) => {
   const svgWidth = 360;
@@ -60,24 +77,99 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
     endPt = pts[pts.length - 1];
   }
 
+  // Theme based on mapType
+  const isSatellite = mapType === 'satellite' || mapType === 'hybrid';
+  const isWinter = mapType === 'winter';
+  const bgColor = isSatellite
+    ? 'bg-[#15231D]'
+    : isWinter
+    ? 'bg-[#EAF2F8]'
+    : 'bg-[#F4F3F0]';
+
   return (
-    <View className="flex-1 bg-[#F4F3F0] items-center justify-center relative overflow-hidden">
+    <View className={`flex-1 ${bgColor} items-center justify-center relative overflow-hidden`}>
+      {/* 3D Horizon and Perspective Grid */}
+      {is3D && (
+        <View className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-sky-400/30 to-transparent pointer-events-none z-10 border-b border-sky-300/40">
+          <View className="flex-row justify-between px-6 pt-3">
+            <Text className="text-[10px] font-black tracking-widest text-sky-700 uppercase bg-white/70 px-2 py-0.5 rounded-full">
+              3D Terrain Perspective (Unlocked)
+            </Text>
+            <Ionicons name="cube-outline" size={14} color="#0369A1" />
+          </View>
+        </View>
+      )}
+
       {/* Background Cartographic Styling Grid */}
       <View className="absolute inset-0 opacity-40">
-        <View className="w-full h-full border border-gray-200" />
-        <View className="absolute w-full h-1 bg-[#E2E8F0] top-1/4 -rotate-6" />
-        <View className="absolute w-full h-2 bg-[#E2E8F0] top-1/2 rotate-6" />
-        <View className="absolute w-2 h-full bg-[#E2E8F0] left-1/3" />
-        <View className="absolute w-1.5 h-full bg-[#E2E8F0] right-1/4 -rotate-3" />
-        {/* River / Lake feature */}
-        <View className="absolute -right-10 top-1/3 w-36 h-28 bg-[#BAE6FD]/40 rounded-full blur-sm" />
+        <View className="w-full h-full border border-gray-300/50" />
+        <View className={`absolute w-full h-1 ${isSatellite ? 'bg-[#374151]' : 'bg-[#E2E8F0]'} top-1/4 -rotate-6`} />
+        <View className={`absolute w-full h-2 ${isSatellite ? 'bg-[#4B5563]' : 'bg-[#E2E8F0]'} top-1/2 rotate-6`} />
+        <View className={`absolute w-2 h-full ${isSatellite ? 'bg-[#374151]' : 'bg-[#E2E8F0]'} left-1/3`} />
+        <View className={`absolute w-1.5 h-full ${isSatellite ? 'bg-[#374151]' : 'bg-[#E2E8F0]'} right-1/4 -rotate-3`} />
+
+        {/* River / Water body */}
+        <View className={`absolute -right-10 top-1/3 w-36 h-28 ${isSatellite ? 'bg-[#0E7490]/50' : 'bg-[#BAE6FD]/60'} rounded-full blur-sm`} />
+
         {/* Park / Greenery feature */}
-        <View className="absolute -left-8 bottom-6 w-44 h-32 bg-[#DCFCE7]/50 rounded-3xl" />
+        <View className={`absolute -left-8 bottom-6 w-44 h-32 ${isSatellite ? 'bg-[#064E3B]/60' : 'bg-[#DCFCE7]/70'} rounded-3xl`} />
       </View>
+
+      {/* Heatmap Layer Overlays (Strava Heatmap Effect) */}
+      {heatmapType !== 'none' && (
+        <View className="absolute inset-0 pointer-events-none opacity-60 z-10">
+          {/* Heat glow lines mimicking community athletic activity */}
+          <Svg width="100%" height="100%">
+            <Path
+              d="M 20 80 Q 120 40 220 90 T 360 70"
+              stroke={heatmapType === 'night' ? '#A855F7' : heatmapType === 'weekly' ? '#10B981' : '#FC4C02'}
+              strokeWidth={8}
+              strokeOpacity={0.4}
+              fill="none"
+            />
+            <Path
+              d="M 20 80 Q 120 40 220 90 T 360 70"
+              stroke="#FDE047"
+              strokeWidth={3}
+              strokeOpacity={0.8}
+              fill="none"
+            />
+            <Path
+              d="M 80 10 Q 140 120 180 240"
+              stroke={heatmapType === 'personal' ? '#3B82F6' : '#FC4C02'}
+              strokeWidth={7}
+              strokeOpacity={0.4}
+              fill="none"
+            />
+            <Path
+              d="M 80 10 Q 140 120 180 240"
+              stroke="#FFF"
+              strokeWidth={2}
+              strokeOpacity={0.7}
+              fill="none"
+            />
+          </Svg>
+        </View>
+      )}
+
+      {/* Bike Lanes Layer Overlay */}
+      {bikeLanesEnabled && (
+        <View className="absolute inset-0 pointer-events-none z-10">
+          <Svg width="100%" height="100%">
+            <Path
+              d="M 0 140 C 90 120, 180 160, 360 130"
+              stroke="#10B981"
+              strokeWidth={3.5}
+              strokeDasharray="6 4"
+              fill="none"
+            />
+          </Svg>
+        </View>
+      )}
 
       {/* Real Geodesic SVG Polyline */}
       {pathString ? (
-        <View className="w-full h-full absolute inset-0 items-center justify-center">
+        <View className="w-full h-full absolute inset-0 items-center justify-center z-20">
           <Svg width="100%" height="100%" viewBox={`0 0 ${svgWidth} ${svgHeight}`}>
             <Defs>
               <LinearGradient id="routeGlow" x1="0" y1="0" x2="1" y2="1">
@@ -156,6 +248,20 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
             Acquiring GPS Signal...
           </Text>
         </View>
+      )}
+
+      {/* Points of Interest (POIs) if enabled */}
+      {poiEnabled && (
+        <>
+          <View className="absolute top-1/4 left-16 z-20 flex-row items-center bg-white/95 px-2 py-1 rounded-full shadow-sm border border-gray-200">
+            <Ionicons name="cafe" size={12} color="#D97706" />
+            <Text className="text-[9px] font-bold text-gray-800 ml-1">Café</Text>
+          </View>
+          <View className="absolute bottom-1/3 right-12 z-20 flex-row items-center bg-white/95 px-2 py-1 rounded-full shadow-sm border border-gray-200">
+            <Ionicons name="water" size={12} color="#0284C7" />
+            <Text className="text-[9px] font-bold text-gray-800 ml-1">Water Station</Text>
+          </View>
+        </>
       )}
 
       {/* Interactive Route and Segment Markers */}

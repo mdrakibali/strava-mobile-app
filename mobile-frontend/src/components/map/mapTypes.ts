@@ -6,6 +6,10 @@ export const MAP_STYLES = {
 
 export type MapStyleKey = keyof typeof MAP_STYLES;
 
+export type MapTypeOption = 'standard' | 'satellite' | 'hybrid' | 'winter';
+export type HeatmapTypeOption = 'none' | 'global_run' | 'weekly' | 'night' | 'personal';
+export type TerrainTypeOption = 'none' | 'aspect' | 'avalanche' | 'gradient';
+
 export interface MapMarkerItem {
   id: string;
   coordinate: [number, number]; // [longitude, latitude]
@@ -16,6 +20,12 @@ export interface MapMarkerItem {
 
 export interface StravaMapViewProps {
   styleKey?: MapStyleKey;
+  mapType?: MapTypeOption;
+  heatmapType?: HeatmapTypeOption;
+  terrainType?: TerrainTypeOption;
+  is3D?: boolean;
+  poiEnabled?: boolean;
+  bikeLanesEnabled?: boolean;
   centerCoordinate?: [number, number];
   userLocation?: [number, number];
   zoomLevel?: number;
@@ -30,4 +40,3 @@ export interface StravaMapViewProps {
   className?: string;
   children?: React.ReactNode;
 }
-
