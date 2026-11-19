@@ -15,10 +15,12 @@
     "@neondatabase/serverless": "^0.10.4",
     "drizzle-orm": "^0.38.4",
     "hono": "^4.6.17",
-    "jose": "^5.9.6"
+    "jose": "^5.9.6",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250109.0",
+    "@types/pg": "^8.23.1",
     "dotenv": "^16.4.7",
     "drizzle-kit": "^0.30.2",
     "typescript": "^5.7.3",

@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "open-strava-backend",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-11-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "account_id": "1f5806581fa2928a69c62e788e63acca",
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "abb5f1ceb7e9424fba7a5c315f190fe8"
+    }
+  ],
+  "vars": {
+    "ENVIRONMENT": "production",
+    "CORS_ORIGIN": "*",
+    "JWT_SECRET": "open-strava-prod-secret-jwt-key-2026-auth",
+    "DATABASE_URL": "postgresql://neondb_owner:npg_chTDF35Axdla@ep-nameless-meadow-biyayy82-pooler.c-5.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+    "GOOGLE_CLIENT_ID": ""
+  }
+}

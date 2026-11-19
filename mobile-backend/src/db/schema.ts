@@ -14,9 +14,10 @@ import {
 // 1. Athletes (Users) Table
 export const athletes = pgTable('athletes', {
   id: text('id').primaryKey(),
+  googleId: text('google_id').unique(),
   username: varchar('username', { length: 50 }).notNull().unique(),
   email: varchar('email', { length: 255 }).notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
+  passwordHash: text('password_hash'),
   displayName: varchar('display_name', { length: 100 }).notNull(),
   avatarUrl: text('avatar_url'),
   city: varchar('city', { length: 100 }),
@@ -314,4 +315,24 @@ export const directMessages = pgTable('direct_messages', {
   isRead: boolean('is_read').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+// 18. Live Beacon Safety Tracking (Spectator Mode)
+export const beaconSessions = pgTable('beacon_sessions', {
+  id: text('id').primaryKey(),
+  token: varchar('token', { length: 64 }).notNull().unique(),
+  athleteId: text('athlete_id')
+    .notNull()
+    .references(() => athletes.id, { onDelete: 'cascade' }),
+  sportType: varchar('sport_type', { length: 50 }).default('Run').notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  lastLatitude: decimal('last_latitude', { precision: 10, scale: 6 }),
+  lastLongitude: decimal('last_longitude', { precision: 10, scale: 6 }),
+  lastAltitude: decimal('last_altitude', { precision: 7, scale: 2 }),
+  lastSpeedMps: decimal('last_speed_mps', { precision: 6, scale: 2 }),
+  batteryPercentage: integer('battery_percentage'),
+  startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+  lastPingAt: timestamp('last_ping_at', { withTimezone: true }).defaultNow().notNull(),
+  endedAt: timestamp('ended_at', { withTimezone: true }),
+});
+
 
