@@ -1,5 +1,5 @@
-import { and, desc, eq, inArray, lt } from 'drizzle-orm';
-import { activities, athletes } from '../db/schema';
+import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
+import { activities, athletes, comments, kudos } from '../db/schema';
 import { CursorPayload } from '../lib/cursor';
 import { AppDatabase } from '../lib/db';
 
@@ -39,10 +39,15 @@ export class FeedRepository {
           avatarUrl: athletes.avatarUrl,
           city: athletes.city,
         },
+        kudosCount: sql<number>`count(distinct ${kudos.id})`,
+        commentsCount: sql<number>`count(distinct ${comments.id})`,
       })
       .from(activities)
       .innerJoin(athletes, eq(activities.athleteId, athletes.id))
+      .leftJoin(kudos, eq(activities.id, kudos.activityId))
+      .leftJoin(comments, eq(activities.id, comments.activityId))
       .where(and(...conditions))
+      .groupBy(activities.id, athletes.id)
       .orderBy(desc(activities.startTime), desc(activities.id))
       .limit(limit + 1);
 

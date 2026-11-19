@@ -117,10 +117,9 @@ export class ActivityController {
 
       if (!gpxXml) return c.json({ error: 'Activity not found' }, 404);
 
-      return c.body(gpxXml, 200, {
-        'Content-Type': 'application/gpx+xml; charset=utf-8',
-        'Content-Disposition': `attachment; filename="activity_${id}.gpx"`,
-      });
+      c.header('Content-Type', 'application/gpx+xml; charset=utf-8');
+      c.header('Content-Disposition', `attachment; filename="activity_${id}.gpx"`);
+      return c.body(gpxXml);
     } catch (err: any) {
       return c.json({ error: err.message }, 500);
     }

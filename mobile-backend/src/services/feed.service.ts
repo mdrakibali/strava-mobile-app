@@ -33,7 +33,6 @@ export class FeedService {
     } else if (tab === 'clubs' && dto.currentUserId) {
       const userClubIds = await this.clubRepo.getUserClubIds(dto.currentUserId);
       if (userClubIds.length > 0) {
-        // Collect members of all user's clubs
         const allMembers = await Promise.all(
           userClubIds.map((cid) => this.clubRepo.getMembers(cid))
         );
@@ -45,7 +44,6 @@ export class FeedService {
         targetAthleteIds = [dto.currentUserId];
       }
     } else {
-      // 'all' tab or unauthenticated
       publicOnly = true;
     }
 
@@ -56,45 +54,36 @@ export class FeedService {
       cursor,
     });
 
-    // Enrich activities
-    const enrichedFeed = await Promise.all(
-      items.map(async ({ activity, athlete }) => {
-        const kudosCount = await this.activityRepo.getKudosCount(activity.id);
-        const hasKudos = dto.currentUserId
-          ? await this.activityRepo.hasKudos(activity.id, dto.currentUserId)
-          : false;
-        const comments = await this.activityRepo.getComments(activity.id);
+    const enrichedFeed = items.map(({ activity, athlete, kudosCount, commentsCount }) => {
+      const isAuthor = dto.currentUserId && dto.currentUserId === activity.athleteId;
 
-        const isAuthor = dto.currentUserId && dto.currentUserId === activity.athleteId;
-
-        return {
-          id: activity.id,
-          title: activity.title,
-          description: activity.description,
-          sportType: activity.sportType,
-          visibility: activity.visibility,
-          startTime: activity.startTime,
-          distanceMeters: Number(activity.distanceMeters),
-          movingTimeSeconds: activity.movingTimeSeconds,
-          elapsedTimeSeconds: activity.elapsedTimeSeconds,
-          elevationGainMeters: activity.elevationGainMeters,
-          averageSpeedMps: activity.averageSpeedMps ? Number(activity.averageSpeedMps) : null,
-          maxSpeedMps: activity.maxSpeedMps ? Number(activity.maxSpeedMps) : null,
-          averageHeartRate: activity.averageHeartRate,
-          calories: activity.calories,
-          relativeEffortScore: activity.relativeEffortScore,
-          gapFormatted: activity.gapFormatted,
-          // Raw polyline is redacted unless the viewer is the author
-          polyline: isAuthor ? (activity.rawPolyline || activity.maskedPolyline) : activity.maskedPolyline,
-          photos: activity.photos,
-          athlete,
-          kudosCount,
-          hasKudos,
-          commentsCount: comments.length,
-          createdAt: activity.createdAt,
-        };
-      })
-    );
+      return {
+        id: activity.id,
+        title: activity.title,
+        description: activity.description,
+        sportType: activity.sportType,
+        visibility: activity.visibility,
+        startTime: activity.startTime,
+        distanceMeters: Number(activity.distanceMeters),
+        movingTimeSeconds: activity.movingTimeSeconds,
+        elapsedTimeSeconds: activity.elapsedTimeSeconds,
+        elevationGainMeters: activity.elevationGainMeters,
+        averageSpeedMps: activity.averageSpeedMps ? Number(activity.averageSpeedMps) : null,
+        maxSpeedMps: activity.maxSpeedMps ? Number(activity.maxSpeedMps) : null,
+        averageHeartRate: activity.averageHeartRate,
+        calories: activity.calories,
+        relativeEffortScore: activity.relativeEffortScore,
+        gapFormatted: activity.gapFormatted,
+        // Masked polyline if not author
+        polyline: isAuthor ? (activity.rawPolyline || activity.maskedPolyline) : activity.maskedPolyline,
+        photos: activity.photos,
+        athlete,
+        kudosCount: Number(kudosCount || 0),
+        hasKudos: false, // client will maintain optimistic kudos or fetch on detail
+        commentsCount: Number(commentsCount || 0),
+        createdAt: activity.createdAt,
+      };
+    });
 
     const encodedNextCursor = rawNextCursor
       ? encodeCursor(rawNextCursor.timestamp, rawNextCursor.id)

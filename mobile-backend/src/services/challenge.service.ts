@@ -6,29 +6,33 @@ export class ChallengeService {
   async listChallenges(athleteId?: string) {
     const list = await this.challengeRepo.list();
 
-    return Promise.all(
-      list.map(async (ch) => {
-        const participantsCount = await this.challengeRepo.getParticipantCount(ch.id);
-        const participation = athleteId
-          ? await this.challengeRepo.getParticipation(ch.id, athleteId)
-          : null;
+    let userParticipationMap = new Map<string, { currentMeters: number; isCompleted: boolean }>();
+    if (athleteId) {
+      const userParts = await this.challengeRepo.getUserParticipations(athleteId);
+      userParticipationMap = new Map(
+        userParts.map((p) => [
+          p.challengeId,
+          { currentMeters: Number(p.currentMeters), isCompleted: p.isCompleted },
+        ])
+      );
+    }
 
-        const now = new Date();
-        const end = new Date(ch.endDate);
-        const diffMs = end.getTime() - now.getTime();
-        const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    return list.map((ch) => {
+      const participation = userParticipationMap.get(ch.id);
+      const now = new Date();
+      const end = new Date(ch.endDate);
+      const diffMs = end.getTime() - now.getTime();
+      const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
 
-        return {
-          ...ch,
-          targetMeters: Number(ch.targetMeters),
-          participantsCount,
-          isJoined: Boolean(participation),
-          currentMeters: participation ? Number(participation.currentMeters) : 0,
-          isCompleted: participation ? participation.isCompleted : false,
-          daysRemaining,
-        };
-      })
-    );
+      return {
+        ...ch,
+        targetMeters: Number(ch.targetMeters),
+        isJoined: Boolean(participation),
+        currentMeters: participation ? participation.currentMeters : 0,
+        isCompleted: participation ? participation.isCompleted : false,
+        daysRemaining,
+      };
+    });
   }
 
   async getChallengeDetail(challengeId: string, athleteId?: string) {
