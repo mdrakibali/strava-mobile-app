@@ -231,6 +231,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await loadFeedData();
   };
 
+  const loginWithEmail = async (email: string, password: string) => {
+    setIsSyncing(true);
+    try {
+      const res = await api.auth.login(email, password);
+      if (res?.token && res?.athlete) {
+        const athleteProfile: Athlete = {
+          id: res.athlete.id,
+          displayName: res.athlete.displayName,
+          username: res.athlete.username,
+          avatarUrl: res.athlete.avatarUrl,
+          city: res.athlete.city || 'Dhaka',
+          country: res.athlete.country || 'Bangladesh',
+          bio: res.athlete.bio || '',
+          followersCount: res.athlete.followersCount || 0,
+          followingCount: res.athlete.followingCount || 0,
+          isFollowing: false,
+        };
+
+        await AsyncStorage.setItem('@open_strava_token', res.token);
+        await AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(athleteProfile));
+
+        setAuthToken(res.token);
+        setCurrentUser(athleteProfile);
+        setIsAuthenticated(true);
+        await loadFeedData();
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const registerWithEmail = async (data: { email: string; password: string; displayName: string; username?: string }) => {
+    setIsSyncing(true);
+    try {
+      const res = await api.auth.register(data);
+      if (res?.token && res?.athlete) {
+        const athleteProfile: Athlete = {
+          id: res.athlete.id,
+          displayName: res.athlete.displayName,
+          username: res.athlete.username,
+          avatarUrl: res.athlete.avatarUrl,
+          city: res.athlete.city || 'Dhaka',
+          country: res.athlete.country || 'Bangladesh',
+          bio: res.athlete.bio || '',
+          followersCount: res.athlete.followersCount || 0,
+          followingCount: res.athlete.followingCount || 0,
+          isFollowing: false,
+        };
+
+        await AsyncStorage.setItem('@open_strava_token', res.token);
+        await AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(athleteProfile));
+
+        setAuthToken(res.token);
+        setCurrentUser(athleteProfile);
+        setIsAuthenticated(true);
+        await loadFeedData();
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const loginWithGoogle = async (idToken: string) => {
     setIsSyncing(true);
     try {
@@ -422,6 +484,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return act;
       })
     );
+    api.athletes.toggleFollow(athleteId).catch((err) => {
+      console.warn('Follow sync error:', err);
+    });
   };
 
   const markNotificationAsRead = (notificationId: string) => {
@@ -559,6 +624,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         markNotificationAsRead,
         markAllNotificationsAsRead,
         refreshFeed,
+        loginWithEmail,
+        registerWithEmail,
         loginWithGoogle,
         loginWithDemo,
         loginAsGuest,

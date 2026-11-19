@@ -1,4 +1,4 @@
-import { generateToken } from '../lib/auth';
+import { generateToken, hashPassword, verifyPassword } from '../lib/auth';
 import { verifyGoogleToken } from '../lib/google-auth';
 import { AthleteRepository } from '../repositories/athlete.repository';
 
@@ -8,6 +8,116 @@ export class AuthService {
     private jwtSecret: string,
     private googleClientId?: string
   ) {}
+
+  /**
+   * Register with Email & Password
+   */
+  async registerWithEmail(data: { email: string; password: string; displayName: string; username?: string }) {
+    const emailNorm = data.email.toLowerCase().trim();
+    const existing = await this.athleteRepo.findByEmail(emailNorm);
+    if (existing) {
+      throw new Error('An athlete with this email already exists');
+    }
+
+    const baseUsername = (data.username || emailNorm.split('@')[0]).replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+    let uniqueUsername = baseUsername || `runner_${Date.now()}`;
+    const existingUser = await this.athleteRepo.findByUsername(uniqueUsername);
+    if (existingUser) {
+      uniqueUsername = `${baseUsername}_${Math.floor(100 + Math.random() * 900)}`;
+    }
+
+    const passwordHash = await hashPassword(data.password);
+    const athleteId = `ath_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+    const athlete = await this.athleteRepo.create({
+      id: athleteId,
+      email: emailNorm,
+      passwordHash,
+      username: uniqueUsername,
+      displayName: data.displayName.trim() || 'Athlete',
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
+      city: 'Dhaka',
+      country: 'Bangladesh',
+      weightKg: '68.0',
+      heightCm: '175.0',
+      maxHr: 188,
+      restingHr: 54,
+      ftpWatts: 220,
+    });
+
+    const token = await generateToken(
+      {
+        athleteId: athlete.id,
+        username: athlete.username,
+        email: athlete.email,
+      },
+      this.jwtSecret
+    );
+
+    return {
+      token,
+      athlete: {
+        id: athlete.id,
+        username: athlete.username,
+        displayName: athlete.displayName,
+        email: athlete.email,
+        avatarUrl: athlete.avatarUrl,
+        city: athlete.city,
+        country: athlete.country,
+        bio: athlete.bio,
+        followersCount: 0,
+        followingCount: 0,
+      },
+    };
+  }
+
+  /**
+   * Login with Email & Password
+   */
+  async loginWithEmail(email: string, password: string) {
+    const emailNorm = email.toLowerCase().trim();
+    const athlete = await this.athleteRepo.findByEmail(emailNorm);
+    if (!athlete) {
+      throw new Error('No athlete found with this email');
+    }
+
+    if (!athlete.passwordHash) {
+      throw new Error('This account was created with Google. Please sign in with Google.');
+    }
+
+    const isValid = await verifyPassword(password, athlete.passwordHash);
+    if (!isValid) {
+      throw new Error('Invalid email or password');
+    }
+
+    const token = await generateToken(
+      {
+        athleteId: athlete.id,
+        username: athlete.username,
+        email: athlete.email,
+      },
+      this.jwtSecret
+    );
+
+    const followersCount = await this.athleteRepo.getFollowersCount(athlete.id);
+    const followingCount = await this.athleteRepo.getFollowingCount(athlete.id);
+
+    return {
+      token,
+      athlete: {
+        id: athlete.id,
+        username: athlete.username,
+        displayName: athlete.displayName,
+        email: athlete.email,
+        avatarUrl: athlete.avatarUrl,
+        city: athlete.city,
+        country: athlete.country,
+        bio: athlete.bio,
+        followersCount,
+        followingCount,
+      },
+    };
+  }
 
   /**
    * Google-Only Authentication:

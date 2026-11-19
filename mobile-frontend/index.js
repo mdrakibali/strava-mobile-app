@@ -44,4 +44,17 @@ if (typeof globalThis !== 'undefined') {
   }
 }
 
+// Polyfill AssetRegistry for expo-asset / @expo/vector-icons in RN 0.88 / React 19
+try {
+  const ReactNative = require('react-native');
+  const assetRegistry = require('react-native/src/asset-registry');
+  if (!ReactNative.AssetRegistry) {
+    Object.defineProperty(ReactNative, 'AssetRegistry', {
+      get: () => assetRegistry,
+      configurable: true,
+      enumerable: true,
+    });
+  }
+} catch (_e) {}
+
 import 'expo-router/entry';

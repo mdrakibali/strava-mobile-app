@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Alert,
   Image,
   ScrollView,
   Share,
@@ -15,7 +16,7 @@ import { useApp } from '../../context/AppContext';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { currentUser, activities } = useApp();
+  const { currentUser, activities, logout } = useApp();
   const [activeSubTab, setActiveSubTab] = useState<'progress' | 'activities' | 'more'>('progress');
 
   const userActivities = activities.filter((a) => a.athlete.id === currentUser.id);
@@ -61,8 +62,25 @@ export default function ProfileScreen() {
           <TouchableOpacity onPress={() => router.push('/search')} className="p-1 mr-3">
             <Ionicons name="search-outline" size={22} color="#111827" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/settings')} className="p-1">
+          <TouchableOpacity onPress={() => router.push('/settings')} className="p-1 mr-3">
             <Ionicons name="settings-outline" size={22} color="#111827" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert('Log Out', 'Are you sure you want to log out of your athlete profile?', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Log Out',
+                  style: 'destructive',
+                  onPress: async () => {
+                    await logout();
+                    router.replace('/auth/login');
+                  },
+                },
+              ]);
+            }}
+            className="p-1">
+            <Ionicons name="log-out-outline" size={22} color="#EF4444" />
           </TouchableOpacity>
         </View>
       </View>

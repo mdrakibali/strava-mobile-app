@@ -11,6 +11,48 @@ export class AuthController {
     return new AuthService(athleteRepo, c.env.JWT_SECRET, c.env.GOOGLE_CLIENT_ID);
   }
 
+  // POST /api/v1/auth/register
+  async register(c: Context<{ Bindings: Env }>) {
+    try {
+      const body = await c.req.json();
+      const { email, password, displayName, username } = body;
+
+      if (!email || !password || !displayName) {
+        return c.json({ error: 'Email, password, and display name are required' }, 400);
+      }
+
+      if (password.length < 6) {
+        return c.json({ error: 'Password must be at least 6 characters' }, 400);
+      }
+
+      const service = this.getService(c);
+      const result = await service.registerWithEmail({ email, password, displayName, username });
+      return c.json(result, 201);
+    } catch (err: any) {
+      console.error('Register controller error:', err);
+      return c.json({ error: err.message || 'Registration failed' }, 400);
+    }
+  }
+
+  // POST /api/v1/auth/login
+  async login(c: Context<{ Bindings: Env }>) {
+    try {
+      const body = await c.req.json();
+      const { email, password } = body;
+
+      if (!email || !password) {
+        return c.json({ error: 'Email and password are required' }, 400);
+      }
+
+      const service = this.getService(c);
+      const result = await service.loginWithEmail(email, password);
+      return c.json(result, 200);
+    } catch (err: any) {
+      console.error('Login controller error:', err);
+      return c.json({ error: err.message || 'Login failed' }, 401);
+    }
+  }
+
   // POST /api/v1/auth/google
   async googleLogin(c: Context<{ Bindings: Env }>) {
     try {

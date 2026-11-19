@@ -39,8 +39,18 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 }
 
 export const api = {
-  // 1. Authentication (Google-Only + Demo)
+  // 1. Authentication (Email/Password & Google OAuth)
   auth: {
+    register: (data: { email: string; password: string; displayName: string; username?: string }) =>
+      request<{ token: string; athlete: any }>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    login: (email: string, password: string) =>
+      request<{ token: string; athlete: any }>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      }),
     googleLogin: (idToken: string) =>
       request<{ token: string; athlete: any }>('/auth/google', {
         method: 'POST',

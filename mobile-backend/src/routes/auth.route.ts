@@ -6,7 +6,9 @@ import { Env } from '../types';
 export const authRouter = new Hono<{ Bindings: Env }>();
 const controller = new AuthController();
 
-// Google-Only Authentication
+// Production Authentication (Email/Password & Google OAuth)
+authRouter.post('/register', (c) => controller.register(c));
+authRouter.post('/login', (c) => controller.login(c));
 authRouter.post('/google', (c) => controller.googleLogin(c));
 authRouter.post('/demo-login', (c) => controller.demoLogin(c));
 authRouter.get('/me', requireAuth, (c) => controller.getMe(c));

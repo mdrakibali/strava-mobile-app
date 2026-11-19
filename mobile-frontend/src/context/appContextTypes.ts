@@ -34,6 +34,8 @@ export interface AppContextType {
   markAllNotificationsAsRead: () => void;
   toggleFollowAthlete: (athleteId: string) => void;
   refreshFeed: () => Promise<void>;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  registerWithEmail: (data: { email: string; password: string; displayName: string; username?: string }) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
   loginWithDemo: () => Promise<void>;
   loginAsGuest: () => Promise<void>;

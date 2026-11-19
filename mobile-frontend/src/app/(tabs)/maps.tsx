@@ -21,7 +21,29 @@ import {
 } from '../../components/map/StravaMapView';
 import { useApp } from '../../context/AppContext';
 import { MOCK_ROUTES } from '../../mock/data';
-import { RouteItem } from '../../types';
+import { RouteItem, SportType } from '../../types';
+
+const calculateHaversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return +(R * c).toFixed(1);
+};
+
+const getEstimatedDuration = (distanceMeters: number, sport: SportType) => {
+  const km = distanceMeters / 1000;
+  const mins = sport === 'Ride' ? Math.round((km / 22) * 60) : Math.round(km * 5.5);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+};
 
 export default function MapsScreen() {
   const router = useRouter();
@@ -338,21 +360,25 @@ export default function MapsScreen() {
                   <Ionicons name="bookmark-outline" size={18} color="#4B5563" />
                 </View>
 
-                {/* Badges: Moderate · 7.2 km · 8.4 m · 1h 4m */}
+                {/* Badges: Calculated Grade · Distance · Elevation · Estimated Duration */}
                 <View className="flex-row items-center flex-wrap my-1">
                   <View className="bg-blue-600 px-1.5 py-0.5 rounded mr-1.5">
-                    <Text className="text-[10px] font-bold text-white">Moderate</Text>
+                    <Text className="text-[10px] font-bold text-white">{currentPreviewRoute.climbCategory || 'Moderate'}</Text>
                   </View>
                   <Text className="text-xs font-semibold text-gray-700">
                     {(currentPreviewRoute.distanceMeters / 1000).toFixed(1)} km · +
-                    {currentPreviewRoute.elevationGainMeters} m · 1h 4m
+                    {currentPreviewRoute.elevationGainMeters} m · {getEstimatedDuration(currentPreviewRoute.distanceMeters, selectedSport)}
                   </Text>
                 </View>
 
-                {/* Subtext: From your location · Made for you */}
+                {/* Subtext: Real Distance From Your Location */}
                 <View className="flex-row items-center">
                   <Ionicons name="locate-outline" size={11} color="#6B7280" />
-                  <Text className="text-[10px] text-gray-500 ml-1">From your location · </Text>
+                  <Text className="text-[10px] text-gray-500 ml-1">
+                    {userLocation && currentPreviewRoute.polylinePoints[0]
+                      ? `${calculateHaversineKm(userLocation[1], userLocation[0], currentPreviewRoute.polylinePoints[0].latitude, currentPreviewRoute.polylinePoints[0].longitude)} km away · `
+                      : 'From your location · '}
+                  </Text>
                   <Ionicons name="flash" size={10} color="#FC4C02" />
                   <Text className="text-[10px] font-bold text-[#FC4C02] ml-0.5">Made for you</Text>
                 </View>

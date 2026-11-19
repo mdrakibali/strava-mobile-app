@@ -29,7 +29,7 @@ export default function SettingsHubScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       {/* Header */}
       <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-200">
         <TouchableOpacity onPress={() => router.back()} className="p-1">
@@ -38,7 +38,11 @@ export default function SettingsHubScreen() {
         <Text className="text-base font-black text-gray-900 ml-3">Settings & Preferences</Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="p-4" contentContainerClassName="pb-24">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
+        className="p-4"
+        contentContainerStyle={{ paddingBottom: 110 }}>
         {/* Profile & Account Section */}
         <Text className="text-xs font-bold text-gray-500 uppercase mb-2">Athlete Profile</Text>
         <View className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-4 overflow-hidden">
