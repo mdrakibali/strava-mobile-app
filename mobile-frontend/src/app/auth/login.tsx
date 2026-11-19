@@ -1,8 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { makeRedirectUri } from 'expo-auth-session';
-import * as Google from 'expo-auth-session/providers/google';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,62 +16,75 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 
-WebBrowser.maybeCompleteAuthSession();
-
 export default function LoginScreen() {
   const router = useRouter();
   const { loginWithGoogle, loginWithEmail, registerWithEmail } = useApp();
-  
+
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [showGoogleGuide, setShowGoogleGuide] = useState(false);
 
   const googleClientId =
     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
     '923419495380-p8senmhosq66vltjdviijc08dbunhmsd.apps.googleusercontent.com';
 
-  // Standard Expo Go Auth Proxy URI for Google Web Client IDs
-  const redirectUri = makeRedirectUri({
-    preferLocalhost: false,
-  });
-
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: googleClientId,
-    webClientId: googleClientId,
-    redirectUri,
-  });
-
+  // Configure native Google Sign-In on mount
   useEffect(() => {
-    if (response?.type === 'success') {
-      const idToken = response.params?.id_token || (response as any).authentication?.idToken;
-      if (idToken) {
-        handleGoogleToken(idToken);
-      }
-    } else if (response?.type === 'error') {
-      setIsLoading(false);
-      setStatusMessage(null);
-      setShowGoogleGuide(true);
-      Alert.alert(
-        'Google Auth Notice',
-        `Google reported an invalid request. Please ensure the exact redirect URI is added to Authorized redirect URIs in Google Cloud Console.`
-      );
-    }
-  }, [response]);
-
-  const handleGoogleToken = async (idToken: string) => {
-    setIsLoading(true);
-    setStatusMessage('Authenticating with Google & Edge DB...');
     try {
-      await loginWithGoogle(idToken);
-      router.replace('/(tabs)');
-    } catch (err: any) {
-      Alert.alert('Login Failed', err.message || 'Could not verify Google ID token with backend');
+      GoogleSignin.configure({
+        webClientId: googleClientId,
+        offlineAccess: true,
+        scopes: ['profile', 'email'],
+      });
+    } catch (err) {
+      console.warn('Native GoogleSignin configuration warning:', err);
+    }
+  }, [googleClientId]);
+
+  // Native Google Sign-In using @react-native-google-signin/google-signin
+  const handleNativeGoogleSignIn = async () => {
+    setIsLoading(true);
+    setStatusMessage('Connecting to Google Play Services...');
+
+    try {
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const response = await GoogleSignin.signIn();
+
+      // Retrieve verified ID token from native sign-in response
+      const idToken =
+        (response as any).data?.idToken ||
+        (response as any).idToken;
+
+      if (idToken) {
+        setStatusMessage('Authenticating athlete account on Neon DB...');
+        await loginWithGoogle(idToken);
+        router.replace('/(tabs)');
+      } else {
+        Alert.alert('Google Sign-In', 'No ID token received from Google.');
+      }
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // User closed or dismissed the Google account prompt
+        console.log('User cancelled Google Sign-In');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        console.log('Google Sign-In is already running');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert(
+          'Google Play Services',
+          'Google Play Services is not available or needs to be updated on your device.'
+        );
+      } else {
+        console.error('Google Sign-In Error:', error);
+        Alert.alert(
+          'Google Sign-In',
+          error.message || 'Unable to authenticate with Google. Please try again or use email.'
+        );
+      }
     } finally {
       setIsLoading(false);
       setStatusMessage(null);
@@ -92,7 +103,11 @@ export default function LoginScreen() {
     }
 
     setIsLoading(true);
-    setStatusMessage(authMode === 'login' ? 'Logging in to athlete account...' : 'Creating your athlete account on Neon DB...');
+    setStatusMessage(
+      authMode === 'login'
+        ? 'Logging in to athlete account...'
+        : 'Creating your athlete account on Neon DB...'
+    );
 
     try {
       if (authMode === 'login') {
@@ -137,7 +152,7 @@ export default function LoginScreen() {
               STRAVA
             </Text>
             <Text className="text-xs font-semibold text-gray-500 mt-0.5">
-              Open Edition · Unlimited & Subscription-Free
+              Open Edition · Unlimited & Free
             </Text>
           </View>
 
@@ -148,7 +163,10 @@ export default function LoginScreen() {
               className={`flex-1 py-2.5 rounded-xl items-center ${
                 authMode === 'login' ? 'bg-white shadow-xs' : ''
               }`}>
-              <Text className={`text-xs font-black ${authMode === 'login' ? 'text-gray-900' : 'text-gray-500'}`}>
+              <Text
+                className={`text-xs font-black ${
+                  authMode === 'login' ? 'text-gray-900' : 'text-gray-500'
+                }`}>
                 Log In
               </Text>
             </TouchableOpacity>
@@ -158,77 +176,83 @@ export default function LoginScreen() {
               className={`flex-1 py-2.5 rounded-xl items-center ${
                 authMode === 'register' ? 'bg-white shadow-xs' : ''
               }`}>
-              <Text className={`text-xs font-black ${authMode === 'register' ? 'text-gray-900' : 'text-gray-500'}`}>
+              <Text
+                className={`text-xs font-black ${
+                  authMode === 'register' ? 'text-gray-900' : 'text-gray-500'
+                }`}>
                 Create Account
               </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Input Form */}
-          <View className="space-y-3 mb-5">
+          {/* Form Inputs */}
+          <View className="space-y-3.5 mb-5">
             {authMode === 'register' && (
               <>
-                <View className="mb-3">
-                  <Text className="text-xs font-bold text-gray-700 mb-1">Athlete Name</Text>
+                <View>
+                  <Text className="text-xs font-bold text-gray-700 mb-1.5">Full Name</Text>
                   <TextInput
-                    value={displayName}
-                    onChangeText={setDisplayName}
+                    className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-sm text-gray-900"
                     placeholder="e.g. Md Rakib Ali"
                     placeholderTextColor="#9CA3AF"
-                    className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 text-sm font-semibold text-gray-900"
+                    value={displayName}
+                    onChangeText={setDisplayName}
+                    autoCapitalize="words"
                   />
                 </View>
 
-                <View className="mb-3">
-                  <Text className="text-xs font-bold text-gray-700 mb-1">Username (Optional)</Text>
+                <View>
+                  <Text className="text-xs font-bold text-gray-700 mb-1.5">
+                    Username (Optional)
+                  </Text>
                   <TextInput
+                    className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-sm text-gray-900"
+                    placeholder="e.g. rakib_runner"
+                    placeholderTextColor="#9CA3AF"
                     value={username}
                     onChangeText={setUsername}
-                    placeholder="e.g. rakib_runner"
                     autoCapitalize="none"
-                    placeholderTextColor="#9CA3AF"
-                    className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 text-sm font-semibold text-gray-900"
                   />
                 </View>
               </>
             )}
 
-            <View className="mb-3">
-              <Text className="text-xs font-bold text-gray-700 mb-1">Email Address</Text>
+            <View>
+              <Text className="text-xs font-bold text-gray-700 mb-1.5">Email Address</Text>
               <TextInput
+                className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-sm text-gray-900"
+                placeholder="athlete@example.com"
+                placeholderTextColor="#9CA3AF"
                 value={email}
                 onChangeText={setEmail}
-                placeholder="athlete@example.com"
-                autoCapitalize="none"
                 keyboardType="email-address"
-                placeholderTextColor="#9CA3AF"
-                className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 text-sm font-semibold text-gray-900"
+                autoCapitalize="none"
               />
             </View>
 
-            <View className="mb-4">
-              <Text className="text-xs font-bold text-gray-700 mb-1">Password</Text>
+            <View>
+              <Text className="text-xs font-bold text-gray-700 mb-1.5">Password</Text>
               <TextInput
+                className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-sm text-gray-900"
+                placeholder="••••••••"
+                placeholderTextColor="#9CA3AF"
                 value={password}
                 onChangeText={setPassword}
-                placeholder="At least 6 characters"
                 secureTextEntry
-                placeholderTextColor="#9CA3AF"
-                className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 text-sm font-semibold text-gray-900"
               />
             </View>
-
-            {/* Submit Email Button */}
-            <TouchableOpacity
-              disabled={isLoading}
-              onPress={handleEmailAuth}
-              activeOpacity={0.85}
-              className="w-full py-4 bg-[#FC4C02] rounded-2xl items-center justify-center shadow-md">
-              <Text className="text-sm font-black text-white">
-                {authMode === 'login' ? 'Log In to Account' : 'Create Athlete Profile'}
-              </Text>
-            </TouchableOpacity>
           </View>
+
+          {/* Primary Action Button */}
+          <TouchableOpacity
+            disabled={isLoading}
+            onPress={handleEmailAuth}
+            activeOpacity={0.8}
+            className="w-full py-4 bg-[#FC4C02] rounded-2xl items-center justify-center shadow-md active:bg-[#E03A00] mb-3">
+            <Text className="text-sm font-black text-white tracking-wide">
+              {authMode === 'login' ? 'Log In to Strava' : 'Complete Registration'}
+            </Text>
+          </TouchableOpacity>
 
           {/* Divider */}
           <View className="flex-row items-center my-4">
@@ -237,19 +261,10 @@ export default function LoginScreen() {
             <View className="flex-1 h-px bg-gray-200" />
           </View>
 
-          {/* Google Sign-In Button */}
+          {/* Native Google Sign-In Button (Option A: @react-native-google-signin/google-signin) */}
           <TouchableOpacity
             disabled={isLoading}
-            onPress={() => {
-              setIsLoading(true);
-              setStatusMessage('Opening Google Sign-In...');
-              promptAsync().catch((err) => {
-                setIsLoading(false);
-                setStatusMessage(null);
-                setShowGoogleGuide(true);
-                Alert.alert('Google Sign-In', err.message);
-              });
-            }}
+            onPress={handleNativeGoogleSignIn}
             activeOpacity={0.85}
             className="w-full py-3.5 px-4 bg-white border border-gray-300 rounded-2xl flex-row items-center justify-center shadow-xs mb-4">
             <Ionicons name="logo-google" size={18} color="#EA4335" />
@@ -264,55 +279,6 @@ export default function LoginScreen() {
               <ActivityIndicator size="small" color="#FC4C02" />
               <Text className="text-xs font-bold text-orange-800 mt-2">
                 {statusMessage || 'Loading...'}
-              </Text>
-            </View>
-          )}
-
-          {/* Google Cloud Console Setup Helper Card */}
-          <TouchableOpacity
-            onPress={() => setShowGoogleGuide(!showGoogleGuide)}
-            className="flex-row items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-2xl mb-4">
-            <View className="flex-row items-center flex-1 mr-2">
-              <Ionicons name="information-circle" size={18} color="#2563EB" />
-              <Text className="text-xs font-bold text-blue-900 ml-2">
-                Google Console Setup Instructions
-              </Text>
-            </View>
-            <Ionicons name={showGoogleGuide ? 'chevron-up' : 'chevron-down'} size={16} color="#2563EB" />
-          </TouchableOpacity>
-
-          {showGoogleGuide && (
-            <View className="bg-stone-900 text-white p-4 rounded-2xl mb-5 space-y-3">
-              <Text className="text-xs font-bold text-amber-400 mb-1">
-                Google Cloud Console Settings:
-              </Text>
-
-              <View className="mb-2">
-                <Text className="text-[10px] font-bold text-gray-400 uppercase">
-                  1. Authorised JavaScript origins:
-                </Text>
-                <Text className="text-[11px] font-mono text-emerald-400 bg-stone-800 p-1.5 rounded mt-0.5">
-                  https://auth.expo.io
-                </Text>
-                <Text className="text-[11px] font-mono text-emerald-400 bg-stone-800 p-1.5 rounded mt-0.5">
-                  http://localhost:8081
-                </Text>
-              </View>
-
-              <View className="mb-2">
-                <Text className="text-[10px] font-bold text-gray-400 uppercase">
-                  2. Authorised redirect URIs:
-                </Text>
-                <Text className="text-[11px] font-mono text-emerald-400 bg-stone-800 p-1.5 rounded mt-0.5">
-                  https://auth.expo.io/@anonymous/mobile-frontend
-                </Text>
-                <Text className="text-[11px] font-mono text-emerald-400 bg-stone-800 p-1.5 rounded mt-0.5">
-                  {redirectUri}
-                </Text>
-              </View>
-
-              <Text className="text-[10px] text-gray-300 leading-4">
-                Note: Google Web Client IDs strictly reject non-HTTPS custom schemes. Ensure both entries above are saved in your Google Cloud Console Credentials.
               </Text>
             </View>
           )}
