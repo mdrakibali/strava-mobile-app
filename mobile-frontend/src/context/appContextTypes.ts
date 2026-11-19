@@ -20,6 +20,7 @@ export interface AppContextType {
   notifications: NotificationItem[];
   unreadNotificationCount: number;
   activeRecording: ActiveRecordingState;
+  isSyncing: boolean;
 
   // Actions
   toggleKudos: (activityId: string) => void;
@@ -30,6 +31,9 @@ export interface AppContextType {
   markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: () => void;
   toggleFollowAthlete: (athleteId: string) => void;
+  refreshFeed: () => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
+  loginWithDemo: () => Promise<void>;
 
   // Recording Controls
   startRecording: (sport?: SportType, simulate?: boolean) => void;
@@ -42,6 +46,5 @@ export interface AppContextType {
     title: string,
     description: string,
     visibility: 'PUBLIC' | 'FOLLOWERS_ONLY' | 'ONLY_ME'
-  ) => void;
+  ) => Promise<void>;
 }
-
