@@ -13,11 +13,12 @@ export default function PermissionsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
-        className="flex-1 px-6 pt-2 pb-6">
+        style={{ flex: 1 }}
+        className="px-6 pt-2 pb-6">
         
         <TouchableOpacity onPress={() => router.back()} className="p-1 mb-4 self-start">
           <Ionicons name="arrow-back" size={24} color="#111827" />

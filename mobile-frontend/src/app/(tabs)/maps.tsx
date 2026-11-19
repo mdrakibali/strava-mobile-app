@@ -142,7 +142,7 @@ export default function MapsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-stone-900 relative">
+    <View style={{ flex: 1 }} className="bg-stone-900 relative">
       {/* Full-Screen Edge-to-Edge Map with Pro Layers */}
       <StravaMapView
         markers={mapMarkers}

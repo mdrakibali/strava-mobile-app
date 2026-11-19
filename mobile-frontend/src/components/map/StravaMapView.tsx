@@ -124,7 +124,7 @@ export const StravaMapView: React.FC<StravaMapViewProps> = ({
     !isExpoGo && Boolean(MapLibreGL && MapLibreGL.MapView && Platform.OS !== 'web');
 
   return (
-    <View className={`relative overflow-hidden bg-gray-100 ${className}`}>
+    <View style={{ flex: 1 }} className={`relative overflow-hidden bg-gray-100 ${className}`}>
       {isMapLibreAvailable ? (
         <MapLibreGL.MapView
           style={{ flex: 1 }}

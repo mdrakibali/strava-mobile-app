@@ -47,16 +47,16 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <View className="flex-1 bg-black">
+    <View style={{ flex: 1, backgroundColor: '#000000' }}>
       {/* Background Hero Image */}
       <ImageBackground
         source={{
           uri: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=1200&auto=format&fit=crop&q=80',
         }}
-        className="flex-1 justify-between"
+        style={{ flex: 1, justifyContent: 'space-between' }}
         resizeMode="cover">
         {/* Dark Vignette Overlay for Crisp Readability */}
-        <View className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/90" />
+        <View className="absolute inset-0 bg-black/60" />
 
         <SafeAreaView edges={['top']} className="px-6 pt-4 items-center z-20">
           <Text className="text-3xl font-black text-white tracking-widest font-sans">
@@ -89,7 +89,7 @@ export default function WelcomeScreen() {
               <TouchableOpacity
                 key={i}
                 onPress={() => setSlideIndex(i)}
-                className={`h-2 rounded-full mr-2 transition-all ${
+                className={`h-2 rounded-full mr-2 ${
                   i === slideIndex ? 'w-8 bg-[#FC4C02]' : 'w-2 bg-white/40'
                 }`}
               />
@@ -101,7 +101,7 @@ export default function WelcomeScreen() {
             <TouchableOpacity
               onPress={() => router.push('/onboarding/sport-preferences')}
               activeOpacity={0.85}
-              className="w-full py-4 bg-[#FC4C02] rounded-full items-center justify-center shadow-xl mb-3">
+              className="w-full py-4 bg-primary rounded-full items-center justify-center shadow-xl mb-3">
               <Text className="text-base font-black text-white tracking-wide">
                 Get Started
               </Text>

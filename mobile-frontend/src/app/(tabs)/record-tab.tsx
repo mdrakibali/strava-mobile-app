@@ -52,7 +52,7 @@ export default function WorkoutTabScreen() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       {/* Header */}
       <View className="px-5 pt-3 pb-2">
         <Text className="text-3xl font-black text-gray-900 tracking-tight">Workout</Text>
@@ -60,8 +60,9 @@ export default function WorkoutTabScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        className="flex-1 px-5"
-        contentContainerClassName="pb-28">
+        style={{ flex: 1 }}
+        className="px-5"
+        contentContainerStyle={{ paddingBottom: 110 }}>
         {/* Primary Sport Cards */}
         <View className="space-y-4 my-2">
           {primarySports.map((item) => (

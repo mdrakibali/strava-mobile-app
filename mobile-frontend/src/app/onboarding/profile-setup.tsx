@@ -23,14 +23,15 @@ export default function ProfileSetupScreen() {
   const [maxHr, setMaxHr] = useState('188');
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1">
+        style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={{ flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
-          className="flex-1 px-6 pt-2 pb-6">
+          style={{ flex: 1 }}
+          className="px-6 pt-2 pb-6">
           
           <TouchableOpacity onPress={() => router.back()} className="p-1 mb-3 self-start">
             <Ionicons name="arrow-back" size={24} color="#111827" />
@@ -124,7 +125,7 @@ export default function ProfileSetupScreen() {
             <TouchableOpacity
               onPress={() => router.push('/onboarding/permissions')}
               activeOpacity={0.85}
-              className="w-full py-4 bg-[#FC4C02] rounded-full items-center justify-center shadow-lg">
+              className="w-full py-4 bg-primary rounded-full items-center justify-center shadow-lg">
               <Text className="text-base font-black text-white">Next: Permissions</Text>
             </TouchableOpacity>
           </View>

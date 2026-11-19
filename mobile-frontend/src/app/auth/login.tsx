@@ -21,6 +21,7 @@ import { useApp } from '../../context/AppContext';
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
+  console.log('>>> [LOGIN_SCREEN] Rendering LoginScreen');
   const router = useRouter();
   const { loginWithGoogle, loginAsGuest } = useApp();
   const [isLoading, setIsLoading] = useState(false);
@@ -88,14 +89,15 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1">
+        style={{ flex: 1 }}>
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
-          className="flex-1 px-6 py-4">
+          style={{ flex: 1 }}
+          className="px-6 py-4">
           
           {/* Header Branding */}
           <View className="items-center mt-6 mb-8">

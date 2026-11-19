@@ -53,7 +53,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       {/* Top Header Bar */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
         <Text className="text-xl font-black text-gray-900">You</Text>
@@ -67,7 +67,10 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-28">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 110 }}>
         {/* Profile Card matching Screenshot 11 */}
         <View className="bg-white p-4 border-b border-gray-200">
           <View className="flex-row items-center mb-3">

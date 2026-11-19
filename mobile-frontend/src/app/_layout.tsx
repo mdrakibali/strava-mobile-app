@@ -14,11 +14,15 @@ function NavigationRoot() {
   const segments = useSegments();
   const router = useRouter();
 
+  console.log('>>> [NAV_ROOT]', { isAuthenticated, isAuthLoading, segments });
+
   useEffect(() => {
     if (isAuthLoading) return;
 
     const inAuthGroup = segments[0] === 'auth';
     const inOnboarding = segments[0] === 'onboarding';
+
+    console.log('>>> [NAV_EFFECT]', { isAuthenticated, inAuthGroup, inOnboarding, segments });
 
     if (!isAuthenticated && !inAuthGroup && !inOnboarding) {
       router.replace('/auth/login');
@@ -41,8 +45,17 @@ function NavigationRoot() {
         headerShown: false,
         contentStyle: { backgroundColor: Colors.background },
       }}>
+      {/* Root Entrypoint */}
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+
       {/* Auth Screen */}
       <Stack.Screen name="auth/login" options={{ animation: 'fade' }} />
+
+      {/* Onboarding Screens */}
+      <Stack.Screen name="onboarding/welcome" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="onboarding/sport-preferences" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="onboarding/profile-setup" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="onboarding/permissions" options={{ animation: 'slide_from_right' }} />
 
       {/* Main Tabs */}
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -98,9 +111,6 @@ function NavigationRoot() {
         name="settings/report"
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
-
-      {/* Fade Transitions */}
-      <Stack.Screen name="onboarding/welcome" options={{ animation: 'fade' }} />
     </Stack>
   );
 }

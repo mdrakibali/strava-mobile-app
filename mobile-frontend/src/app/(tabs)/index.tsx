@@ -36,7 +36,7 @@ export default function FeedScreen() {
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       <Header />
 
       {/* Filter Chips Bar */}

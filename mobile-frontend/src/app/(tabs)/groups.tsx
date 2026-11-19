@@ -22,7 +22,7 @@ export default function GroupsScreen() {
   const [hasJoinedNovemberChallenge, setHasJoinedNovemberChallenge] = useState(false);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       <Header title="STRAVA" />
 
       {/* 3 Tab Navigation Pills matching Strava: Challenges, Clubs, Events */}
@@ -69,8 +69,9 @@ export default function GroupsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        className="flex-1 px-4 pt-3"
-        contentContainerClassName="pb-24">
+        style={{ flex: 1 }}
+        className="px-4 pt-3"
+        contentContainerStyle={{ paddingBottom: 110 }}>
         {activeTab === 'challenges' && (
           <View>
             {/* November Elevation Challenge Hero Banner (matching Screenshot 10) */}
