@@ -13,6 +13,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TurboModuleRegistry,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,16 +23,23 @@ WebBrowser.maybeCompleteAuthSession();
 
 /**
  * Safely probes for native @react-native-google-signin/google-signin TurboModule.
- * Prevents red-screen crash in Expo Go where custom TurboModules are not compiled into the APK.
+ * TurboModuleRegistry.get returns null safely in Expo Go without throwing Invariant Violation.
  */
 const loadNativeGoogleSignin = () => {
   try {
-    const mod = require('@react-native-google-signin/google-signin');
-    if (mod && mod.GoogleSignin) {
-      return { GoogleSignin: mod.GoogleSignin, statusCodes: mod.statusCodes || {} };
+    const isRegistered =
+      TurboModuleRegistry &&
+      typeof TurboModuleRegistry.get === 'function' &&
+      Boolean(TurboModuleRegistry.get('RNGoogleSignin'));
+
+    if (isRegistered) {
+      const mod = require('@react-native-google-signin/google-signin');
+      if (mod && mod.GoogleSignin) {
+        return { GoogleSignin: mod.GoogleSignin, statusCodes: mod.statusCodes || {} };
+      }
     }
   } catch (err) {
-    // Native TurboModule 'RNGoogleSignin' not registered in Expo Go binary
+    console.warn('Native GoogleSignin probe warning:', err);
   }
   return null;
 };
@@ -64,7 +72,7 @@ export default function LoginScreen() {
     redirectUri,
   });
 
-  // Configure native Google Sign-In on mount if native module is present in the binary
+  // Configure native Google Sign-In on mount if native module is compiled into the binary
   useEffect(() => {
     const native = loadNativeGoogleSignin();
     if (native) {
@@ -75,7 +83,7 @@ export default function LoginScreen() {
           scopes: ['profile', 'email'],
         });
       } catch (err) {
-        console.warn('Native GoogleSignin configuration warning:', err);
+        console.warn('Native GoogleSignin configure warning:', err);
       }
     }
   }, [googleClientId]);
@@ -123,17 +131,17 @@ export default function LoginScreen() {
           Alert.alert('Google Sign-In', 'No ID token received from Google.');
         }
       } catch (error: any) {
-        if (error.code === native.statusCodes.SIGN_IN_CANCELLED) {
+        if (error.code === native.statusCodes?.SIGN_IN_CANCELLED) {
           console.log('User cancelled Google Sign-In');
-        } else if (error.code === native.statusCodes.IN_PROGRESS) {
+        } else if (error.code === native.statusCodes?.IN_PROGRESS) {
           console.log('Google Sign-In is already running');
-        } else if (error.code === native.statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        } else if (error.code === native.statusCodes?.PLAY_SERVICES_NOT_AVAILABLE) {
           Alert.alert(
             'Google Play Services',
             'Google Play Services is not available or outdated on this device.'
           );
         } else {
-          console.error('Google Sign-In Error:', error);
+          console.error('Native Google Sign-In Error:', error);
           Alert.alert(
             'Google Sign-In',
             error.message || 'Unable to authenticate with Google. Please try email or dev build.'
