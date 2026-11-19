@@ -2,6 +2,7 @@ import { and, desc, eq, or } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { athletes, directMessages } from '../db/schema';
 import { getDb } from '../lib/db';
+import { NotificationRepository } from '../repositories/notification.repository';
 import { requireAuth } from '../middleware/auth';
 import { Env } from '../types';
 
@@ -152,6 +153,19 @@ messagesRouter.post('/send', requireAuth, async (c) => {
     };
 
     await db.insert(directMessages).values(newMsg);
+
+    try {
+      const notifRepo = new NotificationRepository(db);
+      await notifRepo.create({
+        id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        recipientId,
+        actorId: myId,
+        actionType: 'MESSAGE',
+        message: `${user.username || 'An athlete'} sent you a message: "${text.trim().slice(0, 45)}"`,
+      });
+    } catch (notifErr) {
+      console.warn('Failed to create message notification:', notifErr);
+    }
 
     return c.json({ message: 'Message sent successfully', directMessage: newMsg }, 201);
   } catch (err: any) {

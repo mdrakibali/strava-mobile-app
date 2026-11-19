@@ -157,7 +157,7 @@ export interface GroupEvent {
 
 export interface NotificationItem {
   id: string;
-  actionType: 'KUDOS' | 'COMMENT' | 'FOLLOW' | 'CHALLENGE_WON' | 'CLUB_INVITE';
+  actionType: 'KUDOS' | 'COMMENT' | 'FOLLOW' | 'CHALLENGE_WON' | 'CLUB_INVITE' | 'MESSAGE';
   actor: Athlete;
   message: string;
   timeAgo: string;

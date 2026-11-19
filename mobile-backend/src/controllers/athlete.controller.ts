@@ -1,6 +1,7 @@
 import { Context } from 'hono';
 import { getDb } from '../lib/db';
 import { AthleteRepository } from '../repositories/athlete.repository';
+import { NotificationRepository } from '../repositories/notification.repository';
 import { Env } from '../types';
 
 export class AthleteController {
@@ -83,6 +84,19 @@ export class AthleteController {
         await repo.unfollow(currentUser.athleteId, targetId);
       } else {
         await repo.follow(currentUser.athleteId, targetId);
+        try {
+          const db = getDb(c.env);
+          const notifRepo = new NotificationRepository(db);
+          await notifRepo.create({
+            id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            recipientId: targetId,
+            actorId: currentUser.athleteId,
+            actionType: 'FOLLOW',
+            message: `${currentUser.username || 'An athlete'} started following you!`,
+          });
+        } catch (notifErr) {
+          console.warn('Failed to send follow notification:', notifErr);
+        }
       }
 
       const followersCount = await repo.getFollowersCount(targetId);

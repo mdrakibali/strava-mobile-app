@@ -24,6 +24,8 @@ export default function NotificationsScreen() {
         return <Ionicons name="chatbubble" size={14} color="#3B82F6" />;
       case 'FOLLOW':
         return <Ionicons name="person-add" size={14} color="#10B981" />;
+      case 'MESSAGE':
+        return <Ionicons name="chatbubbles" size={14} color="#8B5CF6" />;
       case 'CHALLENGE_WON':
         return <Ionicons name="trophy" size={14} color="#F59E0B" />;
       default:
@@ -33,7 +35,17 @@ export default function NotificationsScreen() {
 
   const handleNotificationPress = (item: NotificationItem) => {
     markNotificationAsRead(item.id);
-    if (item.targetActivityId) {
+    if (item.actionType === 'MESSAGE' && item.actor?.id) {
+      router.push({
+        pathname: '/messages/[id]',
+        params: { id: item.actor.id },
+      });
+    } else if (item.actionType === 'FOLLOW' && item.actor?.id) {
+      router.push({
+        pathname: '/athlete/[id]',
+        params: { id: item.actor.id },
+      });
+    } else if (item.targetActivityId) {
       router.push({
         pathname: '/activity/[id]',
         params: { id: item.targetActivityId },
