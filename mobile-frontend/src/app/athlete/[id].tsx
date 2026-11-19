@@ -73,8 +73,8 @@ export default function AthleteProfileScreen() {
                   movingTimeSeconds: act.movingTimeSeconds,
                   elapsedTimeSeconds: act.elapsedTimeSeconds,
                   elevationGainMeters: act.elevationGainMeters,
-                  averageSpeedMps: act.averageSpeedMps ? Number(act.averageSpeedMps) : null,
-                  maxSpeedMps: act.maxSpeedMps ? Number(act.maxSpeedMps) : null,
+                  averageSpeedMps: act.averageSpeedMps ? Number(act.averageSpeedMps) : 3.0,
+                  maxSpeedMps: act.maxSpeedMps ? Number(act.maxSpeedMps) : 4.5,
                   averageHeartRate: act.averageHeartRate,
                   distanceFormatted: `${distKm} km`,
                   movingTimeFormatted: `${mins}:${secs < 10 ? '0' : ''}${secs}`,
@@ -248,9 +248,6 @@ export default function AthleteProfileScreen() {
               <ActivityCard
                 key={act.id}
                 activity={act}
-                onKudos={() => toggleKudos(act.id)}
-                onComment={() => router.push(`/activity/${act.id}`)}
-                onShare={() => router.push(`/share/${act.id}`)}
               />
             ))
           )}

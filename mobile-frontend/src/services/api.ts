@@ -168,5 +168,49 @@ export const api = {
         method: 'POST',
       }),
   },
+
+  // 9. Gear Management
+  gear: {
+    list: () => request<{ gear: any[] }>('/gear'),
+    create: (data: {
+      name: string;
+      type: 'shoes' | 'bike' | 'other';
+      brand?: string;
+      model?: string;
+      isDefault?: boolean;
+    }) =>
+      request<{ message: string; gear: any }>('/gear', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: any) =>
+      request<{ message: string; gear: any }>(`/gear/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      request<{ message: string }>(`/gear/${id}`, {
+        method: 'DELETE',
+      }),
+  },
+
+  // 10. Privacy Zones (Start/End masking)
+  privacyZones: {
+    list: () => request<{ privacyZones: any[] }>('/privacy-zones'),
+    create: (data: {
+      name: string;
+      latitude: number;
+      longitude: number;
+      radiusMeters?: number;
+    }) =>
+      request<{ message: string; privacyZone: any }>('/privacy-zones', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      request<{ message: string }>(`/privacy-zones/${id}`, {
+        method: 'DELETE',
+      }),
+  },
 };
 

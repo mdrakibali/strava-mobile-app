@@ -178,7 +178,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setNotifications(
           notifRes.notifications.map((n: any) => ({
             id: n.id,
-            type: n.actionType?.toLowerCase() || 'kudos',
+            actionType: (n.actionType?.toUpperCase() || 'KUDOS') as any,
             actor: {
               id: n.actor?.id || 'ath_unknown',
               displayName: n.actor?.displayName || 'Athlete',
@@ -191,7 +191,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             },
             message: n.message,
             targetActivityId: n.targetActivityId,
-            createdAt: n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently',
+            timeAgo: n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently',
             isRead: n.isRead,
           }))
         );
