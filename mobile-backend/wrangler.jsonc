@@ -16,6 +16,6 @@
   "vars": {
     "ENVIRONMENT": "production",
     "CORS_ORIGIN": "*",
-    "GOOGLE_CLIENT_ID": "123496427764-00sln89ecf8mlo19n1fuqkevgfqsvje7.apps.googleusercontent.com"
+    "GOOGLE_CLIENT_ID": "123496427764-733qtd6vqvlpc2uj1m9nvpg17g4qg48k.apps.googleusercontent.com"
   }
 }

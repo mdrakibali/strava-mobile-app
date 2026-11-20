@@ -56,7 +56,7 @@ export default function LoginScreen() {
 
   const googleClientId =
     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
-    '123496427764-00sln89ecf8mlo19n1fuqkevgfqsvje7.apps.googleusercontent.com';
+    '123496427764-733qtd6vqvlpc2uj1m9nvpg17g4qg48k.apps.googleusercontent.com';
 
   // Configure native Google Sign-In on mount if native module is compiled into the binary
   useEffect(() => {
@@ -123,8 +123,10 @@ export default function LoginScreen() {
       if (error?.code === codes.PLAY_SERVICES_NOT_AVAILABLE) {
         Alert.alert('Google Play Services', 'Google Play Services is not available or needs an update on this device.');
       } else if (String(error?.code) === '10' || /DEVELOPER_ERROR/i.test(String(error?.message))) {
-        // Status 10 = this build's package name / SHA-1 is not registered for the OAuth client.
-        Alert.alert('Google Sign-In not configured', 'This app build is not registered with Google (package name / SHA-1). See the setup notes in the QA report.');
+        Alert.alert(
+          'Google Sign-In Configuration Error',
+          'Google returned DEVELOPER_ERROR (Code 10). Make sure you have created a "Web application" OAuth Client ID in Google Cloud Console and set it as webClientId (do not use the "Android" Client ID here).'
+        );
       } else {
         Alert.alert('Google Sign-In', error?.message || 'Unable to sign in with Google. Please try again or use email.');
       }
