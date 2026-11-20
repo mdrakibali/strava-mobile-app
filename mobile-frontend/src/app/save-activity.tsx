@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VISIBILITY_LABEL } from '../components/activity/FeedCard';
 import { RoutePreview } from '../components/map/RoutePreview';
@@ -189,6 +190,45 @@ export default function SaveActivityScreen() {
           />
           <View style={{ height: space.md }} />
           <SelectField value={cfg.label} icon={cfg.icon} onPress={() => setSportSheet(true)} accessibilityLabel="Sport" />
+
+          {/* Add Photos/Videos Dashed Box (Strava Style) */}
+          <Pressable
+            onPress={() => Alert.alert('Photos & Videos', 'Photo and video upload feature will be available in the next cloud storage update.')}
+            style={styles.addMediaBox}>
+            <Ionicons name="image-outline" size={32} color={color.brand} />
+            <AppText variant="bodyStrong" style={{ color: color.brand, marginTop: space.xs }}>
+              Add Photos/Videos
+            </AppText>
+          </Pressable>
+
+          {/* Details Section */}
+          <SectionTitle title="Details" style={{ marginTop: space.xl }} />
+          <Pressable
+            onPress={() => Alert.alert('Activity Tag', 'Select a tag (Workout, Race, Long Run).')}
+            style={styles.detailRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="pricetag-outline" size={18} color={color.inkSecondary} />
+              <AppText variant="body" style={{ marginLeft: space.sm }}>Activity Tag</AppText>
+            </View>
+            <Ionicons name="chevron-down" size={16} color={color.inkSecondary} />
+          </Pressable>
+
+          <Pressable
+            onPress={() => Alert.alert('Perceived Exertion', 'Rate how hard the activity felt (1-10).')}
+            style={[styles.detailRow, { marginTop: space.sm }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="speedometer-outline" size={18} color={color.inkSecondary} />
+              <AppText variant="body" style={{ marginLeft: space.sm }}>How did that activity feel?</AppText>
+            </View>
+            <Ionicons name="chevron-down" size={16} color={color.inkSecondary} />
+          </Pressable>
+
+          <View style={[styles.privateNoteBox, { marginTop: space.sm }]}>
+            <Ionicons name="lock-closed-outline" size={16} color={color.inkSecondary} style={{ marginTop: 2, marginRight: space.xs }} />
+            <AppText variant="caption" color="inkSecondary" style={{ flex: 1 }}>
+              Jot down private notes here. Only you can see these.
+            </AppText>
+          </View>
 
           <SectionTitle title="Visibility" style={{ marginTop: space.xxl }} />
           <AppText variant="label" color="inkSecondary" style={{ marginBottom: space.sm }}>
