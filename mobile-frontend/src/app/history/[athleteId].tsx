@@ -19,6 +19,7 @@ export default function ActivityHistoryScreen() {
   const isSelf = athleteId === currentUser.id;
   const [items, setItems] = useState<ActivityView[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [errMsg, setErrMsg] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,8 +41,9 @@ export default function ActivityHistoryScreen() {
         setStatus('ready');
         setRefreshing(false);
       },
-      () => {
+      (e: any) => {
         if (cancelled) return;
+        setErrMsg(e?.message ?? null);
         setStatus('error');
         setRefreshing(false);
       }
@@ -81,7 +83,7 @@ export default function ActivityHistoryScreen() {
         </View>
       ) : status === 'error' ? (
         <ErrorState
-          message="We couldn’t load these activities."
+          message={errMsg ?? "We couldn’t load these activities."}
           onRetry={() => {
             setStatus('loading');
             setReloadKey((k) => k + 1);

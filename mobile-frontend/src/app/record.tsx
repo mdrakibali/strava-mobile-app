@@ -16,9 +16,10 @@ import {
   space,
 } from '../design';
 import { estimateCalories } from '../lib/calories';
-import { DASH, formatClock, formatElevation, kmValue, paceValue, speedValue } from '../lib/format';
+import { DASH, formatClock, formatDuration, formatElevation, kmValue, paceValue, speedValue } from '../lib/format';
 import { recordingEngine } from '../tracking/engine';
 import { gpsStatus, liveSpeed, timerSeconds, useNow, useRecording } from '../tracking/useRecording';
+import { plannedRouteStore, usePlannedRoute } from '../lib/plannedRoute';
 import { MVP_SPORTS, sportConfig } from '../lib/sports';
 import { SportType } from '../types';
 
@@ -100,6 +101,14 @@ export default function RecordScreen() {
         : { label: 'Avg speed (km/h)', value: isIdle ? DASH : speedValue(avgSpeed) }
       : { label: 'Avg pace (/km)', value: paceValue(rec.distanceM, rec.movingTimeS) };
   const calories = estimateCalories(cfg.id, rec.distanceM, rec.movingTimeS);
+  // Planned route (from Maps) = reference overlay only. The engine never reads it; the saved
+  // activity uses recorded GPS points exclusively.
+  const planned = usePlannedRoute();
+  const current = liveSpeed(rec, now);
+  const currentMetric =
+    cfg.primaryMetric === 'speed'
+      ? { label: 'Speed now (km/h)', value: status === 'recording' ? speedValue(current) : DASH }
+      : { label: 'Pace now (/km)', value: status === 'recording' && current > 0.5 ? paceValue(1000, 1000 / current) : DASH };
 
   const onStart = async () => {
     setFollowing(true);
@@ -179,6 +188,10 @@ export default function RecordScreen() {
           <MetricTile label={second.label} value={second.value} size="display" align="center" />
           <MetricTile label="Distance (km)" value={distance} size="display" align="center" />
           <View style={[styles.row, { marginTop: space.lg }]}>
+            <MetricTile label="Moving time" value={formatClock(rec.movingTimeS)} size="L" align="center" style={{ flex: 1 }} />
+            <MetricTile label={currentMetric.label} value={currentMetric.value} size="L" align="center" style={{ flex: 1 }} />
+          </View>
+          <View style={[styles.row, { marginTop: space.lg }]}>
             <MetricTile label="Elevation gain" value={formatElevation(rec.elevGainM)} size="L" align="center" style={{ flex: 1 }} />
             <MetricTile label="Calories (est.)" value={calories ? String(calories) : DASH} size="L" align="center" style={{ flex: 1 }} />
           </View>
@@ -199,6 +212,7 @@ export default function RecordScreen() {
         following={following}
         onFollowingChange={setFollowing}
         padding={{ bottom: 280 }}
+        plannedRoute={planned?.geometry}
       />
 
       <View style={[styles.topOverlay, { top: insets.top + space.sm }]} pointerEvents="box-none">
@@ -212,6 +226,15 @@ export default function RecordScreen() {
           <IconButton icon="locate" appearance="floating" accessibilityLabel="Recenter on my location" onPress={() => setFollowing(true)} />
         ) : null}
       </View>
+      {planned ? (
+        <View style={[styles.plannedChip, elevation.floating, { top: insets.top + 64 }]}>
+          <View style={styles.plannedSwatch} />
+          <AppText variant="label" numberOfLines={1} style={{ flex: 1 }}>
+            Planned: {planned.name} · {kmValue(planned.distanceM)} km · ≈{formatDuration(planned.durationS)}
+          </AppText>
+          <IconButton icon="close" size={32} accessibilityLabel="Hide planned route" onPress={() => plannedRouteStore.set(null)} />
+        </View>
+      ) : null}
 
       <View style={[styles.bottomArea]} pointerEvents="box-none">
         <View style={[styles.metricsCard, elevation.floating]}>
@@ -307,5 +330,16 @@ const styles = StyleSheet.create({
   },
   statsScreen: { flex: 1, backgroundColor: color.surface },
   statsTop: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.sm, height: 56 },
+  plannedChip: {
+    position: 'absolute',
+    left: space.gutter,
+    right: space.gutter,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: color.surface,
+    borderRadius: radius.md,
+    paddingLeft: space.md,
+  },
+  plannedSwatch: { width: 18, height: 4, borderRadius: 2, backgroundColor: color.planned, marginRight: space.sm },
   statsBody: { flex: 1, justifyContent: 'space-evenly', paddingHorizontal: space.gutter },
 });

@@ -30,6 +30,7 @@ import {
   speedValue,
 } from '../lib/format';
 import { sportConfig } from '../lib/sports';
+import { plannedRouteStore } from '../lib/plannedRoute';
 import { recordingEngine } from '../tracking/engine';
 import { TrackSummary } from '../tracking/shared';
 import { syncWorker } from '../tracking/sync';
@@ -102,6 +103,7 @@ export default function SaveActivityScreen() {
         style: 'destructive',
         onPress: async () => {
           await recordingEngine.discard();
+          plannedRouteStore.set(null);
           router.dismissAll();
         },
       },
@@ -124,6 +126,7 @@ export default function SaveActivityScreen() {
       setSaving(false);
       return;
     }
+    plannedRouteStore.set(null); // the saved activity is the recorded track only
     const { synced, activityId } = await syncWorker.waitFor(sessionId, 8000);
     router.dismissAll();
     if (synced && activityId) router.push({ pathname: '/activity/[id]', params: { id: activityId } });

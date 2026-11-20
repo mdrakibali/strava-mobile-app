@@ -25,6 +25,7 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
   const router = useRouter();
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [errMsg, setErrMsg] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -46,8 +47,9 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
         setStatus('ready');
         setRefreshing(false);
       },
-      () => {
+      (e: any) => {
         if (cancelled) return;
+        setErrMsg(e?.message ?? null);
         setStatus((s) => (s === 'ready' ? s : 'error'));
         setRefreshing(false);
       }
@@ -89,7 +91,7 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
       {status === 'loading' ? (
         <LoadingState />
       ) : status === 'error' ? (
-        <ErrorState message={`We couldn’t load ${title.toLowerCase()}.`} onRetry={() => { setStatus('loading'); setReloadKey((k) => k + 1); }} />
+        <ErrorState message={errMsg ?? `We couldn’t load ${title.toLowerCase()}.`} onRetry={() => { setStatus('loading'); setReloadKey((k) => k + 1); }} />
       ) : (
         <FlatList
           data={rows}

@@ -13,6 +13,7 @@ export default function KudosListScreen() {
   const [items, setItems] = useState<any[]>([]);
   const [count, setCount] = useState(0);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [errMsg, setErrMsg] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const cursor = useRef<string | null>(null);
@@ -28,7 +29,11 @@ export default function KudosListScreen() {
         setCount(res.kudosCount);
         setStatus('ready');
       },
-      () => !cancelled && setStatus('error')
+      (e: any) => {
+        if (cancelled) return;
+        setErrMsg(e?.message ?? null);
+        setStatus('error');
+      }
     );
     return () => {
       cancelled = true;
@@ -54,7 +59,7 @@ export default function KudosListScreen() {
         <LoadingState />
       ) : status === 'error' ? (
         <ErrorState
-          message="We couldn’t load kudos."
+          message={errMsg ?? "We couldn’t load kudos."}
           onRetry={() => {
             setStatus('loading');
             setReloadKey((k) => k + 1);

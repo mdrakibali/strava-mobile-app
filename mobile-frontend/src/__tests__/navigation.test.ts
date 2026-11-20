@@ -65,8 +65,17 @@ describe('navigation', () => {
   });
 
   it('secondary screens added for social features exist', () => {
-    for (const r of ['/activity/kudos/abc', '/activity/edit/abc', '/history/abc', '/athlete/followers', '/athlete/following', '/settings/gps']) {
+    for (const r of ['/activity/kudos/abc', '/activity/edit/abc', '/history/abc', '/athlete/followers', '/athlete/following', '/settings/gps', '/routes/plan', '/routes/builder']) {
       expect([r, matches(r)]).toEqual([r, true]);
+    }
+  });
+});
+
+describe('planned vs recorded routes', () => {
+  it('the recording engine, background task and sync never read the planned route', () => {
+    for (const f of ['tracking/engine.ts', 'tracking/locationTask.ts', 'tracking/sync.ts', 'tracking/db.ts']) {
+      const text = readFileSync(join(SRC, f), 'utf8');
+      expect([f, /plannedRoute/i.test(text)]).toEqual([f, false]);
     }
   });
 });

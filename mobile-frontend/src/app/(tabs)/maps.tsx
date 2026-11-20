@@ -15,12 +15,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapView } from '../../components/map/MapView';
 import { useApp } from '../../context/AppContext';
-import { AppText, Button, Chip, ChipRow, color, elevation, IconButton, radius, space } from '../../design';
+import { Image } from 'expo-image';
+import { AppText, BottomSheet, Button, Chip, ChipRow, color, elevation, IconButton, OptionRow, radius, space } from '../../design';
+import { MapStyleKey } from '../../components/map/mapTypes';
+import { plannedRouteStore } from '../../lib/plannedRoute';
 import { LngLat, toRoute } from '../../lib/activityView';
 import { formatDuration, kmValue } from '../../lib/format';
 import { PLACE_LABEL, useNearbyPlaces } from '../../lib/useNearbyPlaces';
 import { MVP_SPORTS, sportConfig } from '../../lib/sports';
-import { api } from '../../services/api';
+import { api, PlaceDetails } from '../../services/api';
 import { haversineM } from '../../tracking/shared';
 import { SportType } from '../../types';
 
@@ -75,6 +78,14 @@ export default function MapsScreen() {
   const listRef = useRef<FlatList<MapItem>>(null);
 
   const nearby = useNearbyPlaces(sport, source === 'nearby');
+
+  // Map style: only modes backed by real data (OpenFreeMap styles; 3D = Liberty's OSM buildings).
+  const [mapMode, setMapMode] = useState<'standard' | 'light' | 'bright' | '3d'>('standard');
+  const [styleSheet, setStyleSheet] = useState(false);
+  const styleKey: MapStyleKey = mapMode === 'light' ? 'positron' : mapMode === 'bright' ? 'bright' : 'liberty';
+
+  // Genuine photo/details for the selected place only (one lookup at a time; cached server-side).
+  const [placeDetails, setPlaceDetails] = useState<Record<string, PlaceDetails | null>>({});
 
   // Links from other tabs (Workout → "Places near you") arrive as params on an already-mounted tab.
   const lastParams = useRef('');
@@ -177,7 +188,7 @@ export default function MapsScreen() {
       id: p.id,
       kind: 'place' as const,
       name: p.name,
-      subtitle: [PLACE_LABEL[p.category]?.label ?? 'Place', p.lengthM ? `${kmValue(p.lengthM)} km of path` : null, p.surface ? `surface: ${p.surface}` : null, p.lit ? 'lit at night' : null]
+      subtitle: [PLACE_LABEL[p.category]?.label ?? 'Place', p.lengthM ? `${kmValue(p.lengthM)} km of path` : null, p.address, p.surface ? `surface: ${p.surface}` : null, p.lit ? 'lit at night' : null]
         .filter(Boolean)
         .join(' · '),
       sportType: sport,
@@ -200,6 +211,18 @@ export default function MapsScreen() {
 
   const selectedIndex = Math.max(0, visible.findIndex((v) => v.id === selectedId));
   const current = visible[selectedIndex];
+  const currentPlaceId = current?.kind === 'place' ? current.id : null;
+  useEffect(() => {
+    if (!currentPlaceId || currentPlaceId in placeDetails) return;
+    let cancelled = false;
+    api.places.details(currentPlaceId).then(
+      (d) => !cancelled && setPlaceDetails((m) => ({ ...m, [currentPlaceId]: d })),
+      () => !cancelled && setPlaceDetails((m) => ({ ...m, [currentPlaceId]: null }))
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPlaceId, placeDetails]);
   const select = (index: number, scroll = true) => {
     const item = visible[index];
     if (!item) return;
@@ -327,6 +350,15 @@ export default function MapsScreen() {
               accessibilityRole="button"
               accessibilityLabel={`${item.name}. ${selected ? (item.kind === 'place' ? 'Selected' : 'Open') : 'Show on map'}`}
               style={[styles.card, { width: cardWidth, marginRight: space.md }, selected && styles.cardSelected]}>
+              {item.kind === 'place' && selected && placeDetails[item.id]?.image ? (
+                <Image
+                  source={{ uri: placeDetails[item.id]!.image!.url }}
+                  style={styles.cardPhoto}
+                  contentFit="cover"
+                  transition={150}
+                  accessibilityLabel={`Photo of ${item.name} (${placeDetails[item.id]!.image!.author ?? 'Wikimedia Commons'}, ${placeDetails[item.id]!.image!.license ?? ''})`}
+                />
+              ) : null}
               <View style={styles.row}>
                 <Ionicons name={item.kind === 'place' ? 'location' : sportConfig(item.sportType).icon} size={18} color={color.brandText} />
                 <AppText variant="title3" numberOfLines={1} style={{ flex: 1, marginLeft: space.sm }}>{item.name}</AppText>
@@ -338,16 +370,38 @@ export default function MapsScreen() {
                 {[item.subtitle, fmtAway(item.distanceFromMeM)].filter(Boolean).join(' · ')}
               </AppText>
               {item.kind === 'place' ? (
+                <>
                 <View style={[styles.row, { marginTop: space.sm }]}>
-                  <Button label="Directions" icon="navigate-outline" variant="outline" size="sm" onPress={() => directions(item)} />
                   <Button
-                    label={`Start ${sportConfig(sport).label}`}
+                    label="Route"
+                    icon="git-branch-outline"
+                    size="sm"
+                    onPress={() =>
+                      router.push({
+                        pathname: '/routes/plan',
+                        params: { name: item.name, lat: String(item.anchor[1]), lng: String(item.anchor[0]), sport, place: item.id },
+                      })
+                    }
+                  />
+                  <Button label="Directions" icon="navigate-outline" variant="outline" size="sm" style={{ marginLeft: space.sm }} onPress={() => directions(item)} />
+                  <Button
+                    label="Start"
                     icon="play"
+                    variant="dark"
                     size="sm"
                     style={{ marginLeft: space.sm }}
-                    onPress={() => router.push({ pathname: '/record', params: { sport: sport as SportType } })}
+                    onPress={() => {
+                      plannedRouteStore.set(null);
+                      router.push({ pathname: '/record', params: { sport: sport as SportType } });
+                    }}
                   />
                 </View>
+                {placeDetails[item.id]?.image ? (
+                  <AppText variant="caption" color="inkTertiary" numberOfLines={1} style={{ marginTop: 4 }}>
+                    Photo: {placeDetails[item.id]!.image!.author ?? 'unknown'} · {placeDetails[item.id]!.image!.license ?? ''} · Wikimedia Commons
+                  </AppText>
+                ) : null}
+                </>
               ) : null}
             </Pressable>
           );
@@ -369,6 +423,8 @@ export default function MapsScreen() {
         focus={current && mainRoute.length < 2 ? { center: current.anchor, zoom: 15 } : null}
         frameKey={current ? `${current.kind}:${current.id}` : position ? 'me' : 'none'}
         padding={{ top: insets.top + 120, bottom: 210 }}
+        styleKey={styleKey}
+        pitch={mapMode === '3d' ? 55 : 0}
       />
 
       <View style={[styles.top, { top: insets.top + space.sm }]} pointerEvents="box-none">
@@ -401,7 +457,25 @@ export default function MapsScreen() {
         ) : null}
       </View>
 
-      <Pressable onPress={() => router.push('/routes/builder')} accessibilityRole="button" style={[styles.create, elevation.floating, { bottom: 220 }]}>
+      <View style={[styles.styleBtn, { top: insets.top + 168 }]}>
+        <IconButton icon="layers-outline" appearance="floating" accessibilityLabel="Map style" onPress={() => setStyleSheet(true)} />
+      </View>
+      <BottomSheet visible={styleSheet} onClose={() => setStyleSheet(false)} title="Map style">
+        {(
+          [
+            ['standard', 'Standard', 'Streets, parks, water and paths', 'map-outline'],
+            ['light', 'Light', 'Muted map so routes stand out', 'sunny-outline'],
+            ['bright', 'Bright', 'High-contrast street map', 'contrast-outline'],
+            ['3d', '3D buildings', 'Tilted view with OpenStreetMap building heights', 'cube-outline'],
+          ] as const
+        ).map(([id, title, description, icon]) => (
+          <OptionRow key={id} title={title} description={description} icon={icon} selected={mapMode === id} onPress={() => (setMapMode(id), setStyleSheet(false))} />
+        ))}
+        <AppText variant="caption" color="inkTertiary" style={{ padding: space.gutter }}>
+          Map data © OpenStreetMap contributors · tiles OpenFreeMap. Satellite and terrain views are not offered because no imagery or elevation tile source is configured.
+        </AppText>
+      </BottomSheet>
+      <Pressable onPress={() => router.push('/routes/builder')} accessibilityRole="button" style={[styles.create, elevation.floating, { top: insets.top + 224 }]}>
         <Ionicons name="create-outline" size={20} color={color.ink} />
         <AppText variant="bodyStrong" style={{ marginLeft: space.sm }}>Create Route</AppText>
       </Pressable>
@@ -440,6 +514,8 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
   },
+  styleBtn: { position: 'absolute', right: space.gutter },
+  cardPhoto: { width: '100%', height: 110, borderRadius: radius.md, marginBottom: space.sm, backgroundColor: color.canvas },
   credit: { position: 'absolute', left: space.gutter, backgroundColor: 'rgba(255,255,255,0.8)', paddingHorizontal: 4 },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: space.lg },
   card: { backgroundColor: color.surface, borderRadius: radius.lg, padding: space.lg, minHeight: 112, ...elevation.floating },

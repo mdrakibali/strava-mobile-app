@@ -99,6 +99,15 @@ check('nearby places from a real provider', places.status === 200 && places.body
 check('nearby places require auth', (await call('GET', '/places/nearby?lat=23.738&lng=90.398')).status === 401);
 check('nearby places validate coordinates', (await call('GET', '/places/nearby?lat=999&lng=90', ana.token)).status === 400);
 
+// --- route planning over real mapped ways (Valhalla) + genuine place photo (Wikimedia Commons) ---
+const plan = await call('POST', '/routing/plan', ana.token, { sport: 'Walk', from: { lat: 23.7381, lng: 90.3958 }, to: { lat: 23.7353, lng: 90.4022 } });
+const r0 = plan.body?.routes?.[0];
+check('route planned over mapped paths', plan.status === 200 && r0?.geometry?.length > 10 && r0.distanceM > 1000 && r0.distanceM < 2500, `${r0?.distanceM} m, ${r0?.geometry?.length} pts, ${plan.body?.routes?.length} option(s), gain ${r0?.elevationGainM}`);
+const ramna = await call('GET', '/places/way/236956073', ana.token);
+check('genuine photo with attribution for a place that links one', ramna.status === 200 && /wikimedia/.test(ramna.body?.image?.url ?? '') && Boolean(ramna.body?.image?.license), `${ramna.body?.image?.author} · ${ramna.body?.image?.license}`);
+const suhrawardy = await call('GET', '/places/node/9684909174', ana.token);
+check('no image for a place without linked media (no stock photo)', suhrawardy.status === 200 && suhrawardy.body.image === null);
+
 // --- a brand-new account has no invented content ---
 const cleo = await reg('Cleo');
 const empty = await call('GET', '/feed?tab=following', cleo.token);

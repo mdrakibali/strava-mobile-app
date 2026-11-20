@@ -130,13 +130,13 @@ Migration test: every backend test run applies `0000…0003` in order to a fresh
 | Suite | Result |
 |---|---|
 | Backend TypeScript (`tsc --noEmit`) | ✅ 0 errors |
-| Backend + shared (Vitest, PGlite with real migrations): shared tracking 31, api 22, social 11, groups 5, places 10, google-auth 3 | ✅ **82 / 82** |
-| HTTP E2E (`scripts/e2e-local.mjs`, three users, local server, **real** Photon for nearby places) | ✅ **28 / 28** |
+| Backend + shared (Vitest, PGlite with real migrations): shared tracking 31, api 22, social 11, groups 5, places 10, routing+place details 10, google-auth 3 | ✅ **92 / 92** |
+| HTTP E2E (`scripts/e2e-local.mjs`, three users, local server, **real** Photon, Valhalla, OSM API, Wikidata and Commons) | ✅ **31 / 31** |
 | Live provider check: real places for Run/Walk/Hike/Ride in Dhaka, Chattogram and Sylhet (§19B) | ✅ real results in all 12 cases |
 | Map style check: the exact style the app builds (OpenFreeMap Positron/Liberty + injected route/marker layers) against MapLibre's official `validateStyleMin` | ✅ valid (59 / 115 layers) |
 | App TypeScript | ✅ 0 errors |
-| App Jest: format, calories, activityView, social store, mercator (incl. `fitCamera`), sync worker, navigation integrity | ✅ **46 / 46** |
-| App ESLint (`eslint src`) | ⚠️ 5 errors, 7 warnings, all in legacy files not changed here (React Compiler `set-state-in-effect` in goals, messages ×2, routes/[id], use-color-scheme.web) |
+| App Jest: format, calories, activityView, social store, mercator (incl. `fitCamera`), sync worker, API client errors, navigation integrity, planned-vs-recorded separation | ✅ **51 / 51** |
+| App ESLint (`eslint src`) | ⚠️ 5 errors, 7 warnings, **all pre-existing** in files whose logic wasn't changed (React Compiler `set-state-in-effect` in analytics/goals, messages ×2, routes/[id], use-color-scheme.web). **0 problems in every file added or changed in this work.** |
 
 Tests that were updated to the new behaviour (not hidden): `activityView.test` (feed `hasKudos` is now real), `social.test` (toggle → idempotent give/remove).
 
@@ -144,9 +144,9 @@ Tests that were updated to the new behaviour (not hidden): `activityView.test` (
 
 | Build | Result |
 |---|---|
-| Cloudflare Worker (`wrangler deploy --dry-run`) | ✅ 956.8 KiB / gzip 183.7 KiB |
+| Cloudflare Worker (`wrangler deploy --dry-run`) | ✅ 968.0 KiB / gzip 186.7 KiB |
 | Android JS bundle (`expo export --platform android`) | ✅ Hermes bundle 5.8 MB |
-| Android debug APK (Phase 3 native modules) | ✅ built (`android/app/build/outputs/apk/debug/app-debug.apk`) |
+| Android debug APK (incremental rebuild after this round, `nice`-d while your Metro ran) | ✅ `BUILD SUCCESSFUL in 26s` (no native changes since the Phase 3 build) |
 | Android release APK (`assembleRelease`, arm64, built **before** this round's changes; no new native modules since, so a rebuild needs no native changes) | ✅ `BUILD SUCCESSFUL in 20m 25s` → `android/app/build/outputs/apk/release/app-release.apk` (54.5 MB) |
 
 ### 13a. Release build notes
@@ -356,3 +356,133 @@ Report anything that fails with the step number. Steps 7–16, 27–28 and 32 ar
 **Production database:** I have no access to it. If seed or demo rows were inserted earlier (by the deleted scripts), they are still there. Inspect with SQL and delete them deliberately; there's no longer a script that does this blindly.
 
 **Test fixtures:** synthetic tracks and provider responses exist **only** in `__tests__` files and the local PGlite test database. They are never in the app bundle or any real database.
+
+
+---
+
+## 20. Final round: maps discovery, real routing, workout integration (2026-11-20)
+
+### 20.1 Phase 4 (social): re-verified, not rebuilt
+Already implemented and tested in §1. Re-run this round: 22 API + 11 social tests, plus E2E (follow → feed → kudos give/remove/list → comment add/edit/delete → notifications → unfollow → privacy → edit/delete). New this round: social list screens (kudos, followers/following, history) show the server's real error, e.g. "needs the latest server version", instead of a generic failure.
+**Not supported (documented, not faked):**
+- private *profiles* (only per-activity visibility exists);
+- uploading a profile photo (no image storage yet; Google profile photos are shown).
+
+### 20.2 Maps discovery
+Full-screen OpenFreeMap map (MapLibre v11) with your real location dot; zoom and pan; sources **Nearby / Routes / Saved / My activities**; sport chips; filter-by-name; a marker ↔ card carousel. The selected place card shows:
+- category, distance from you, address and path length (when the provider has them);
+- a **genuine photo** (§20.3);
+- **Route** (opens the preview), **Directions** (your maps app) and **Start**.
+
+The **map style** button switches modes without moving the map (§20.5). No hard-coded location anywhere: no permission → permission state; no fix → "Couldn't get a GPS fix"; provider down → error + Retry.
+
+### 20.3 Data providers and genuine images
+
+| Need | Provider | Key? | Notes |
+|---|---|---|---|
+| Map tiles | OpenFreeMap (OSM / OpenMapTiles) | No | Liberty, Positron, Bright |
+| Nearby places | Photon (komoot) reverse + OSM tags; Overpass failover | No | §19B |
+| Place details | OpenStreetMap API 0.6 (`/node|way|relation/{id}.json`) | No | Only for the *selected* place; cached 7 days |
+| Place photos | OSM `wikidata` → Wikidata P18 → **Wikimedia Commons**; or OSM `wikimedia_commons` File/Category | No | Only media the OSM object itself links to. Author, licence and Commons page are shown under the photo. Verified: Ramna Park → "Romna Park5.JPG", Hameem Shakhawat, CC BY-SA 3.0. Places without linked media show **no photo** (e.g. Suhrawardy Udyan). |
+| Routing | Valhalla, FOSSGIS public instance | No | §20.4 |
+| Elevation | Valhalla `/height` (DEM) | No | §20.4 |
+
+All of these are free, fair-use public services, cached on our side. For production scale, self-host Valhalla/Photon or move to paid tiers.
+
+### 20.4 Routing engine and route geometry
+`POST /routing/plan {sport, from, to}`, from your **real** position to the selected place:
+- **Engine:** Valhalla costing — pedestrian for Run/Walk (walking speed 10 / 5 km/h), pedestrian with hiking difficulty for Hike (4 km/h), bicycle for Ride (18 km/h).
+- **Alternatives:** up to 2.
+- **Geometry:** decoded from Valhalla's polyline6, so it is continuous and follows mapped ways (verified live: 1.32 / 1.44 / 1.77 km options between Shahbag and Ramna, 46–71 vertices; the longest vertex gap, 118 m, is a straight road stretch between junctions).
+- **Distance and duration:** Valhalla's, labelled with the assumed speed.
+- **Elevation:** DEM samples every 30 m, gain/loss with 5 m hysteresis (DEM noise). `null` if the DEM call fails. Labelled "terrain model (estimate)".
+- **Errors:** "no path" → 422 message; outage → 503 + Retry.
+- **Nothing drawn as straight lines between coordinates; no invented numbers.**
+
+**Route preview** (`/routes/plan`):
+- map auto-fit to the selected route, alternatives faint, destination marker, your dot;
+- alternative chips, distance, est. time and elevation gain, elevation profile;
+- **Start {sport} with this route**, **Start without route**, **Save route** (stores the real geometry; the server recomputes distance);
+- attribution.
+
+**Loop routes:** not offered. Valhalla plans A→B only, and a fabricated loop isn't acceptable.
+
+**Route builder** (Create Route): tap-to-draw, labelled "straight segments between taps". It's a manual drawing tool, not presented as routed geometry.
+
+### 20.5 Map styles: real availability
+| Mode | Source | Offered |
+|---|---|---|
+| Standard (2D) | OpenFreeMap Liberty | ✅ |
+| Light | OpenFreeMap Positron | ✅ |
+| Bright | OpenFreeMap Bright | ✅ |
+| 3D buildings | Liberty's `building-3d` layer (OSM building heights) + camera tilt 55° | ✅ (the layer exists in the style; how it looks on device is NOT DEVICE TESTED) |
+| Satellite | none configured | ❌ not shown |
+| Terrain / topo / hillshade | no raster-dem or hillshade source in these styles | ❌ not shown |
+
+Switching keeps the camera: the Map isn't remounted, and tilt uses `camera.easeTo`.
+
+### 20.6 Workout
+- **Sports:** Run, Walk, Ride, Hike (Workout tab cards; Maps → Start).
+- **Live recording:** your GPS dot; the **recorded** route (orange, from the Phase 3 engine); time and distance; pace or speed; and in the large-stats view **moving time**, **current pace/speed**, elevation gain (only when reliable) and calories (estimate). Pause, Resume and Finish are unchanged.
+- **Phase 3 engine:** untouched (no second engine). A test asserts that `tracking/engine.ts`, `locationTask.ts`, `sync.ts` and `db.ts` never reference the planned route.
+
+### 20.7 Planned vs recorded routes
+- A planned route lives in a separate in-memory store (`lib/plannedRoute.ts`). On the recorder it's drawn as a **dashed blue** reference line, with a chip showing its name, distance and time and a ✕ to hide it.
+- The recorded track is the **solid orange** line from GPS points.
+- Saving builds the activity **only** from recorded points (sync/upload path unchanged). The planned route is cleared on save or discard.
+
+### 20.8 Five-tab navigation
+Home · Maps · Workout · Groups · You, asserted by `navigation.test.ts`, which also checks that every navigation target in the code resolves to a screen, including the new `/routes/plan`.
+
+### 20.9 Backend API changes (this round)
+`GET /places/:type/:id` (details + genuine photo) · `POST /routing/plan` · addresses in `/places/nearby` results. All require auth; all are validated; provider failures → 503; never a fallback list.
+
+### 20.10 Deployment and migrations: exact dependencies
+**Order matters:** run the migrations on Neon **before** deploying this Worker version.
+- The new code inserts `activities.client_activity_id` on **every** activity create (migration **0002**).
+- The new code reads `comments.updated_at` in activity detail (migration **0003**).
+
+Deploying first would break activity creation and activity detail.
+
+| Feature | Needs deploy | Needs 0002 | Needs 0003 |
+|---|---|---|---|
+| Batch GPS upload (`/activities/uploads*`), idempotent create | ✅ | ✅ | — |
+| Activity detail / comments list, edit, delete | ✅ | — | ✅ |
+| Kudos remove / list, real `hasKudos` in feed | ✅ | — | — (indexes in 0003 help) |
+| Follow PUT/DELETE, followers/following lists, stats | ✅ | — | — (indexes in 0003 help) |
+| Edit/delete activity, history endpoint | ✅ | — | — |
+| Nearby places, place details/photos, route planning | ✅ | — | — |
+| `POST /events`, route creation without invented defaults | ✅ | — | — |
+| Visibility policy, auth hardening, no demo login | ✅ | — | — |
+| Maps tiles (OpenFreeMap), snapshots | app only | — | — |
+
+**Before deploying:**
+1. `wrangler secret put JWT_SECRET` (≥ 32 chars). This invalidates existing sessions.
+2. `DATABASE_URL=… npx drizzle-kit migrate`, or apply `0002_batch_uploads.sql` then `0003_social.sql`.
+3. `npm run deploy`.
+
+**Until deployed**, the app against production shows "This feature needs the latest server version" for the new endpoints (tested), uploads through the legacy single-request path, and shows no fake success.
+
+### 20.11 Security and privacy (this round)
+- The user's position reaches third parties only via our server, rounded to ~110 m (places) or ~11 m (routing start). Providers see the Worker, not the phone.
+- Photos are loaded from `upload.wikimedia.org` directly by the app, which does reveal the phone's IP to Wikimedia (a standard image CDN).
+- No secrets added; no new API keys.
+
+### 20.12 Known limitations (this round)
+- **Medium:** public Photon/Valhalla/OSM/Wikidata endpoints are fair-use. Heavy use needs self-hosting or paid plans.
+- **Medium:** Overpass failover is often at capacity (observed); when both providers are down, the app shows Retry.
+- **Low:** few places in Bangladesh link a Commons photo, so most cards show no photo (by design).
+- **Low:** duration estimates use fixed sport speeds, not your personal pace.
+- **Low:** no turn-by-turn guidance during a workout (the planned line is a visual reference only).
+
+### 20.13 Pixel 7a checklist for this round (NOT DEVICE TESTED; your Metro/phone session was left untouched)
+1. **Maps → Nearby:** allow location. Your blue dot appears (not Dhaka unless you are there), and real places show as markers and cards. Pinch/pan the map.
+2. Tap a card: if the place links a Commons photo it appears with "Photo: author · licence · Wikimedia Commons"; otherwise there's no photo.
+3. **Route:** the preview opens; the orange line follows streets and paths from your dot to the place; alternatives appear as chips and faint lines; distance, est. time and elevation (or "–") are shown, plus an elevation chart when available.
+4. **Map style** (layers button): Standard, Light, Bright, 3D buildings. The map stays where it was; 3D tilts and shows building blocks where OSM has heights.
+5. **Start Run with this route:** the recorder shows the **dashed blue** planned line and a "Planned: … " chip. Start, walk 200 m: the **solid orange** recorded line follows *your* path. ✕ hides the planned line. The large-stats view shows Moving time and Pace now / Speed now.
+6. Finish → Save. Open the activity: its map shows only what you actually recorded.
+7. **Start without route** from the preview, and **Start** on a card: no planned line.
+8. **Save route** on the preview → Maps → Routes shows it with the same geometry.
+9. Deny location: Maps shows the permission state, never a default city or places. Airplane mode: "Nearby places unavailable" + Retry, and the route preview shows an error + Retry.
+10. **Against production before deploying:** the kudos list and route planning show "needs the latest server version".
