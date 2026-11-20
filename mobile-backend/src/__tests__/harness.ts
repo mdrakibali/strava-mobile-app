@@ -40,7 +40,7 @@ export const createTestApp = (db: AppDatabase, env: Record<string, string> = ENV
     } catch {
       json = text;
     }
-    return { status: res.status, body: json };
+    return { status: res.status, body: json, headers: res.headers };
   };
   return { app, call };
 };

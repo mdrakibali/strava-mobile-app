@@ -1,5 +1,6 @@
 import { Context } from 'hono';
 import { z } from 'zod';
+import { decodeCursor } from '../lib/cursor';
 import { getDb } from '../lib/db';
 import { HttpError, parseBody } from '../lib/http';
 import {
@@ -74,6 +75,43 @@ export class ActivityController {
   async giveKudos(c: C) {
     const user = c.get('user');
     return c.json(await this.service(c).giveKudos(this.param(c, 'id'), user.athleteId, user.username));
+  }
+
+  // DELETE /activities/:id/kudos (idempotent)
+  async removeKudos(c: C) {
+    return c.json(await this.service(c).removeKudos(this.param(c, 'id'), c.get('user').athleteId));
+  }
+
+  private page(c: C, max = 50, def = 30) {
+    const limit = Math.min(max, Math.max(1, Number(c.req.query('limit')) || def));
+    const raw = c.req.query('cursor');
+    const cursor = decodeCursor(raw);
+    if (raw && !cursor) throw new HttpError(400, 'invalid_cursor', 'Invalid cursor');
+    return { limit, cursor };
+  }
+
+  // GET /activities/:id/kudos
+  async listKudos(c: C) {
+    const { limit, cursor } = this.page(c);
+    return c.json(await this.service(c).listKudos(this.param(c, 'id'), c.get('user')?.athleteId, limit, cursor));
+  }
+
+  // GET /activities/:id/comments
+  async listComments(c: C) {
+    const { limit, cursor } = this.page(c, 100, 50);
+    return c.json(await this.service(c).listComments(this.param(c, 'id'), c.get('user')?.athleteId, limit, cursor));
+  }
+
+  // PATCH /activities/:id/comments/:commentId (author only)
+  async editComment(c: C) {
+    const body = await parseBody(c, commentSchema.pick({ content: true }));
+    const comment = await this.service(c).editComment(this.param(c, 'id'), this.param(c, 'commentId'), c.get('user').athleteId, body.content);
+    return c.json({ comment });
+  }
+
+  // DELETE /activities/:id/comments/:commentId (author or activity owner)
+  async deleteComment(c: C) {
+    return c.json(await this.service(c).deleteComment(this.param(c, 'id'), this.param(c, 'commentId'), c.get('user').athleteId));
   }
 
   // POST /activities/:id/comments

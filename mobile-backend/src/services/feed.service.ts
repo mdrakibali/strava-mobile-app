@@ -42,11 +42,12 @@ export class FeedService {
 
     const { items, hasNextPage, nextCursor: rawNextCursor } = await this.feedRepo.getTimeline({
       where,
+      viewerId: dto.currentUserId,
       limit,
       cursor,
     });
 
-    const enrichedFeed = items.map(({ activity, athlete, kudosCount, commentsCount }) => {
+    const enrichedFeed = items.map(({ activity, athlete, kudosCount, commentsCount, hasKudos }) => {
       const isAuthor = dto.currentUserId && dto.currentUserId === activity.athleteId;
 
       return {
@@ -69,7 +70,7 @@ export class FeedService {
         photos: activity.photos,
         athlete,
         kudosCount: Number(kudosCount || 0),
-        hasKudos: false, // client will maintain optimistic kudos or fetch on detail
+        hasKudos: Boolean(hasKudos),
         commentsCount: Number(commentsCount || 0),
         createdAt: activity.createdAt,
       };

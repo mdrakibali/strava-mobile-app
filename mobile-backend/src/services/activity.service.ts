@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { estimateCalories } from '../../../shared/tracking/calories';
+import { CursorPayload, encodeCursor } from '../lib/cursor';
 import { HttpError, notFound } from '../lib/http';
 import { canViewActivity } from '../lib/policy';
 import { LatLngPoint, maskPolylineWithPrivacyZones } from '../lib/privacy';
@@ -128,7 +129,62 @@ export class ActivityService {
     await this.activityRepo.delete(activityId);
   }
 
-  /** Kudos are give-only and idempotent (research §11: "no takebacks"); no self-kudos. */
+  /**
+   * Remove the viewer's kudos (idempotent). Strava itself doesn't allow this ("no takebacks"),
+   * but the product owner explicitly asked for it.
+   */
+  async removeKudos(activityId: string, actorId: string) {
+    await this.loadVisible(activityId, actorId);
+    await this.activityRepo.removeKudos(activityId, actorId);
+    return { hasKudos: false, kudosCount: await this.activityRepo.getKudosCount(activityId) };
+  }
+
+  async listKudos(activityId: string, viewerId: string | undefined, limit: number, cursor: CursorPayload | null) {
+    await this.loadVisible(activityId, viewerId);
+    const rows = await this.activityRepo.listKudos(activityId, limit, cursor);
+    const items = rows.slice(0, limit);
+    const last = items[items.length - 1];
+    return {
+      athletes: items.map((r) => ({ ...r.athlete, givenAt: r.createdAt })),
+      kudosCount: await this.activityRepo.getKudosCount(activityId),
+      hasNextPage: rows.length > limit,
+      nextCursor: rows.length > limit && last ? encodeCursor(last.createdAt, last.id) : null,
+    };
+  }
+
+  async listComments(activityId: string, viewerId: string | undefined, limit: number, cursor: CursorPayload | null) {
+    await this.loadVisible(activityId, viewerId);
+    const rows = await this.activityRepo.getComments(activityId, limit + 1, cursor);
+    const items = rows.slice(0, limit);
+    const last = items[items.length - 1];
+    return {
+      comments: items,
+      hasNextPage: rows.length > limit,
+      nextCursor: rows.length > limit && last ? encodeCursor(last.createdAt, last.id) : null,
+    };
+  }
+
+  /** Only the comment's author can edit it. */
+  async editComment(activityId: string, commentId: string, actorId: string, content: string) {
+    await this.loadVisible(activityId, actorId);
+    const comment = await this.activityRepo.getComment(commentId);
+    if (!comment || comment.activityId !== activityId) throw notFound('Comment');
+    if (comment.athleteId !== actorId) throw new HttpError(403, 'forbidden', 'Only the author can edit this comment');
+    return this.activityRepo.updateComment(commentId, content);
+  }
+
+  /** The comment's author or the activity's owner can delete it. */
+  async deleteComment(activityId: string, commentId: string, actorId: string) {
+    const { activity } = await this.loadVisible(activityId, actorId);
+    const comment = await this.activityRepo.getComment(commentId);
+    if (!comment || comment.activityId !== activityId) throw notFound('Comment');
+    if (comment.athleteId !== actorId && activity.athleteId !== actorId)
+      throw new HttpError(403, 'forbidden', 'You can’t delete this comment');
+    await this.activityRepo.deleteComment(commentId);
+    return { commentsCount: await this.activityRepo.getCommentsCount(activityId) };
+  }
+
+  /** Kudos are idempotent; no self-kudos. */
   async giveKudos(activityId: string, actorId: string, actorUsername: string) {
     const { activity } = await this.loadVisible(activityId, actorId);
     if (activity.athleteId === actorId) throw new HttpError(422, 'self_kudos', 'You can’t give kudos to your own activity');

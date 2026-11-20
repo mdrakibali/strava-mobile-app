@@ -16,6 +16,13 @@ activitiesRouter.post('/', requireAuth, (c) => controller.create(c));
 activitiesRouter.get('/:id', optionalAuth, (c) => controller.getDetail(c));
 activitiesRouter.patch('/:id', requireAuth, (c) => controller.update(c));
 activitiesRouter.delete('/:id', requireAuth, (c) => controller.remove(c));
+// Kudos: POST/PUT give, DELETE remove (all idempotent); GET lists who gave kudos.
 activitiesRouter.post('/:id/kudos', requireAuth, (c) => controller.giveKudos(c));
+activitiesRouter.put('/:id/kudos', requireAuth, (c) => controller.giveKudos(c));
+activitiesRouter.delete('/:id/kudos', requireAuth, (c) => controller.removeKudos(c));
+activitiesRouter.get('/:id/kudos', optionalAuth, (c) => controller.listKudos(c));
+activitiesRouter.get('/:id/comments', optionalAuth, (c) => controller.listComments(c));
 activitiesRouter.post('/:id/comments', requireAuth, (c) => controller.addComment(c));
+activitiesRouter.patch('/:id/comments/:commentId', requireAuth, (c) => controller.editComment(c));
+activitiesRouter.delete('/:id/comments/:commentId', requireAuth, (c) => controller.deleteComment(c));
 activitiesRouter.get('/:id/export', requireAuth, (c) => controller.exportGpx(c));

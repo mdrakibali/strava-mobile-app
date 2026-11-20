@@ -6,6 +6,8 @@ import { AppDatabase } from '../lib/db';
 export interface FeedQueryOptions {
   /** Visibility/audience predicate from lib/policy (required: no unfiltered feed queries). */
   where: SQL;
+  /** Viewer, for has_kudoed. */
+  viewerId?: string;
   limit?: number;
   cursor?: CursorPayload | null;
 }
@@ -36,15 +38,16 @@ export class FeedRepository {
           avatarUrl: athletes.avatarUrl,
           city: athletes.city,
         },
-        kudosCount: sql<number>`count(distinct ${kudos.id})`,
-        commentsCount: sql<number>`count(distinct ${comments.id})`,
+        // Correlated subqueries instead of join + group by (no row multiplication; API-04).
+        kudosCount: sql<number>`(select count(*) from ${kudos} where ${kudos.activityId} = ${activities.id})`,
+        commentsCount: sql<number>`(select count(*) from ${comments} where ${comments.activityId} = ${activities.id})`,
+        hasKudos: options.viewerId
+          ? sql<boolean>`exists (select 1 from ${kudos} where ${kudos.activityId} = ${activities.id} and ${kudos.athleteId} = ${options.viewerId})`
+          : sql<boolean>`false`,
       })
       .from(activities)
       .innerJoin(athletes, eq(activities.athleteId, athletes.id))
-      .leftJoin(kudos, eq(activities.id, kudos.activityId))
-      .leftJoin(comments, eq(activities.id, comments.activityId))
       .where(and(...conditions))
-      .groupBy(activities.id, athletes.id)
       .orderBy(desc(activities.startTime), desc(activities.id))
       .limit(limit + 1);
 

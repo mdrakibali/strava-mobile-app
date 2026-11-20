@@ -48,6 +48,11 @@ export const createApp = (dbProvider: DbProvider = hyperdriveProvider) => {
 
   const api = new Hono<{ Bindings: Env }>();
   api.use('*', dbMiddleware(dbProvider));
+  // Per-user, frequently changing data: never let a client or proxy cache serve a stale feed.
+  api.use('*', async (c, next) => {
+    await next();
+    c.header('Cache-Control', 'no-store');
+  });
 
   // MVP scope (ADR-15)
   api.route('/auth', authRouter);

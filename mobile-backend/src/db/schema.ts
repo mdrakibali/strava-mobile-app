@@ -48,6 +48,7 @@ export const follows = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.followerId, table.followingId] }),
+    index('follows_following_idx').on(table.followingId, table.createdAt),
   ]
 );
 
@@ -154,6 +155,7 @@ export const kudos = pgTable(
   },
   (table) => [
     uniqueIndex('kudos_unique_idx').on(table.activityId, table.athleteId),
+    index('kudos_athlete_idx').on(table.athleteId),
   ]
 );
 
@@ -169,7 +171,9 @@ export const comments = pgTable('comments', {
   parentCommentId: text('parent_comment_id'),
   content: text('content').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+  /** Set when the author edits the comment (null = never edited). */
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
+}, (table) => [index('comments_activity_created_idx').on(table.activityId, table.createdAt)]);
 
 // 7. Clubs Table
 export const clubs = pgTable('clubs', {
@@ -343,7 +347,7 @@ export const notifications = pgTable('notifications', {
   message: text('message').notNull(),
   isRead: boolean('is_read').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [index('notifications_recipient_created_idx').on(table.recipientId, table.createdAt)]);
 
 // 17. Direct Messaging (Chat) Table
 export const directMessages = pgTable('direct_messages', {

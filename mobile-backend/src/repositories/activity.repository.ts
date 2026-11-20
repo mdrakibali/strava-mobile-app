@@ -125,6 +125,61 @@ export class ActivityRepository {
     return inserted.length > 0;
   }
 
+  /** Idempotent. Returns true when a kudos row was actually removed. */
+  async removeKudos(activityId: string, athleteId: string): Promise<boolean> {
+    const removed = await this.db
+      .delete(kudos)
+      .where(and(eq(kudos.activityId, activityId), eq(kudos.athleteId, athleteId)))
+      .returning({ id: kudos.id });
+    return removed.length > 0;
+  }
+
+  /** Who gave kudos, newest first, cursor on (created_at, id). */
+  async listKudos(activityId: string, limit: number, cursor: CursorPayload | null) {
+    const conds = [eq(kudos.activityId, activityId)];
+    if (cursor) conds.push(sql`(${kudos.createdAt}, ${kudos.id}) < (${new Date(cursor.timestamp).toISOString()}::timestamptz, ${cursor.id})`);
+    return this.db
+      .select({
+        id: kudos.id,
+        createdAt: kudos.createdAt,
+        athlete: {
+          id: athletes.id,
+          username: athletes.username,
+          displayName: athletes.displayName,
+          avatarUrl: athletes.avatarUrl,
+          city: athletes.city,
+        },
+      })
+      .from(kudos)
+      .innerJoin(athletes, eq(kudos.athleteId, athletes.id))
+      .where(and(...conds))
+      .orderBy(desc(kudos.createdAt), desc(kudos.id))
+      .limit(limit + 1);
+  }
+
+  async getComment(commentId: string) {
+    const [row] = await this.db.select().from(comments).where(eq(comments.id, commentId)).limit(1);
+    return row ?? null;
+  }
+
+  async updateComment(commentId: string, content: string) {
+    const [row] = await this.db
+      .update(comments)
+      .set({ content, updatedAt: new Date() })
+      .where(eq(comments.id, commentId))
+      .returning();
+    return row ?? null;
+  }
+
+  async deleteComment(commentId: string) {
+    await this.db.delete(comments).where(eq(comments.id, commentId));
+  }
+
+  async getCommentsCount(activityId: string): Promise<number> {
+    const [res] = await this.db.select({ count: sql<number>`count(*)` }).from(comments).where(eq(comments.activityId, activityId));
+    return Number(res?.count || 0);
+  }
+
   async getKudosAthletes(activityId: string) {
     return this.db
       .select({
@@ -144,13 +199,17 @@ export class ActivityRepository {
       .orderBy(desc(kudos.createdAt));
   }
 
-  async getComments(activityId: string) {
+  /** Comments oldest first (conversation order), cursor on (created_at, id). */
+  async getComments(activityId: string, limit = 200, cursor: CursorPayload | null = null) {
+    const conds = [eq(comments.activityId, activityId)];
+    if (cursor) conds.push(sql`(${comments.createdAt}, ${comments.id}) > (${new Date(cursor.timestamp).toISOString()}::timestamptz, ${cursor.id})`);
     return this.db
       .select({
         id: comments.id,
         content: comments.content,
         parentCommentId: comments.parentCommentId,
         createdAt: comments.createdAt,
+        updatedAt: comments.updatedAt,
         author: {
           id: athletes.id,
           username: athletes.username,
@@ -160,8 +219,9 @@ export class ActivityRepository {
       })
       .from(comments)
       .innerJoin(athletes, eq(comments.athleteId, athletes.id))
-      .where(eq(comments.activityId, activityId))
-      .orderBy(comments.createdAt);
+      .where(and(...conds))
+      .orderBy(comments.createdAt, comments.id)
+      .limit(limit);
   }
 
   async addComment(activityId: string, athleteId: string, content: string, parentCommentId?: string) {

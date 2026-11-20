@@ -5,6 +5,7 @@ import { toActivityListItem, toPrivateAthlete, toPublicAthlete } from '../lib/dt
 import { HttpError } from '../lib/http';
 import { ActivityRepository } from '../repositories/activity.repository';
 import { AthleteRepository } from '../repositories/athlete.repository';
+import { SocialService } from '../services/social.service';
 import { NotificationRepository } from '../repositories/notification.repository';
 import { Env } from '../types';
 
@@ -162,5 +163,41 @@ export class AthleteController {
     } catch (err: any) {
       return c.json({ error: err.message }, 500);
     }
+  }
+
+  private page(c: Context<{ Bindings: Env }>) {
+    const limit = Math.min(50, Math.max(1, Number(c.req.query('limit')) || 30));
+    const raw = c.req.query('cursor');
+    const cursor = decodeCursor(raw);
+    if (raw && !cursor) throw new HttpError(400, 'invalid_cursor', 'Invalid cursor');
+    return { limit, cursor };
+  }
+
+  private targetId(c: Context<{ Bindings: Env }>) {
+    const id = c.req.param('id');
+    if (!id) throw new HttpError(400, 'missing_param', 'Athlete ID is required');
+    return id;
+  }
+
+  // PUT /athletes/:id/follow (idempotent)
+  async follow(c: Context<{ Bindings: Env }>) {
+    const user = c.get('user');
+    return c.json(await new SocialService(getDb(c)).follow(user.athleteId, user.username, this.targetId(c)));
+  }
+
+  // DELETE /athletes/:id/follow (idempotent)
+  async unfollow(c: Context<{ Bindings: Env }>) {
+    return c.json(await new SocialService(getDb(c)).unfollow(c.get('user').athleteId, this.targetId(c)));
+  }
+
+  // GET /athletes/:id/followers | /following
+  async listFollows(c: Context<{ Bindings: Env }>, kind: 'followers' | 'following') {
+    const { limit, cursor } = this.page(c);
+    return c.json(await new SocialService(getDb(c)).list(kind, this.targetId(c), c.get('user')?.athleteId, limit, cursor));
+  }
+
+  // GET /athletes/:id/stats (policy-aware totals + 12 weeks)
+  async stats(c: Context<{ Bindings: Env }>) {
+    return c.json(await new SocialService(getDb(c)).stats(this.targetId(c), c.get('user')?.athleteId));
   }
 }
