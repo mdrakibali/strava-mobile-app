@@ -1,6 +1,8 @@
 import {
   boolean,
   decimal,
+  foreignKey,
+  index,
   integer,
   jsonb,
   pgTable,
@@ -92,9 +94,50 @@ export const activities = pgTable('activities', {
   photos: jsonb('photos'),
   gearId: text('gear_id'),
   excludeFromFeed: boolean('exclude_from_feed').default(false).notNull(),
+  /** Client-generated UUID of the recording; makes uploads idempotent (ADR-06). Null for legacy rows. */
+  clientActivityId: text('client_activity_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  uniqueIndex('activities_athlete_client_idx').on(table.athleteId, table.clientActivityId),
+  index('activities_athlete_start_idx').on(table.athleteId, table.startTime),
+]);
+
+/**
+ * Staged GPS uploads (batch sync). One row per recording, keyed by the client's UUID within the
+ * athlete, so ids can't collide across athletes and nobody can touch someone else's upload.
+ * Drafts never appear in feeds: the activities row is only created on /complete.
+ */
+export const activityUploads = pgTable('activity_uploads', {
+  athleteId: text('athlete_id')
+    .notNull()
+    .references(() => athletes.id, { onDelete: 'cascade' }),
+  clientActivityId: text('client_activity_id').notNull(),
+  sportType: varchar('sport_type', { length: 50 }).notNull(),
+  startTime: timestamp('start_time', { withTimezone: true }).notNull(),
+  status: varchar('status', { length: 20 }).default('OPEN').notNull(), // OPEN | COMPLETED
+  activityId: text('activity_id').references(() => activities.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.athleteId, table.clientActivityId] }),
+]);
+
+export const activityUploadBatches = pgTable('activity_upload_batches', {
+  athleteId: text('athlete_id').notNull(),
+  clientActivityId: text('client_activity_id').notNull(),
+  seq: integer('seq').notNull(),
+  /** WirePoint[]: [t, lat, lng, acc, alt, altAcc, speed, seg] */
+  points: jsonb('points').notNull(),
+  pointCount: integer('point_count').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.athleteId, table.clientActivityId, table.seq] }),
+  foreignKey({
+    columns: [table.athleteId, table.clientActivityId],
+    foreignColumns: [activityUploads.athleteId, activityUploads.clientActivityId],
+  }).onDelete('cascade'),
+]);
 
 // 5. Kudos (Likes) Table
 export const kudos = pgTable(

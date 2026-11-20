@@ -11,7 +11,7 @@ export const goalsRouter = new Hono<{ Bindings: Env }>();
 goalsRouter.get('/', optionalAuth, async (c) => {
   try {
     const user = c.get('user' as any);
-    const db = getDb(c.env);
+    const db = getDb(c);
 
     let athleteId = user?.id;
     if (!athleteId) {
@@ -51,7 +51,7 @@ goalsRouter.post('/', optionalAuth, async (c) => {
   try {
     const user = c.get('user' as any);
     const body = await c.req.json();
-    const db = getDb(c.env);
+    const db = getDb(c);
 
     let athleteId = user?.id;
     if (!athleteId) {
@@ -111,7 +111,7 @@ goalsRouter.delete('/:id', optionalAuth, async (c) => {
     if (!id) {
       return c.json({ error: 'Goal ID is required' }, 400);
     }
-    const db = getDb(c.env);
+    const db = getDb(c);
 
     await db.delete(trainingGoals).where(eq(trainingGoals.id, id));
 

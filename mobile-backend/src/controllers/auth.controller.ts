@@ -1,14 +1,15 @@
 import { Context } from 'hono';
 import { getDb } from '../lib/db';
+import { jwtSecret } from '../middleware/auth';
 import { AthleteRepository } from '../repositories/athlete.repository';
 import { AuthService } from '../services/auth.service';
 import { Env } from '../types';
 
 export class AuthController {
   private getService(c: Context<{ Bindings: Env }>) {
-    const db = getDb(c.env);
+    const db = getDb(c);
     const athleteRepo = new AthleteRepository(db);
-    return new AuthService(athleteRepo, c.env.JWT_SECRET, c.env.GOOGLE_CLIENT_ID);
+    return new AuthService(athleteRepo, jwtSecret(c.env), c.env.GOOGLE_CLIENT_ID);
   }
 
   // POST /api/v1/auth/register

@@ -5,7 +5,7 @@ import { Env } from '../types';
 
 export class PrivacyZoneController {
   private getRepo(c: Context<{ Bindings: Env }>) {
-    const db = getDb(c.env);
+    const db = getDb(c);
     return new PrivacyZoneRepository(db);
   }
 

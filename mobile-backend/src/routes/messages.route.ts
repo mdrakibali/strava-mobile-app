@@ -13,7 +13,7 @@ messagesRouter.get('/conversations', requireAuth, async (c) => {
   try {
     const user = c.get('user');
     const myId = user.athleteId;
-    const db = getDb(c.env);
+    const db = getDb(c);
 
     // Fetch all messages where athlete is sender or recipient
     const allUserMessages = await db
@@ -98,7 +98,7 @@ messagesRouter.get('/:participantId', requireAuth, async (c) => {
     if (!partnerId) {
       return c.json({ error: 'participantId is required' }, 400);
     }
-    const db = getDb(c.env);
+    const db = getDb(c);
 
     // Mark partner's unread messages to me as read
     await db
@@ -143,7 +143,7 @@ messagesRouter.post('/send', requireAuth, async (c) => {
       return c.json({ error: 'recipientId and text are required' }, 400);
     }
 
-    const db = getDb(c.env);
+    const db = getDb(c);
     const newMsg = {
       id: `dm_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       senderId: myId,

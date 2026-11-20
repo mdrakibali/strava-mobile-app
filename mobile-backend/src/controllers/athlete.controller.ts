@@ -1,12 +1,16 @@
 import { Context } from 'hono';
+import { decodeCursor, encodeCursor } from '../lib/cursor';
 import { getDb } from '../lib/db';
+import { toActivityListItem, toPrivateAthlete, toPublicAthlete } from '../lib/dto';
+import { HttpError } from '../lib/http';
+import { ActivityRepository } from '../repositories/activity.repository';
 import { AthleteRepository } from '../repositories/athlete.repository';
 import { NotificationRepository } from '../repositories/notification.repository';
 import { Env } from '../types';
 
 export class AthleteController {
   private getRepo(c: Context<{ Bindings: Env }>) {
-    const db = getDb(c.env);
+    const db = getDb(c);
     return new AthleteRepository(db);
   }
 
@@ -21,8 +25,8 @@ export class AthleteController {
       const followedIds = currentUser ? await repo.getFollowedIds(currentUser.athleteId) : [];
       const followedSet = new Set(followedIds);
 
-      const formatted = list.map(({ passwordHash: _, ...a }) => ({
-        ...a,
+      const formatted = list.map((a) => ({
+        ...toPublicAthlete(a),
         isFollowing: followedSet.has(a.id),
       }));
 
@@ -47,13 +51,14 @@ export class AthleteController {
       const followersCount = await repo.getFollowersCount(id);
       const followingCount = await repo.getFollowingCount(id);
       const isFollowing = currentUser ? await repo.isFollowing(currentUser.athleteId, id) : false;
-      const recentActivities = await repo.getRecentActivities(id, 10);
-
-      const { passwordHash: _, ...safeAthlete } = athlete;
+      // Policy-filtered (ONLY_ME / FOLLOWERS_ONLY respected) and without the raw track (PRIV-02/03).
+      const rows = await new ActivityRepository(getDb(c)).listVisibleByAthlete(id, currentUser?.athleteId, 10, null);
+      const recentActivities = rows.slice(0, 10).map(toActivityListItem);
+      const isSelf = currentUser?.athleteId === id;
 
       return c.json({
         athlete: {
-          ...safeAthlete,
+          ...(isSelf ? toPrivateAthlete(athlete) : toPublicAthlete(athlete)),
           followersCount,
           followingCount,
           isFollowing,
@@ -63,6 +68,26 @@ export class AthleteController {
     } catch (err: any) {
       return c.json({ error: err.message }, 500);
     }
+  }
+
+  // GET /api/v1/athletes/:id/activities?cursor=&limit= — activity history (policy-filtered)
+  async listActivities(c: Context<{ Bindings: Env }>) {
+    const id = c.req.param('id');
+    if (!id) throw new HttpError(400, 'missing_param', 'Athlete ID is required');
+    const limit = Math.min(50, Math.max(1, Number(c.req.query('limit')) || 20));
+    const rawCursor = c.req.query('cursor');
+    const cursor = decodeCursor(rawCursor);
+    if (rawCursor && !cursor) throw new HttpError(400, 'invalid_cursor', 'Invalid cursor');
+    const viewer = c.get('user')?.athleteId;
+    const rows = await new ActivityRepository(getDb(c)).listVisibleByAthlete(id, viewer, limit, cursor);
+    const hasNextPage = rows.length > limit;
+    const items = rows.slice(0, limit);
+    const last = items[items.length - 1];
+    return c.json({
+      activities: items.map(toActivityListItem),
+      hasNextPage,
+      nextCursor: hasNextPage && last ? encodeCursor(last.startTime, last.id) : null,
+    });
   }
 
   // POST /api/v1/athletes/:id/follow
@@ -85,7 +110,7 @@ export class AthleteController {
       } else {
         await repo.follow(currentUser.athleteId, targetId);
         try {
-          const db = getDb(c.env);
+          const db = getDb(c);
           const notifRepo = new NotificationRepository(db);
           await notifRepo.create({
             id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -133,8 +158,7 @@ export class AthleteController {
 
       if (!updated) return c.json({ error: 'Failed to update profile' }, 400);
 
-      const { passwordHash: _, ...safeAthlete } = updated;
-      return c.json({ message: 'Profile updated', athlete: safeAthlete });
+      return c.json({ message: 'Profile updated', athlete: toPrivateAthlete(updated) });
     } catch (err: any) {
       return c.json({ error: err.message }, 500);
     }

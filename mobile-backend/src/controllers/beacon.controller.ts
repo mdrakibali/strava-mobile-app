@@ -6,7 +6,7 @@ import { Env } from '../types';
 
 export class BeaconController {
   private getService(c: Context<{ Bindings: Env }>) {
-    const db = getDb(c.env);
+    const db = getDb(c);
     return new BeaconService(new BeaconRepository(db));
   }
 

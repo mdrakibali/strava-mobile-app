@@ -12,7 +12,7 @@ routesRouter.get('/', optionalAuth, async (c) => {
   try {
     const sportType = c.req.query('sportType');
     const search = c.req.query('search');
-    const db = getDb(c.env);
+    const db = getDb(c);
 
     let query = db
       .select({
@@ -56,7 +56,7 @@ routesRouter.get('/', optionalAuth, async (c) => {
 routesRouter.get('/saved', requireAuth, async (c) => {
   try {
     const user = c.get('user');
-    const db = getDb(c.env);
+    const db = getDb(c);
 
     const saved = await db
       .select({
@@ -82,7 +82,7 @@ routesRouter.get('/:id', optionalAuth, async (c) => {
     if (!id) {
       return c.json({ error: 'Route ID is required' }, 400);
     }
-    const db = getDb(c.env);
+    const db = getDb(c);
 
     const [route] = await db
       .select({
@@ -129,7 +129,7 @@ routesRouter.post('/', requireAuth, async (c) => {
       return c.json({ error: 'Route name and polylinePoints (min 2 coordinates) are required' }, 400);
     }
 
-    const db = getDb(c.env);
+    const db = getDb(c);
     const newRoute = {
       id: `route_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       creatorId: user.athleteId,
@@ -162,7 +162,7 @@ routesRouter.post('/:id/toggle-save', requireAuth, async (c) => {
     if (!routeId) {
       return c.json({ error: 'Route ID is required' }, 400);
     }
-    const db = getDb(c.env);
+    const db = getDb(c);
 
     const existing = await db
       .select()

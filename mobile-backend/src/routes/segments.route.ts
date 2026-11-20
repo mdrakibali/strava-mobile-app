@@ -11,7 +11,7 @@ export const segmentsRouter = new Hono<{ Bindings: Env }>();
 segmentsRouter.get('/', optionalAuth, async (c) => {
   try {
     const sportType = c.req.query('sportType');
-    const db = getDb(c.env);
+    const db = getDb(c);
 
     let query = db.select().from(segments);
     const results = sportType
@@ -32,7 +32,7 @@ segmentsRouter.get('/:id', optionalAuth, async (c) => {
     if (!id) {
       return c.json({ error: 'Segment ID is required' }, 400);
     }
-    const db = getDb(c.env);
+    const db = getDb(c);
 
     const [segment] = await db.select().from(segments).where(eq(segments.id, id)).limit(1);
 
@@ -54,7 +54,7 @@ segmentsRouter.get('/:id/leaderboard', optionalAuth, async (c) => {
     if (!id) {
       return c.json({ error: 'Segment ID is required' }, 400);
     }
-    const db = getDb(c.env);
+    const db = getDb(c);
 
     const efforts = await db
       .select({
@@ -108,7 +108,7 @@ segmentsRouter.post('/', requireAuth, async (c) => {
       return c.json({ error: 'Segment name and polylinePoints (min 2 coordinates) are required' }, 400);
     }
 
-    const db = getDb(c.env);
+    const db = getDb(c);
     const first = body.polylinePoints[0];
     const last = body.polylinePoints[body.polylinePoints.length - 1];
 

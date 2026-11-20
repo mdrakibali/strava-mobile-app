@@ -1,11 +1,11 @@
-import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, SQL, sql } from 'drizzle-orm';
 import { activities, athletes, comments, kudos } from '../db/schema';
 import { CursorPayload } from '../lib/cursor';
 import { AppDatabase } from '../lib/db';
 
 export interface FeedQueryOptions {
-  athleteIds?: string[] | null;
-  publicOnly?: boolean;
+  /** Visibility/audience predicate from lib/policy (required: no unfiltered feed queries). */
+  where: SQL;
   limit?: number;
   cursor?: CursorPayload | null;
 }
@@ -17,16 +17,13 @@ export class FeedRepository {
     const limit = Math.min(50, Math.max(1, options.limit || 15));
     const cursor = options.cursor;
 
-    const conditions = [eq(activities.excludeFromFeed, false)];
+    const conditions: SQL[] = [eq(activities.excludeFromFeed, false), options.where];
 
     if (cursor) {
-      conditions.push(lt(activities.startTime, new Date(cursor.timestamp)));
-    }
-
-    if (options.athleteIds && options.athleteIds.length > 0) {
-      conditions.push(inArray(activities.athleteId, options.athleteIds));
-    } else if (options.publicOnly) {
-      conditions.push(eq(activities.visibility, 'PUBLIC'));
+      // Row-value comparison: activities sharing a start time are neither skipped nor repeated (API-03).
+      conditions.push(
+        sql`(${activities.startTime}, ${activities.id}) < (${new Date(cursor.timestamp).toISOString()}::timestamptz, ${cursor.id})`
+      );
     }
 
     const rows = await this.db

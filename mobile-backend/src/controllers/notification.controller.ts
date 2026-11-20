@@ -7,7 +7,7 @@ import { Env } from '../types';
 
 export class NotificationController {
   private getService(c: Context<{ Bindings: Env }>) {
-    const db = getDb(c.env);
+    const db = getDb(c);
     return new NotificationService(new NotificationRepository(db));
   }
 
@@ -55,7 +55,7 @@ export class NotificationController {
   // GET /api/v1/notifications/stream (Real-Time Server-Sent Events)
   async stream(c: Context<{ Bindings: Env }>) {
     const user = c.get('user');
-    const db = getDb(c.env);
+    const db = getDb(c);
     const repo = new NotificationRepository(db);
 
     return streamSSE(c, async (stream) => {

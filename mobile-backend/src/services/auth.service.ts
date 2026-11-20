@@ -27,7 +27,7 @@ export class AuthService {
     }
 
     const passwordHash = await hashPassword(data.password);
-    const athleteId = `ath_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const athleteId = `ath_${crypto.randomUUID()}`;
 
     const athlete = await this.athleteRepo.create({
       id: athleteId,
@@ -35,14 +35,7 @@ export class AuthService {
       passwordHash,
       username: uniqueUsername,
       displayName: data.displayName.trim() || 'Athlete',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
-      city: 'Dhaka',
-      country: 'Bangladesh',
-      weightKg: '68.0',
-      heightCm: '175.0',
-      maxHr: 188,
-      restingHr: 54,
-      ftpWatts: 220,
+      // No invented profile data (city, weight, heart rate…): unknown stays null (MET-01).
     });
 
     const token = await generateToken(
@@ -130,8 +123,9 @@ export class AuthService {
     // 1. Check if athlete exists by Google ID
     let athlete = await this.athleteRepo.findByGoogleId(googleUser.googleId);
 
-    // 2. Fallback: check by email if registered previously
-    if (!athlete) {
+    // 2. Fallback: link to an existing email account — only when Google verified that email,
+    //    otherwise an unverified Google account could take over someone's account (SEC-06).
+    if (!athlete && googleUser.emailVerified) {
       athlete = await this.athleteRepo.findByEmail(googleUser.email);
       if (athlete) {
         // Link Google ID to existing account
@@ -144,6 +138,9 @@ export class AuthService {
 
     // 3. If athlete doesn't exist, create new athlete profile
     if (!athlete) {
+      if (await this.athleteRepo.findByEmail(googleUser.email.toLowerCase().trim())) {
+        throw new Error('An account with this email already exists. Sign in with your password.');
+      }
       const baseUsername = googleUser.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
       let uniqueUsername = baseUsername || `runner_${Date.now()}`;
 
@@ -153,7 +150,7 @@ export class AuthService {
         uniqueUsername = `${baseUsername}_${Math.floor(100 + Math.random() * 900)}`;
       }
 
-      const athleteId = `ath_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const athleteId = `ath_${crypto.randomUUID()}`;
 
       athlete = await this.athleteRepo.create({
         id: athleteId,
@@ -161,14 +158,7 @@ export class AuthService {
         email: googleUser.email.toLowerCase().trim(),
         username: uniqueUsername,
         displayName: googleUser.displayName || 'Athlete',
-        avatarUrl: googleUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
-        city: 'Dhaka',
-        country: 'Bangladesh',
-        weightKg: '68.0',
-        heightCm: '175.0',
-        maxHr: 188,
-        restingHr: 54,
-        ftpWatts: 220,
+        avatarUrl: googleUser.avatarUrl,
       });
     }
 
@@ -203,10 +193,38 @@ export class AuthService {
   }
 
   /**
-   * Demo Login for development testing without live Google client credentials
+   * Demo login for local development only (the route is not mounted in production).
    */
   async loginWithDemo() {
-    return this.loginWithGoogle('demo-google-token');
+    const email = 'demo.athlete@example.com';
+    let athlete = await this.athleteRepo.findByEmail(email);
+    if (!athlete) {
+      athlete = await this.athleteRepo.create({
+        id: `ath_${crypto.randomUUID()}`,
+        email,
+        username: 'demo_athlete',
+        displayName: 'Demo Athlete',
+      });
+    }
+    const token = await generateToken(
+      { athleteId: athlete.id, username: athlete.username, email: athlete.email },
+      this.jwtSecret
+    );
+    return {
+      token,
+      athlete: {
+        id: athlete.id,
+        username: athlete.username,
+        displayName: athlete.displayName,
+        email: athlete.email,
+        avatarUrl: athlete.avatarUrl,
+        city: athlete.city,
+        country: athlete.country,
+        bio: athlete.bio,
+        followersCount: 0,
+        followingCount: 0,
+      },
+    };
   }
 
   async getMe(athleteId: string) {

@@ -10,6 +10,9 @@ const controller = new AuthController();
 authRouter.post('/register', (c) => controller.register(c));
 authRouter.post('/login', (c) => controller.login(c));
 authRouter.post('/google', (c) => controller.googleLogin(c));
-authRouter.post('/demo-login', (c) => controller.demoLogin(c));
+// Demo login exists for local development only (SEC-02).
+authRouter.post('/demo-login', (c) =>
+  c.env.ENVIRONMENT === 'production' ? c.json({ error: 'Endpoint Not Found' }, 404) : controller.demoLogin(c)
+);
 authRouter.get('/me', requireAuth, (c) => controller.getMe(c));
 

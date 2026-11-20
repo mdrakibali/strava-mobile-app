@@ -18,21 +18,14 @@ export async function verifyGoogleToken(
   idToken: string,
   expectedClientId?: string
 ): Promise<GoogleUserPayload> {
-  // Support local development & demo testing
-  if (idToken === 'demo-google-token' || idToken.startsWith('mock:')) {
-    return {
-      googleId: 'google_demo_10928374',
-      email: 'rakib.runner@example.com',
-      displayName: 'Rakib Ahmed',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
-      emailVerified: true,
-    };
-  }
+  // No test/mock tokens here: the old 'demo-google-token' / 'mock:' bypass let anyone log in
+  // without Google (SEC-02). The audience is mandatory so tokens minted for other apps are rejected.
+  if (!expectedClientId) throw new Error('Google sign-in is not configured on the server');
 
   try {
     const { payload } = await jwtVerify(idToken, GOOGLE_JWKS, {
       issuer: ['https://accounts.google.com', 'accounts.google.com'],
-      audience: expectedClientId ? expectedClientId : undefined,
+      audience: expectedClientId,
     });
 
     const googleId = payload.sub as string;

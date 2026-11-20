@@ -1,4 +1,7 @@
+import { and, eq, inArray } from 'drizzle-orm';
+import { activities } from '../db/schema';
 import { decodeCursor, encodeCursor } from '../lib/cursor';
+import { followingFeedWhere, visibleActivitiesWhere } from '../lib/policy';
 import { ActivityRepository } from '../repositories/activity.repository';
 import { AthleteRepository } from '../repositories/athlete.repository';
 import { ClubRepository } from '../repositories/club.repository';
@@ -24,32 +27,21 @@ export class FeedService {
     const limit = Math.min(50, Math.max(1, dto.limit || 15));
     const cursor = decodeCursor(dto.cursor);
 
-    let targetAthleteIds: string[] | null = null;
-    let publicOnly = false;
-
+    let where;
     if (tab === 'following' && dto.currentUserId) {
       const followedIds = await this.athleteRepo.getFollowedIds(dto.currentUserId);
-      targetAthleteIds = [dto.currentUserId, ...followedIds];
+      where = followingFeedWhere(dto.currentUserId, followedIds);
     } else if (tab === 'clubs' && dto.currentUserId) {
       const userClubIds = await this.clubRepo.getUserClubIds(dto.currentUserId);
-      if (userClubIds.length > 0) {
-        const allMembers = await Promise.all(
-          userClubIds.map((cid) => this.clubRepo.getMembers(cid))
-        );
-        const uniqueMemberIds = Array.from(
-          new Set(allMembers.flat().map((m) => m.athleteId))
-        );
-        targetAthleteIds = uniqueMemberIds;
-      } else {
-        targetAthleteIds = [dto.currentUserId];
-      }
+      const allMembers = await Promise.all(userClubIds.map((cid) => this.clubRepo.getMembers(cid)));
+      const memberIds = Array.from(new Set([dto.currentUserId, ...allMembers.flat().map((m) => m.athleteId)]));
+      where = and(inArray(activities.athleteId, memberIds), visibleActivitiesWhere(dto.currentUserId))!;
     } else {
-      publicOnly = true;
+      where = eq(activities.visibility, 'PUBLIC');
     }
 
     const { items, hasNextPage, nextCursor: rawNextCursor } = await this.feedRepo.getTimeline({
-      athleteIds: targetAthleteIds,
-      publicOnly,
+      where,
       limit,
       cursor,
     });
@@ -72,10 +64,8 @@ export class FeedService {
         maxSpeedMps: activity.maxSpeedMps ? Number(activity.maxSpeedMps) : null,
         averageHeartRate: activity.averageHeartRate,
         calories: activity.calories,
-        relativeEffortScore: activity.relativeEffortScore,
-        gapFormatted: activity.gapFormatted,
         // Masked polyline if not author
-        polyline: isAuthor ? (activity.rawPolyline || activity.maskedPolyline) : activity.maskedPolyline,
+        polyline: isAuthor ? activity.rawPolyline || activity.maskedPolyline : activity.maskedPolyline,
         photos: activity.photos,
         athlete,
         kudosCount: Number(kudosCount || 0),

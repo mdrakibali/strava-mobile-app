@@ -10,7 +10,7 @@ export const eventsRouter = new Hono<{ Bindings: Env }>();
 // GET /api/v1/events
 eventsRouter.get('/', optionalAuth, async (c) => {
   try {
-    const db = getDb(c.env);
+    const db = getDb(c);
 
     const eventsList = await db
       .select({
@@ -76,7 +76,7 @@ eventsRouter.get('/:id', optionalAuth, async (c) => {
     if (!id) {
       return c.json({ error: 'Event ID is required' }, 400);
     }
-    const db = getDb(c.env);
+    const db = getDb(c);
 
     const [event] = await db
       .select({
@@ -139,7 +139,7 @@ eventsRouter.post('/:id/rsvp', requireAuth, async (c) => {
     }
     const { status = 'GOING' } = await c.req.json().catch(() => ({}));
 
-    const db = getDb(c.env);
+    const db = getDb(c);
 
     const existing = await db
       .select()
