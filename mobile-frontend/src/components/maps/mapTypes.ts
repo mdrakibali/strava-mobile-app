@@ -22,3 +22,4 @@ export interface MapItem {
   locationName: string;
   photos: string[];
 }
+
