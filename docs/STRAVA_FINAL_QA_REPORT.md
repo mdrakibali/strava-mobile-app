@@ -90,10 +90,21 @@ See B1–B5. Pull-to-refresh also triggers the upload worker. Pagination uses a 
 
 ## 8. Map improvements
 
-- **Feed / profile / history / save previews** (`components/map/RoutePreview.tsx` + `lib/mercator.ts`): the zoom is chosen so the whole route fits with padding (max z16). CARTO Voyager raster tiles (same provider as the interactive style) are cached on disk via expo-image. The route is drawn on the same Web Mercator pixel grid, with a white casing, plus a green start and black finish marker. The card map is 240 px tall (was 180). No map engine per list item. The projection and fit are unit-tested.
-- **Interactive map** (`MapView`): new `otherRoutes` (faint context lines), `showUserLocation` and `frameKey` (re-frame on selection).
-- **Maps tab** as in §5. Sorted nearest-first when your location is known; shows distance from you; save/unsave routes; opens route or activity detail.
-- **NOT DEVICE TESTED:** tile loading on mobile data, MapLibre camera re-framing, and the user dot.
+Provider is now **MapLibre Native v11 + OpenFreeMap** (no API key). Details and verification are in §19.
+
+- **List previews** (feed, profile, history, save, events; `RoutePreview.tsx` + `routeSnapshot.ts`): a native MapLibre **snapshot** of the OpenFreeMap *Positron* style, with the route (white casing + orange line) and start/finish markers drawn **inside the map style**, so they sit exactly on the streets. The camera fits the route with padding (fractional zoom, max 16; `fitCamera` is unit-tested). Snapshots are cached and rendered at most two at a time, and an attribution label is shown. If a snapshot can't be produced (offline, Expo Go), the route geometry is drawn on a neutral background labelled "Map unavailable — route only", never a fake map. CARTO raster tiles were removed (their free terms are non-commercial).
+- **Interactive map** (`MapView`, OpenFreeMap *Liberty*: parks, water, paths, POIs). Additions:
+  - point markers with tap-to-select;
+  - map tap (route builder);
+  - `focus` camera;
+  - a load-error overlay with Retry;
+  - native attribution.
+
+  The camera never invents a position: with no route and no known location it shows the world. In Expo Go it says the map needs the development build, instead of the old Leaflet fallback with a hard-coded Dhaka centre (removed).
+- **Legacy map screens** (route detail, navigation, builder, heatmap, segments) now go through `StravaMapView`, rebuilt as an adapter over the same working map. Every hard-coded Dhaka default coordinate was removed.
+- **Route builder:** now tap-to-draw from your real location, with distance computed from the points by the server. The old version drew a geometric circle around Dhaka and invented climb, surface and elevation.
+- **Maps tab:** Nearby (real places, §19B) · Routes · Saved · My activities, plus markers ↔ card carousel, Directions, Start activity, and Create Route.
+- **NOT DEVICE TESTED:** on-screen rendering, snapshot output, gestures, camera re-framing, the user dot.
 
 ## 9. Kudos implementation
 
@@ -101,7 +112,7 @@ Endpoints: `PUT|POST /activities/:id/kudos` (give), `DELETE` (remove), `GET` (li
 
 ## 10. Backend changes
 
-Hono app factory with per-request DB · zod validation · typed `HttpError` · `lib/policy.ts` · `lib/dto.ts` public DTOs · batch upload service · activity PATCH/DELETE/history · social service (follow, lists, stats) · kudos/comments endpoints · `POST /events` · events RSVP data fix · `no-store` header · JWT fail-closed · mock Google tokens removed · demo login 404 in production · all modules still mounted (none removed) · local dev server `npm run dev:local` (PGlite) · E2E script `scripts/e2e-local.mjs` (refuses production URLs).
+Hono app factory with per-request DB · zod validation · typed `HttpError` · `lib/policy.ts` · `lib/dto.ts` public DTOs · batch upload service · activity PATCH/DELETE/history · social service (follow, lists, stats) · kudos/comments endpoints · `POST /events` · events RSVP data fix · `no-store` header · JWT fail-closed · mock Google tokens removed · **demo login removed entirely** · `GET /places/nearby` (Photon + Overpass failover, cached, privacy-rounded) · route creation computes distance server-side (no invented defaults) · Google token verification injectable for tests · seed scripts and the destructive `clean-seed-data.js` deleted · all modules still mounted (none removed) · local dev server `npm run dev:local` (PGlite) · E2E script `scripts/e2e-local.mjs` (refuses production URLs).
 
 ## 11. Database changes and migrations (additive only; nothing dropped or renamed)
 
@@ -119,11 +130,13 @@ Migration test: every backend test run applies `0000…0003` in order to a fresh
 | Suite | Result |
 |---|---|
 | Backend TypeScript (`tsc --noEmit`) | ✅ 0 errors |
-| Backend + shared (Vitest, PGlite with real migrations): `shared/tracking` 31, `api` 21, `social` 11, `groups` 5 | ✅ **68 / 68** |
-| HTTP E2E (`scripts/e2e-local.mjs`, two users, local server) | ✅ **23 / 23** |
+| Backend + shared (Vitest, PGlite with real migrations): shared tracking 31, api 22, social 11, groups 5, places 10, google-auth 3 | ✅ **82 / 82** |
+| HTTP E2E (`scripts/e2e-local.mjs`, three users, local server, **real** Photon for nearby places) | ✅ **28 / 28** |
+| Live provider check: real places for Run/Walk/Hike/Ride in Dhaka, Chattogram and Sylhet (§19B) | ✅ real results in all 12 cases |
+| Map style check: the exact style the app builds (OpenFreeMap Positron/Liberty + injected route/marker layers) against MapLibre's official `validateStyleMin` | ✅ valid (59 / 115 layers) |
 | App TypeScript | ✅ 0 errors |
-| App Jest: format, calories, activityView, social store, mercator, sync worker, navigation integrity | ✅ **43 / 43** |
-| App ESLint (`eslint src`) | ⚠️ 8 errors, 27 warnings, **all in files not changed this phase** (React Compiler `set-state-in-effect` advisories in login, analytics/goals, messages ×2, routes/[id], StravaMapView ×2, use-color-scheme.web). 0 errors in changed files. |
+| App Jest: format, calories, activityView, social store, mercator (incl. `fitCamera`), sync worker, navigation integrity | ✅ **46 / 46** |
+| App ESLint (`eslint src`) | ⚠️ 5 errors, 7 warnings, all in legacy files not changed here (React Compiler `set-state-in-effect` in goals, messages ×2, routes/[id], use-color-scheme.web) |
 
 Tests that were updated to the new behaviour (not hidden): `activityView.test` (feed `hasKudos` is now real), `social.test` (toggle → idempotent give/remove).
 
@@ -131,10 +144,10 @@ Tests that were updated to the new behaviour (not hidden): `activityView.test` (
 
 | Build | Result |
 |---|---|
-| Cloudflare Worker (`wrangler deploy --dry-run`) | ✅ 943.7 KiB / gzip 179.5 KiB |
-| Android JS bundle (`expo export --platform android`) | ✅ Hermes bundle 6 MB |
+| Cloudflare Worker (`wrangler deploy --dry-run`) | ✅ 956.8 KiB / gzip 183.7 KiB |
+| Android JS bundle (`expo export --platform android`) | ✅ Hermes bundle 5.8 MB |
 | Android debug APK (Phase 3 native modules) | ✅ built (`android/app/build/outputs/apk/debug/app-debug.apk`) |
-| Android release APK (`assembleRelease`, arm64) | ✅ `BUILD SUCCESSFUL in 20m 25s` → `android/app/build/outputs/apk/release/app-release.apk` (54.5 MB) |
+| Android release APK (`assembleRelease`, arm64, built **before** this round's changes; no new native modules since, so a rebuild needs no native changes) | ✅ `BUILD SUCCESSFUL in 20m 25s` → `android/app/build/outputs/apk/release/app-release.apk` (54.5 MB) |
 
 ### 13a. Release build notes
 - Signed with the **debug keystore** (Expo prebuild default). It is not a Play Store build; use EAS or your own keystore for that.
@@ -161,6 +174,10 @@ Tests that were updated to the new behaviour (not hidden): `activityView.test` (
 
 | Severity | Issue |
 |---|---|
+| **High** | Google Sign-In can't work until the Android OAuth client (package + SHA-1) is registered (§19C), and it has not been verified on a device. |
+| Medium | Nearby places depend on free fair-use services (Photon primary, Overpass failover). Fine at small scale with the 24 h cache; for growth, self-host Photon/Overpass or use a paid places API. |
+| Medium | Package name is still the placeholder `com.anonymous.mobilefrontend`. |
+| Low | Possible seed/demo rows already in the production database (no access from here; inspect manually, §19D). |
 | **Critical** | Backend not deployed and migrations 0002/0003 not applied. Until then the app uses the legacy upload fallback, and **kudos removal, follower lists, stats, comment edit/delete, history and event creation return 404 in production**. |
 | **Critical** | Rotate the Neon password (SEC-01). |
 | High | No on-device verification of anything in this report (§17). |
@@ -185,6 +202,8 @@ Tests that were updated to the new behaviour (not hidden): `activityView.test` (
 | Push notifications | In-app list only; no push service configured. |
 
 ## 17. Requires physical-device testing: NOT DEVICE TESTED
+
+Also: OpenFreeMap map rendering and route snapshots on screen, nearby places from the phone's real GPS fix, the Directions intent, and the Google Sign-In account chooser and token round trip.
 
 GPS permission prompts on Android 17 · real GPS accuracy and drift · live route drawing · **screen-off recording** · **app backgrounded** · **app swiped away** · **force-stop → interrupted-recording recovery** · reboot recovery · temporary GPS loss ("GPS SIGNAL LOST") · airplane mode during save → automatic upload when back online · foreground-service notification · battery-optimization shortcut · map tiles and MapLibre on device · share sheet and deep link · all screen layouts on a 6.1" display.
 
@@ -235,9 +254,17 @@ GPS permission prompts on Android 17 · real GPS accuracy and drift · live rout
 25. **Share** (feed card or detail) opens the Android share sheet with a summary and link. A private activity has no Share.
 26. B unfollows A: A's Followers activities disappear from B's feed, and opening one by link shows "isn't available".
 
-### F. Maps
+### F. Maps and nearby places
+27a. Open Maps: **Nearby** is selected. Allow location; within a few seconds real parks, tracks or trails near you appear as orange markers and cards ("© OpenStreetMap contributors"). Switch Run/Walk/Hike/Ride. Tap a marker → its card is selected; **Directions** opens your maps app; **Start Run** opens the recorder.
+27b. Deny location (Settings → Apps → Location → Don't allow) and reopen Maps: you see "Location needed for nearby places" — **no** places, no default city. Turn on airplane mode → "Nearby places unavailable" + Retry — **no** fallback list.
+27c. Workout tab → **Places near you** shows the three nearest for the chosen sport; tapping one opens it on Maps.
 27. Maps shows the map at your location (blue dot) with route cards along the bottom. Swipe the cards: the map frames each route. Use the chips for Routes / Saved / My activities / sports, search by name, bookmark to save, and **Create Route** opens the builder.
 28. Feed cards show a **real street map** with the orange route, a green start and a black finish.
+
+### F2. Google Sign-In (after completing §19C setup)
+28a. Log out (also signs you out of Google). Tap **Continue with Google** → the account chooser appears → pick an account → you land on Home. Kill and reopen the app → still signed in.
+28b. Tap Google, then press Back on the chooser → nothing happens (no error).
+28c. A brand-new Google account starts with an empty feed, 0 activities, 0 followers, no city/bio/photo invented.
 
 ### G. Groups
 29. Groups → Challenges / Clubs / Events tabs with sport chips. Tap **+** to create one of each; it opens the new item.
@@ -249,3 +276,83 @@ GPS permission prompts on Android 17 · real GPS accuracy and drift · live rout
 33. Privacy zones: add a zone at your location; activities recorded inside it hide that part from others.
 
 Report anything that fails with the step number. Steps 7–16, 27–28 and 32 are the ones I could not verify without your phone.
+
+
+---
+
+## 19. Map provider, nearby places, Google Sign-In, no demo data
+
+### A. Map provider: MapLibre Native + OpenFreeMap
+
+| Question | Finding |
+|---|---|
+| Current library | `@maplibre/maplibre-react-native` **11.5.1** (MapLibre Native), already a dependency with its Expo config plugin, Expo SDK 58 / RN 0.88, new architecture. Already in the Android dev build. **No migration of the map library was needed.** |
+| Previous tile provider | CARTO basemaps (no key, but free use is limited to non-commercial). Replaced. |
+| OpenFreeMap | `https://tiles.openfreemap.org/styles/{liberty,positron,bright}`: no key, no registration. Verified from this machine: styles 200 OK; **Dhaka z14 vector tile 305 KB** of real OSM data. Attribution "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" (shown by MapLibre's attribution button and on every snapshot). |
+| Style choice | **Liberty** for interactive maps (parks, water, paths, POIs give geographic context). **Positron** for small previews, so the orange route stands out. Override with `EXPO_PUBLIC_MAP_STYLE_URL`. |
+| Compatibility | Background tracking, GPS and the recorder are untouched (separate modules). No new native dependency, so the existing dev build works. Route polylines, markers, gestures and the camera use only v11 APIs (`Map`, `Camera`, `GeoJSONSource`+`Layer`, `UserLocation`, `StaticMapImageManager`). |
+| Verification done | Type-checked. The exact styles the app builds pass MapLibre's official style validator. Projection/fit maths unit-tested. A headless native render was attempted, but the environment blocked loading the required native libraries, so **no rendered image was inspected**. |
+| **NOT DEVICE TESTED** | Visual rendering, snapshot output, gestures, user dot accuracy. |
+
+### B. Real nearby workout places
+
+| Item | Implementation |
+|---|---|
+| Endpoint | `GET /places/nearby?lat&lng&sport&radius` (auth required; radius 0.5–15 km; default 5 km). |
+| Data | OpenStreetMap only. Categories: park, garden, nature reserve/forest, running track, recreation ground, cycleway, cycling/hiking routes. |
+| Provider 1 (primary) | **Photon** (komoot) reverse search with OSM tag filters: free, no key, fair use. Two parallel queries per request (sport-specific + general green space), so dense park areas can't crowd out tracks or cycleways (4 reserved slots). Tiny areas (< 150 m; gardens < 300 m) are dropped. Results are de-duplicated and sorted nearest first. |
+| Provider 2 (failover) | **Overpass API** (two public instances): adds path geometry and length. Observed at capacity (502) or unreachable during development, so it isn't primary. |
+| Not used | OpenFreeMap (tiles only); Nominatim (search needs a text query, and its usage policy forbids app-scale use); Geoapify/Google Places (API key and paid tiers not needed). |
+| Privacy | The client sends its real fix to **our** API only. The server rounds it to 3 decimals (~110 m) before calling a provider, and providers see the Worker, not the phone. |
+| Caching / limits | 24 h per (rounded cell, sport, radius) in the Workers Cache API (in-memory in Node dev). `User-Agent` identifies the app. |
+| Failure | Provider failure → **503 + Retry** in the app. Nothing found → empty state. **There is no static or fallback list anywhere.** |
+| Live verification (real provider, this machine) | Dhaka/Shahbag: Shishu Park 147 m, Ramna Park 294–359 m, Suhrawardy Udyan 490 m … Lalmatia Running Track 3.5 km (Run), Baldha Garden (Hike), Mohammadpur cycleway (Ride). Chattogram: Biplob Udyan, Shishu Park, DC Hill. Sylhet: 3 parks within 5 km. |
+| App | Maps tab **Nearby** (default): markers, card carousel, Directions (`geo:` intent → your maps app), **Start {sport}**. Workout tab **Places near you** (top 3). States: locating, permission denied (with Allow/Settings), location off, no GPS fix, loading, error + Retry, empty. |
+| **NOT DEVICE TESTED** | Real phone GPS fix, the permission prompts, the `geo:` intent. |
+
+### C. Google Sign-In
+
+**Implementation (reviewed and fixed):**
+- **App:** native `@react-native-google-signin/google-signin` v17 (Google Play Services), with `webClientId` = the *web* OAuth client and `offlineAccess: false`.
+- **Fixes:**
+  - Cancelling (`{type: 'cancelled'}` in v17) used to show an error.
+  - The Expo Go browser fallback was removed, because Google doesn't support that flow for this setup. Expo Go now shows an honest message.
+  - "DEVELOPER_ERROR" (status 10) now explains the configuration problem.
+  - Logout now also signs out of Google.
+- **Backend `POST /auth/google`:** verifies the ID token with Google's JWKS (RS256 signature, issuer `accounts.google.com`, **audience = `GOOGLE_CLIENT_ID`**, expiry). It finds or creates the athlete; linking to an existing email account only happens when `email_verified` is true. It issues our own JWT (requires `JWT_SECRET`; no fallback secret). No mock tokens, no demo login.
+- **Tests:** 3 tests with real RS256-signed tokens and a local key set: valid passes; wrong audience, wrong issuer, expired, forged signature, missing client ID and mock token fail; unverified email is reported. Google's live JWKS endpoint was reachable from here (2 RS256 keys).
+- **NOT VERIFIED:** the real end-to-end OAuth flow on a phone. It needs your Google Cloud configuration and a device.
+
+**Google Cloud Console setup (must be done by you, in the project that owns web client `923419495380-p8sen….apps.googleusercontent.com`):**
+1. **OAuth consent screen:** app name, support email, scopes `email`, `profile`, `openid`. While it's in "Testing", add your Google accounts as test users.
+2. **Web application** OAuth client. This already exists and is set in `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (app) and `GOOGLE_CLIENT_ID` (`wrangler.jsonc`), and the two must match.
+3. Create an **Android** OAuth client:
+   - Package name: **`com.anonymous.mobilefrontend`** (the current `app.json` value).
+   - SHA-1 for local dev/debug builds (standard React Native debug keystore, `android/app/debug.keystore`): `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`. SHA-256 for reference: `FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C`.
+   - Add **another** Android client (or SHA-1) for every other signing key: your release keystore, the EAS credentials (`eas credentials`), and the Play App Signing key from Play Console → App integrity.
+4. **Before release:** change `android.package` to your real ID (e.g. `com.<company>.<app>`). That needs a **new** Android OAuth client, and the debug key above is shared by every React Native template project, so never use it for release.
+5. No `google-services.json` is needed for this library's sign-in.
+
+### D. No demo users, seed data or invented content: audit results
+
+| Removed / fixed | Where |
+|---|---|
+| Demo login (endpoint, service, app context `loginAsGuest`/`loginWithDemo`, API client) | backend + app |
+| Seed scripts `seed.js`, `seed-routes.js`; **destructive** `clean-seed-data.js` (deleted every user's activities except one hard-coded ID) | `mobile-backend/scripts` |
+| Unused mock data file and dead components with invented content (`mock/data.ts`, `AthleteIntelligenceCard`, `MatchedSegmentsSection`, `ActivityCard`) | app |
+| Default "Dhaka, Bangladesh" + stock photo + "Open Strava Runner" bio for every login, notification and signed-out state | `AppContext` |
+| Stock-photo avatars and badges standing in for real people | segment, messages, club, members, suggested, challenge |
+| Club list invented weekly stats (42 km / 8 activities) and challenge `daysRemaining` default 10 | `AppContext` mappers |
+| Event detail placeholder event ("City Striders", 12 attendees, 5:30 pace, RSVP "Going"), fake "Official Group Route" → `route_1` | event screen rebuilt on the API |
+| Route detail fallback with invented elevation profile and 95% paved surface; backend route defaults (5 km / 25 m / surface split / profile) | route screen + backend |
+| Route builder pre-filled Dhaka loop and invented climb | rebuilt |
+| `RouteMapPreview` invented loop when an event had no route | now renders nothing |
+| Analytics screens with hard-coded sample data (training log, relative effort, fitness & freshness, race predictions, training plans, matched activities) and the segment screen's invented KOM / "Local Legend" | replaced by an honest "not available yet" screen (routes kept) |
+| Login placeholder containing a real person's name | "Your name" |
+| New accounts | Test-verified: no invented city, bio, photo, physiology; empty feed, history, stats, notifications, followers |
+
+**Remaining decorative asset:** the onboarding welcome screen's hero photo (an Unsplash stock image used as a design background, not presented as anyone's data).
+
+**Production database:** I have no access to it. If seed or demo rows were inserted earlier (by the deleted scripts), they are still there. Inspect with SQL and delete them deliberately; there's no longer a script that does this blindly.
+
+**Test fixtures:** synthetic tracks and provider responses exist **only** in `__tests__` files and the local PGlite test database. They are never in the app bundle or any real database.

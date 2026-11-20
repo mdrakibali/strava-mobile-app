@@ -93,5 +93,18 @@ check('owner deletes', (await call('DELETE', `/activities/${id}`, ana.token)).st
 const resurrect = await call('POST', `/activities/uploads/${cid}/complete`, ana.token, details);
 check('late upload retry does not resurrect a deleted activity', resurrect.body.deleted === true);
 
+// --- nearby places: real provider, real coordinates (central Dhaka), no invented fallback ---
+const places = await call('GET', '/places/nearby?lat=23.738&lng=90.398&sport=Run', ana.token);
+check('nearby places from a real provider', places.status === 200 && places.body.places.length > 0, `${places.body?.provider}, ${places.body?.places?.length} places, first: ${places.body?.places?.[0]?.name}`);
+check('nearby places require auth', (await call('GET', '/places/nearby?lat=23.738&lng=90.398')).status === 401);
+check('nearby places validate coordinates', (await call('GET', '/places/nearby?lat=999&lng=90', ana.token)).status === 400);
+
+// --- a brand-new account has no invented content ---
+const cleo = await reg('Cleo');
+const empty = await call('GET', '/feed?tab=following', cleo.token);
+const cStats = await call('GET', `/athletes/${cleo.athlete.id}/stats`, cleo.token);
+check('new account: empty feed, zero stats, no invented profile', empty.body.feed.length === 0 && cStats.body.activityCount === 0 && cleo.athlete.city == null && cleo.athlete.avatarUrl == null);
+check('no demo login endpoint', (await call('POST', '/auth/demo-login')).status === 404);
+
 console.log(failures ? `\n${failures} FAILED` : '\nALL PASSED');
 process.exit(failures ? 1 : 0);
