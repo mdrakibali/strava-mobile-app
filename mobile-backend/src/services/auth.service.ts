@@ -192,41 +192,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Demo login for local development only (the route is not mounted in production).
-   */
-  async loginWithDemo() {
-    const email = 'demo.athlete@example.com';
-    let athlete = await this.athleteRepo.findByEmail(email);
-    if (!athlete) {
-      athlete = await this.athleteRepo.create({
-        id: `ath_${crypto.randomUUID()}`,
-        email,
-        username: 'demo_athlete',
-        displayName: 'Demo Athlete',
-      });
-    }
-    const token = await generateToken(
-      { athleteId: athlete.id, username: athlete.username, email: athlete.email },
-      this.jwtSecret
-    );
-    return {
-      token,
-      athlete: {
-        id: athlete.id,
-        username: athlete.username,
-        displayName: athlete.displayName,
-        email: athlete.email,
-        avatarUrl: athlete.avatarUrl,
-        city: athlete.city,
-        country: athlete.country,
-        bio: athlete.bio,
-        followersCount: 0,
-        followingCount: 0,
-      },
-    };
-  }
-
   async getMe(athleteId: string) {
     const athlete = await this.athleteRepo.findById(athleteId);
     if (!athlete) return null;

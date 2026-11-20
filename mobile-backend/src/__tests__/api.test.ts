@@ -310,8 +310,24 @@ describe('authentication', () => {
     expect(demo.status).toBe(401);
   });
 
-  it('hides demo login in production', async () => {
+  it('has no demo/mock login endpoint in any environment', async () => {
+    expect((await call('POST', '/auth/demo-login')).status).toBe(404);
     const { call: prod } = createTestApp(db, { ...ENV, ENVIRONMENT: 'production' });
     expect((await prod('POST', '/auth/demo-login')).status).toBe(404);
+  });
+
+  it('a new account starts with genuinely empty data', async () => {
+    const reg = await call('POST', '/auth/register', { body: { email: 'new@example.com', password: 'Passw0rd!x', displayName: 'New Person' } });
+    expect(reg.status).toBeLessThan(300);
+    const t = reg.body.token;
+    const id = reg.body.athlete.id;
+    expect(reg.body.athlete).toMatchObject({ city: null, country: null, bio: null, followersCount: 0, followingCount: 0 });
+    expect(reg.body.athlete.avatarUrl).toBeNull();
+    expect((await call('GET', '/feed?tab=following', { token: t })).body.feed).toEqual([]);
+    expect((await call('GET', `/athletes/${id}/activities`, { token: t })).body.activities).toEqual([]);
+    const stats = await call('GET', `/athletes/${id}/stats`, { token: t });
+    expect(stats.body).toMatchObject({ activityCount: 0, followersCount: 0, followingCount: 0, bySport: [] });
+    expect((await call('GET', '/notifications', { token: t })).body.notifications).toEqual([]);
+    expect((await call('GET', `/athletes/${id}/followers`, { token: t })).body.athletes).toEqual([]);
   });
 });

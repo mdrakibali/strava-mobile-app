@@ -73,17 +73,6 @@ export class AuthController {
     }
   }
 
-  // POST /api/v1/auth/demo-login
-  async demoLogin(c: Context<{ Bindings: Env }>) {
-    try {
-      const service = this.getService(c);
-      const result = await service.loginWithDemo();
-      return c.json(result, 200);
-    } catch (err: any) {
-      return c.json({ error: err.message || 'Demo login failed' }, 500);
-    }
-  }
-
   // GET /api/v1/auth/me
   async getMe(c: Context<{ Bindings: Env }>) {
     const user = c.get('user');

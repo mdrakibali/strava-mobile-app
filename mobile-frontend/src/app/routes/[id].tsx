@@ -6,13 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ElevationChart } from '../../components/common/ElevationChart';
 import { StatBox } from '../../components/common/StatBox';
 import { StravaMapView } from '../../components/map/StravaMapView';
-import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
 
 export default function RouteDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { activities } = useApp();
   const [route, setRoute] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
@@ -24,56 +22,14 @@ export default function RouteDetailScreen() {
     api.routes
       .get(id)
       .then((res) => {
-        if (res?.route) {
-          setRoute(res.route);
-        } else {
-          // Check activities fallback
-          const matchingAct = activities.find((a) => a.id === id);
-          if (matchingAct) {
-            setRoute({
-              id: matchingAct.id,
-              name: matchingAct.title,
-              description: matchingAct.description,
-              sportType: matchingAct.sportType,
-              distanceMeters: matchingAct.distanceMeters,
-              elevationGainMeters: matchingAct.elevationGainMeters,
-              estimatedTimeSeconds: matchingAct.movingTimeSeconds,
-              polylinePoints: matchingAct.routePoints || [],
-              elevationProfile: matchingAct.elevationProfile || [10, 15, 20, 15, 10],
-              surfaceTypes: { pavedPercent: 95, unpavedPercent: 5 },
-              creator: {
-                displayName: matchingAct.athlete?.displayName || 'Community Athlete',
-                avatarUrl: matchingAct.athlete?.avatarUrl,
-              },
-            });
-          }
-        }
+        // Only the server's route — no invented elevation profile or surface split as a fallback.
+        if (res?.route) setRoute(res.route);
       })
-      .catch(() => {
-        const matchingAct = activities.find((a) => a.id === id);
-        if (matchingAct) {
-          setRoute({
-            id: matchingAct.id,
-            name: matchingAct.title,
-            description: matchingAct.description,
-            sportType: matchingAct.sportType,
-            distanceMeters: matchingAct.distanceMeters,
-            elevationGainMeters: matchingAct.elevationGainMeters,
-            estimatedTimeSeconds: matchingAct.movingTimeSeconds,
-            polylinePoints: matchingAct.routePoints || [],
-            elevationProfile: matchingAct.elevationProfile || [10, 15, 20, 15, 10],
-            surfaceTypes: { pavedPercent: 95, unpavedPercent: 5 },
-            creator: {
-              displayName: matchingAct.athlete?.displayName || 'Community Athlete',
-              avatarUrl: matchingAct.athlete?.avatarUrl,
-            },
-          });
-        }
-      })
+      .catch(() => setRoute(null))
       .finally(() => {
         setIsLoading(false);
       });
-  }, [id, activities]);
+  }, [id]);
 
   const handleToggleSave = async () => {
     if (!id) return;
@@ -171,31 +127,33 @@ export default function RouteDetailScreen() {
           <View className="flex-row justify-between py-4 my-3 border-y border-gray-100">
             <StatBox label="Distance" value={`${distKm} km`} />
             <StatBox label="Est. Moving Time" value={`${timeHours} hrs`} />
-            <StatBox label="Elevation Gain" value={`${route.elevationGainMeters || 0} m`} />
+            <StatBox label="Elevation Gain" value={route.elevationGainMeters ? `${route.elevationGainMeters} m` : '–'} />
           </View>
 
-          {/* Elevation Profile Area Chart */}
-          <View className="my-2">
-            <Text className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
-              Elevation Profile
-            </Text>
-            <ElevationChart elevations={route.elevationProfile || [10, 15, 20, 15, 10]} height={110} />
-          </View>
+          {/* Elevation profile only when real samples exist (no invented 10/15/20 m curve). */}
+          {Array.isArray(route.elevationProfile) && route.elevationProfile.length > 1 ? (
+            <View className="my-2">
+              <Text className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
+                Elevation Profile
+              </Text>
+              <ElevationChart elevations={route.elevationProfile} height={110} />
+            </View>
+          ) : null}
 
           {/* Surface Breakdown */}
-          {route.surfaceTypes && (
+          {route.surfaceTypes && route.surfaceTypes.pavedPercent != null && (
             <View className="my-3 p-4 bg-gray-50 rounded-2xl border border-gray-100">
               <Text className="text-xs font-black text-gray-800 mb-2">Surface Breakdown</Text>
               <View className="flex-row items-center justify-between">
                 <Text className="text-xs text-gray-600">Paved Asphalt</Text>
                 <Text className="text-xs font-bold text-gray-900">
-                  {route.surfaceTypes.pavedPercent ?? 90}%
+                  {route.surfaceTypes.pavedPercent}%
                 </Text>
               </View>
               <View className="flex-row items-center justify-between mt-1">
                 <Text className="text-xs text-gray-600">Gravel / Trail</Text>
                 <Text className="text-xs font-bold text-gray-900">
-                  {route.surfaceTypes.unpavedPercent ?? 10}%
+                  {route.surfaceTypes.unpavedPercent ?? 0}%
                 </Text>
               </View>
             </View>

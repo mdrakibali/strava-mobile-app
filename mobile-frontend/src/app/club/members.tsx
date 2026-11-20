@@ -109,7 +109,7 @@ export default function ClubMembersScreen() {
                     {(member.role === 'ADMIN' || member.role === 'CREATOR' || index === 0) && (
                       <View className="bg-orange-100 px-2 py-0.5 rounded-full">
                         <Text className="text-[10px] font-black text-[#FC4C02]">
-                          {member.role || 'Club Leader'}
+                          {member.role || 'Member'}
                         </Text>
                       </View>
                     )}

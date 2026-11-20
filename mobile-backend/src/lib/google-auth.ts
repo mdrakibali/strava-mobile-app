@@ -16,14 +16,16 @@ export interface GoogleUserPayload {
  */
 export async function verifyGoogleToken(
   idToken: string,
-  expectedClientId?: string
+  expectedClientId?: string,
+  /** Key source (Google's JWKS in production; a local key set in tests). */
+  jwks: Parameters<typeof jwtVerify>[1] = GOOGLE_JWKS
 ): Promise<GoogleUserPayload> {
   // No test/mock tokens here: the old 'demo-google-token' / 'mock:' bypass let anyone log in
   // without Google (SEC-02). The audience is mandatory so tokens minted for other apps are rejected.
   if (!expectedClientId) throw new Error('Google sign-in is not configured on the server');
 
   try {
-    const { payload } = await jwtVerify(idToken, GOOGLE_JWKS, {
+    const { payload } = await jwtVerify(idToken, jwks as any, {
       issuer: ['https://accounts.google.com', 'accounts.google.com'],
       audience: expectedClientId,
     });
