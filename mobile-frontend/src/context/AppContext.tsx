@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { ActiveRecordingState, useGpsRecorder } from '../hooks/use-gps-recorder';
+import { recordingEngine } from '../tracking/engine';
+import { syncWorker } from '../tracking/sync';
 import { api, setAuthToken } from '../services/api';
 import {
   Activity,
@@ -12,11 +13,10 @@ import {
   Segment,
 } from '../types';
 import { FEATURES } from '../config/features';
-import { estimateCalories } from '../lib/calories';
 import { formatRelative } from '../lib/format';
-import { AppContextType, SaveActivityInput } from './appContextTypes';
+import { AppContextType } from './appContextTypes';
 
-export { ActiveRecordingState, AppContextType, SaveActivityInput };
+export { AppContextType };
 
 const INITIAL_ATHLETE: Athlete = {
   id: 'ath_initial',
@@ -45,15 +45,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isSyncing, setIsSyncing] = useState<boolean>(true);
 
-  const {
-    activeRecording,
-    startRecording,
-    pauseRecording,
-    resumeRecording,
-    discardRecording,
-    finishRecording,
-    toggleSimulation,
-  } = useGpsRecorder();
+  // Recording + upload state live outside React (src/tracking). They only need to know who is
+  // signed in: recordings and pending uploads are bound to the athlete who made them.
+  useEffect(() => {
+    const id = isAuthenticated ? currentUser.id : null;
+    recordingEngine.setAthlete(id);
+    syncWorker.startTriggers();
+    syncWorker.setAthlete(id);
+    if (id) recordingEngine.load(true).catch((e) => console.warn('recording recovery failed', e));
+  }, [isAuthenticated, currentUser.id]);
 
   // Helper: map backend club format
   const mapBackendClub = (item: any): Club => ({
@@ -470,44 +470,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     api.notifications.markAllRead().catch(console.warn);
   };
 
-  /**
-   * Upload the current recording.
-   * - Sends what the user chose on the Save screen: title, description, sport, visibility
-   *   (previously visibility/start time/sport were dropped → every activity was stored PUBLIC
-   *   with the upload time as start; technical audit SYNC-01/SYNC-06).
-   * - On failure the recording is KEPT and the error is rethrown so the Save screen can offer a
-   *   retry (previously it was discarded while logging "saved locally"; SYNC-02).
-   * - Returns the server activity id. The caller discards the recording after navigating.
-   */
-  const saveNewActivity = async (input: SaveActivityInput): Promise<string> => {
-    const rec = activeRecording;
-    const elapsed = rec.elapsedSeconds;
-    const startedAt = rec.startedAt ?? Date.now() - elapsed * 1000;
-    const calories = estimateCalories(input.sportType, rec.distanceMeters, rec.movingSeconds);
-
-    const serverRes = await api.activities.create({
-      title: input.title.trim() || 'Activity',
-      description: input.description.trim() || undefined,
-      sportType: input.sportType,
-      visibility: input.visibility,
-      startTime: new Date(startedAt).toISOString(),
-      distanceMeters: rec.distanceMeters,
-      movingTimeSeconds: rec.movingSeconds,
-      elapsedTimeSeconds: Math.max(elapsed, rec.movingSeconds),
-      elevationGainMeters: rec.elevationGainMeters,
-      maxSpeedMps: rec.maxSpeedMps > 0 ? rec.maxSpeedMps : undefined,
-      calories: calories ?? undefined,
-      rawPolyline: rec.routeCoordinates || [],
-      // Splits carry no heart-rate (the recorder's HR values are not from a sensor).
-      splits: rec.splits.map(({ averageHeartRate: _hr, ...s }) => s),
-      elevationProfile: rec.elevationProfile || [],
-    });
-
-    const id = serverRes?.activity?.id;
-    if (!id) throw new Error('The server did not confirm the upload.');
-    return String(id);
-  };
-
   const unreadNotificationCount = notifications.filter((n) => !n.isRead).length;
 
   return (
@@ -523,7 +485,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         segments,
         notifications,
         unreadNotificationCount,
-        activeRecording,
         isSyncing,
         toggleKudos,
         addComment,
@@ -540,13 +501,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         loginWithDemo,
         loginAsGuest,
         logout,
-        startRecording,
-        pauseRecording,
-        resumeRecording,
-        discardRecording,
-        finishRecording,
-        toggleSimulation,
-        saveNewActivity,
         updateCurrentUser,
       }}>
       {children}

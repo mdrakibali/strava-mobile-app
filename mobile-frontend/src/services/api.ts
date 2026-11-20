@@ -1,9 +1,19 @@
 /**
- * OpenStrava API Client
- * Connects directly to Cloudflare Workers Edge API powered by Neon PostgreSQL + Hyperdrive
+ * OpenStrava API client (Cloudflare Workers + Neon via Hyperdrive).
+ * Base URL is configurable per build/run: EXPO_PUBLIC_API_URL (e.g. a local dev server via
+ * `adb reverse tcp:8787 tcp:8787` → http://localhost:8787/api/v1).
  */
+import type {
+  UploadBatchRequest,
+  UploadCompleteRequest,
+  UploadStartRequest,
+  UploadStatusResponse,
+} from '../tracking/shared';
 
-export const API_BASE_URL = 'https://open-strava-backend.rakib2020-tkg.workers.dev/api/v1';
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL || 'https://open-strava-backend.rakib2020-tkg.workers.dev/api/v1';
+
+const TIMEOUT_MS = 30_000;
 
 let authToken: string | null = null;
 
@@ -12,6 +22,25 @@ export const setAuthToken = (token: string | null) => {
 };
 
 export const getAuthToken = () => authToken;
+
+/**
+ * Typed API failure. status 0 = network failure or timeout (no HTTP response).
+ * `retryable` tells the sync worker whether trying again later can succeed.
+ */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code: string | null = null,
+    readonly details: any = null
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+  get retryable() {
+    return this.status === 0 || this.status === 408 || this.status === 429 || this.status >= 500;
+  }
+}
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
@@ -25,16 +54,27 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers['Authorization'] = `Bearer ${authToken}`;
   }
 
-  const res = await fetch(url, {
-    ...options,
-    headers,
-  });
-
-  if (!res.ok) {
-    const errorJson = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(errorJson.error || `HTTP ${res.status}: ${res.statusText}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(url, { ...options, headers, signal: controller.signal });
+  } catch (e: any) {
+    throw new ApiError(
+      e?.name === 'AbortError' ? 'The server took too long to respond.' : 'No connection to the server.',
+      0,
+      'network'
+    );
+  } finally {
+    clearTimeout(timer);
   }
 
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: res.statusText }));
+    throw new ApiError(body?.error || `HTTP ${res.status}`, res.status, body?.code ?? null, body?.details ?? null);
+  }
+
+  if (res.status === 204) return undefined as T;
   return res.json();
 }
 
@@ -81,6 +121,7 @@ export const api = {
   // 3. Activities
   activities: {
     create: (data: {
+      clientActivityId?: string;
       title: string;
       description?: string;
       sportType: string;
@@ -112,6 +153,27 @@ export const api = {
         body: JSON.stringify({ content, parentCommentId }),
       }),
     getGpxDownloadUrl: (id: string) => `${API_BASE_URL}/activities/${id}/export`,
+    /** Owner only. Returns the same shape as get(). */
+    update: (id: string, data: { title?: string; description?: string | null; sportType?: string; visibility?: string }) =>
+      request<any>(`/activities/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    /** Owner only. */
+    remove: (id: string) => request<void>(`/activities/${id}`, { method: 'DELETE' }),
+  },
+
+  /** Batch GPS upload protocol (shared/tracking/batching.ts). All calls are idempotent. */
+  uploads: {
+    start: (data: UploadStartRequest) =>
+      request<UploadStatusResponse>('/activities/uploads', { method: 'POST', body: JSON.stringify(data) }),
+    putBatch: (clientActivityId: string, seq: number, data: UploadBatchRequest) =>
+      request<{ seq: number; duplicate: boolean; completed: boolean }>(
+        `/activities/uploads/${clientActivityId}/batches/${seq}`,
+        { method: 'PUT', body: JSON.stringify(data) }
+      ),
+    complete: (clientActivityId: string, data: UploadCompleteRequest) =>
+      request<{ created: boolean; deleted: boolean; activity: any | null }>(
+        `/activities/uploads/${clientActivityId}/complete`,
+        { method: 'POST', body: JSON.stringify(data) }
+      ),
   },
 
   // 4. Clubs
@@ -177,6 +239,14 @@ export const api = {
       request<{ athletes: any[]; count: number }>(`/athletes/search?q=${encodeURIComponent(query)}`),
     getProfile: (id: string) =>
       request<{ athlete: any; recentActivities: any[] }>(`/athletes/${id}`),
+    /** Activity history, policy-filtered by the server, cursor-paginated. */
+    listActivities: (id: string, cursor?: string | null, limit = 20) => {
+      const params = new URLSearchParams({ limit: String(limit) });
+      if (cursor) params.set('cursor', cursor);
+      return request<{ activities: any[]; hasNextPage: boolean; nextCursor: string | null }>(
+        `/athletes/${id}/activities?${params.toString()}`
+      );
+    },
     toggleFollow: (id: string) =>
       request<{ isFollowing: boolean; followersCount: number }>(`/athletes/${id}/follow`, {
         method: 'POST',

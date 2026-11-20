@@ -17,6 +17,8 @@ import { useApp } from '../../context/AppContext';
 import { ActivityView, fromFeedItem } from '../../lib/activityView';
 import { formatClock } from '../../lib/format';
 import { api } from '../../services/api';
+import { syncWorker } from '../../tracking/sync';
+import { isRecordingActive, timerSeconds, useNow, usePendingUploads, useRecording } from '../../tracking/useRecording';
 
 type Status = 'loading' | 'ready' | 'error';
 
@@ -26,7 +28,14 @@ type Status = 'loading' | 'ready' | 'error';
  */
 export default function HomeFeedScreen() {
   const router = useRouter();
-  const { currentUser, unreadNotificationCount, activeRecording } = useApp();
+  const { currentUser, unreadNotificationCount } = useApp();
+  const rec = useRecording();
+  const active = isRecordingActive(rec);
+  const paused = rec.lifecycle.status === 'paused';
+  const interrupted = rec.lifecycle.pauseReason === 'interrupted';
+  const now = useNow(active && !paused);
+  const pending = usePendingUploads();
+  const attention = pending.filter((p) => p.state === 'needs_attention');
   const [items, setItems] = useState<ActivityView[]>([]);
   const [status, setStatus] = useState<Status>('loading');
   const [refreshing, setRefreshing] = useState(false);
@@ -130,27 +139,46 @@ export default function HomeFeedScreen() {
     />
   );
 
-  const recordingBanner =
-    activeRecording.isRecording ? (
+  const recordingBanner = active ? (
+    <Pressable
+      onPress={() => router.push('/record')}
+      accessibilityRole="button"
+      accessibilityLabel={interrupted ? 'Recording interrupted. Open to resume or finish' : 'Return to recording'}
+      style={[styles.banner, paused && { backgroundColor: color.warning }]}>
+      <Ionicons
+        name={interrupted ? 'alert-circle' : paused ? 'pause' : 'radio-button-on'}
+        size={18}
+        color={paused ? color.ink : color.inverse}
+      />
+      <AppText variant="bodyStrong" color={paused ? 'ink' : 'inverse'} style={{ flex: 1, marginLeft: space.sm }}>
+        {interrupted
+          ? 'Recording interrupted · Resume or finish'
+          : `${paused ? 'Recording paused' : 'Recording'} · ${formatClock(timerSeconds(rec, now))}`}
+      </AppText>
+      <AppText variant="label" color={paused ? 'ink' : 'inverse'} style={{ fontWeight: '700' }}>
+        Open
+      </AppText>
+    </Pressable>
+  ) : null;
+
+  // Saved on the phone but not yet confirmed by the server (local-first; never silently dropped).
+  const uploadsBanner =
+    pending.length > 0 ? (
       <Pressable
-        onPress={() => router.push('/record')}
+        onPress={() => syncWorker.kick(true)}
         accessibilityRole="button"
-        accessibilityLabel="Return to recording"
-        style={[styles.banner, activeRecording.isPaused && { backgroundColor: color.warning }]}>
-        <Ionicons
-          name={activeRecording.isPaused ? 'pause' : 'radio-button-on'}
-          size={18}
-          color={activeRecording.isPaused ? color.ink : color.inverse}
-        />
-        <AppText
-          variant="bodyStrong"
-          color={activeRecording.isPaused ? 'ink' : 'inverse'}
-          style={{ flex: 1, marginLeft: space.sm }}>
-          {activeRecording.isPaused ? 'Recording paused' : 'Recording'} · {formatClock(activeRecording.elapsedSeconds)}
-        </AppText>
-        <AppText variant="label" color={activeRecording.isPaused ? 'ink' : 'inverse'} style={{ fontWeight: '700' }}>
-          Return
-        </AppText>
+        accessibilityLabel="Retry pending uploads"
+        style={[styles.pending, attention.length > 0 && { backgroundColor: color.dangerSoft }]}>
+        <Ionicons name={attention.length ? 'warning-outline' : 'cloud-upload-outline'} size={18} color={attention.length ? color.danger : color.ink} />
+        <View style={{ flex: 1, marginLeft: space.sm }}>
+          <AppText variant="bodyStrong">
+            {pending.length === 1 ? `“${pending[0].title}” is waiting to upload` : `${pending.length} activities are waiting to upload`}
+          </AppText>
+          <AppText variant="label" color="inkSecondary" numberOfLines={2}>
+            {attention.length ? attention[0].lastError ?? 'The server rejected the upload.' : 'Saved on this phone. It uploads automatically when you’re online.'}
+          </AppText>
+        </View>
+        <AppText variant="label" style={{ fontWeight: '700' }}>Retry</AppText>
       </Pressable>
     ) : null;
 
@@ -202,6 +230,7 @@ export default function HomeFeedScreen() {
     <SafeAreaView edges={['top']} style={styles.screen}>
       {header}
       {recordingBanner}
+      {uploadsBanner}
       {body}
     </SafeAreaView>
   );
@@ -209,6 +238,15 @@ export default function HomeFeedScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.canvas },
+  pending: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: color.surface,
+    paddingHorizontal: space.gutter,
+    paddingVertical: space.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: color.border,
+  },
   banner: {
     flexDirection: 'row',
     alignItems: 'center',

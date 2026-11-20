@@ -1,7 +1,11 @@
 const { getDefaultConfig } = require('expo/metro-config');
 const { withNativewind } = require('nativewind/metro');
 
+const path = require('path');
+
 let config = getDefaultConfig(__dirname);
+// Shared, platform-free tracking core also compiled by the backend (repo-root /shared).
+config.watchFolders = [...(config.watchFolders || []), path.resolve(__dirname, '../shared')];
 config = withNativewind(config);
 
 const originalResolveRequest = config.resolver.resolveRequest;

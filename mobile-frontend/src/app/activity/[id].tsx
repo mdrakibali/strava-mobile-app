@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -91,6 +92,18 @@ export default function ActivityDetailScreen() {
     };
   }, [id, reloadKey]);
 
+  // Refetch silently when returning to this screen (e.g. after Edit), without a loading flash.
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      setReloadKey((k) => k + 1);
+    }, [])
+  );
+
   const state: State = id ? fetched : { status: 'notFound' };
   const retry = () => {
     setState({ status: 'loading' });
@@ -118,6 +131,23 @@ export default function ActivityDetailScreen() {
   }
 
   const { activity, isOwner } = state;
+
+  const confirmDelete = (activityId: string) =>
+    Alert.alert('Delete activity?', 'It will be removed for everyone. This can’t be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.activities.remove(activityId);
+            router.back();
+          } catch (e: any) {
+            Alert.alert('Couldn’t delete', e?.message ?? 'Please try again.');
+          }
+        },
+      },
+    ]);
   const hasMap = activity.route.length > 1;
   const mapHeight = Math.round(height * 0.42);
 
@@ -140,6 +170,22 @@ export default function ActivityDetailScreen() {
       <View style={[styles.backOverlay, { top: insets.top + space.sm }]}>
         <IconButton icon="arrow-back" appearance="floating" accessibilityLabel="Back" onPress={() => router.back()} />
       </View>
+      {isOwner ? (
+        <View style={[styles.menuOverlay, { top: insets.top + space.sm }]}>
+          <IconButton
+            icon="ellipsis-vertical"
+            appearance="floating"
+            accessibilityLabel="Activity options"
+            onPress={() =>
+              Alert.alert(activity.title, undefined, [
+                { text: 'Edit activity', onPress: () => router.push({ pathname: '/activity/edit/[id]', params: { id: activity.id } }) },
+                { text: 'Delete activity', style: 'destructive', onPress: () => confirmDelete(activity.id) },
+                { text: 'Cancel', style: 'cancel' },
+              ])
+            }
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -389,6 +435,7 @@ const styles = StyleSheet.create({
   sheet: { backgroundColor: color.surface, padding: space.gutter, paddingTop: space.xl },
   sheetOverlap: { marginTop: -radius.lg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg },
   backOverlay: { position: 'absolute', left: space.gutter },
+  menuOverlay: { position: 'absolute', right: space.gutter },
   athleteRow: { flexDirection: 'row', alignItems: 'center' },
   meta: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
   grid: {

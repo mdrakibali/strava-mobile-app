@@ -1,12 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapView } from '../components/map/MapView';
 import { loadLastSport, SportSheet } from '../components/record/SportSheet';
-import { useApp } from '../context/AppContext';
 import {
   AppText,
   Button,
@@ -17,40 +15,37 @@ import {
   radius,
   space,
 } from '../design';
-import { LngLat } from '../lib/activityView';
 import { estimateCalories } from '../lib/calories';
 import { DASH, formatClock, formatElevation, kmValue, paceValue, speedValue } from '../lib/format';
+import { recordingEngine } from '../tracking/engine';
+import { gpsStatus, liveSpeed, timerSeconds, useNow, useRecording } from '../tracking/useRecording';
 import { sportConfig } from '../lib/sports';
 import { SportType } from '../types';
-
-type PreviewGps =
-  | { state: 'acquiring' }
-  | { state: 'denied' }
-  | { state: 'off' }
-  | { state: 'fix'; accuracy: number; position: LngLat };
-
-const GOOD_ACCURACY_M = 20;
 
 /**
  * Recorder (reference: ScreensDesign 374878 pre-start, 374732 recording, 374733 paused,
  * 374717 stats view). Behaviour rules: research §3, §5, §8.
  *
- * Recording logic is unchanged (use-gps-recorder); this screen only presents it.
- * Closing the screen never discards — discarding is only offered on the Save screen.
+ * All recording logic lives in src/tracking (engine + background task); this screen only presents
+ * it and sends commands. Closing the screen never discards — discarding is only on the Save screen.
  */
 export default function RecordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { activeRecording: rec, startRecording, pauseRecording, resumeRecording } = useApp();
+  const rec = useRecording();
+  const status = rec.lifecycle.status;
+  const isIdle = status === 'idle' || status === 'preparing';
+  const isPaused = status === 'paused';
+  const interrupted = rec.lifecycle.pauseReason === 'interrupted';
+  const now = useNow(true);
 
-  const [sport, setSport] = useState<SportType>(rec.isRecording ? rec.sportType : 'Run');
+  const [sport, setSport] = useState<SportType>(isIdle ? 'Run' : (rec.sport as SportType));
   const [sportSheet, setSportSheet] = useState(false);
   const [statsView, setStatsView] = useState(false);
   const [following, setFollowing] = useState(true);
-  const [preview, setPreview] = useState<PreviewGps>({ state: 'acquiring' });
+  const [starting, setStarting] = useState(false);
 
-  const isIdle = !rec.isRecording;
-  const cfg = sportConfig(isIdle ? sport : rec.sportType);
+  const cfg = sportConfig(isIdle ? sport : rec.sport);
 
   // Preselect the last-used sport (research §1).
   useEffect(() => {
@@ -59,78 +54,63 @@ export default function RecordScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Pre-start GPS status: a lightweight foreground watch while idle only. The recorder starts
-  // its own subscription on Start, so this one is removed as soon as recording begins.
+  // PREPARING: warm up GPS while the athlete is on this screen; stop if they leave without starting.
   useEffect(() => {
-    if (!isIdle || Platform.OS === 'web') return;
-    let sub: Location.LocationSubscription | null = null;
-    let cancelled = false;
-    (async () => {
-      const perm = await Location.requestForegroundPermissionsAsync().catch(() => null);
-      if (cancelled) return;
-      if (!perm || perm.status !== 'granted') return setPreview({ state: 'denied' });
-      const enabled = await Location.hasServicesEnabledAsync().catch(() => false);
-      if (cancelled) return;
-      if (!enabled) return setPreview({ state: 'off' });
-      sub = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.High, timeInterval: 2000, distanceInterval: 0 },
-        (loc) =>
-          setPreview({
-            state: 'fix',
-            accuracy: loc.coords.accuracy ?? 99,
-            position: [loc.coords.longitude, loc.coords.latitude],
-          })
-      ).catch(() => null);
-      if (cancelled) sub?.remove();
-    })();
+    recordingEngine.prepare();
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && recordingEngine.refreshPermission());
     return () => {
-      cancelled = true;
-      sub?.remove();
+      sub.remove();
+      recordingEngine.cancelPrepare();
     };
-  }, [isIdle]);
+  }, []);
 
-  const route = useMemo<LngLat[]>(
-    () => rec.routeCoordinates.map((p) => [p.longitude, p.latitude] as LngLat),
-    // routeCoordinates is replaced (not mutated) on every fix
-    [rec.routeCoordinates]
-  );
-  const userPosition: LngLat | null =
-    route.length > 0 ? route[route.length - 1] : preview.state === 'fix' ? preview.position : null;
+  const gps = gpsStatus(rec, now);
+  const route = rec.route;
+  const userPosition = rec.lastFix ? ([rec.lastFix.lng, rec.lastFix.lat] as [number, number]) : null;
 
   // ---- Status strip -------------------------------------------------------------------------
   let strip: { text: string; bg: string; fg: string; action?: () => void };
-  if (isIdle) {
-    if (preview.state === 'denied')
-      strip = { text: 'Location access needed · Open settings', bg: color.dangerSoft, fg: color.danger, action: () => Linking.openSettings() };
-    else if (preview.state === 'off')
-      strip = { text: 'Location is off · Turn on', bg: color.dangerSoft, fg: color.danger, action: () => Linking.openSettings() };
-    else if (preview.state === 'acquiring')
-      strip = { text: 'Acquiring GPS…', bg: color.canvas, fg: color.inkSecondary };
-    else if (preview.accuracy <= GOOD_ACCURACY_M)
-      strip = { text: 'GPS ready', bg: color.successSoft, fg: color.successText };
-    else strip = { text: `Weak GPS (±${Math.round(preview.accuracy)} m)`, bg: color.warningSoft, fg: color.ink };
-  } else if (rec.isPaused) {
-    strip = { text: 'PAUSED', bg: color.warning, fg: color.ink };
+  if (gps === 'denied')
+    strip = { text: 'Location access needed · Open settings', bg: color.dangerSoft, fg: color.danger, action: () => Linking.openSettings() };
+  else if (gps === 'off')
+    strip = { text: 'Location is off · Turn on', bg: color.dangerSoft, fg: color.danger, action: () => Linking.openSettings() };
+  else if (interrupted)
+    strip = { text: 'RECORDING WAS INTERRUPTED · Resume or finish', bg: color.warning, fg: color.ink };
+  else if (isPaused) strip = { text: 'PAUSED', bg: color.warning, fg: color.ink };
+  else if (isIdle) {
+    if (gps === 'acquiring') strip = { text: 'Acquiring GPS…', bg: color.canvas, fg: color.inkSecondary };
+    else if (gps === 'good') strip = { text: 'GPS ready', bg: color.successSoft, fg: color.successText };
+    else strip = { text: `Weak GPS (±${Math.round(rec.lastFix?.acc ?? 99)} m)`, bg: color.warningSoft, fg: color.ink };
   } else {
-    const weak = rec.gpsSignal === 'searching' || rec.gpsSignal === 'denied' || rec.gpsSignal === 'disabled';
-    strip = { text: `${cfg.label.toUpperCase()}${weak ? ' · WEAK GPS' : ''}`, bg: color.surface, fg: color.ink };
+    const suffix = gps === 'lost' ? ' · GPS SIGNAL LOST' : gps === 'weak' || gps === 'acquiring' ? ' · WEAK GPS' : '';
+    strip = { text: `${cfg.label.toUpperCase()}${suffix}`, bg: suffix ? color.warningSoft : color.surface, fg: color.ink };
   }
 
   // ---- Metrics (research §5: runs show avg pace; rides show current speed, avg when paused) ----
-  const time = formatClock(rec.elapsedSeconds);
-  const distance = kmValue(rec.distanceMeters);
+  const time = formatClock(isIdle ? 0 : timerSeconds(rec, now));
+  const distance = kmValue(rec.distanceM);
+  const avgSpeed = rec.movingTimeS > 0 ? rec.distanceM / rec.movingTimeS : null;
   const second =
     cfg.primaryMetric === 'speed'
-      ? !isIdle && !rec.isPaused
-        ? { label: 'Speed (km/h)', value: speedValue(rec.currentSpeedMps) }
-        : { label: 'Avg speed (km/h)', value: isIdle ? DASH : speedValue(rec.averageSpeedMps) }
-      : { label: 'Avg pace (/km)', value: paceValue(rec.distanceMeters, rec.movingSeconds) };
-  const calories = estimateCalories(cfg.id, rec.distanceMeters, rec.movingSeconds);
+      ? status === 'recording'
+        ? { label: 'Speed (km/h)', value: speedValue(liveSpeed(rec, now)) }
+        : { label: 'Avg speed (km/h)', value: isIdle ? DASH : speedValue(avgSpeed) }
+      : { label: 'Avg pace (/km)', value: paceValue(rec.distanceM, rec.movingTimeS) };
+  const calories = estimateCalories(cfg.id, rec.distanceM, rec.movingTimeS);
 
-  const onStart = () => {
+  const onStart = async () => {
     setFollowing(true);
-    startRecording(sport);
+    setStarting(true);
+    try {
+      await recordingEngine.start(sport);
+    } catch (e: any) {
+      Alert.alert('Can’t start recording', e?.message ?? 'Please try again.');
+    } finally {
+      setStarting(false);
+    }
   };
+  const pauseRecording = () => recordingEngine.pause();
+  const resumeRecording = () => recordingEngine.resume();
 
   const onFinish = () => router.push('/save-activity');
 
@@ -164,6 +144,7 @@ export default function RecordScreen() {
       </Pressable>
       <Pressable
         onPress={onStart}
+        disabled={starting || gps === 'denied' || gps === 'off'}
         accessibilityRole="button"
         accessibilityLabel={`Start ${cfg.label}`}
         style={({ pressed }) => [styles.startButton, pressed && { backgroundColor: color.brandPressed }]}>
@@ -171,7 +152,7 @@ export default function RecordScreen() {
       </Pressable>
       <View style={styles.sideControl} />
     </View>
-  ) : rec.isPaused ? (
+  ) : isPaused ? (
     <View style={styles.row}>
       <Button label="Resume" icon="play" size="lg" onPress={resumeRecording} style={{ flex: 1 }} />
       <Button label="Finish" icon="flag" size="lg" variant="dark" onPress={onFinish} style={{ flex: 1, marginLeft: space.md }} />
@@ -195,7 +176,7 @@ export default function RecordScreen() {
           <MetricTile label={second.label} value={second.value} size="display" align="center" />
           <MetricTile label="Distance (km)" value={distance} size="display" align="center" />
           <View style={[styles.row, { marginTop: space.lg }]}>
-            <MetricTile label="Elevation gain" value={formatElevation(rec.elevationGainMeters)} size="L" align="center" style={{ flex: 1 }} />
+            <MetricTile label="Elevation gain" value={formatElevation(rec.elevGainM)} size="L" align="center" style={{ flex: 1 }} />
             <MetricTile label="Calories (est.)" value={calories ? String(calories) : DASH} size="L" align="center" style={{ flex: 1 }} />
           </View>
         </View>

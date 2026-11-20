@@ -1,11 +1,10 @@
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VISIBILITY_LABEL } from '../components/activity/FeedCard';
 import { RoutePreview } from '../components/map/RoutePreview';
 import { SportSheet } from '../components/record/SportSheet';
-import { useApp } from '../context/AppContext';
 import {
   AppText,
   BottomSheet,
@@ -22,7 +21,6 @@ import {
   space,
   TextField,
 } from '../design';
-import { LngLat } from '../lib/activityView';
 import {
   defaultActivityTitle,
   formatDuration,
@@ -32,6 +30,10 @@ import {
   speedValue,
 } from '../lib/format';
 import { sportConfig } from '../lib/sports';
+import { recordingEngine } from '../tracking/engine';
+import { TrackSummary } from '../tracking/shared';
+import { syncWorker } from '../tracking/sync';
+import { useRecording } from '../tracking/useRecording';
 import { ActivityVisibility, SportType } from '../types';
 
 const VISIBILITY_OPTIONS: { id: ActivityVisibility; title: string; description: string }[] = [
@@ -47,11 +49,12 @@ const VISIBILITY_OPTIONS: { id: ActivityVisibility; title: string; description: 
 export default function SaveActivityScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { activeRecording: rec, saveNewActivity, discardRecording, resumeRecording } = useApp();
+  const rec = useRecording();
+  const active = rec.lifecycle.status === 'recording' || rec.lifecycle.status === 'paused';
 
-  const [startDate] = useState(() => new Date(rec.startedAt ?? Date.now()));
-  const [sport, setSport] = useState<SportType>(rec.sportType);
-  const [title, setTitle] = useState(() => defaultActivityTitle(sportConfig(rec.sportType).label, startDate));
+  const [startDate] = useState(() => new Date(rec.lifecycle.startedAt ?? Date.now()));
+  const [sport, setSport] = useState<SportType>(rec.sport as SportType);
+  const [title, setTitle] = useState(() => defaultActivityTitle(sportConfig(rec.sport).label, startDate));
   const [titleEdited, setTitleEdited] = useState(false);
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<ActivityVisibility>('PUBLIC');
@@ -59,14 +62,21 @@ export default function SaveActivityScreen() {
   const [visibilitySheet, setVisibilitySheet] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Summary exactly as the activity will be stored: same shared math the server re-runs.
+  const [summary, setSummary] = useState<TrackSummary | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    recordingEngine.previewSummary().then((s) => !cancelled && setSummary(s));
+    return () => {
+      cancelled = true;
+    };
+  }, [rec.distanceM]);
 
   const cfg = sportConfig(sport);
-  const route = useMemo<LngLat[]>(
-    () => rec.routeCoordinates.map((p) => [p.longitude, p.latitude] as LngLat),
-    [rec.routeCoordinates]
-  );
+  const route = rec.route;
 
-  if (!rec.isRecording) {
+  if (!active && !saving) {
     return (
       <SafeAreaView style={styles.screen}>
         <EmptyState
@@ -79,8 +89,8 @@ export default function SaveActivityScreen() {
     );
   }
 
-  const onResume = () => {
-    resumeRecording();
+  const onResume = async () => {
+    await recordingEngine.resume();
     router.back();
   };
 
@@ -90,33 +100,43 @@ export default function SaveActivityScreen() {
       {
         text: 'Discard',
         style: 'destructive',
-        onPress: () => {
-          discardRecording();
+        onPress: async () => {
+          await recordingEngine.discard();
           router.dismissAll();
         },
       },
     ]);
 
+  /**
+   * Local-first save: the activity is committed to the phone's database first (it can't be lost
+   * from here on), then uploaded. We wait briefly so a good connection lands on the new activity;
+   * otherwise the upload continues in the background and Home shows it as pending.
+   */
   const onSave = async () => {
+    if (saving) return;
     setSaving(true);
     setError(null);
+    let sessionId: string;
     try {
-      const id = await saveNewActivity({ title, description, sportType: sport, visibility });
-      router.dismissAll();
-      router.push({ pathname: '/activity/[id]', params: { id } });
-      discardRecording(); // only after the server confirmed the upload
+      sessionId = await recordingEngine.complete({ title: title.trim(), description: description.trim(), sportType: sport, visibility });
     } catch (e: any) {
-      setError(
-        `${e?.message || 'Upload failed.'} Your activity is still here — check your connection and tap Save again.`
-      );
+      setError(e?.message ?? 'Could not save the activity.');
       setSaving(false);
+      return;
     }
+    const { synced, activityId } = await syncWorker.waitFor(sessionId, 8000);
+    router.dismissAll();
+    if (synced && activityId) router.push({ pathname: '/activity/[id]', params: { id: activityId } });
+    else if (!synced) Alert.alert('Saved on this phone', 'Your activity will upload automatically when the connection is back.');
   };
 
+  const s = summary;
+  const distanceM = s?.distanceM ?? rec.distanceM;
+  const movingS = s?.movingTimeS ?? rec.movingTimeS;
   const second =
     cfg.primaryMetric === 'speed'
-      ? { label: 'Avg speed', value: speedValue(rec.averageSpeedMps), unit: 'km/h' }
-      : { label: 'Avg pace', value: paceValue(rec.distanceMeters, rec.movingSeconds), unit: '/km' };
+      ? { label: 'Avg speed', value: speedValue(movingS > 0 ? distanceM / movingS : null), unit: 'km/h' }
+      : { label: 'Avg pace', value: paceValue(distanceM, movingS), unit: '/km' };
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
@@ -132,10 +152,10 @@ export default function SaveActivityScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.summary}>
             <MetricRow>
-              <MetricTile label="Distance" value={kmValue(rec.distanceMeters)} unit="km" />
-              <MetricTile label="Moving time" value={formatDuration(rec.movingSeconds)} />
+              <MetricTile label="Distance" value={kmValue(distanceM)} unit="km" />
+              <MetricTile label="Moving time" value={formatDuration(movingS)} />
               <MetricTile label={second.label} value={second.value} unit={second.value === '–' ? undefined : second.unit} />
-              <MetricTile label="Elev gain" value={formatElevation(rec.elevationGainMeters)} />
+              <MetricTile label="Elev gain" value={formatElevation(s ? s.elevGainM : rec.elevGainM)} />
             </MetricRow>
           </View>
           {route.length > 1 ? (

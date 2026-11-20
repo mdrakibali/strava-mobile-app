@@ -1,4 +1,3 @@
-import { ActiveRecordingState } from '../hooks/use-gps-recorder';
 import {
   Activity,
   Athlete,
@@ -21,7 +20,6 @@ export interface AppContextType {
   segments: Segment[];
   notifications: NotificationItem[];
   unreadNotificationCount: number;
-  activeRecording: ActiveRecordingState;
   isSyncing: boolean;
 
   // Actions
@@ -40,22 +38,7 @@ export interface AppContextType {
   loginWithDemo: () => Promise<void>;
   loginAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
-
-  // Recording Controls
-  startRecording: (sport?: SportType, simulate?: boolean) => void;
-  pauseRecording: () => void;
-  resumeRecording: () => void;
-  discardRecording: () => void;
-  finishRecording: () => ActiveRecordingState;
-  toggleSimulation?: () => void;
   updateCurrentUser: (patch: Partial<Athlete>) => Promise<void>;
-  /** Uploads the current recording; resolves to the server activity id. Keeps the recording on failure. */
-  saveNewActivity: (input: SaveActivityInput) => Promise<string>;
+
 }
 
-export interface SaveActivityInput {
-  title: string;
-  description: string;
-  sportType: SportType;
-  visibility: 'PUBLIC' | 'FOLLOWERS_ONLY' | 'ONLY_ME';
-}

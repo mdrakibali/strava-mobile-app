@@ -303,12 +303,12 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
               <FeedCard key={a.id} activity={a} currentUserId={isSelf ? athleteId : undefined} showAthlete={false} />
             ))}
             {data.activities.length >= RECENT_LIMIT ? (
-              <View style={styles.note}>
-                <Ionicons name="information-circle-outline" size={18} color={color.inkTertiary} />
-                <AppText variant="caption" color="inkTertiary" style={{ marginLeft: space.sm, flex: 1 }}>
-                  Showing the {RECENT_LIMIT} most recent activities.
-                </AppText>
-              </View>
+              <Button
+                label="See all activities"
+                variant="secondary"
+                onPress={() => router.push({ pathname: '/history/[athleteId]', params: { athleteId } })}
+                style={{ margin: space.gutter }}
+              />
             ) : null}
           </View>
         )}

@@ -57,4 +57,6 @@ try {
   }
 } catch (_e) {}
 
+// Background location task must be registered at startup, including headless launches.
+import './src/tracking/locationTask';
 import 'expo-router/entry';

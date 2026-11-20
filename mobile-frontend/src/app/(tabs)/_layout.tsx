@@ -4,7 +4,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FEATURES } from '../../config/features';
-import { useApp } from '../../context/AppContext';
+import { isRecordingActive, useRecording } from '../../tracking/useRecording';
 import { color } from '../../design/tokens';
 
 /**
@@ -15,7 +15,7 @@ import { color } from '../../design/tokens';
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { activeRecording } = useApp();
+  const recording = isRecordingActive(useRecording());
 
   return (
     <Tabs
@@ -56,11 +56,11 @@ export default function TabLayout() {
         name="record-tab"
         options={{
           title: 'Record',
-          tabBarAccessibilityLabel: activeRecording.isRecording ? 'Record, recording in progress' : 'Record',
+          tabBarAccessibilityLabel: recording ? 'Record, recording in progress' : 'Record',
           tabBarIcon: () => (
             <View>
-              <Ionicons name="radio-button-on" size={26} color={activeRecording.isRecording ? color.brand : color.inkTertiary} />
-              {activeRecording.isRecording ? <View style={styles.liveDot} /> : null}
+              <Ionicons name="radio-button-on" size={26} color={recording ? color.brand : color.inkTertiary} />
+              {recording ? <View style={styles.liveDot} /> : null}
             </View>
           ),
         }}

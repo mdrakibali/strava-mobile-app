@@ -157,10 +157,15 @@ export const fromDetailResponse = (res: any): ActivityView => {
   };
 };
 
-/** GET /athletes/:id → recentActivities row (full activity row, no social counts). */
+/**
+ * GET /athletes/:id → recentActivities and GET /athletes/:id/activities items (summary + masked
+ * `polyline` + counts). Older servers returned full rows (maskedPolyline/rawPolyline), still accepted.
+ */
 export const fromProfileActivity = (row: any, athlete: AthleteSummary): ActivityView => ({
   ...base(row, athlete),
-  route: toRoute(row.maskedPolyline?.length ? row.maskedPolyline : row.rawPolyline),
+  route: toRoute(row.polyline?.length ? row.polyline : row.maskedPolyline?.length ? row.maskedPolyline : row.rawPolyline),
+  kudosCount: num(row.kudosCount) ?? 0,
+  commentsCount: num(row.commentsCount) ?? 0,
 });
 
 /** Avg speed with fallback to distance / moving time (never a hard-coded default). */

@@ -1,0 +1,157 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { VISIBILITY_LABEL } from '../../../components/activity/FeedCard';
+import { SportSheet } from '../../../components/record/SportSheet';
+import {
+  AppBar,
+  BottomSheet,
+  Button,
+  color,
+  ErrorState,
+  LoadingState,
+  OptionRow,
+  SectionTitle,
+  SelectField,
+  space,
+  TextField,
+} from '../../../design';
+import { sportConfig } from '../../../lib/sports';
+import { api } from '../../../services/api';
+import { ActivityVisibility, SportType } from '../../../types';
+
+const VISIBILITY_OPTIONS: { id: ActivityVisibility; title: string; description: string }[] = [
+  { id: 'PUBLIC', title: 'Everyone', description: 'Anyone can view this activity.' },
+  { id: 'FOLLOWERS_ONLY', title: 'Followers', description: 'Only people who follow you can view this activity.' },
+  { id: 'ONLY_ME', title: 'Only you', description: 'Private. Only you can view this activity.' },
+];
+
+/** Edit activity (owner only; the server enforces ownership — PATCH /activities/:id). */
+export default function EditActivityScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const [loaded, setLoaded] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [sport, setSport] = useState<SportType>('Run');
+  const [visibility, setVisibility] = useState<ActivityVisibility>('PUBLIC');
+  const [sportSheet, setSportSheet] = useState(false);
+  const [visibilitySheet, setVisibilitySheet] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    api.activities.get(id).then(
+      (res) => {
+        if (cancelled) return;
+        if (!res?.isOwner) return setLoaded('error');
+        const a = res.activity;
+        setTitle(a.title ?? '');
+        setDescription(a.description ?? '');
+        setSport(a.sportType);
+        setVisibility(a.visibility);
+        setLoaded('ready');
+      },
+      () => !cancelled && setLoaded('error')
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  const onSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await api.activities.update(id!, { title: title.trim(), description: description.trim() || null, sportType: sport, visibility });
+      router.back();
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not save changes.');
+      setSaving(false);
+    }
+  };
+
+  const cfg = sportConfig(sport);
+
+  return (
+    <SafeAreaView edges={['top']} style={styles.screen}>
+      <AppBar title="Edit Activity" />
+      {loaded === 'loading' ? (
+        <LoadingState />
+      ) : loaded === 'error' ? (
+        <ErrorState message="This activity can’t be edited." />
+      ) : (
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView contentContainerStyle={{ padding: space.gutter }} keyboardShouldPersistTaps="handled">
+            <TextField value={title} onChangeText={setTitle} placeholder="Title" accessibilityLabel="Activity title" maxLength={100} />
+            <View style={{ height: space.md }} />
+            <TextField
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Description"
+              accessibilityLabel="Description"
+              multiline
+              maxLength={2000}
+            />
+            <View style={{ height: space.md }} />
+            <SelectField value={cfg.label} icon={cfg.icon} onPress={() => setSportSheet(true)} accessibilityLabel="Sport" />
+            <SectionTitle title="Who can view" style={{ marginTop: space.xxl }} />
+            <SelectField
+              value={VISIBILITY_LABEL[visibility].label}
+              icon={VISIBILITY_LABEL[visibility].icon}
+              onPress={() => setVisibilitySheet(true)}
+              accessibilityLabel="Who can view"
+            />
+            {error ? (
+              <View style={{ marginTop: space.lg }}>
+                <ErrorState compact message={error} />
+              </View>
+            ) : null}
+          </ScrollView>
+          <View style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}>
+            <Button label="Save changes" size="lg" fullWidth loading={saving} disabled={!title.trim()} onPress={onSave} />
+          </View>
+        </KeyboardAvoidingView>
+      )}
+      <SportSheet
+        visible={sportSheet}
+        selected={sport}
+        onSelect={(s) => {
+          setSport(s);
+          setSportSheet(false);
+        }}
+        onClose={() => setSportSheet(false)}
+      />
+      <BottomSheet visible={visibilitySheet} onClose={() => setVisibilitySheet(false)} title="Who can view">
+        {VISIBILITY_OPTIONS.map((o) => (
+          <OptionRow
+            key={o.id}
+            title={o.title}
+            description={o.description}
+            icon={VISIBILITY_LABEL[o.id].icon}
+            selected={visibility === o.id}
+            onPress={() => {
+              setVisibility(o.id);
+              setVisibilitySheet(false);
+            }}
+          />
+        ))}
+      </BottomSheet>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: color.surface },
+  footer: {
+    paddingHorizontal: space.gutter,
+    paddingTop: space.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: color.border,
+  },
+});
