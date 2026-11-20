@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 
-const databaseUrl = 'postgresql://neondb_owner:npg_chTDF35Axdla@ep-nameless-meadow-biyayy82-pooler.c-5.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+const databaseUrl = process.env.DATABASE_URL;
 
 async function cleanSeedData() {
   console.log('Connecting to Neon DB to purge fake seed demo data...');

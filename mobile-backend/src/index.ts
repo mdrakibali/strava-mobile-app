@@ -57,24 +57,16 @@ export const createApp = (dbProvider: DbProvider = hyperdriveProvider) => {
   api.route('/notifications', notificationsRouter);
   api.route('/privacy-zones', privacyZonesRouter);
 
-  // Out-of-scope modules: not mounted in production (SEC-07); the app hides them behind flags.
-  const outOfScope: [string, Hono<{ Bindings: Env }>][] = [
-    ['/clubs', clubsRouter],
-    ['/challenges', challengesRouter],
-    ['/beacon', beaconRouter],
-    ['/messages', messagesRouter],
-    ['/segments', segmentsRouter],
-    ['/routes', routesRouter],
-    ['/events', eventsRouter],
-    ['/goals', goalsRouter],
-  ];
-  for (const [path, router] of outOfScope) {
-    const gate = async (c: any, next: () => Promise<void>) =>
-      c.env.ENVIRONMENT === 'production' ? c.json({ error: 'Endpoint Not Found', code: 'not_found' }, 404) : next();
-    api.use(path, gate);
-    api.use(`${path}/*`, gate);
-    api.route(path, router);
-  }
+  // Other existing modules stay mounted: the product owner asked that no existing feature be
+  // removed. They still go through the same auth middleware as before.
+  api.route('/clubs', clubsRouter);
+  api.route('/challenges', challengesRouter);
+  api.route('/beacon', beaconRouter);
+  api.route('/messages', messagesRouter);
+  api.route('/segments', segmentsRouter);
+  api.route('/routes', routesRouter);
+  api.route('/events', eventsRouter);
+  api.route('/goals', goalsRouter);
 
   app.route('/api/v1', api);
 

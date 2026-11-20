@@ -6,7 +6,6 @@ import {
   GroupEvent,
   NotificationItem,
   Segment,
-  SportType,
 } from '../types';
 
 export interface AppContextType {

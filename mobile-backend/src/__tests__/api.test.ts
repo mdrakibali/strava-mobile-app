@@ -310,10 +310,8 @@ describe('authentication', () => {
     expect(demo.status).toBe(401);
   });
 
-  it('hides demo login and out-of-scope modules in production', async () => {
+  it('hides demo login in production', async () => {
     const { call: prod } = createTestApp(db, { ...ENV, ENVIRONMENT: 'production' });
     expect((await prod('POST', '/auth/demo-login')).status).toBe(404);
-    expect((await prod('GET', '/clubs', { token: owner })).status).toBe(404);
-    expect((await prod('GET', '/segments', { token: owner })).status).toBe(404);
   });
 });

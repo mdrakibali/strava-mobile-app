@@ -789,3 +789,42 @@ Each finding uses this format: **Severity · Problem · Evidence · Affected fil
 | SOC-03 | **Fixed on the client** (give-only kudos with a state check, rollback on error). The server should still return `has_kudoed` and offer idempotent PUT. |
 | PRIV-01…06, SEC-01…07 | **Unchanged — still open.** Because the client now sends "Only you" correctly, the server leaks in PRIV-02/03 now affect deliberately private activities. **Phase 0 is urgent.** |
 | QA-01 / QA-02 | **Started.** ESLint (`eslint-config-expo`) and Jest (`jest-expo`) configured in the frontend, with 30 unit tests. No CI yet. |
+
+### 2026-11-20 — Phase 3: core tracking, persistence, sync and backend hardening
+Verification legend: **T** = covered by automated tests (`shared` + backend: Vitest, 52 tests; app: Jest, 37 tests) · **D** = verified on the Pixel 7a (Android 17) · **—** = not verified yet.
+
+| Finding | Status | Verified |
+|---|---|---|
+| GPS-01 | **Fixed in code.** Foreground-service location task (expo-task-manager); no background-location permission needed. See [STRAVA_BACKGROUND_TRACKING.md](STRAVA_BACKGROUND_TRACKING.md). | see device log |
+| GPS-02 | **Fixed.** Timer = wall clock − pauses (`activeMs`); moving time from fix timestamps. No tick counting. | T |
+| GPS-03 | **Fixed.** Each resume starts a new segment; distance never bridges a pause. | T |
+| GPS-04 / GPS-11 | **Fixed.** Shared `PointFilter`: accuracy, stale/duplicate, invalid, impossible-speed (with a re-anchor after 10 s); Doppler-based stationary gate; max speed from a 10 s window. Stationary 5 min → ≤ 20 m and ≤ 10 s (plan T-2), synthetic. | T (synthetic tracks; real-world tuning still needed) |
+| GPS-05 | **Changed.** Auto-pause removed (it stopped time but not distance). Moving time uses a per-sport speed threshold. A real auto-pause setting is still open. | T |
+| GPS-06 | **Fixed.** Altitude accuracy ≤ 10 m, 5-point smoothing, 10 m hysteresis. Reported as "–" when coverage is insufficient. | T |
+| GPS-07 | **Fixed in code.** Session, lifecycle, pauses, events and every fix persisted in SQLite. Interruption → PAUSED(`interrupted`) with Resume/Finish. | see device log |
+| GPS-08 | **Fixed.** Interpolated 1 km splits plus a final partial split; no heart rate. | T |
+| GPS-09 | **Fixed.** Simulator removed with `use-gps-recorder.ts`. | — |
+| GPS-10 | **Fixed.** PREPARING state with GPS status; Start is disabled when permission is denied or location is off. | — |
+| SYNC-02 | **Fixed.** Local-first: Save commits to SQLite, then uploads. Nothing local is deleted before the server confirms; 7-day retention after that. | T (client worker) |
+| SYNC-03 | **Fixed.** Client UUID per recording; `UNIQUE(athlete_id, client_activity_id)`; transaction with a row lock on `/complete`; idempotent start/batch/complete; legacy `POST /activities` idempotent when given the id. 5 concurrent completes → 1 activity. | T |
+| SYNC-04 | **Fixed.** zod validation on all activity writes; server recomputes metrics from the raw points with the shared module (client numbers are not trusted). | T |
+| SYNC-05 | **Fixed.** `PATCH`/`DELETE /activities/:id` (owner only, others get 404); app edit screen + owner menu. A deleted activity is not resurrected by a late upload retry. | T (API) |
+| SYNC-07 | **Fixed.** A new recording can't start while one is active (engine guard). | — |
+| SYNC-08 | **Fixed.** Recording state moved out of AppContext into a `useSyncExternalStore` store. | — |
+| API-01 | **Fixed.** One `pg.Client` per request, closed via `waitUntil`. | bundle builds (`wrangler deploy --dry-run`); not deployed |
+| API-03 | **Fixed** for feed and history (row-value cursor). | T |
+| API-05 | **Partially fixed.** Kudos are give-only and idempotent (`ON CONFLICT DO NOTHING`), no self-kudos. Follow is still a toggle. | T |
+| API-08 | **Fixed for new accounts** (no invented city/weight/HR). Existing rows unchanged. | — |
+| SEC-01 | **Mitigated in the repo.** `drizzle.config.ts` and `scripts/*` read `DATABASE_URL`; `.dev.vars` untracked; `.dev.vars.example` added. **The password is still in git history: rotate it.** | — |
+| SEC-02 | **Fixed.** `demo-google-token` / `mock:` bypass removed; `/auth/demo-login` returns 404 in production. | T |
+| SEC-04 | **Fixed.** No JWT fallback secret: fails closed (500) if `JWT_SECRET` is missing or shorter than 32 characters. | T |
+| SEC-05 / SEC-06 | **Fixed.** Account linking only with `email_verified`; Google audience mandatory. | T (mock tokens rejected) |
+| SEC-07 | **Unchanged by request.** The product owner asked that no existing module be removed, so clubs, challenges, segments, routes, events, goals, messages and beacon stay mounted. Their own authorization issues remain open. | — |
+| PRIV-01/02/03/06 | **Fixed.** Single policy (`lib/policy.ts`) applied to detail, following feed, clubs feed, profile list, history, kudos and comments; invisible = 404. Public DTOs whitelist fields (no email or physiology for others). Raw track only for the owner. | T (visibility matrix: 4 viewers × 3 visibilities × detail/history/profile/feed/kudos/comments/export) |
+| PRIV-04 | **Fixed.** GPX export requires auth, owner only, XML-escaped. | T |
+| PRIV-05 | **Partially fixed.** Search returns the public DTO; it still lists all users when the query is empty. | — |
+| SEC-03 | **Open.** Password hashing is still SHA-256 with a static salt. Moving to PBKDF2 needs a CPU-budget check on the Workers plan. | — |
+
+**Deployment status:** none of the backend changes are deployed. Migration `drizzle/0002_batch_uploads.sql` is additive (2 new tables, 1 nullable column, 2 indexes) and has not been run against Neon. Until it is deployed, the app falls back to the legacy single-request upload; it still uploads, but without the batch protocol.
+
+**Database decision:** the Phase 3 brief names Cloudflare D1, but the confirmed stack (Phase 1, ADR-16) and the deployed backend use Neon Postgres via Hyperdrive. This phase kept Neon; all new code goes through Drizzle repositories. Moving to D1 is a separate migration that needs a product decision (see the implementation plan).

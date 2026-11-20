@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 
 const databaseUrl =
-  'postgresql://neondb_owner:npg_chTDF35Axdla@ep-nameless-meadow-biyayy82-pooler.c-5.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+  process.env.DATABASE_URL;
 
 async function seedRoutes() {
   console.log('Seeding Real Location Routes around Dhaka (Kuril, Pragati Sarani, Bashundhara, 300 Feet) in Neon PostgreSQL...');
