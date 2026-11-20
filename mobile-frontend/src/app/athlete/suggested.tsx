@@ -40,13 +40,16 @@ export default function SuggestedAthletesScreen() {
   }, []);
 
   const toggleFollow = async (id: string) => {
-    setSuggested((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, isFollowing: !a.isFollowing } : a))
-    );
+    const row = suggested.find((a) => a.id === id);
+    const want = !row?.isFollowing;
+    setSuggested((prev) => prev.map((a) => (a.id === id ? { ...a, isFollowing: want } : a)));
     try {
-      await api.athletes.toggleFollow(id);
+      // idempotent PUT/DELETE: a double tap can't flip the state twice
+      const res = await (want ? api.athletes.follow(id) : api.athletes.unfollow(id));
+      setSuggested((prev) => prev.map((a) => (a.id === id ? { ...a, isFollowing: res.isFollowing } : a)));
     } catch (err) {
       console.warn('Follow error:', err);
+      setSuggested((prev) => prev.map((a) => (a.id === id ? { ...a, isFollowing: !want } : a)));
     }
   };
 

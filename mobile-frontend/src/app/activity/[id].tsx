@@ -46,7 +46,8 @@ import {
   formatRelative,
   formatSpeed,
 } from '../../lib/format';
-import { giveKudos } from '../../lib/social';
+import { setKudos, socialStore, useSocial } from '../../lib/social';
+import { shareActivity } from '../../lib/share';
 import { sportConfig } from '../../lib/sports';
 import { api } from '../../services/api';
 
@@ -78,7 +79,11 @@ export default function ActivityDetailScreen() {
       (res) => {
         if (cancelled) return;
         if (!res?.activity) setState({ status: 'notFound' });
-        else setState({ status: 'ready', activity: fromDetailResponse(res), isOwner: Boolean(res.isOwner) });
+        else {
+          const activity = fromDetailResponse(res);
+          socialStore.seed([{ id: activity.id, hasKudos: activity.hasKudos, kudosCount: activity.kudosCount, commentsCount: activity.commentsCount }]);
+          setState({ status: 'ready', activity, isOwner: Boolean(res.isOwner) });
+        }
       },
       (e: any) => {
         if (cancelled) return;
@@ -199,9 +204,15 @@ const ActivityBody: React.FC<{
 }> = ({ activity, isOwner, currentUserId, currentUserName, currentUserAvatar }) => {
   const router = useRouter();
   const sport = sportConfig(activity.sportType);
-  const [kudos, setKudos] = useState({ has: activity.hasKudos, count: activity.kudosCount });
+  const social = useSocial(activity.id, {
+    hasKudos: activity.hasKudos,
+    kudosCount: activity.kudosCount,
+    commentsCount: activity.commentsCount,
+  });
   const [kudosPending, setKudosPending] = useState(false);
   const [comments, setComments] = useState<CommentView[]>(activity.comments);
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [draft, setDraft] = useState('');
   const [posting, setPosting] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
@@ -225,17 +236,63 @@ const ActivityBody: React.FC<{
   }
 
   const onKudos = async () => {
-    if (kudosPending || kudos.has) return;
-    const prev = kudos;
+    if (kudosPending) return;
     setKudosPending(true);
-    setKudos({ has: true, count: prev.count + 1 });
     try {
-      const res = await giveKudos(activity.id, prev.has);
-      setKudos({ has: res.hasKudos, count: res.kudosCount });
-    } catch {
-      setKudos(prev);
+      await setKudos(activity.id, !social.hasKudos);
+    } catch (e: any) {
+      Alert.alert('Kudos not updated', e?.message ?? 'Check your connection and try again.');
     } finally {
       setKudosPending(false);
+    }
+  };
+
+  const openKudos = () => router.push({ pathname: '/activity/kudos/[id]', params: { id: activity.id } });
+
+  const onCommentMenu = (c: CommentView) => {
+    const mine = c.author.id === currentUserId;
+    const buttons: any[] = [];
+    if (mine) buttons.push({ text: 'Edit', onPress: () => setEditing({ id: c.id, text: c.content }) });
+    if (mine || isOwner)
+      buttons.push({
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () =>
+          Alert.alert('Delete comment?', undefined, [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Delete',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  const res = await api.activities.deleteComment(activity.id, c.id);
+                  setComments((prev) => prev.filter((x) => x.id !== c.id));
+                  socialStore.patch(activity.id, { commentsCount: res.commentsCount });
+                } catch (e: any) {
+                  Alert.alert('Couldn’t delete', e?.message ?? 'Please try again.');
+                }
+              },
+            },
+          ]),
+      });
+    if (!buttons.length) return;
+    buttons.push({ text: 'Cancel', style: 'cancel' });
+    Alert.alert('Comment', undefined, buttons);
+  };
+
+  const onSaveEdit = async () => {
+    if (!editing || !editing.text.trim() || savingEdit) return;
+    setSavingEdit(true);
+    try {
+      const res = await api.activities.editComment(activity.id, editing.id, editing.text.trim());
+      setComments((prev) =>
+        prev.map((x) => (x.id === editing.id ? { ...x, content: res.comment.content, updatedAt: res.comment.updatedAt } : x))
+      );
+      setEditing(null);
+    } catch (e: any) {
+      Alert.alert('Couldn’t save', e?.message ?? 'Please try again.');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -253,10 +310,12 @@ const ActivityBody: React.FC<{
           id: String(c?.id ?? `local_${Date.now()}`),
           content,
           createdAt: c?.createdAt ?? new Date().toISOString(),
+          updatedAt: null,
           author: toAthleteSummary({ id: currentUserId, displayName: currentUserName, avatarUrl: currentUserAvatar }),
         },
       ]);
       setDraft('');
+      socialStore.patch(activity.id, { commentsCount: social.commentsCount + 1 });
     } catch (e: any) {
       setCommentError(e?.message || 'Couldn’t post your comment. Try again.');
     } finally {
@@ -342,20 +401,37 @@ const ActivityBody: React.FC<{
 
       <View style={styles.section}>
         <View style={styles.kudosRow}>
-          <Ionicons name="thumbs-up" size={18} color={kudos.count > 0 ? color.brand : color.inkTertiary} />
-          <AppText variant="bodyStrong" style={{ flex: 1, marginLeft: space.sm }}>
-            {kudos.count > 0 ? `${kudos.count} gave kudos` : 'No kudos yet'}
+          <Pressable onPress={openKudos} disabled={social.kudosCount === 0} accessibilityRole="button" style={{ flex: 1 }}>
+            <AppText variant="bodyStrong" color={social.kudosCount > 0 ? 'ink' : 'inkSecondary'}>
+              {social.kudosCount > 0 ? `${social.kudosCount} gave kudos ›` : 'No kudos yet'}
+            </AppText>
+          </Pressable>
+          <AppText variant="label" color="inkSecondary">
+            {social.commentsCount} {social.commentsCount === 1 ? 'comment' : 'comments'}
           </AppText>
-          {!isOwner ? (
-            <Button
-              label={kudos.has ? 'Kudos given' : 'Give kudos'}
-              icon={kudos.has ? 'thumbs-up' : 'thumbs-up-outline'}
-              size="sm"
-              variant={kudos.has ? 'secondary' : 'primary'}
-              disabled={kudos.has === true}
-              loading={kudosPending}
-              onPress={onKudos}
-            />
+        </View>
+        <View style={styles.actionBar}>
+          <Pressable
+            onPress={isOwner ? openKudos : onKudos}
+            disabled={kudosPending}
+            accessibilityRole="button"
+            accessibilityLabel={isOwner ? 'See who gave kudos' : social.hasKudos ? 'Remove kudos' : 'Give kudos'}
+            accessibilityState={{ selected: social.hasKudos === true, busy: kudosPending }}
+            style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: color.canvas }]}>
+            <Ionicons name={social.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'} size={24} color={social.hasKudos ? color.brand : color.ink} />
+            <AppText variant="label" style={{ marginLeft: space.sm, fontWeight: '600' }} color={social.hasKudos ? 'brandText' : 'ink'}>
+              {isOwner ? 'Kudos' : social.hasKudos ? 'Kudos given' : 'Give kudos'}
+            </AppText>
+          </Pressable>
+          {activity.visibility !== 'ONLY_ME' ? (
+            <Pressable
+              onPress={() => shareActivity(activity)}
+              accessibilityRole="button"
+              accessibilityLabel="Share activity"
+              style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: color.canvas }]}>
+              <Ionicons name="share-social-outline" size={24} color={color.ink} />
+              <AppText variant="label" style={{ marginLeft: space.sm, fontWeight: '600' }}>Share</AppText>
+            </Pressable>
           ) : null}
         </View>
       </View>
@@ -379,8 +455,30 @@ const ActivityBody: React.FC<{
                       {formatRelative(c.createdAt)}
                     </AppText>
                   </View>
-                  <AppText variant="body" style={{ marginTop: 2 }}>{c.content}</AppText>
+                  {editing?.id === c.id ? (
+                    <View style={{ marginTop: space.xs }}>
+                      <TextField
+                        value={editing.text}
+                        onChangeText={(t) => setEditing({ id: c.id, text: t })}
+                        accessibilityLabel="Edit comment"
+                        maxLength={1000}
+                        multiline
+                      />
+                      <View style={[styles.meta, { marginTop: space.sm, justifyContent: 'flex-end' }]}>
+                        <Button label="Cancel" variant="ghost" size="sm" onPress={() => setEditing(null)} />
+                        <Button label="Save" size="sm" loading={savingEdit} disabled={!editing.text.trim()} onPress={onSaveEdit} style={{ marginLeft: space.sm }} />
+                      </View>
+                    </View>
+                  ) : (
+                    <AppText variant="body" style={{ marginTop: 2 }}>
+                      {c.content}
+                      {c.updatedAt ? <AppText variant="caption" color="inkTertiary">  (edited)</AppText> : null}
+                    </AppText>
+                  )}
                 </View>
+                {(c.author.id === currentUserId || isOwner) && editing?.id !== c.id ? (
+                  <IconButton icon="ellipsis-horizontal" size={36} accessibilityLabel="Comment options" onPress={() => onCommentMenu(c)} />
+                ) : null}
               </View>
             </View>
           ))
@@ -436,6 +534,14 @@ const styles = StyleSheet.create({
   sheetOverlap: { marginTop: -radius.lg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg },
   backOverlay: { position: 'absolute', left: space.gutter },
   menuOverlay: { position: 'absolute', right: space.gutter },
+  actionBar: {
+    flexDirection: 'row',
+    marginTop: space.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: color.border,
+  },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 52 },
   athleteRow: { flexDirection: 'row', alignItems: 'center' },
   meta: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
   grid: {

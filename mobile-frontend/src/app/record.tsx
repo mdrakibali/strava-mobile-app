@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,7 +19,7 @@ import { estimateCalories } from '../lib/calories';
 import { DASH, formatClock, formatElevation, kmValue, paceValue, speedValue } from '../lib/format';
 import { recordingEngine } from '../tracking/engine';
 import { gpsStatus, liveSpeed, timerSeconds, useNow, useRecording } from '../tracking/useRecording';
-import { sportConfig } from '../lib/sports';
+import { MVP_SPORTS, sportConfig } from '../lib/sports';
 import { SportType } from '../types';
 
 /**
@@ -32,6 +32,7 @@ import { SportType } from '../types';
 export default function RecordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ sport?: string }>();
   const rec = useRecording();
   const status = rec.lifecycle.status;
   const isIdle = status === 'idle' || status === 'preparing';
@@ -39,7 +40,9 @@ export default function RecordScreen() {
   const interrupted = rec.lifecycle.pauseReason === 'interrupted';
   const now = useNow(true);
 
-  const [sport, setSport] = useState<SportType>(isIdle ? 'Run' : (rec.sport as SportType));
+  // Workout tab passes ?sport=…; otherwise the last-used sport is preselected below.
+  const requested = MVP_SPORTS.some((x) => x.id === params.sport) ? (params.sport as SportType) : null;
+  const [sport, setSport] = useState<SportType>(isIdle ? (requested ?? 'Run') : (rec.sport as SportType));
   const [sportSheet, setSportSheet] = useState(false);
   const [statsView, setStatsView] = useState(false);
   const [following, setFollowing] = useState(true);
@@ -49,7 +52,7 @@ export default function RecordScreen() {
 
   // Preselect the last-used sport (research §1).
   useEffect(() => {
-    if (!isIdle) return;
+    if (!isIdle || requested) return;
     loadLastSport().then((s) => s && setSport(s));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -76,7 +79,7 @@ export default function RecordScreen() {
     strip = { text: 'Location is off · Turn on', bg: color.dangerSoft, fg: color.danger, action: () => Linking.openSettings() };
   else if (interrupted)
     strip = { text: 'RECORDING WAS INTERRUPTED · Resume or finish', bg: color.warning, fg: color.ink };
-  else if (isPaused) strip = { text: 'PAUSED', bg: color.warning, fg: color.ink };
+  else if (isPaused) strip = { text: 'Stopped', bg: color.warning, fg: color.ink };
   else if (isIdle) {
     if (gps === 'acquiring') strip = { text: 'Acquiring GPS…', bg: color.canvas, fg: color.inkSecondary };
     else if (gps === 'good') strip = { text: 'GPS ready', bg: color.successSoft, fg: color.successText };

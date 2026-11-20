@@ -49,6 +49,12 @@ export interface MapViewProps {
   padding?: { top?: number; right?: number; bottom?: number; left?: number };
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
+  /** Additional routes drawn faintly for context (Maps tab). */
+  otherRoutes?: LngLat[][];
+  /** Show the blue user dot in route mode too. */
+  showUserLocation?: boolean;
+  /** Changing this re-frames the camera (e.g. a different route was selected). */
+  frameKey?: string;
 }
 
 const boundsOf = (pts: LngLat[]): [number, number, number, number] => {
@@ -85,7 +91,20 @@ export const MapView: React.FC<MapViewProps> = ({
   padding = {},
   style,
   children,
+  otherRoutes,
+  showUserLocation = false,
+  frameKey,
 }) => {
+  const othersData = useMemo<GeoJSON.FeatureCollection>(
+    () => ({
+      type: 'FeatureCollection',
+      features: (otherRoutes ?? [])
+        .filter((r) => r.length > 1)
+        .map((coordinates) => ({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates } })),
+    }),
+    [otherRoutes]
+  );
+
   const lineData = useMemo<GeoJSON.FeatureCollection>(
     () => ({
       type: 'FeatureCollection',
@@ -150,6 +169,7 @@ export const MapView: React.FC<MapViewProps> = ({
   if (mode === 'route' && route.length > 0) {
     cameraElement = (
       <Camera
+        key={frameKey ?? 'route'}
         initialViewState={{ bounds: boundsOf(route), padding: cameraPadding }}
       />
     );
@@ -164,6 +184,8 @@ export const MapView: React.FC<MapViewProps> = ({
         }}
       />
     );
+  } else if (userPosition) {
+    cameraElement = <Camera key={frameKey ?? 'user'} initialViewState={{ center: userPosition, zoom: 13 }} />;
   } else {
     cameraElement = <Camera initialViewState={{ zoom: 2 }} />;
   }
@@ -183,7 +205,17 @@ export const MapView: React.FC<MapViewProps> = ({
         touchRotate={false}
         touchPitch={false}>
         {cameraElement}
-        {mode === 'live' ? <UserLocation animated accuracy /> : null}
+        {mode === 'live' || showUserLocation ? <UserLocation animated accuracy /> : null}
+        {otherRoutes && otherRoutes.length ? (
+          <GeoJSONSource id="other-routes" data={othersData}>
+            <Layer
+              id="other-routes-line"
+              type="line"
+              layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+              paint={{ 'line-color': color.brand, 'line-width': 3, 'line-opacity': 0.35 }}
+            />
+          </GeoJSONSource>
+        ) : null}
         <GeoJSONSource id="route" data={lineData}>
           <Layer
             id="route-casing"

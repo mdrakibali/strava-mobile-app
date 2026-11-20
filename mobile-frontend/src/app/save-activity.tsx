@@ -216,6 +216,7 @@ export default function SaveActivityScreen() {
         <View style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}>
           <Button
             label={error ? 'Try again' : 'Save Activity'}
+            variant="dark"
             size="lg"
             fullWidth
             loading={saving}

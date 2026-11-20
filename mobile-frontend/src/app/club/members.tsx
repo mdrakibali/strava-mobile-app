@@ -117,7 +117,7 @@ export default function ClubMembersScreen() {
                   <Text className="text-xs text-gray-400">@{member.username || 'athlete'}</Text>
                   <View className="flex-row items-center mt-0.5">
                     <Ionicons name="location-outline" size={10} color="#9CA3AF" />
-                    <Text className="text-[10px] text-gray-400 ml-0.5">{member.city || 'Dhaka'}</Text>
+                    <Text className="text-[10px] text-gray-400 ml-0.5">{member.city || ''}</Text>
                   </View>
                 </View>
               </View>

@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   AppBar,
@@ -22,9 +22,10 @@ import {
 } from '../../design';
 import { ActivityView, AthleteSummary, fromProfileActivity, toAthleteSummary } from '../../lib/activityView';
 import { formatDuration, formatElevation, kmValue } from '../../lib/format';
-import { setFollowing } from '../../lib/social';
+import { setFollowing, socialStore } from '../../lib/social';
+import { shareAthlete } from '../../lib/share';
 import { MVP_SPORTS } from '../../lib/sports';
-import { api } from '../../services/api';
+import { api, AthleteStats } from '../../services/api';
 import { FeedCard } from '../activity/FeedCard';
 
 /** The profile endpoint returns at most this many recent activities (athlete.repository). */
@@ -37,6 +38,8 @@ interface ProfileData {
   followingCount: number;
   isFollowing: boolean;
   activities: ActivityView[];
+  /** Server totals over every activity the viewer may see (policy-aware). */
+  stats: AthleteStats | null;
 }
 
 const startOfWeek = (d: Date) => {
@@ -63,7 +66,10 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
 
   const load = useCallback(async () => {
     try {
-      const res = await api.athletes.getProfile(athleteId);
+      const [res, stats] = await Promise.all([
+        api.athletes.getProfile(athleteId),
+        api.athletes.stats(athleteId).catch(() => null),
+      ]);
       const athlete = { ...toAthleteSummary(res.athlete), bio: res.athlete?.bio ?? null };
       const all = (res.recentActivities || []).map((row: any) => fromProfileActivity(row, athlete));
       setData({
@@ -73,7 +79,9 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
         isFollowing: Boolean(res.athlete?.isFollowing),
         // Defence in depth only — the server must not return these (technical audit PRIV-03).
         activities: isSelf ? all : all.filter((a: ActivityView) => a.visibility !== 'ONLY_ME'),
+        stats,
       });
+      socialStore.seed(all);
       setStatus('ready');
     } catch (e: any) {
       setStatus(/not found/i.test(String(e?.message)) ? 'notFound' : 'error');
@@ -103,6 +111,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
         ...data,
         isFollowing: res.isFollowing,
         followersCount: res.followersCount ?? data.followersCount + (res.isFollowing ? 1 : -1),
+        stats: data.stats,
       });
     } catch {
       // state unchanged; button re-enables
@@ -113,37 +122,57 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
 
   const onShare = () => {
     if (!data) return;
-    Share.share({ message: `${data.athlete.displayName} is recording activities — find them by searching “${data.athlete.displayName}” in the app.` }).catch(() => {});
+    shareAthlete(athleteId, data.athlete.displayName).catch(() => {});
   };
 
+  // Weekly numbers come from the server's 12-week buckets (all visible activities, not just the
+  // 10 most recent). Falls back to the recent list only if the stats call failed.
   const progress = useMemo(() => {
     if (!data) return null;
-    const list = data.activities.filter((a) => sportFilter === 'All' || a.sportType === sportFilter);
-    const now = new Date();
-    const thisWeekStart = startOfWeek(now).getTime();
+    const match = (sport: string) => sportFilter === 'All' || sport === sportFilter;
+    if (data.stats) {
+      const weeks = data.stats.weeks.map((w) => {
+        let meters = 0, seconds = 0, elev = 0;
+        for (const [sport, v] of Object.entries(w.bySport)) {
+          if (!match(sport)) continue;
+          meters += v.distance;
+          seconds += v.moving;
+          elev += v.elevation;
+        }
+        return { start: new Date(w.weekStart).getTime(), meters, seconds, elev };
+      });
+      const cur = weeks[weeks.length - 1];
+      return { week: { meters: cur.meters, seconds: cur.seconds, elev: cur.elev }, weeks, weekComplete: true, windowComplete: true };
+    }
+    const list = data.activities.filter((a) => match(a.sportType));
+    const thisWeekStart = startOfWeek(new Date()).getTime();
     const windowStart = thisWeekStart - 11 * WEEK_MS;
-    const oldest = data.activities.length
-      ? Math.min(...data.activities.map((a) => new Date(a.startTime).getTime()))
-      : Infinity;
-    const truncated = data.activities.length >= RECENT_LIMIT;
-    const weekComplete = !truncated || oldest < thisWeekStart;
-    const windowComplete = !truncated || oldest < windowStart;
-
-    const weeks = Array.from({ length: 12 }, (_, i) => ({ start: windowStart + i * WEEK_MS, meters: 0 }));
+    const weeks = Array.from({ length: 12 }, (_, i) => ({ start: windowStart + i * WEEK_MS, meters: 0, seconds: 0, elev: 0 }));
     let week = { meters: 0, seconds: 0, elev: 0 };
     for (const a of list) {
       const t = new Date(a.startTime).getTime();
-      if (t >= thisWeekStart) {
-        week = {
-          meters: week.meters + a.distanceMeters,
-          seconds: week.seconds + a.movingTimeSeconds,
-          elev: week.elev + (a.elevationGainMeters ?? 0),
-        };
-      }
+      if (t >= thisWeekStart) week = { meters: week.meters + a.distanceMeters, seconds: week.seconds + a.movingTimeSeconds, elev: week.elev + (a.elevationGainMeters ?? 0) };
       const idx = Math.floor((t - windowStart) / WEEK_MS);
       if (idx >= 0 && idx < 12) weeks[idx].meters += a.distanceMeters;
     }
-    return { week, weeks, weekComplete, windowComplete };
+    const truncated = data.activities.length >= RECENT_LIMIT;
+    return { week, weeks, weekComplete: !truncated, windowComplete: !truncated };
+  }, [data, sportFilter]);
+
+  const totals = useMemo(() => {
+    if (!data?.stats) return null;
+    const rows = data.stats.bySport.filter((b) => sportFilter === 'All' || b.sportType === sportFilter);
+    const sum = (k: 'yearToDate' | 'allTime') =>
+      rows.reduce(
+        (acc, r) => ({
+          count: acc.count + r[k].count,
+          distanceMeters: acc.distanceMeters + r[k].distanceMeters,
+          movingTimeSeconds: acc.movingTimeSeconds + r[k].movingTimeSeconds,
+          elevationGainMeters: acc.elevationGainMeters + r[k].elevationGainMeters,
+        }),
+        { count: 0, distanceMeters: 0, movingTimeSeconds: 0, elevationGainMeters: 0 }
+      );
+    return { ytd: sum('yearToDate'), all: sum('allTime') };
   }, [data, sportFilter]);
 
   const header = isSelf ? (
@@ -153,6 +182,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
       leading="none"
       right={
         <>
+          <IconButton icon="add" accessibilityLabel="Record an activity" onPress={() => router.push('/record')} />
           <IconButton icon="search-outline" accessibilityLabel="Find athletes" onPress={() => router.push('/search')} />
           <IconButton icon="settings-outline" accessibilityLabel="Settings" onPress={() => router.push('/settings')} />
         </>
@@ -188,7 +218,9 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
 
   const location = [data.athlete.city, data.athlete.country].filter(Boolean).join(', ');
   const maxWeek = Math.max(...progress.weeks.map((w) => w.meters), 1);
-  const sportsPresent = MVP_SPORTS.filter((s) => data.activities.some((a) => a.sportType === s.id));
+  const sportsPresent = MVP_SPORTS.filter(
+    (s) => data.activities.some((a) => a.sportType === s.id) || data.stats?.bySport.some((b) => b.sportType === s.id)
+  );
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
@@ -201,6 +233,11 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
             <Avatar uri={data.athlete.avatarUrl} name={data.athlete.displayName} size={72} />
             <View style={{ flex: 1, marginLeft: space.lg }}>
               <AppText variant="title1" numberOfLines={2}>{data.athlete.displayName}</AppText>
+              {data.stats ? (
+                <AppText variant="body" color="inkSecondary" style={{ marginTop: 2 }}>
+                  {data.stats.activityCount} {data.stats.activityCount === 1 ? 'activity' : 'activities'}
+                </AppText>
+              ) : null}
               {location ? (
                 <AppText variant="label" color="inkSecondary" style={{ marginTop: 2 }}>{location}</AppText>
               ) : null}
@@ -209,12 +246,26 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
           {data.athlete.bio ? (
             <AppText variant="body" style={{ marginTop: space.md }}>{data.athlete.bio}</AppText>
           ) : null}
-          <AppText variant="body" style={{ marginTop: space.md }}>
-            <AppText variant="bodyStrong">{data.followersCount}</AppText>
-            {data.followersCount === 1 ? ' follower' : ' followers'}
-            {'  •  '}
-            <AppText variant="bodyStrong">{data.followingCount}</AppText> following
-          </AppText>
+          <View style={[styles.row, { marginTop: space.md }]}>
+            <Pressable
+              onPress={() => router.push({ pathname: '/athlete/followers', params: { id: athleteId } })}
+              accessibilityRole="button"
+              hitSlop={8}>
+              <AppText variant="body">
+                <AppText variant="bodyStrong">{data.followersCount}</AppText>
+                {data.followersCount === 1 ? ' follower' : ' followers'}
+              </AppText>
+            </Pressable>
+            <AppText variant="body" color="inkTertiary">{'  •  '}</AppText>
+            <Pressable
+              onPress={() => router.push({ pathname: '/athlete/following', params: { id: athleteId } })}
+              accessibilityRole="button"
+              hitSlop={8}>
+              <AppText variant="body">
+                <AppText variant="bodyStrong">{data.followingCount}</AppText> following
+              </AppText>
+            </Pressable>
+          </View>
           <View style={[styles.row, { marginTop: space.lg }]}>
             {isSelf ? (
               <>
@@ -287,6 +338,24 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
               <AppText variant="caption" color="inkTertiary" style={{ marginTop: space.sm }}>
                 Older weeks may be incomplete — only the {RECENT_LIMIT} most recent activities are loaded.
               </AppText>
+            ) : null}
+            {totals ? (
+              <View style={{ marginTop: space.xl }}>
+                <AppText variant="title3">This year</AppText>
+                <MetricRow style={{ marginTop: space.sm }}>
+                  <MetricTile label="Activities" value={String(totals.ytd.count)} />
+                  <MetricTile label="Distance" value={kmValue(totals.ytd.distanceMeters)} unit="km" />
+                  <MetricTile label="Time" value={formatDuration(totals.ytd.movingTimeSeconds)} />
+                  <MetricTile label="Elev gain" value={formatElevation(totals.ytd.elevationGainMeters)} />
+                </MetricRow>
+                <AppText variant="title3" style={{ marginTop: space.lg }}>All time</AppText>
+                <MetricRow style={{ marginTop: space.sm }}>
+                  <MetricTile label="Activities" value={String(totals.all.count)} />
+                  <MetricTile label="Distance" value={kmValue(totals.all.distanceMeters)} unit="km" />
+                  <MetricTile label="Time" value={formatDuration(totals.all.movingTimeSeconds)} />
+                  <MetricTile label="Elev gain" value={formatElevation(totals.all.elevationGainMeters)} />
+                </MetricRow>
+              </View>
             ) : null}
           </View>
         ) : data.activities.length === 0 ? (

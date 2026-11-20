@@ -26,6 +26,8 @@ export interface CommentView {
   id: string;
   content: string;
   createdAt: string;
+  /** Set when the author edited it. */
+  updatedAt?: string | null;
   author: AthleteSummary;
 }
 
@@ -133,7 +135,8 @@ export const fromFeedItem = (item: any): ActivityView => ({
   ...base(item, toAthleteSummary(item.athlete)),
   route: toRoute(item.polyline),
   kudosCount: num(item.kudosCount) ?? 0,
-  hasKudos: null, // backend always returns false here — unknown, not "no"
+  // Current servers report the viewer's kudos state; very old ones didn't send the field.
+  hasKudos: typeof item.hasKudos === 'boolean' ? item.hasKudos : null,
   commentsCount: num(item.commentsCount) ?? 0,
 });
 
@@ -151,6 +154,7 @@ export const fromDetailResponse = (res: any): ActivityView => {
           id: String(c.id),
           content: c.content,
           createdAt: c.createdAt,
+          updatedAt: c.updatedAt ?? null,
           author: toAthleteSummary(c.author),
         }))
       : [],

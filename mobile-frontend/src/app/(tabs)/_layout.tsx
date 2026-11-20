@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,91 +14,73 @@ import { color } from '../../design/tokens';
  */
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const recording = isRecordingActive(useRecording());
+
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: color.ink,
-        tabBarInactiveTintColor: color.inkTertiary,
+        tabBarInactiveTintColor: color.ink,
         tabBarStyle: {
           backgroundColor: color.surface,
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: color.border,
-          height: 60 + insets.bottom,
+          height: 66 + insets.bottom,
           paddingBottom: Math.max(insets.bottom, 6),
           paddingTop: 6,
         },
-        tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '600', marginTop: 2 },
       }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={focused ? color.brand : color.inkTertiary} />
-          ),
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: icon('home-outline', 'home') }} />
       <Tabs.Screen
         name="maps"
-        options={{
-          href: FEATURES.explore ? undefined : null,
-          title: 'Maps',
-          tabBarIcon: ({ focused }) => (
-            <Ionicons name={focused ? 'map' : 'map-outline'} size={24} color={focused ? color.ink : color.inkTertiary} />
-          ),
-        }}
+        options={{ href: FEATURES.explore ? undefined : null, title: 'Maps', tabBarIcon: icon('map-outline', 'map') }}
       />
       <Tabs.Screen
-        name="record-tab"
+        name="workout"
         options={{
-          title: 'Record',
-          tabBarAccessibilityLabel: recording ? 'Record, recording in progress' : 'Record',
-          tabBarIcon: () => (
-            <View>
-              <Ionicons name="radio-button-on" size={26} color={recording ? color.brand : color.inkTertiary} />
-              {recording ? <View style={styles.liveDot} /> : null}
-            </View>
-          ),
-        }}
-        listeners={{
-          tabPress: (e) => {
-            e.preventDefault();
-            router.push('/record');
-          },
+          title: 'Workout',
+          tabBarAccessibilityLabel: recording ? 'Workout, recording in progress' : 'Workout',
+          tabBarIcon: icon('radio-button-on-outline', 'radio-button-on', recording),
         }}
       />
       <Tabs.Screen
         name="groups"
-        options={{
-          href: FEATURES.groups ? undefined : null,
-          title: 'Groups',
-          tabBarIcon: ({ focused }) => (
-            <Ionicons name={focused ? 'people' : 'people-outline'} size={24} color={focused ? color.ink : color.inkTertiary} />
-          ),
-        }}
+        options={{ href: FEATURES.groups ? undefined : null, title: 'Groups', tabBarIcon: icon('people-outline', 'people') }}
       />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'You',
-          tabBarIcon: ({ focused }) => (
-            <Ionicons name={focused ? 'person-circle' : 'person-circle-outline'} size={26} color={focused ? color.brand : color.inkTertiary} />
-          ),
-        }}
-      />
+      <Tabs.Screen name="profile" options={{ title: 'You', tabBarIcon: icon('person-circle-outline', 'person-circle') }} />
+      {/* Old route kept for deep links / restored state; forwards to the recorder. */}
+      <Tabs.Screen name="record-tab" options={{ href: null }} />
     </Tabs>
   );
 }
 
+/** tabBarIcon factory (module scope, named function → stable identity and a display name). */
+function icon(name: keyof typeof Ionicons.glyphMap, active: keyof typeof Ionicons.glyphMap, badge = false) {
+  return function TabBarIcon({ focused }: { focused: boolean }) {
+    return <TabIcon focused={focused} name={name} active={active} badge={badge} />;
+  };
+}
+
+/** Strava-style tab icon: inside a soft pill when active, orange when active (reference home-tab.png). */
+function TabIcon({ focused, name, active, badge }: { focused: boolean; name: keyof typeof Ionicons.glyphMap; active: keyof typeof Ionicons.glyphMap; badge: boolean }) {
+  return (
+    <View style={[styles.pill, focused && styles.pillActive]}>
+      <Ionicons name={focused ? active : name} size={24} color={focused ? color.brand : color.ink} />
+      {badge ? <View style={styles.liveDot} /> : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  pill: { width: 56, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  pillActive: { backgroundColor: color.brandSoft },
   liveDot: {
     position: 'absolute',
-    top: -1,
-    right: -3,
+    top: 0,
+    right: 12,
     width: 10,
     height: 10,
     borderRadius: 5,

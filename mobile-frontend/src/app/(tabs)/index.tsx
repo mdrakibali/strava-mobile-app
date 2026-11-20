@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,7 +14,9 @@ import {
   space,
 } from '../../design';
 import { useApp } from '../../context/AppContext';
+import { APP_NAME } from '../../config/app';
 import { ActivityView, fromFeedItem } from '../../lib/activityView';
+import { socialStore } from '../../lib/social';
 import { formatClock } from '../../lib/format';
 import { api } from '../../services/api';
 import { syncWorker } from '../../tracking/sync';
@@ -43,6 +45,10 @@ export default function HomeFeedScreen() {
   const [loadMoreError, setLoadMoreError] = useState(false);
   const cursorRef = useRef<string | null>(null);
   const hasNextRef = useRef(false);
+  // Bumped by every first-page load; a "load more" that started before it is discarded, so a
+  // refresh can never be followed by a stale page appended to the fresh list.
+  const generation = useRef(0);
+  const lastLoadedAt = useRef(0);
 
   // Defence in depth only — the server must enforce visibility (technical audit PRIV-02).
   const visibleToMe = useCallback(
@@ -53,8 +59,10 @@ export default function HomeFeedScreen() {
   /** Fetches page 1 without touching state; callers apply the result. */
   const fetchFirstPage = useCallback(async () => {
     const res = await api.feed.getFeed('following');
+    const items = res.feed.map(fromFeedItem).filter(visibleToMe);
+    socialStore.seed(items); // server counts replace any local/optimistic values
     return {
-      items: res.feed.map(fromFeedItem).filter(visibleToMe),
+      items,
       cursor: res.nextCursor,
       hasNext: res.hasNextPage,
     };
@@ -67,6 +75,8 @@ export default function HomeFeedScreen() {
     fetchFirstPage().then(
       (page) => {
         if (cancelled) return;
+        generation.current++;
+        lastLoadedAt.current = Date.now();
         cursorRef.current = page.cursor;
         hasNextRef.current = page.hasNext;
         setItems(page.items);
@@ -86,8 +96,12 @@ export default function HomeFeedScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    syncWorker.kick(); // also push any activity still waiting to upload
     try {
       const page = await fetchFirstPage();
+      generation.current++;
+      lastLoadedAt.current = Date.now();
+      setLoadMoreError(false);
       cursorRef.current = page.cursor;
       hasNextRef.current = page.hasNext;
       setItems(page.items);
@@ -104,11 +118,14 @@ export default function HomeFeedScreen() {
     if (loadingMore || !hasNextRef.current || !cursorRef.current || status !== 'ready') return;
     setLoadingMore(true);
     setLoadMoreError(false);
+    const gen = generation.current;
     try {
       const res = await api.feed.getFeed('following', cursorRef.current);
+      if (gen !== generation.current) return; // a refresh replaced the list meanwhile
       cursorRef.current = res.nextCursor;
       hasNextRef.current = res.hasNextPage;
       const next = res.feed.map(fromFeedItem).filter(visibleToMe);
+      socialStore.seed(next);
       setItems((prev) => {
         const seen = new Set(prev.map((p) => p.id));
         return [...prev, ...next.filter((n) => !seen.has(n.id))];
@@ -120,13 +137,31 @@ export default function HomeFeedScreen() {
     }
   };
 
+  // Fresh data whenever Home is shown again (after saving, following someone, commenting…),
+  // without a loading flash. Throttled so quick tab switches don't hammer the API.
+  useFocusEffect(
+    useCallback(() => {
+      if (lastLoadedAt.current && Date.now() - lastLoadedAt.current > 10_000) setReloadKey((k) => k + 1);
+    }, [])
+  );
+
+  // An activity just finished uploading → show it.
+  const pendingCount = pending.length;
+  const prevPending = useRef(pendingCount);
+  useEffect(() => {
+    if (pendingCount < prevPending.current) setReloadKey((k) => k + 1);
+    prevPending.current = pendingCount;
+  }, [pendingCount]);
+
   const header = (
     <AppBar
-      title="Home"
+      title={APP_NAME}
       large
       leading="none"
       right={
         <>
+          <IconButton icon="add" accessibilityLabel="Record an activity" onPress={() => router.push('/record')} />
+          <IconButton icon="chatbubbles-outline" accessibilityLabel="Messages" onPress={() => router.push('/messages')} />
           <IconButton icon="search-outline" accessibilityLabel="Find athletes" onPress={() => router.push('/search')} />
           <IconButton
             icon="notifications-outline"
@@ -196,7 +231,7 @@ export default function HomeFeedScreen() {
     body = (
       <FlatList
         data={items}
-        keyExtractor={(a) => `${a.id}:${a.kudosCount}:${a.commentsCount}`}
+        keyExtractor={(a) => a.id}
         renderItem={({ item }) => <FeedCard activity={item} currentUserId={currentUser.id} />}
         onEndReached={onEndReached}
         onEndReachedThreshold={0.6}

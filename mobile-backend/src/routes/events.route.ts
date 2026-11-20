@@ -1,7 +1,9 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { athletes, clubs, eventRsvps, groupEvents } from '../db/schema';
+import { z } from 'zod';
 import { getDb } from '../lib/db';
+import { parseBody } from '../lib/http';
 import { optionalAuth, requireAuth } from '../middleware/auth';
 import { Env } from '../types';
 
@@ -45,6 +47,11 @@ eventsRouter.get('/', optionalAuth, async (c) => {
       rsvpCountMap.set(r.eventId, (rsvpCountMap.get(r.eventId) || 0) + 1);
     }
 
+    // The viewer's own RSVP per event (was always null before).
+    const viewer = c.get('user')?.athleteId;
+    const mine = viewer ? await db.select().from(eventRsvps).where(eq(eventRsvps.athleteId, viewer)) : [];
+    const myStatus = new Map(mine.map((r) => [r.eventId, r.status]));
+
     const formatted = eventsList.map((e) => {
       const d = new Date(e.eventDate);
       return {
@@ -56,8 +63,9 @@ eventsRouter.get('/', optionalAuth, async (c) => {
         timeFormatted: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
         meetingPoint: e.meetingPoint,
         distanceMeters: Number(e.distanceMeters || 0),
-        attendeesCount: rsvpCountMap.get(e.id) || 1,
-        rsvpStatus: null,
+        eventDate: e.eventDate,
+        attendeesCount: rsvpCountMap.get(e.id) || 0,
+        rsvpStatus: myStatus.get(e.id) ?? null,
         paceDescription: e.paceDescription || 'All paces welcome',
       };
     });
@@ -172,4 +180,38 @@ eventsRouter.post('/:id/rsvp', requireAuth, async (c) => {
     console.error('RSVP error:', err);
     return c.json({ error: err.message || 'Failed to record RSVP' }, 500);
   }
+});
+
+const createEventSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+  sportType: z.string().trim().min(1).max(50),
+  eventDate: z.string().datetime({ offset: true }).refine((d) => Date.parse(d) > Date.now() - 3600_000, 'Event date must be in the future'),
+  meetingPoint: z.string().trim().min(1).max(200),
+  paceDescription: z.string().trim().max(200).optional(),
+  distanceMeters: z.number().finite().min(0).max(1_000_000).optional(),
+  clubId: z.string().max(100).optional(),
+});
+
+// POST /events — create a group event; the creator is automatically going.
+eventsRouter.post('/', requireAuth, async (c) => {
+  const body = await parseBody(c, createEventSchema);
+  const db = getDb(c);
+  const user = c.get('user');
+  const id = `evt_${crypto.randomUUID()}`;
+  const [event] = await db
+    .insert(groupEvents)
+    .values({
+      id,
+      title: body.title,
+      sportType: body.sportType,
+      clubId: body.clubId ?? null,
+      creatorId: user.athleteId,
+      meetingPoint: body.meetingPoint,
+      paceDescription: body.paceDescription ?? null,
+      distanceMeters: body.distanceMeters != null ? body.distanceMeters.toFixed(2) : null,
+      eventDate: new Date(body.eventDate),
+    })
+    .returning();
+  await db.insert(eventRsvps).values({ eventId: id, athleteId: user.athleteId, status: 'GOING' }).onConflictDoNothing();
+  return c.json({ message: 'Event created', event }, 201);
 });

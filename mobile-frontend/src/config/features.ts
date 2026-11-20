@@ -1,9 +1,8 @@
 /**
- * MVP scope flags (docs/STRAVA_ARCHITECTURE_DECISIONS.md ADR-15).
- * Out-of-scope modules stay in the codebase but are unreachable from navigation unless enabled
- * via EXPO_PUBLIC_FEATURE_<NAME>=true.
+ * Module flags. Everything is ON by default: the product owner asked that no existing module be
+ * hidden. A module can still be switched off per build with EXPO_PUBLIC_FEATURE_<NAME>=false.
  */
-const flag = (value: string | undefined) => value === 'true';
+const flag = (value: string | undefined) => value !== 'false';
 
 export const FEATURES = {
   explore: flag(process.env.EXPO_PUBLIC_FEATURE_EXPLORE),

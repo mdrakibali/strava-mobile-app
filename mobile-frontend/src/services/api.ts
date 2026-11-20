@@ -15,6 +15,21 @@ export const API_BASE_URL =
 
 const TIMEOUT_MS = 30_000;
 
+export interface Totals {
+  count: number;
+  distanceMeters: number;
+  movingTimeSeconds: number;
+  elevationGainMeters: number;
+}
+
+export interface AthleteStats {
+  activityCount: number;
+  followersCount: number;
+  followingCount: number;
+  bySport: { sportType: string; allTime: Totals; yearToDate: Totals }[];
+  weeks: { weekStart: string; bySport: Record<string, { distance: number; moving: number; elevation: number; count: number }> }[];
+}
+
 let authToken: string | null = null;
 
 export const setAuthToken = (token: string | null) => {
@@ -58,7 +73,8 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   let res: Response;
   try {
-    res = await fetch(url, { ...options, headers, signal: controller.signal });
+    // no-store: the feed and social counts must always come from the server (stale-feed fix).
+    res = await fetch(url, { cache: 'no-store', ...options, headers, signal: controller.signal });
   } catch (e: any) {
     throw new ApiError(
       e?.name === 'AbortError' ? 'The server took too long to respond.' : 'No connection to the server.',
@@ -147,6 +163,25 @@ export const api = {
       request<{ hasKudos: boolean; kudosCount: number }>(`/activities/${id}/kudos`, {
         method: 'POST',
       }),
+    giveKudos: (id: string) =>
+      request<{ hasKudos: boolean; kudosCount: number }>(`/activities/${id}/kudos`, { method: 'PUT' }),
+    removeKudos: (id: string) =>
+      request<{ hasKudos: boolean; kudosCount: number }>(`/activities/${id}/kudos`, { method: 'DELETE' }),
+    listKudos: (id: string, cursor?: string | null) =>
+      request<{ athletes: any[]; kudosCount: number; hasNextPage: boolean; nextCursor: string | null }>(
+        `/activities/${id}/kudos${cursor ? `?cursor=${cursor}` : ''}`
+      ),
+    listComments: (id: string, cursor?: string | null) =>
+      request<{ comments: any[]; hasNextPage: boolean; nextCursor: string | null }>(
+        `/activities/${id}/comments${cursor ? `?cursor=${cursor}` : ''}`
+      ),
+    editComment: (id: string, commentId: string, content: string) =>
+      request<{ comment: any }>(`/activities/${id}/comments/${commentId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ content }),
+      }),
+    deleteComment: (id: string, commentId: string) =>
+      request<{ commentsCount: number }>(`/activities/${id}/comments/${commentId}`, { method: 'DELETE' }),
     addComment: (id: string, content: string, parentCommentId?: string) =>
       request<any>(`/activities/${id}/comments`, {
         method: 'POST',
@@ -185,6 +220,8 @@ export const api = {
       return request<{ clubs: any[]; count: number }>(`/clubs?${params.toString()}`);
     },
     get: (id: string) => request<any>(`/clubs/${id}`),
+    create: (data: { name: string; sportType: string; city?: string; country?: string; description?: string; isPrivate?: boolean }) =>
+      request<{ club: any }>('/clubs', { method: 'POST', body: JSON.stringify(data) }),
     join: (id: string) =>
       request<{ isMember: boolean; message: string }>(`/clubs/${id}/join`, {
         method: 'POST',
@@ -195,6 +232,8 @@ export const api = {
   challenges: {
     list: () => request<{ challenges: any[]; count: number }>('/challenges'),
     get: (id: string) => request<any>(`/challenges/${id}`),
+    create: (data: { title: string; sportType: string; targetMeters: number; description?: string; startDate: string; endDate: string }) =>
+      request<{ challenge: any }>('/challenges', { method: 'POST', body: JSON.stringify(data) }),
     join: (id: string) =>
       request<{ isJoined: boolean; message: string }>(`/challenges/${id}/join`, {
         method: 'POST',
@@ -251,6 +290,15 @@ export const api = {
       request<{ isFollowing: boolean; followersCount: number }>(`/athletes/${id}/follow`, {
         method: 'POST',
       }),
+    follow: (id: string) =>
+      request<{ isFollowing: boolean; followersCount: number; followingCount: number }>(`/athletes/${id}/follow`, { method: 'PUT' }),
+    unfollow: (id: string) =>
+      request<{ isFollowing: boolean; followersCount: number; followingCount: number }>(`/athletes/${id}/follow`, { method: 'DELETE' }),
+    listFollows: (id: string, kind: 'followers' | 'following', cursor?: string | null) =>
+      request<{ athletes: any[]; hasNextPage: boolean; nextCursor: string | null }>(
+        `/athletes/${id}/${kind}${cursor ? `?cursor=${cursor}` : ''}`
+      ),
+    stats: (id: string) => request<AthleteStats>(`/athletes/${id}/stats`),
     /** PUT /athletes/me (existing backend route; previously unused — profile edit was a fake save). */
     updateMe: (data: { displayName?: string; bio?: string; city?: string; country?: string }) =>
       request<{ message: string; athlete: any }>('/athletes/me', {
@@ -350,6 +398,8 @@ export const api = {
   events: {
     list: () => request<{ events: any[] }>('/events'),
     get: (id: string) => request<{ event: any; attendees: any[] }>(`/events/${id}`),
+    create: (data: { title: string; sportType: string; eventDate: string; meetingPoint: string; paceDescription?: string; distanceMeters?: number; clubId?: string }) =>
+      request<{ event: any }>('/events', { method: 'POST', body: JSON.stringify(data) }),
     rsvp: (id: string, status: 'GOING' | 'MAYBE' | 'DECLINED') =>
       request<{ message: string; status: string | null }>(`/events/${id}/rsvp`, {
         method: 'POST',

@@ -67,6 +67,7 @@ export default function SettingsScreen() {
         <AppText variant="label" color="inkSecondary" style={styles.groupLabel}>Privacy</AppText>
         <View style={styles.group}>
           <Row icon="shield-checkmark-outline" title="Privacy zones" subtitle="Hide your route near places like home" onPress={() => router.push('/settings/privacy')} />
+          <Row icon="navigate-outline" title="Recording & GPS" subtitle="Permissions, background recording, battery" onPress={() => router.push('/settings/gps')} />
           <Divider inset={space.lg + 22 + space.lg} />
           <View style={styles.row}>
             <Ionicons name="eye-outline" size={22} color={color.ink} />

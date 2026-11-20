@@ -37,7 +37,7 @@ describe('toAthleteSummary', () => {
 });
 
 describe('fromFeedItem', () => {
-  it('maps the feed payload and marks kudos state as unknown (backend always sends false)', () => {
+  it('maps the feed payload including the viewer kudos state reported by the server', () => {
     const v = fromFeedItem({
       id: 'act_1',
       title: 'Morning Run',
@@ -55,7 +55,8 @@ describe('fromFeedItem', () => {
       hasKudos: false,
       commentsCount: 1,
     });
-    expect(v.hasKudos).toBeNull();
+    expect(v.hasKudos).toBe(false);
+    expect(fromFeedItem({ id: 'x', athlete }).hasKudos).toBeNull(); // field absent (old server) = unknown
     expect(v.kudosCount).toBe(3);
     expect(v.route).toEqual([[2, 1]]);
     expect(v.averageSpeedMps).toBeNull(); // old mapper invented 3.0

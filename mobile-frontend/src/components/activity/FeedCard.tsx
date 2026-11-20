@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { memo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Avatar, color, MetricRow, MetricTile, Skeleton, space } from '../../design';
 import { ActivityView, avgSpeedOf } from '../../lib/activityView';
 import {
@@ -11,7 +11,8 @@ import {
   paceValue,
   speedValue,
 } from '../../lib/format';
-import { giveKudos } from '../../lib/social';
+import { setKudos, useSocial } from '../../lib/social';
+import { shareActivity } from '../../lib/share';
 import { sportConfig } from '../../lib/sports';
 import { RoutePreview } from '../map/RoutePreview';
 
@@ -37,21 +38,26 @@ export const FeedCard = memo(function FeedCard({
   const router = useRouter();
   const sport = sportConfig(activity.sportType);
   const isOwn = activity.athlete.id === currentUserId;
-  const [kudos, setKudos] = useState({ has: activity.hasKudos, count: activity.kudosCount });
+  const social = useSocial(activity.id, {
+    hasKudos: activity.hasKudos,
+    kudosCount: activity.kudosCount,
+    commentsCount: activity.commentsCount,
+  });
   const [pending, setPending] = useState(false);
 
   const open = () => router.push({ pathname: '/activity/[id]', params: { id: activity.id } });
+  const openKudos = () => router.push({ pathname: '/activity/kudos/[id]', params: { id: activity.id } });
+  const openComments = () => router.push({ pathname: '/activity/[id]', params: { id: activity.id, focus: 'comments' } });
 
+  // Own activity: the kudos button shows who gave kudos (you can't kudos yourself).
   const onKudos = async () => {
-    if (pending || kudos.has) return;
+    if (isOwn) return openKudos();
+    if (pending) return;
     setPending(true);
-    const prev = kudos;
-    setKudos({ has: true, count: prev.count + 1 }); // optimistic
     try {
-      const res = await giveKudos(activity.id, prev.has);
-      setKudos({ has: res.hasKudos, count: res.kudosCount });
-    } catch {
-      setKudos(prev); // roll back
+      await setKudos(activity.id, !social.hasKudos);
+    } catch (e: any) {
+      Alert.alert('Kudos not updated', e?.message ?? 'Check your connection and try again.');
     } finally {
       setPending(false);
     }
@@ -109,53 +115,65 @@ export const FeedCard = memo(function FeedCard({
               </AppText>
             </View>
           ) : null}
+          {activity.description ? (
+            <AppText variant="body" color="inkSecondary" numberOfLines={2} style={{ marginTop: space.xs }}>
+              {activity.description}
+            </AppText>
+          ) : null}
           <MetricRow style={{ marginTop: space.md, marginBottom: space.md }}>
             <MetricTile label="Distance" value={kmValue(activity.distanceMeters)} unit="km" />
             <MetricTile label={speedOrPace.label} value={speedOrPace.value} unit={speedOrPace.value === '–' ? undefined : speedOrPace.unit} />
             <MetricTile label="Time" value={formatDuration(activity.movingTimeSeconds)} />
           </MetricRow>
         </View>
-        <RoutePreview route={activity.route} height={180} />
+        <RoutePreview route={activity.route} height={240} />
       </Pressable>
 
       <View style={[styles.padded, styles.socialSummary]}>
-        <AppText variant="caption" color="inkSecondary">
-          {kudos.count > 0 ? `${kudos.count} kudos` : 'No kudos yet'}
-          {activity.commentsCount > 0
-            ? ` · ${activity.commentsCount} ${activity.commentsCount === 1 ? 'comment' : 'comments'}`
-            : ''}
-        </AppText>
-      </View>
-
-      <View style={styles.actions}>
-        {!isOwn ? (
-          <Pressable
-            onPress={onKudos}
-            disabled={pending || kudos.has === true}
-            accessibilityRole="button"
-            accessibilityLabel={kudos.has ? 'Kudos given' : 'Give kudos'}
-            accessibilityState={{ disabled: pending || kudos.has === true, selected: kudos.has === true }}
-            style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}>
-            <Ionicons
-              name={kudos.has ? 'thumbs-up' : 'thumbs-up-outline'}
-              size={22}
-              color={kudos.has ? color.brand : color.ink}
-            />
-            <AppText variant="label" color={kudos.has ? 'brandText' : 'ink'} style={styles.actionLabel}>
-              {kudos.has ? 'Kudos given' : 'Kudos'}
+        <Pressable onPress={openKudos} disabled={social.kudosCount === 0} accessibilityRole="button" hitSlop={8}>
+          <AppText variant="caption" color="inkSecondary">
+            {social.kudosCount > 0 ? `${social.kudosCount} gave kudos` : isOwn ? 'No kudos yet' : 'Be the first to give kudos'}
+          </AppText>
+        </Pressable>
+        {social.commentsCount > 0 ? (
+          <Pressable onPress={openComments} accessibilityRole="button" hitSlop={8}>
+            <AppText variant="caption" color="inkSecondary">
+              {social.commentsCount} {social.commentsCount === 1 ? 'comment' : 'comments'}
             </AppText>
           </Pressable>
         ) : null}
+      </View>
+
+      <View style={styles.actions}>
         <Pressable
-          onPress={open}
+          onPress={onKudos}
+          disabled={pending}
+          accessibilityRole="button"
+          accessibilityLabel={isOwn ? 'See who gave kudos' : social.hasKudos ? 'Remove kudos' : 'Give kudos'}
+          accessibilityState={{ selected: social.hasKudos === true, busy: pending }}
+          style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}>
+          <Ionicons
+            name={social.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'}
+            size={24}
+            color={social.hasKudos ? color.brand : color.ink}
+          />
+        </Pressable>
+        <Pressable
+          onPress={openComments}
           accessibilityRole="button"
           accessibilityLabel="Comment"
           style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}>
-          <Ionicons name="chatbubble-outline" size={21} color={color.ink} />
-          <AppText variant="label" style={styles.actionLabel}>
-            Comment
-          </AppText>
+          <Ionicons name="chatbox-ellipses-outline" size={24} color={color.ink} />
         </Pressable>
+        {activity.visibility !== 'ONLY_ME' ? (
+          <Pressable
+            onPress={() => shareActivity(activity)}
+            accessibilityRole="button"
+            accessibilityLabel="Share activity"
+            style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}>
+            <Ionicons name="share-social-outline" size={24} color={color.ink} />
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
@@ -200,12 +218,10 @@ const styles = StyleSheet.create({
   athleteText: { flex: 1, marginLeft: space.md },
   metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
   metaText: { marginLeft: space.xs, flexShrink: 1 },
-  socialSummary: { paddingTop: space.md },
+  socialSummary: { paddingTop: space.md, flexDirection: 'row', justifyContent: 'space-between' },
   actions: {
     flexDirection: 'row',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
-    marginTop: space.md,
+    marginTop: space.xs,
   },
   action: {
     flex: 1,

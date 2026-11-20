@@ -15,9 +15,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 export default function ProfileSetupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [displayName, setDisplayName] = useState('Rakib Ahmed');
+  const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('rakib.runner');
-  const [city, setCity] = useState('Dhaka');
+  const [city, setCity] = useState('');
   const [weightKg, setWeightKg] = useState('68');
   const [heightCm, setHeightCm] = useState('175');
   const [maxHr, setMaxHr] = useState('188');

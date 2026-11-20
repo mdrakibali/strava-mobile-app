@@ -50,6 +50,21 @@ describe('challenges', () => {
 });
 
 describe('events', () => {
+  it('create with validation, list shows the viewer RSVP and real attendee count, RSVP', async () => {
+    const when = new Date(Date.now() + 3 * 86400000).toISOString();
+    expect((await call('POST', '/events', { token: a, body: { title: 'x', sportType: 'Run', eventDate: '2001-01-01T00:00:00Z', meetingPoint: 'Park' } })).status).toBe(400);
+    const created = await call('POST', '/events', { token: a, body: { title: 'Saturday long run', sportType: 'Run', eventDate: when, meetingPoint: 'Hatirjheel', distanceMeters: 15000 } });
+    expect(created.status).toBe(201);
+    const id = created.body.event.id;
+    let list = await call('GET', '/events', { token: b });
+    let ev = list.body.events.find((e: any) => e.id === id);
+    expect(ev).toMatchObject({ attendeesCount: 1, rsvpStatus: null });
+    await call('POST', `/events/${id}/rsvp`, { token: b, body: { status: 'GOING' } });
+    list = await call('GET', '/events', { token: b });
+    ev = list.body.events.find((e: any) => e.id === id);
+    expect(ev).toMatchObject({ attendeesCount: 2, rsvpStatus: 'GOING' });
+  });
+
   it('lists and 404s unknown events', async () => {
     expect((await call('GET', '/events', { token: a })).status).toBe(200);
     expect((await call('GET', '/events/nope', { token: a })).status).toBe(404);

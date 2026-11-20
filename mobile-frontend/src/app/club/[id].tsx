@@ -39,7 +39,7 @@ export default function ClubDetailScreen() {
               id: res.club.id,
               name: res.club.name,
               sportType: res.club.sportType,
-              city: res.club.city || 'Dhaka',
+              city: res.club.city || '',
               description: res.club.description || '',
               avatarUrl: res.club.avatarUrl,
               bannerUrl: res.club.bannerUrl,

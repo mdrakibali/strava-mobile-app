@@ -1,110 +1,115 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import * as Location from 'expo-location';
+import { useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { Linking, PermissionsAndroid, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppBar, AppText, Button, color, radius, SectionTitle, space } from '../../design';
 
-export default function GpsSettingsScreen() {
-  const router = useRouter();
-  const [accuracyMode, setAccuracyMode] = useState<'High' | 'Balanced' | 'BatterySaver'>('High');
-  const [autoPause, setAutoPause] = useState(true);
-  const [voiceCues, setVoiceCues] = useState(true);
-  const [cueInterval, setCueInterval] = useState<'1km' | '2km' | '5km'>('1km');
+type Check = 'ok' | 'problem' | 'unknown';
+
+/**
+ * Recording & GPS: live status of everything background recording depends on, with the actions
+ * that fix each problem (docs/STRAVA_BACKGROUND_TRACKING.md). Nothing here is decorative.
+ */
+export default function RecordingSettingsScreen() {
+  const [location, setLocation] = useState<Check>('unknown');
+  const [services, setServices] = useState<Check>('unknown');
+  const [notifications, setNotifications] = useState<Check>('unknown');
+
+  const refresh = useCallback(async () => {
+    const perm = await Location.getForegroundPermissionsAsync().catch(() => null);
+    setLocation(perm?.granted ? 'ok' : 'problem');
+    setServices((await Location.hasServicesEnabledAsync().catch(() => false)) ? 'ok' : 'problem');
+    if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
+      const granted = await PermissionsAndroid.check('android.permission.POST_NOTIFICATIONS').catch(() => false);
+      setNotifications(granted ? 'ok' : 'problem');
+    } else setNotifications('ok');
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
+
+  const requestLocation = async () => {
+    const res = await Location.requestForegroundPermissionsAsync().catch(() => null);
+    if (!res?.granted && res && !res.canAskAgain) Linking.openSettings();
+    refresh();
+  };
+  const requestNotifications = async () => {
+    const res = await PermissionsAndroid.request('android.permission.POST_NOTIFICATIONS').catch(() => null);
+    if (res === 'never_ask_again') Linking.openSettings();
+    refresh();
+  };
+  const openBattery = () =>
+    Linking.sendIntent('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS').catch(() => Linking.openSettings());
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-200">
-        <TouchableOpacity onPress={() => router.back()} className="p-1">
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900 ml-3">GPS & Audio Cues</Text>
-      </View>
+    <SafeAreaView edges={['top']} style={styles.screen}>
+      <AppBar title="Recording & GPS" />
+      <ScrollView contentContainerStyle={{ padding: space.gutter, paddingBottom: space.xxxl }}>
+        <StatusRow
+          title="Location permission"
+          ok={location}
+          okText="Allowed while using the app — enough for screen-off recording."
+          problemText="Needed to record. Recording uses a foreground service, so “Allow all the time” is not required."
+          action={location === 'problem' ? { label: 'Allow location', onPress: requestLocation } : undefined}
+        />
+        <StatusRow
+          title="Device location"
+          ok={services}
+          okText="On."
+          problemText="Location is turned off on this phone."
+          action={services === 'problem' ? { label: 'Open settings', onPress: () => Linking.openSettings() } : undefined}
+        />
+        <StatusRow
+          title="Recording notification"
+          ok={notifications}
+          okText="Shown while recording so you can return to the activity."
+          problemText="Android hides the recording notification. Recording still works, but allow it so you can see GPS is on."
+          action={notifications === 'problem' ? { label: 'Allow notifications', onPress: requestNotifications } : undefined}
+        />
 
-      <ScrollView showsVerticalScrollIndicator={false} className="p-4" contentContainerClassName="pb-24">
-        {/* GPS Accuracy Mode */}
-        <Text className="text-xs font-bold text-gray-500 uppercase mb-2">GPS Location Sampling</Text>
-        <View className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4 space-y-3">
-          {[
-            { id: 'High', title: 'High Precision (1s)', desc: 'Highest accuracy for segment matching and pace. Best for track & sprints.' },
-            { id: 'Balanced', title: 'Balanced (3s)', desc: 'Optimal balance of track fidelity and battery life for long endurance rides.' },
-            { id: 'BatterySaver', title: 'Battery Saver (5s)', desc: 'Extended battery life for ultra-marathons and multi-day hikes.' },
-          ].map((mode) => {
-            const isSelected = accuracyMode === mode.id;
-            return (
-              <TouchableOpacity
-                key={mode.id}
-                onPress={() => setAccuracyMode(mode.id as any)}
-                className={`p-3 rounded-xl border mb-2 ${
-                  isSelected ? 'border-[#FC4C02] bg-orange-50/50' : 'border-gray-200 bg-white'
-                }`}>
-                <View className="flex-row items-center justify-between mb-1">
-                  <Text className="text-xs font-black text-gray-900">{mode.title}</Text>
-                  {isSelected && <Ionicons name="checkmark-circle" size={18} color="#FC4C02" />}
-                </View>
-                <Text className="text-[11px] text-gray-500 leading-4">{mode.desc}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <SectionTitle title="Battery optimisation" style={{ marginTop: space.xl }} />
+        <AppText variant="body" color="inkSecondary">
+          Some phones stop apps in the background to save battery, which can end a recording early. If a recording was
+          interrupted, set this app to “Unrestricted” / “Not optimised”.
+        </AppText>
+        <Button label="Open battery settings" variant="outline" fullWidth onPress={openBattery} style={{ marginTop: space.md }} />
 
-        {/* Auto-Pause */}
-        <Text className="text-xs font-bold text-gray-500 uppercase mb-2">Smart Pause</Text>
-        <View className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-1 mr-3">
-              <Text className="text-sm font-bold text-gray-900">Auto-Pause When Stopped</Text>
-              <Text className="text-xs text-gray-500">Automatically stops timer at red lights (&lt;1.8 km/h).</Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => setAutoPause(!autoPause)}
-              className={`w-12 h-7 rounded-full justify-center px-1 ${
-                autoPause ? 'bg-[#FC4C02]' : 'bg-gray-300'
-              }`}>
-              <View className={`w-5 h-5 rounded-full bg-white shadow-sm ${autoPause ? 'self-end' : 'self-start'}`} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Audio Split Voice Cues */}
-        <Text className="text-xs font-bold text-gray-500 uppercase mb-2">Voice Feedback</Text>
-        <View className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
-          <View className="flex-row items-center justify-between mb-4">
-            <View className="flex-1 mr-3">
-              <Text className="text-sm font-bold text-gray-900">Spoken Split Announcements</Text>
-              <Text className="text-xs text-gray-500">Reads pace, distance, and split time over headphones.</Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => setVoiceCues(!voiceCues)}
-              className={`w-12 h-7 rounded-full justify-center px-1 ${
-                voiceCues ? 'bg-[#FC4C02]' : 'bg-gray-300'
-              }`}>
-              <View className={`w-5 h-5 rounded-full bg-white shadow-sm ${voiceCues ? 'self-end' : 'self-start'}`} />
-            </TouchableOpacity>
-          </View>
-
-          {voiceCues && (
-            <View className="pt-3 border-t border-gray-100">
-              <Text className="text-xs font-bold text-gray-600 mb-2">Announcement Frequency</Text>
-              <View className="flex-row space-x-2">
-                {(['1km', '2km', '5km'] as const).map((interval) => (
-                  <TouchableOpacity
-                    key={interval}
-                    onPress={() => setCueInterval(interval)}
-                    className={`flex-1 py-2 items-center rounded-xl border mr-2 ${
-                      cueInterval === interval ? 'border-[#FC4C02] bg-[#FC4C02]' : 'border-gray-200 bg-gray-50'
-                    }`}>
-                    <Text className={`text-xs font-bold ${cueInterval === interval ? 'text-white' : 'text-gray-700'}`}>
-                      Every {interval}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-        </View>
+        <SectionTitle title="Good to know" style={{ marginTop: space.xl }} />
+        <AppText variant="body" color="inkSecondary">
+          • Force-stopping the app from Android settings ends any recording — no app can record after that.{'\n'}• If a recording is
+          interrupted, open the app: you can resume or finish it, and nothing recorded is lost.{'\n'}• Activities are saved on the phone
+          first and upload automatically when you are online.
+        </AppText>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+const StatusRow: React.FC<{
+  title: string;
+  ok: Check;
+  okText: string;
+  problemText: string;
+  action?: { label: string; onPress: () => void };
+}> = ({ title, ok, okText, problemText, action }) => (
+  <View style={[styles.card, ok === 'problem' && { borderColor: color.danger }]}>
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <View style={[styles.dot, { backgroundColor: ok === 'ok' ? color.success : ok === 'problem' ? color.danger : color.borderStrong }]} />
+      <AppText variant="bodyStrong" style={{ marginLeft: space.sm }}>{title}</AppText>
+    </View>
+    <AppText variant="label" color="inkSecondary" style={{ marginTop: space.xs }}>
+      {ok === 'unknown' ? 'Checking…' : ok === 'ok' ? okText : problemText}
+    </AppText>
+    {action ? <Button label={action.label} size="sm" onPress={action.onPress} style={{ marginTop: space.md, alignSelf: 'flex-start' }} /> : null}
+  </View>
+);
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: color.canvas },
+  card: { backgroundColor: color.surface, borderRadius: radius.md, padding: space.lg, marginBottom: space.md, borderWidth: 1, borderColor: color.border },
+  dot: { width: 10, height: 10, borderRadius: 5 },
+});
