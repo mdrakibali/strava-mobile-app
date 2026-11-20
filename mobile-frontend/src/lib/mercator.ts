@@ -85,3 +85,42 @@ export const thin = <T,>(pts: T[], max = 400): T[] => {
   const step = (pts.length - 1) / (max - 1);
   return Array.from({ length: max }, (_, i) => pts[Math.round(i * step)]);
 };
+
+/** Inverse of `project`: global pixel coordinates at zoom z → [lng, lat]. */
+export const unproject = ([x, y]: [number, number], z: number): LngLat => {
+  const W = worldSize(z);
+  const lng = (x / W) * 360 - 180;
+  const n = Math.PI - (2 * Math.PI * y) / W;
+  return [lng, (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)))];
+};
+
+/**
+ * Centre + fractional zoom that fits the route in a width×height box with padding, in
+ * MapLibre's convention (512-px tiles, i.e. one less than the 256-px zoom used above).
+ */
+export const fitCamera = (
+  route: LngLat[],
+  width: number,
+  height: number,
+  opts: { padding?: number; maxZoom?: number } = {}
+): { center: LngLat; zoom: number } | null => {
+  if (route.length < 2 || width <= 0 || height <= 0) return null;
+  const pad = opts.padding ?? 28;
+  const maxZoom = opts.maxZoom ?? 16; // MapLibre zoom
+  let minX = Infinity,
+    maxX = -Infinity,
+    minY = Infinity,
+    maxY = -Infinity;
+  for (const p of route) {
+    const [x, y] = project(p, 0);
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+  }
+  const spanX = Math.max(maxX - minX, 1e-9);
+  const spanY = Math.max(maxY - minY, 1e-9);
+  const z256 = Math.log2(Math.min((width - 2 * pad) / spanX, (height - 2 * pad) / spanY));
+  const zoom = Math.max(0, Math.min(maxZoom, z256 - 1));
+  return { center: unproject([(minX + maxX) / 2, (minY + maxY) / 2], 0), zoom };
+};

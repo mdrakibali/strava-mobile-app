@@ -48,3 +48,36 @@ describe('mercator', () => {
     expect(t[99]).toBe(999);
   });
 });
+
+describe('fitCamera (MapLibre convention)', () => {
+  const { fitCamera, project, unproject } = jest.requireActual('../mercator');
+  it('unproject inverts project', () => {
+    const p: [number, number] = [90.42, 23.78];
+    const [lng, lat] = unproject(project(p, 15), 15);
+    expect(lng).toBeCloseTo(90.42, 9);
+    expect(lat).toBeCloseTo(23.78, 9);
+  });
+  it('fits the route bounds inside the padded box at the chosen zoom', () => {
+    const route: [number, number][] = [
+      [90.40, 23.77],
+      [90.43, 23.79],
+    ];
+    const w = 360, h = 240, pad = 28;
+    const cam = fitCamera(route, w, h, { padding: pad })!;
+    const z256 = cam.zoom + 1;
+    const [cx, cy] = project(cam.center, z256);
+    for (const p of route) {
+      const [x, y] = project(p, z256);
+      expect(Math.abs(x - cx)).toBeLessThanOrEqual(w / 2 - pad + 1e-6);
+      expect(Math.abs(y - cy)).toBeLessThanOrEqual(h / 2 - pad + 1e-6);
+    }
+    // and it is tight on at least one axis
+    const xs = route.map((p) => project(p, z256)[0]);
+    const ys = route.map((p) => project(p, z256)[1]);
+    const tight = Math.max(Math.abs(xs[1] - xs[0]) / (w - 2 * pad), Math.abs(ys[1] - ys[0]) / (h - 2 * pad));
+    expect(tight).toBeCloseTo(1, 6);
+  });
+  it('caps the zoom for tiny routes', () => {
+    expect(fitCamera([[90.4, 23.78], [90.40001, 23.78]], 300, 200)!.zoom).toBe(16);
+  });
+});
