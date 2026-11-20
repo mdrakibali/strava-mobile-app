@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedCard, FeedCardSkeleton } from '../../components/activity/FeedCard';
 import {
@@ -154,67 +154,81 @@ export default function HomeFeedScreen() {
   }, [pendingCount]);
 
   const header = (
-    <AppBar
-      title={APP_NAME}
-      large
-      leading="none"
-      right={
-        <>
-          <IconButton icon="add" accessibilityLabel="Record an activity" onPress={() => router.push('/record')} />
-          <IconButton icon="chatbubbles-outline" accessibilityLabel="Messages" onPress={() => router.push('/messages')} />
-          <IconButton icon="search-outline" accessibilityLabel="Find athletes" onPress={() => router.push('/search')} />
-          <IconButton
-            icon="notifications-outline"
-            accessibilityLabel="Notifications"
-            badgeCount={unreadNotificationCount}
-            onPress={() => router.push('/notifications')}
-          />
-        </>
-      }
-    />
+    <View className="px-5 pt-3 pb-2 bg-white border-b border-gray-100 flex-row items-center justify-between">
+      <Text className="text-2xl font-black text-black tracking-tight">{APP_NAME}</Text>
+      <View className="flex-row items-center space-x-2">
+        <TouchableOpacity onPress={() => router.push('/record')} className="p-2">
+          <Ionicons name="add" size={26} color="#1F2937" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/messages')} className="p-2">
+          <Ionicons name="chatbubbles-outline" size={22} color="#1F2937" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/search')} className="p-2">
+          <Ionicons name="search-outline" size={22} color="#1F2937" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/notifications')} className="p-2 relative">
+          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
+          {unreadNotificationCount > 0 ? (
+            <View className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FC4C02] rounded-full" />
+          ) : null}
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 
   const recordingBanner = active ? (
-    <Pressable
+    <TouchableOpacity
       onPress={() => router.push('/record')}
-      accessibilityRole="button"
-      accessibilityLabel={interrupted ? 'Recording interrupted. Open to resume or finish' : 'Return to recording'}
-      style={[styles.banner, paused && { backgroundColor: color.warning }]}>
+      activeOpacity={0.85}
+      className={`flex-row items-center px-4 py-3 ${
+        paused ? 'bg-amber-400' : 'bg-[#FC4C02]'
+      }`}>
       <Ionicons
         name={interrupted ? 'alert-circle' : paused ? 'pause' : 'radio-button-on'}
         size={18}
-        color={paused ? color.ink : color.inverse}
+        color={paused ? '#1F2937' : '#FFFFFF'}
       />
-      <AppText variant="bodyStrong" color={paused ? 'ink' : 'inverse'} style={{ flex: 1, marginLeft: space.sm }}>
+      <Text
+        className={`flex-1 text-sm font-bold ml-2.5 ${
+          paused ? 'text-gray-900' : 'text-white'
+        }`}>
         {interrupted
           ? 'Recording interrupted · Resume or finish'
           : `${paused ? 'Recording paused' : 'Recording'} · ${formatClock(timerSeconds(rec, now))}`}
-      </AppText>
-      <AppText variant="label" color={paused ? 'ink' : 'inverse'} style={{ fontWeight: '700' }}>
+      </Text>
+      <Text
+        className={`text-xs font-black uppercase tracking-wider ${
+          paused ? 'text-gray-900' : 'text-white'
+        }`}>
         Open
-      </AppText>
-    </Pressable>
+      </Text>
+    </TouchableOpacity>
   ) : null;
 
   // Saved on the phone but not yet confirmed by the server (local-first; never silently dropped).
   const uploadsBanner =
     pending.length > 0 ? (
-      <Pressable
+      <TouchableOpacity
         onPress={() => syncWorker.kick(true)}
-        accessibilityRole="button"
-        accessibilityLabel="Retry pending uploads"
-        style={[styles.pending, attention.length > 0 && { backgroundColor: color.dangerSoft }]}>
-        <Ionicons name={attention.length ? 'warning-outline' : 'cloud-upload-outline'} size={18} color={attention.length ? color.danger : color.ink} />
-        <View style={{ flex: 1, marginLeft: space.sm }}>
-          <AppText variant="bodyStrong">
+        activeOpacity={0.85}
+        className={`flex-row items-center px-4 py-2.5 border-b border-gray-200 ${
+          attention.length > 0 ? 'bg-red-50' : 'bg-white'
+        }`}>
+        <Ionicons
+          name={attention.length ? 'warning-outline' : 'cloud-upload-outline'}
+          size={18}
+          color={attention.length ? '#DC2626' : '#1F2937'}
+        />
+        <View className="flex-1 ml-3">
+          <Text className="text-xs font-bold text-gray-900">
             {pending.length === 1 ? `“${pending[0].title}” is waiting to upload` : `${pending.length} activities are waiting to upload`}
-          </AppText>
-          <AppText variant="label" color="inkSecondary" numberOfLines={2}>
+          </Text>
+          <Text className="text-[11px] text-gray-500" numberOfLines={1}>
             {attention.length ? attention[0].lastError ?? 'The server rejected the upload.' : 'Saved on this phone. It uploads automatically when you’re online.'}
-          </AppText>
+          </Text>
         </View>
-        <AppText variant="label" style={{ fontWeight: '700' }}>Retry</AppText>
-      </Pressable>
+        <Text className="text-xs font-black text-[#FC4C02]">Retry</Text>
+      </TouchableOpacity>
     ) : null;
 
   let body: React.ReactNode;
@@ -262,7 +276,7 @@ export default function HomeFeedScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
+    <SafeAreaView edges={['top']} className="flex-1 bg-[#F7F7F8]">
       {header}
       {recordingBanner}
       {uploadsBanner}

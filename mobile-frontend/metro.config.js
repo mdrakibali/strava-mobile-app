@@ -8,7 +8,7 @@ let config = getDefaultConfig(__dirname);
 config.watchFolders = [...(config.watchFolders || []), path.resolve(__dirname, '../shared')];
 // /shared has no node_modules of its own: resolve its imports (e.g. @babel/runtime) from the app.
 config.resolver.nodeModulesPaths = [...(config.resolver.nodeModulesPaths || []), path.resolve(__dirname, 'node_modules')];
-config = withNativewind(config);
+config = withNativewind(config, { input: './src/global.css' });
 
 const originalResolveRequest = config.resolver.resolveRequest;
 
