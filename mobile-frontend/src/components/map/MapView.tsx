@@ -1,19 +1,20 @@
 /**
- * MapLibre v11 map wrapper (docs/STRAVA_SCREEN_DESIGN_PLAN.md §2.4, ADR-14).
+ * The app's single interactive map: MapLibre Native v11 + OpenFreeMap vector tiles (no API key).
  *
- * The previous StravaMapView used the v10 API (`default.MapView`, `ShapeSource`, `LineLayer`),
- * which does not exist in the installed v11 package, so the native map never rendered and every
- * map silently fell back to a Leaflet WebView (UI/UX audit X-1). This component uses the v11
- * named exports. The Leaflet view is kept only as a fallback for Expo Go, where the native module
- * is absent.
+ * History: the original StravaMapView used the v10 API, which doesn't exist in the installed v11
+ * package, so the native map never rendered (UI/UX audit X-1). This wrapper uses the v11 named
+ * exports. In Expo Go (no native MapLibre module) it says so instead of silently showing a
+ * different map with an invented default location.
+ *
+ * Never invents a position: with no route and no known user position the camera shows the world.
  */
 import Constants, { ExecutionEnvironment } from 'expo-constants';
-import React, { useMemo } from 'react';
-import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { AppText } from '../../design/components/AppText';
 import { color } from '../../design/tokens';
 import { LngLat } from '../../lib/activityView';
-import { LeafletMapView } from './LeafletMapView';
-import { MAP_STYLES } from './mapTypes';
+import { MAP_STYLES, MapStyleKey } from './mapTypes';
 
 type MapLibreModule = typeof import('@maplibre/maplibre-react-native');
 
@@ -33,8 +34,16 @@ if (!isExpoGo) {
 }
 
 export const isNativeMapAvailable = Boolean(ML?.Map);
+export const nativeMapModule = ML;
 
-const STYLE_URL = process.env.EXPO_PUBLIC_MAP_STYLE_URL || MAP_STYLES.positron;
+export const styleUrl = (key: MapStyleKey = 'liberty') =>
+  (key === 'liberty' && process.env.EXPO_PUBLIC_MAP_STYLE_URL) || MAP_STYLES[key];
+
+export interface MapMarker {
+  id: string;
+  coordinate: LngLat;
+  selected?: boolean;
+}
 
 export interface MapViewProps {
   /** `route`: frame the whole route. `live`: follow the user while recording. */
@@ -53,8 +62,16 @@ export interface MapViewProps {
   otherRoutes?: LngLat[][];
   /** Show the blue user dot in route mode too. */
   showUserLocation?: boolean;
-  /** Changing this re-frames the camera (e.g. a different route was selected). */
+  /** Changing this re-frames the camera (e.g. a different route or place was selected). */
   frameKey?: string;
+  /** Point markers (e.g. nearby places). The selected one is drawn larger. */
+  markers?: MapMarker[];
+  onMarkerPress?: (id: string) => void;
+  /** Tap on the map (route builder). */
+  onMapPress?: (lngLat: LngLat) => void;
+  /** Centre + zoom when there is no route to frame (e.g. a selected place). */
+  focus?: { center: LngLat; zoom: number } | null;
+  styleKey?: MapStyleKey;
 }
 
 const boundsOf = (pts: LngLat[]): [number, number, number, number] => {
@@ -94,16 +111,14 @@ export const MapView: React.FC<MapViewProps> = ({
   otherRoutes,
   showUserLocation = false,
   frameKey,
+  markers,
+  onMarkerPress,
+  onMapPress,
+  focus,
+  styleKey = 'liberty',
 }) => {
-  const othersData = useMemo<GeoJSON.FeatureCollection>(
-    () => ({
-      type: 'FeatureCollection',
-      features: (otherRoutes ?? [])
-        .filter((r) => r.length > 1)
-        .map((coordinates) => ({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates } })),
-    }),
-    [otherRoutes]
-  );
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [attempt, setAttempt] = useState(0);
 
   const lineData = useMemo<GeoJSON.FeatureCollection>(
     () => ({
@@ -116,14 +131,20 @@ export const MapView: React.FC<MapViewProps> = ({
     [route]
   );
 
+  const othersData = useMemo<GeoJSON.FeatureCollection>(
+    () => ({
+      type: 'FeatureCollection',
+      features: (otherRoutes ?? [])
+        .filter((r) => r.length > 1)
+        .map((coordinates) => ({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates } })),
+    }),
+    [otherRoutes]
+  );
+
   const endpoints = useMemo<GeoJSON.FeatureCollection>(() => {
     const features: GeoJSON.Feature[] = [];
     if (route.length > 0) {
-      features.push({
-        type: 'Feature',
-        properties: { kind: 'start' },
-        geometry: { type: 'Point', coordinates: route[0] },
-      });
+      features.push({ type: 'Feature', properties: { kind: 'start' }, geometry: { type: 'Point', coordinates: route[0] } });
     }
     if (mode === 'route' && route.length > 1) {
       features.push({
@@ -135,6 +156,18 @@ export const MapView: React.FC<MapViewProps> = ({
     return { type: 'FeatureCollection', features };
   }, [route, mode]);
 
+  const markerData = useMemo<GeoJSON.FeatureCollection>(
+    () => ({
+      type: 'FeatureCollection',
+      features: (markers ?? []).map((m) => ({
+        type: 'Feature',
+        properties: { id: m.id, selected: m.selected ? 1 : 0 },
+        geometry: { type: 'Point', coordinates: m.coordinate },
+      })),
+    }),
+    [markers]
+  );
+
   const cameraPadding = {
     top: 48 + (padding.top ?? 0),
     right: 40 + (padding.right ?? 0),
@@ -143,20 +176,12 @@ export const MapView: React.FC<MapViewProps> = ({
   };
 
   if (!ML) {
-    // Expo Go fallback (no native MapLibre). Kept until all testers use development builds.
-    const centre = route[0] || userPosition || undefined;
     return (
-      <View style={[styles.fill, style]} pointerEvents={interactive ? 'auto' : 'none'}>
-        <LeafletMapView
-          routeCoordinates={route}
-          userLocation={userPosition ?? undefined}
-          centerCoordinate={centre}
-          zoomLevel={15}
-          showUserLocation={mode === 'live'}
-          mode={mode === 'live' ? 'live-record' : 'view-route'}
-          followUser={mode === 'live' && following}
-          autoFitRoute={mode === 'route'}
-        />
+      <View style={[styles.fill, styles.center, style]}>
+        <AppText variant="bodyStrong">Map unavailable in Expo Go</AppText>
+        <AppText variant="label" color="inkSecondary" style={styles.msg}>
+          Maps and GPS recording need the development build (npx expo run:android).
+        </AppText>
         {children}
       </View>
     );
@@ -164,37 +189,37 @@ export const MapView: React.FC<MapViewProps> = ({
 
   const { Map, Camera, GeoJSONSource, Layer, UserLocation } = ML;
 
-  // Camera: fit route bounds (route mode), follow user (live), or centre on the best known point.
+  // Camera: fit the route (route mode), follow the user (live), a focus point, or the best known
+  // real position. Never a hard-coded city.
   let cameraElement: React.ReactNode;
   if (mode === 'route' && route.length > 0) {
-    cameraElement = (
-      <Camera
-        key={frameKey ?? 'route'}
-        initialViewState={{ bounds: boundsOf(route), padding: cameraPadding }}
-      />
-    );
+    cameraElement = <Camera key={frameKey ?? 'route'} initialViewState={{ bounds: boundsOf(route), padding: cameraPadding }} />;
   } else if (mode === 'live') {
     const centre = userPosition || route[route.length - 1];
     cameraElement = (
       <Camera
-        initialViewState={centre ? { center: centre, zoom: 16 } : { zoom: 2 }}
+        key={centre ? 'live' : 'live-unknown'}
+        initialViewState={centre ? { center: centre, zoom: 16 } : { zoom: 1 }}
         trackUserLocation={following ? 'default' : undefined}
         onTrackUserLocationChange={(e) => {
           if (e.nativeEvent.trackUserLocation === null) onFollowingChange?.(false);
         }}
       />
     );
+  } else if (focus) {
+    cameraElement = <Camera key={frameKey ?? 'focus'} initialViewState={{ center: focus.center, zoom: focus.zoom }} />;
   } else if (userPosition) {
     cameraElement = <Camera key={frameKey ?? 'user'} initialViewState={{ center: userPosition, zoom: 13 }} />;
   } else {
-    cameraElement = <Camera initialViewState={{ zoom: 2 }} />;
+    cameraElement = <Camera key="world" initialViewState={{ zoom: 1 }} />;
   }
 
   return (
     <View style={[styles.fill, style]}>
       <Map
+        key={attempt}
         style={styles.fill}
-        mapStyle={STYLE_URL}
+        mapStyle={styleUrl(styleKey)}
         logo={false}
         compass={false}
         attribution
@@ -203,7 +228,10 @@ export const MapView: React.FC<MapViewProps> = ({
         touchZoom={interactive}
         doubleTapZoom={interactive}
         touchRotate={false}
-        touchPitch={false}>
+        touchPitch={false}
+        onDidFinishLoadingMap={() => setLoadState('ready')}
+        onDidFailLoadingMap={() => setLoadState('error')}
+        onPress={onMapPress ? (e) => onMapPress(e.nativeEvent.lngLat as LngLat) : undefined}>
         {cameraElement}
         {mode === 'live' || showUserLocation ? <UserLocation animated accuracy /> : null}
         {otherRoutes && otherRoutes.length ? (
@@ -212,7 +240,7 @@ export const MapView: React.FC<MapViewProps> = ({
               id="other-routes-line"
               type="line"
               layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-              paint={{ 'line-color': color.brand, 'line-width': 3, 'line-opacity': 0.35 }}
+              paint={{ 'line-color': color.brand, 'line-width': 3, 'line-opacity': 0.4 }}
             />
           </GeoJSONSource>
         ) : null}
@@ -221,7 +249,7 @@ export const MapView: React.FC<MapViewProps> = ({
             id="route-casing"
             type="line"
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-            paint={{ 'line-color': '#FFFFFF', 'line-width': 8 }}
+            paint={{ 'line-color': '#FFFFFF', 'line-width': 9 }}
           />
           <Layer
             id="route-line"
@@ -242,7 +270,43 @@ export const MapView: React.FC<MapViewProps> = ({
             }}
           />
         </GeoJSONSource>
+        {markers && markers.length ? (
+          <GeoJSONSource
+            id="markers"
+            data={markerData}
+            hitbox={{ top: 12, right: 12, bottom: 12, left: 12 }}
+            onPress={(e) => {
+              const id = e.nativeEvent.features?.[0]?.properties?.id;
+              if (id != null) onMarkerPress?.(String(id));
+            }}>
+            <Layer
+              id="markers-circle"
+              type="circle"
+              paint={{
+                'circle-radius': ['case', ['==', ['get', 'selected'], 1], 11, 7],
+                'circle-color': ['case', ['==', ['get', 'selected'], 1], color.brand, '#FFFFFF'],
+                'circle-stroke-color': color.brand,
+                'circle-stroke-width': 3,
+              }}
+            />
+          </GeoJSONSource>
+        ) : null}
       </Map>
+      {loadState === 'error' ? (
+        <View style={[StyleSheet.absoluteFill, styles.center, styles.errorBox]}>
+          <AppText variant="bodyStrong">The map couldn’t load</AppText>
+          <AppText variant="label" color="inkSecondary" style={styles.msg}>Check your connection.</AppText>
+          <Pressable
+            onPress={() => {
+              setLoadState('loading');
+              setAttempt((a) => a + 1);
+            }}
+            accessibilityRole="button"
+            style={styles.retry}>
+            <AppText variant="bodyStrong" color="brandText">Retry</AppText>
+          </Pressable>
+        </View>
+      ) : null}
       {children}
     </View>
   );
@@ -250,4 +314,8 @@ export const MapView: React.FC<MapViewProps> = ({
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: color.canvas },
+  center: { alignItems: 'center', justifyContent: 'center', padding: 24 },
+  msg: { textAlign: 'center', marginTop: 4 },
+  errorBox: { backgroundColor: 'rgba(245,246,248,0.94)' },
+  retry: { marginTop: 12, paddingHorizontal: 20, paddingVertical: 10 },
 });

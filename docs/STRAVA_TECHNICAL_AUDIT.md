@@ -828,3 +828,21 @@ Verification legend: **T** = covered by automated tests (`shared` + backend: Vit
 **Deployment status:** none of the backend changes are deployed. Migration `drizzle/0002_batch_uploads.sql` is additive (2 new tables, 1 nullable column, 2 indexes) and has not been run against Neon. Until it is deployed, the app falls back to the legacy single-request upload; it still uploads, but without the batch protocol.
 
 **Database decision:** the Phase 3 brief names Cloudflare D1, but the confirmed stack (Phase 1, ADR-16) and the deployed backend use Neon Postgres via Hyperdrive. This phase kept Neon; all new code goes through Drizzle repositories. Moving to D1 is a separate migration that needs a product decision (see the implementation plan).
+
+### 2026-11-20 — Phases 4–5 (social, navigation, QA)
+Full detail in [STRAVA_FINAL_QA_REPORT.md](STRAVA_FINAL_QA_REPORT.md). Status changes:
+
+| Finding | Status | Verified |
+|---|---|---|
+| SOC-01 | **Fixed.** Real followers/following lists (previously search results); tappable counts. | T |
+| SOC-03 / API-05 | **Fixed.** Kudos give (PUT/POST) and remove (DELETE) are idempotent; real `hasKudos` in the feed; kudos list. | T, HTTP E2E |
+| SOC-04 | **Fixed.** Comments: paginated list, author edit, author-or-owner delete, 1–1000 chars. | T |
+| SOC-05 | **Mitigated.** Notifications only on new follow/kudos/comment rows. | HTTP E2E |
+| API-02 | **Partially fixed.** Migration 0003 indexes follows, comments, kudos and notifications. | migration applied in tests |
+| API-04 | **Fixed.** Feed counts via subqueries (no join row multiplication). | T |
+| FE-04 / FE-05 | **Fixed.** Stats endpoint drives the profile; full history screen. | T |
+| FE-07 | **Partially fixed.** "Recording & GPS" settings rebuilt as a real status screen. Other legacy settings screens are local-only fakes and remain unlinked. | — |
+| SEC-07 | **Open** (modules kept mounted at the owner's request). | — |
+| New: stale feed | **Fixed.** Focus refetch, reload after upload, pagination generation guard, `no-store`. | T (server); app NOT DEVICE TESTED |
+| New: fake create screens (club/challenge/event) | **Fixed.** Real API calls; `POST /events` added. | T |
+| New: events attendee count defaulted to 1; RSVP never returned | **Fixed.** | T |

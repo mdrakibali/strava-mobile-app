@@ -10,7 +10,7 @@ export default function PersonalHeatmapScreen() {
   const router = useRouter();
   const { activities } = useApp();
   const [selectedSport, setSelectedSport] = useState<'All' | 'Run' | 'Ride'>('All');
-  const [mapStyle, setMapStyle] = useState<MapStyleKey>('dark');
+  const [mapStyle, setMapStyle] = useState<MapStyleKey>('liberty');
 
   // Filter user activities by sport and aggregate all polyline coordinates
   const filteredActivities = activities.filter((act) => {
@@ -23,8 +23,8 @@ export default function PersonalHeatmapScreen() {
     return act.routePoints.map((p: any) => [p.longitude, p.latitude] as [number, number]);
   });
 
-  const centerCoord: [number, number] =
-    heatmapCoords.length > 0 ? heatmapCoords[0] : [90.4125, 23.7745];
+  // No invented default: with no recorded points the map simply shows the empty state below.
+  const centerCoord: [number, number] | undefined = heatmapCoords.length > 0 ? heatmapCoords[0] : undefined;
 
   return (
     <SafeAreaView className="flex-1 bg-stone-950 justify-between">
@@ -63,7 +63,7 @@ export default function PersonalHeatmapScreen() {
 
         {/* Style Selector */}
         <View className="flex-row bg-stone-800 rounded-full p-0.5">
-          {(['dark', 'positron'] as const).map((style) => (
+          {(['liberty', 'positron'] as const).map((style) => (
             <TouchableOpacity
               key={style}
               onPress={() => setMapStyle(style)}

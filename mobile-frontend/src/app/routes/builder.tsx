@@ -1,226 +1,125 @@
-import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { StravaMapView } from '../../components/map/StravaMapView';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, StyleSheet, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MapView } from '../../components/map/MapView';
+import { AppBar, AppText, Button, Chip, ChipRow, color, elevation, radius, space, TextField } from '../../design';
+import { LngLat } from '../../lib/activityView';
+import { formatDuration, kmValue } from '../../lib/format';
+import { MVP_SPORTS } from '../../lib/sports';
 import { api } from '../../services/api';
+import { haversineM } from '../../tracking/shared';
+import { SportType } from '../../types';
 
-const generateGeographicLoop = (
-  centerLon: number,
-  centerLat: number,
-  distanceKm: number,
-  heading: string
-): [number, number][] => {
-  const points: [number, number][] = [];
-  const radius = (distanceKm / (2 * Math.PI)) * 0.009;
-  const offsets: Record<string, number> = {
-    North: Math.PI / 2,
-    East: 0,
-    South: -Math.PI / 2,
-    West: Math.PI,
-  };
-  const baseAngle = offsets[heading] || 0;
-  const steps = 16;
-  for (let i = 0; i <= steps; i++) {
-    const theta = baseAngle + (i / steps) * 2 * Math.PI;
-    const lon = centerLon + radius * Math.cos(theta) * 1.15;
-    const lat = centerLat + radius * Math.sin(theta);
-    points.push([+lon.toFixed(5), +lat.toFixed(5)]);
-  }
-  return points;
-};
+const TYPICAL_SPEED: Record<string, number> = { Run: 2.8, Walk: 1.3, Hike: 1.1, Ride: 5.5 };
 
+/**
+ * Route builder: tap the map to add points (straight segments between taps). Starts at the
+ * athlete's real location; there is no pre-filled route and no invented elevation. The server
+ * recomputes the distance from the points on save.
+ */
 export default function RouteBuilderScreen() {
   const router = useRouter();
-  const [mode, setMode] = useState<'loop' | 'manual'>('loop');
-  const [routeName, setRouteName] = useState('My Custom Loop');
-  const [targetDistanceKm, setTargetDistanceKm] = useState(10);
-  const [heading, setHeading] = useState<'North' | 'East' | 'South' | 'West'>('North');
-  const [manualPoints, setManualPoints] = useState<[number, number][]>([
-    [90.4125, 23.7745],
-    [90.418, 23.779],
-    [90.422, 23.773],
-  ]);
+  const insets = useSafeAreaInsets();
+  const [points, setPoints] = useState<LngLat[]>([]);
+  const [name, setName] = useState('');
+  const [sport, setSport] = useState<SportType>('Run');
+  const [me, setMe] = useState<LngLat | null>(null);
+  const [locState, setLocState] = useState<'locating' | 'ok' | 'denied'>('locating');
+  const [saving, setSaving] = useState(false);
 
-  const centerLon = 90.4125;
-  const centerLat = 23.7745;
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const perm = await Location.requestForegroundPermissionsAsync().catch(() => null);
+      if (cancelled) return;
+      if (!perm?.granted) return setLocState('denied');
+      const fix = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null);
+      if (cancelled) return;
+      if (fix) setMe([fix.coords.longitude, fix.coords.latitude]);
+      setLocState('ok');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const activeRouteCoords = useMemo(() => {
-    if (mode === 'loop') {
-      return generateGeographicLoop(centerLon, centerLat, targetDistanceKm, heading);
-    }
-    return manualPoints;
-  }, [mode, targetDistanceKm, heading, manualPoints]);
+  const distance = useMemo(() => {
+    let d = 0;
+    for (let i = 1; i < points.length; i++) d += haversineM(points[i - 1][1], points[i - 1][0], points[i][1], points[i][0]);
+    return d;
+  }, [points]);
 
-  const estimatedClimb = Math.round(targetDistanceKm * 6.5);
-  const estimatedTimeMins = Math.round(targetDistanceKm * 5.2);
-
-  const handleMapTap = (coord: [number, number]) => {
-    if (mode === 'manual') {
-      setManualPoints((prev) => [...prev, coord]);
-    }
-  };
-
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleSaveRoute = async () => {
-    if (!routeName.trim()) {
-      Alert.alert('Route Name Required', 'Please enter a name for your route.');
-      return;
-    }
-    setIsSaving(true);
+  const save = async () => {
+    setSaving(true);
     try {
-      const polylinePoints = activeRouteCoords.map(([lon, lat]) => ({ latitude: lat, longitude: lon }));
-      await api.routes.create({
-        name: routeName.trim(),
-        sportType: 'Run',
-        distanceMeters: targetDistanceKm * 1000,
-        elevationGainMeters: estimatedClimb,
-        estimatedTimeSeconds: estimatedTimeMins * 60,
-        polylinePoints,
+      const res = await api.routes.create({
+        name: name.trim(),
+        sportType: sport,
+        distanceMeters: Math.round(distance),
+        polylinePoints: points.map(([lng, lat]) => ({ latitude: lat, longitude: lng })),
       });
-      Alert.alert('Success', `Route "${routeName}" (${targetDistanceKm} km) saved to database!`);
-      router.back();
-    } catch (err: any) {
-      Alert.alert('Save Failed', err.message || 'Could not save route to database');
-    } finally {
-      setIsSaving(false);
+      router.replace({ pathname: '/routes/[id]', params: { id: res.route.id } });
+    } catch (e: any) {
+      Alert.alert('Couldn’t save the route', e?.message ?? 'Please try again.');
+      setSaving(false);
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-stone-900 justify-between">
-      {/* Top Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 bg-stone-900 border-b border-stone-800 z-30">
-        <TouchableOpacity onPress={() => router.back()} className="p-1">
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text className="text-base font-black text-white">Route Builder</Text>
-        <TouchableOpacity onPress={handleSaveRoute} className="p-1">
-          <Text className="text-sm font-black text-[#FC4C02]">Save</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Real Full-Screen MapLibre Map with Route Geometry */}
-      <View className="flex-1 relative">
-        <StravaMapView
-          routeCoordinates={activeRouteCoords}
-          onMapPress={handleMapTap}
-          showControls={true}
-          showUserLocation={true}
-          className="w-full h-full">
-          {/* Floating Telemetry Badge */}
-          <View className="absolute top-4 left-4 bg-stone-900/95 rounded-2xl p-3 border border-stone-800 shadow-xl z-20">
-            <Text className="text-[10px] uppercase font-bold text-gray-400">Total Route</Text>
-            <Text className="text-xl font-black text-white">{targetDistanceKm}.0 km</Text>
-            <Text className="text-[10px] font-semibold text-[#FC4C02]">
-              +{estimatedClimb}m climb · {estimatedTimeMins} min est.
-            </Text>
-          </View>
-        </StravaMapView>
-      </View>
-
-      {/* Bottom Route Config Drawer */}
-      <View className="bg-white rounded-t-3xl p-5 shadow-2xl border-t border-gray-100 z-30">
-        <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-3" />
-
-        {/* Route Name Input */}
-        <TextInput
-          value={routeName}
-          onChangeText={setRouteName}
-          className="bg-gray-100 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-900 mb-3"
-          placeholder="Route Name"
+    <SafeAreaView edges={['top']} style={styles.screen}>
+      <AppBar title="Create Route" />
+      <View style={{ flex: 1 }}>
+        <MapView
+          mode="route"
+          route={points}
+          userPosition={me}
+          showUserLocation
+          frameKey={me ? 'me' : 'none'}
+          focus={me && points.length === 0 ? { center: me, zoom: 15 } : null}
+          onMapPress={(p) => setPoints((prev) => [...prev, p])}
         />
-
-        {/* Mode Selector */}
-        <View className="flex-row bg-gray-100 p-1 rounded-xl mb-3">
-          <TouchableOpacity
-            onPress={() => setMode('loop')}
-            className={`flex-1 py-2 flex-row items-center justify-center rounded-lg ${mode === 'loop' ? 'bg-[#FC4C02]' : ''}`}>
-            <Ionicons name="sync-outline" size={13} color={mode === 'loop' ? '#FFFFFF' : '#374151'} />
-            <Text className={`text-xs font-black ml-1 ${mode === 'loop' ? 'text-white' : 'text-gray-700'}`}>
-              Loop Generator
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setMode('manual')}
-            className={`flex-1 py-2 flex-row items-center justify-center rounded-lg ${mode === 'manual' ? 'bg-[#FC4C02]' : ''}`}>
-            <Ionicons name="pin-outline" size={13} color={mode === 'manual' ? '#FFFFFF' : '#374151'} />
-            <Text className={`text-xs font-black ml-1 ${mode === 'manual' ? 'text-white' : 'text-gray-700'}`}>
-              Tap to Place ({manualPoints.length} pts)
-            </Text>
-          </TouchableOpacity>
+        <View style={[styles.hint, elevation.floating]} pointerEvents="none">
+          <AppText variant="bodyStrong">{kmValue(distance)} km</AppText>
+          <AppText variant="label" color="inkSecondary">
+            {points.length < 2
+              ? locState === 'denied'
+                ? 'Location off — pan to your area, then tap to add points'
+                : 'Tap the map to add points'
+              : `≈ ${formatDuration(distance / TYPICAL_SPEED[sport])} est. · straight segments between taps`}
+          </AppText>
         </View>
-
-        {mode === 'loop' ? (
-          <View>
-            {/* Distance Pills */}
-            <View className="flex-row justify-between mb-3">
-              {[5, 10, 15, 21, 42].map((km) => (
-                <TouchableOpacity
-                  key={km}
-                  onPress={() => setTargetDistanceKm(km)}
-                  className={`px-3.5 py-1.5 rounded-xl border ${
-                    targetDistanceKm === km
-                      ? 'border-[#FC4C02] bg-[#FC4C02]'
-                      : 'border-gray-200 bg-gray-50'
-                  }`}>
-                  <Text className={`text-xs font-bold ${targetDistanceKm === km ? 'text-white' : 'text-gray-700'}`}>
-                    {km}k
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Heading Selector */}
-            <View className="flex-row justify-between mb-3">
-              {(['North', 'East', 'South', 'West'] as const).map((dir) => (
-                <TouchableOpacity
-                  key={dir}
-                  onPress={() => setHeading(dir)}
-                  className={`flex-1 py-1.5 items-center mx-1 rounded-xl border ${
-                    heading === dir
-                      ? 'border-[#FC4C02] bg-orange-50'
-                      : 'border-gray-200 bg-gray-50'
-                  }`}>
-                  <Text className={`text-xs font-bold ${heading === dir ? 'text-[#FC4C02]' : 'text-gray-700'}`}>
-                    {dir}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ) : (
-          <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-xs font-semibold text-gray-500">
-              Tap map to place waypoints.
-            </Text>
-            <View className="flex-row items-center">
-              <TouchableOpacity
-                onPress={() => {
-                  if (manualPoints.length > 1) {
-                    setManualPoints((prev) => prev.slice(0, prev.length - 1));
-                  }
-                }}
-                className="px-2.5 py-1 bg-gray-100 rounded-lg mr-2">
-                <Text className="text-xs font-bold text-gray-700">Undo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setManualPoints([manualPoints[0]])}
-                className="px-3 py-1 bg-red-50 rounded-lg">
-                <Text className="text-xs font-bold text-red-600">Clear</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        <TouchableOpacity
-          onPress={handleSaveRoute}
-          className="w-full py-3.5 bg-[#FC4C02] rounded-2xl items-center shadow-md">
-          <Text className="text-base font-black text-white">Save Route</Text>
-        </TouchableOpacity>
+      </View>
+      <View style={[styles.sheet, { paddingBottom: insets.bottom + space.md }]}>
+        <View style={styles.row}>
+          <Button label="Undo" icon="arrow-undo" variant="outline" size="sm" disabled={!points.length} onPress={() => setPoints((p) => p.slice(0, -1))} />
+          <Button label="Clear" variant="ghost" size="sm" disabled={!points.length} onPress={() => setPoints([])} style={{ marginLeft: space.sm }} />
+        </View>
+        <ChipRow>
+          {MVP_SPORTS.map((s) => (
+            <Chip key={s.id} label={s.label} icon={s.icon} selected={sport === s.id} onPress={() => setSport(s.id)} />
+          ))}
+        </ChipRow>
+        <TextField value={name} onChangeText={setName} placeholder="Route name" accessibilityLabel="Route name" maxLength={120} />
+        <Button
+          label="Save route"
+          variant="dark"
+          size="lg"
+          fullWidth
+          loading={saving}
+          disabled={points.length < 2 || distance < 50 || !name.trim()}
+          onPress={save}
+          style={{ marginTop: space.md }}
+        />
       </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: color.surface },
+  hint: { position: 'absolute', top: space.md, left: space.gutter, right: space.gutter, backgroundColor: color.surface, borderRadius: radius.md, padding: space.md },
+  sheet: { padding: space.gutter, gap: space.sm, backgroundColor: color.surface, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg },
+  row: { flexDirection: 'row', alignItems: 'center' },
+});

@@ -1,7 +1,10 @@
 import { and, desc, eq, ilike } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { athletes, routes, savedRoutes } from '../db/schema';
+import { z } from 'zod';
+import { haversineM } from '../../../shared/tracking/geo';
 import { getDb } from '../lib/db';
+import { HttpError, parseBody } from '../lib/http';
 import { optionalAuth, requireAuth } from '../middleware/auth';
 import { Env } from '../types';
 
@@ -120,38 +123,46 @@ routesRouter.get('/:id', optionalAuth, async (c) => {
 });
 
 // POST /api/v1/routes
+const createRouteSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(1000).optional(),
+  sportType: z.enum(['Run', 'Walk', 'Hike', 'Ride']).default('Run'),
+  polylinePoints: z
+    .array(z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }))
+    .min(2)
+    .max(5000),
+  isPublic: z.boolean().optional(),
+});
+
+/** Typical moving speeds used only for the *estimated* time label (m/s). */
+const TYPICAL_SPEED: Record<string, number> = { Run: 2.8, Walk: 1.3, Hike: 1.1, Ride: 5.5 };
+
+// POST /api/v1/routes — distance is computed from the drawn points on the server; nothing is
+// invented (the old handler defaulted to 5 km / 25 m climb / fake surface split / fake profile).
 routesRouter.post('/', requireAuth, async (c) => {
-  try {
-    const user = c.get('user');
-    const body = await c.req.json();
-
-    if (!body.name || !body.polylinePoints || body.polylinePoints.length < 2) {
-      return c.json({ error: 'Route name and polylinePoints (min 2 coordinates) are required' }, 400);
-    }
-
-    const db = getDb(c);
-    const newRoute = {
-      id: `route_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      creatorId: user.athleteId,
-      name: body.name,
-      description: body.description || '',
-      sportType: body.sportType || 'Run',
-      distanceMeters: String(body.distanceMeters || 5000),
-      elevationGainMeters: body.elevationGainMeters || 25,
-      estimatedTimeSeconds: body.estimatedTimeSeconds || 1800,
-      polylinePoints: body.polylinePoints,
-      elevationProfile: body.elevationProfile || [10, 15, 20, 15, 10],
-      surfaceTypes: body.surfaceTypes || { paved: 85, gravel: 15, dirt: 0 },
-      isPublic: body.isPublic !== false,
-    };
-
-    await db.insert(routes).values(newRoute);
-
-    return c.json({ message: 'Route created successfully', route: newRoute }, 201);
-  } catch (err: any) {
-    console.error('Route create error:', err);
-    return c.json({ error: err.message || 'Failed to create route' }, 500);
-  }
+  const user = c.get('user');
+  const body = await parseBody(c, createRouteSchema);
+  const pts = body.polylinePoints;
+  let distance = 0;
+  for (let i = 1; i < pts.length; i++) distance += haversineM(pts[i - 1].latitude, pts[i - 1].longitude, pts[i].latitude, pts[i].longitude);
+  if (distance < 50) throw new HttpError(400, 'route_too_short', 'A route must be at least 50 m long');
+  const newRoute = {
+    id: `route_${crypto.randomUUID()}`,
+    creatorId: user.athleteId,
+    name: body.name,
+    description: body.description || '',
+    sportType: body.sportType,
+    distanceMeters: distance.toFixed(2),
+    elevationGainMeters: 0, // unknown: no elevation source for drawn routes
+    estimatedTimeSeconds: Math.round(distance / TYPICAL_SPEED[body.sportType]),
+    polylinePoints: pts,
+    elevationProfile: null,
+    surfaceTypes: null,
+    isPublic: body.isPublic !== false,
+  };
+  const db = getDb(c);
+  await db.insert(routes).values(newRoute);
+  return c.json({ message: 'Route created successfully', route: newRoute }, 201);
 });
 
 // POST /api/v1/routes/:id/toggle-save

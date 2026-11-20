@@ -75,9 +75,14 @@ describe('routes (Maps)', () => {
   it('create, list, detail, save/unsave', async () => {
     const created = await call('POST', '/routes', {
       token: a,
-      body: { name: 'River loop', sportType: 'Run', distanceMeters: 4200, polylinePoints: [{ latitude: 23.78, longitude: 90.42 }, { latitude: 23.79, longitude: 90.43 }] },
+      body: { name: 'River loop', sportType: 'Run', distanceMeters: 999999, polylinePoints: [{ latitude: 23.78, longitude: 90.42 }, { latitude: 23.79, longitude: 90.43 }] },
     });
     expect(created.status).toBe(201);
+    // distance comes from the points (≈1.5 km), never from the client or a default
+    expect(Number(created.body.route.distanceMeters)).toBeGreaterThan(1400);
+    expect(Number(created.body.route.distanceMeters)).toBeLessThan(1600);
+    expect(created.body.route.surfaceTypes).toBeNull();
+    expect((await call('POST', '/routes', { token: a, body: { name: 'x', polylinePoints: [{ latitude: 1, longitude: 1 }] } })).status).toBe(400);
     const id = created.body.route.id;
     expect((await call('GET', '/routes', { token: b })).body.routes.map((r: any) => r.id)).toContain(id);
     expect((await call('GET', `/routes/${id}`, { token: b })).status).toBe(200);

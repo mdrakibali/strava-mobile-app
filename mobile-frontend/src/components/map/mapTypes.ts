@@ -1,8 +1,18 @@
+/**
+ * OpenFreeMap vector styles (OpenStreetMap data, OpenMapTiles schema). Public instance: no API key,
+ * no registration, no request limits stated (https://openfreemap.org/quick_start/).
+ *  - liberty:  full colour (parks, water, POIs, paths) → interactive maps (detail, Maps tab, recorder)
+ *  - positron: light grey → small route previews, where the orange route must dominate
+ *  - bright:   OSM-Bright look, kept as an option
+ * Attribution required: OpenFreeMap · © OpenMapTiles · Data from OpenStreetMap.
+ */
 export const MAP_STYLES = {
-  positron: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-  voyager: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
-  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+  liberty: 'https://tiles.openfreemap.org/styles/liberty',
+  positron: 'https://tiles.openfreemap.org/styles/positron',
+  bright: 'https://tiles.openfreemap.org/styles/bright',
 };
+
+export const MAP_ATTRIBUTION = '© OpenFreeMap · © OpenMapTiles · © OpenStreetMap contributors';
 
 export type MapStyleKey = keyof typeof MAP_STYLES;
 

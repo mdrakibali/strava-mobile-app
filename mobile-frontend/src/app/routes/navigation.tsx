@@ -110,7 +110,7 @@ export default function RouteNavigationScreen() {
         styleKey="positron"
         routeCoordinates={routeCoords}
         userLocation={userLocation || undefined}
-        centerCoordinate={userLocation || routeCoords[0] || [90.4125, 23.7745]}
+        centerCoordinate={userLocation || routeCoords[0]}
         showControls={false}
         showUserLocation={true}
         className="w-full h-full">

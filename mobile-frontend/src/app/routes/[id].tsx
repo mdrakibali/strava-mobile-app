@@ -113,7 +113,7 @@ export default function RouteDetailScreen() {
   const coords: [number, number][] = polyPoints.map((p: any) =>
     Array.isArray(p) ? p : [p.longitude, p.latitude]
   );
-  const centerCoord: [number, number] = coords[0] || [90.4125, 23.7745];
+  const centerCoord: [number, number] | undefined = coords[0];
 
   return (
     <SafeAreaView className="flex-1 bg-white">
