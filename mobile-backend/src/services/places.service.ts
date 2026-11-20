@@ -33,6 +33,8 @@ export interface Place {
   path: [number, number][][] | null;
   surface: string | null;
   lit: boolean | null;
+  /** Street / area / city from the provider (real address data), or null. */
+  address: string | null;
   osmUrl: string;
 }
 
@@ -134,6 +136,7 @@ export const normalizePhoton = (
       path: null,
       surface: null,
       lit: null,
+      address: [p.street, p.locality ?? p.district, p.city].filter((x: unknown) => typeof x === 'string' && x).filter((x: string, i: number, a: string[]) => a.indexOf(x) === i).join(', ') || null,
       osmUrl: `https://www.openstreetmap.org/${type}/${p.osm_id}`,
     });
   }
@@ -268,6 +271,7 @@ export const normalizeOverpass = (json: any, lat: number, lng: number, limit = 1
       path: line ? [simplifyLine(line)] : null,
       surface: tags.surface ?? null,
       lit: tags.lit === 'yes' ? true : tags.lit === 'no' ? false : null,
+      address: [tags['addr:street'], tags['addr:suburb'], tags['addr:city']].filter(Boolean).join(', ') || null,
       osmUrl: `https://www.openstreetmap.org/${el.type}/${el.id}`,
     });
   }

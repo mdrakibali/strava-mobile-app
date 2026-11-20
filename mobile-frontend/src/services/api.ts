@@ -28,7 +28,38 @@ export interface NearbyPlace {
   path: [number, number][][] | null;
   surface: string | null;
   lit: boolean | null;
+  address: string | null;
   osmUrl: string;
+}
+
+export interface PlaceDetails {
+  id: string;
+  name: string | null;
+  nameEn: string | null;
+  tags: { website: string | null; openingHours: string | null; surface: string | null; lit: boolean | null; access: string | null; description: string | null };
+  address: string | null;
+  image: { url: string; pageUrl: string; author: string | null; license: string | null; licenseUrl: string | null; source: string } | null;
+  osmUrl: string;
+  attribution: string;
+}
+
+export interface PlannedRouteDto {
+  geometry: [number, number][];
+  distanceM: number;
+  durationS: number;
+  elevationGainM: number | null;
+  elevationLossM: number | null;
+  elevationProfile: [number, number][] | null;
+}
+
+export interface RoutePlan {
+  sport: string;
+  from: { lat: number; lng: number };
+  to: { lat: number; lng: number };
+  routes: PlannedRouteDto[];
+  engine: string;
+  attribution: string;
+  assumedSpeedKmh: number;
 }
 
 export interface NearbyPlacesResponse {
@@ -115,6 +146,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
+    // The route itself doesn't exist on this server (older deployment): say so plainly instead of
+    // a confusing "not found" — never pretend the action worked.
+    if (res.status === 404 && body?.error === 'Endpoint Not Found') {
+      throw new ApiError('This feature needs the latest server version, which is not deployed yet.', 404, 'endpoint_missing');
+    }
     throw new ApiError(body?.error || `HTTP ${res.status}`, res.status, body?.code ?? null, body?.details ?? null);
   }
 
@@ -333,10 +369,18 @@ export const api = {
 
   /** Real OSM places near a real position (backend proxies Photon/Overpass with caching). */
   places: {
+    /** OSM details + a genuine Wikimedia Commons photo (or null) with attribution. */
+    details: (osmId: string) => request<PlaceDetails>(`/places/${osmId}`),
     nearby: (lat: number, lng: number, sport: string, radiusM = 5000) =>
       request<NearbyPlacesResponse>(
         `/places/nearby?${new URLSearchParams({ lat: String(lat), lng: String(lng), sport, radius: String(radiusM) }).toString()}`
       ),
+  },
+
+  /** Real routes over mapped ways (Valhalla) with DEM elevation. */
+  routing: {
+    plan: (sport: string, from: { lat: number; lng: number }, to: { lat: number; lng: number }) =>
+      request<RoutePlan>('/routing/plan', { method: 'POST', body: JSON.stringify({ sport, from, to }) }),
   },
 
   // 10. Privacy Zones (Start/End masking)

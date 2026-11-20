@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { HttpError } from '../lib/http';
 import { requireAuth } from '../middleware/auth';
+import { PlaceDetailsService } from '../services/place-details.service';
 import { PlacesService } from '../services/places.service';
 import { Env } from '../types';
 
@@ -34,4 +35,9 @@ placesRouter.get('/nearby', requireAuth, async (c) => {
     waitUntil = undefined;
   }
   return c.json(await new PlacesService().nearby(sport, lat, lng, radius, waitUntil));
+});
+
+/** GET /places/:type/:id — OSM details + a genuine Wikimedia Commons photo (or null) with attribution. */
+placesRouter.get('/:type/:id', requireAuth, async (c) => {
+  return c.json(await new PlaceDetailsService().details(c.req.param('type') ?? '', c.req.param('id') ?? ''));
 });

@@ -31,6 +31,8 @@ export const color = {
   info: '#2563EB',
 
   routeStart: '#1F9D5B',
+  /** Planned (reference) routes — distinct from the orange recorded route. */
+  planned: '#2563EB',
   routeEnd: '#15171C',
   overlay: 'rgba(15,17,22,0.5)',
   skeleton: '#E9EBEF',
