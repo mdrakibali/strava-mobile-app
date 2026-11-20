@@ -197,7 +197,7 @@ export default function EventDetailScreen() {
             color={rsvpStatus === 'DECLINED' ? '#ffffff' : '#374151'}
           />
           <Text className={`text-xs font-black ml-1 ${rsvpStatus === 'DECLINED' ? 'text-white' : 'text-gray-700'}`}>
-            Can't Go
+            Can&apos;t Go
           </Text>
         </TouchableOpacity>
       </View>

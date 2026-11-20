@@ -89,16 +89,6 @@ export default function LoginScreen() {
     }
   }, [googleClientId]);
 
-  // Handle Expo Go Google Auth response
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const idToken = response.params?.id_token || (response as any).authentication?.idToken;
-      if (idToken) {
-        handleServerVerification(idToken);
-      }
-    }
-  }, [response]);
-
   const handleServerVerification = async (idToken: string) => {
     setIsLoading(true);
     setStatusMessage('Authenticating athlete account on Neon DB...');
@@ -112,6 +102,17 @@ export default function LoginScreen() {
       setStatusMessage(null);
     }
   };
+
+  // Handle Expo Go Google Auth response
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const idToken = response.params?.id_token || (response as any).authentication?.idToken;
+      if (idToken) {
+        handleServerVerification(idToken);
+      }
+    }
+  }, [response]);
+
 
   // Smart Google Sign-In: Native Google Play Services when built natively, Expo Go fallback otherwise
   const handleGoogleSignInPress = async () => {
