@@ -48,9 +48,14 @@ export interface AppContextType {
   discardRecording: () => void;
   finishRecording: () => ActiveRecordingState;
   toggleSimulation?: () => void;
-  saveNewActivity: (
-    title: string,
-    description: string,
-    visibility: 'PUBLIC' | 'FOLLOWERS_ONLY' | 'ONLY_ME'
-  ) => Promise<void>;
+  updateCurrentUser: (patch: Partial<Athlete>) => Promise<void>;
+  /** Uploads the current recording; resolves to the server activity id. Keeps the recording on failure. */
+  saveNewActivity: (input: SaveActivityInput) => Promise<string>;
+}
+
+export interface SaveActivityInput {
+  title: string;
+  description: string;
+  sportType: SportType;
+  visibility: 'PUBLIC' | 'FOLLOWERS_ONLY' | 'ONLY_ME';
 }

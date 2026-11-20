@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { makeRedirectUri } from 'expo-auth-session';
+import { APP_NAME } from '../../config/app';
 import * as Google from 'expo-auth-session/providers/google';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -226,11 +227,11 @@ export default function LoginScreen() {
           
           {/* Header Branding */}
           <View className="items-center mt-4 mb-6">
-            <View className="w-14 h-14 rounded-2xl bg-[#FC4C02] items-center justify-center mb-2 shadow-lg">
+            <View className="w-14 h-14 rounded-2xl bg-[#F25C19] items-center justify-center mb-2 shadow-lg">
               <Ionicons name="fitness" size={32} color="#FFFFFF" />
             </View>
-            <Text className="text-3xl font-black text-black tracking-wider">
-              STRAVA
+            <Text className="text-3xl font-black text-black tracking-tight">
+              {APP_NAME}
             </Text>
             <Text className="text-xs font-semibold text-gray-500 mt-0.5">
               Open Edition · Unlimited & Free
@@ -329,9 +330,9 @@ export default function LoginScreen() {
             disabled={isLoading}
             onPress={handleEmailAuth}
             activeOpacity={0.8}
-            className="w-full py-4 bg-[#FC4C02] rounded-2xl items-center justify-center shadow-md active:bg-[#E03A00] mb-3">
+            className="w-full py-4 bg-[#F25C19] rounded-2xl items-center justify-center shadow-md active:bg-[#E03A00] mb-3">
             <Text className="text-sm font-black text-white tracking-wide">
-              {authMode === 'login' ? 'Log In to Strava' : 'Complete Registration'}
+              {authMode === 'login' ? 'Log in' : 'Create account'}
             </Text>
           </TouchableOpacity>
 

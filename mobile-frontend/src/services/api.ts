@@ -88,6 +88,10 @@ export const api = {
       movingTimeSeconds: number;
       elapsedTimeSeconds: number;
       elevationGainMeters?: number;
+      visibility?: 'PUBLIC' | 'FOLLOWERS_ONLY' | 'ONLY_ME';
+      startTime?: string;
+      maxSpeedMps?: number;
+      calories?: number;
       rawPolyline: any[];
       splits?: any[];
       elevationProfile?: number[];
@@ -176,6 +180,12 @@ export const api = {
     toggleFollow: (id: string) =>
       request<{ isFollowing: boolean; followersCount: number }>(`/athletes/${id}/follow`, {
         method: 'POST',
+      }),
+    /** PUT /athletes/me (existing backend route; previously unused — profile edit was a fake save). */
+    updateMe: (data: { displayName?: string; bio?: string; city?: string; country?: string }) =>
+      request<{ message: string; athlete: any }>('/athletes/me', {
+        method: 'PUT',
+        body: JSON.stringify(data),
       }),
   },
 

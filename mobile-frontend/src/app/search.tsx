@@ -1,151 +1,168 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
+import {
+  AppText,
+  Avatar,
+  Button,
+  color,
+  Divider,
+  EmptyState,
+  ErrorState,
+  IconButton,
+  radius,
+  space,
+  type,
+} from '../design';
+import { AthleteSummary, toAthleteSummary } from '../lib/activityView';
+import { setFollowing } from '../lib/social';
 import { api } from '../services/api';
-import { Athlete } from '../types';
 
+type Row = AthleteSummary & { isFollowing: boolean; pending?: boolean };
+
+/**
+ * Find athletes (reference: ScreensDesign 374842). One follow request per tap, UI follows the
+ * server's returned state (the old screen toggled twice per tap — a no-op; UI/UX audit X-7).
+ */
 export default function SearchScreen() {
   const router = useRouter();
-  const { toggleFollowAthlete } = useApp();
+  const { currentUser } = useApp();
   const [query, setQuery] = useState('');
-  const [athletes, setAthletes] = useState<Athlete[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [rows, setRows] = useState<Row[]>([]);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const requestId = useRef(0);
 
-  // Search real athletes from Neon Database via Cloudflare Workers
-  useEffect(() => {
-    let isCancelled = false;
-    const fetchAthletes = async () => {
-      setIsLoading(true);
-      try {
-        const res = await api.athletes.search(query);
-        if (!isCancelled && res.athletes) {
-          setAthletes(
-            res.athletes.map((a: any) => ({
-              id: a.id,
-              username: a.username,
-              displayName: a.displayName,
-              avatarUrl: a.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
-              city: a.city || 'Dhaka',
-              country: a.country || 'Bangladesh',
-              bio: a.bio || '',
-              followersCount: a.followersCount || 0,
-              followingCount: a.followingCount || 0,
-              isFollowing: Boolean(a.isFollowing),
-            }))
-          );
-        }
-      } catch (err) {
-        console.warn('Athlete search error:', err);
-      } finally {
-        if (!isCancelled) setIsLoading(false);
-      }
-    };
-
-    const timer = setTimeout(fetchAthletes, 300);
-    return () => {
-      isCancelled = true;
-      clearTimeout(timer);
-    };
-  }, [query]);
-
-  const handleToggleFollow = (id: string) => {
-    toggleFollowAthlete(id);
-    setAthletes((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, isFollowing: !a.isFollowing } : a))
-    );
-    api.athletes.toggleFollow(id).catch(console.warn);
+  const runSearch = async (q: string) => {
+    const myId = ++requestId.current;
+    setStatus('loading');
+    try {
+      const res = await api.athletes.search(q.trim());
+      if (myId !== requestId.current) return; // stale response
+      setRows(
+        (res.athletes || [])
+          .filter((a: any) => a.id !== currentUser.id)
+          .map((a: any) => ({ ...toAthleteSummary(a), isFollowing: Boolean(a.isFollowing) }))
+      );
+      setStatus('ready');
+    } catch {
+      if (myId === requestId.current) setStatus('error');
+    }
   };
 
-  const renderAthleteItem = ({ item }: { item: Athlete }) => (
-    <View className="flex-row items-center px-4 py-3.5 border-b border-gray-100">
-      <TouchableOpacity
-        className="flex-row items-center flex-1 mr-3"
-        onPress={() => router.push(`/athlete/${item.id}`)}>
-        <Image source={{ uri: item.avatarUrl }} className="w-12 h-12 rounded-full bg-gray-100 mr-3" />
+  const tooShort = query.trim().length < 2;
 
-        <View className="flex-1">
-          <Text className="text-sm font-bold text-gray-900">{item.displayName}</Text>
-          <Text className="text-xs text-[#FC4C02] mt-0.5">@{item.username}</Text>
-          <View className="flex-row items-center mt-0.5">
-            <Ionicons name="location-outline" size={11} color="#9CA3AF" />
-            <Text className="text-[10px] text-gray-400 ml-0.5">{item.city}, {item.country}</Text>
-          </View>
-          {item.bio ? <Text className="text-xs text-gray-600 mt-1" numberOfLines={1}>{item.bio}</Text> : null}
-        </View>
-      </TouchableOpacity>
+  useEffect(() => {
+    if (tooShort) {
+      requestId.current++; // drop any in-flight response
+      return;
+    }
+    const t = setTimeout(() => runSearch(query), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, tooShort]);
 
-      <TouchableOpacity
-        className={`px-3.5 py-1.5 rounded-lg border ${
-          item.isFollowing
-            ? 'bg-gray-100 border-gray-200'
-            : 'bg-[#FC4C02] border-[#FC4C02]'
-        }`}
-        onPress={() => handleToggleFollow(item.id)}>
-        <Text
-          className={`text-xs font-bold ${
-            item.isFollowing ? 'text-gray-600' : 'text-white'
-          }`}>
-          {item.isFollowing ? 'Following' : 'Follow'}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const onFollow = async (row: Row) => {
+    setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, pending: true } : r)));
+    try {
+      const res = await setFollowing(row.id, row.isFollowing, !row.isFollowing);
+      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, isFollowing: res.isFollowing, pending: false } : r)));
+    } catch {
+      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, pending: false } : r)));
+    }
+  };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="px-4 py-3 border-b border-gray-100 flex-row items-center">
-        <TouchableOpacity onPress={() => router.back()} className="mr-3 p-1">
-          <Ionicons name="arrow-back" size={24} color="#1F2937" />
-        </TouchableOpacity>
-        <View className="flex-1 flex-row items-center bg-gray-100 rounded-full px-3.5 py-2">
-          <Ionicons name="search" size={18} color="#9CA3AF" />
+    <SafeAreaView style={styles.screen}>
+      <View style={styles.bar}>
+        <IconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => router.back()} />
+        <View style={styles.searchBox}>
+          <Ionicons name="search" size={18} color={color.inkTertiary} />
           <TextInput
-            placeholder="Search athletes by name, handle, or city..."
             value={query}
             onChangeText={setQuery}
-            className="flex-1 ml-2 text-sm text-gray-900"
-            placeholderTextColor="#9CA3AF"
+            placeholder="Search athletes by name or city"
+            placeholderTextColor={color.inkTertiary}
+            autoFocus
             autoCapitalize="none"
             autoCorrect={false}
+            returnKeyType="search"
+            accessibilityLabel="Search athletes"
+            style={[type.body, styles.input]}
           />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')}>
-              <Ionicons name="close-circle" size={16} color="#9CA3AF" />
-            </TouchableOpacity>
-          )}
+          {query.length > 0 ? (
+            <IconButton icon="close-circle" size={32} iconColor={color.inkTertiary} accessibilityLabel="Clear search" onPress={() => setQuery('')} />
+          ) : null}
         </View>
       </View>
 
-      {isLoading ? (
-        <View className="flex-1 items-center justify-center py-12">
-          <ActivityIndicator size="small" color="#FC4C02" />
-        </View>
+      {tooShort || status === 'idle' ? (
+        <EmptyState icon="people-outline" title="Find athletes" body="Search by name or city, then follow athletes to see their activities in your feed." />
+      ) : status === 'loading' && rows.length === 0 ? (
+        <ActivityIndicator style={{ marginTop: space.xxxl }} color={color.brand} />
+      ) : status === 'error' ? (
+        <ErrorState message="Search failed. Check your connection and try again." onRetry={() => runSearch(query)} />
       ) : (
         <FlatList
-          data={athletes}
-          keyExtractor={(item) => item.id}
-          renderItem={renderAthleteItem}
-          ListEmptyComponent={
-            <View className="items-center justify-center py-16 px-6">
-              <Ionicons name="people-outline" size={48} color="#D1D5DB" />
-              <Text className="text-gray-500 text-sm mt-3 font-medium text-center">
-                {query ? 'No athletes found matching your search.' : 'Search for athletes to follow their activities and give kudos.'}
-              </Text>
+          data={rows}
+          keyExtractor={(r) => r.id}
+          keyboardShouldPersistTaps="handled"
+          ItemSeparatorComponent={() => <Divider inset={space.gutter + 48 + space.md} />}
+          contentContainerStyle={rows.length === 0 ? { flexGrow: 1 } : undefined}
+          ListEmptyComponent={<EmptyState icon="search-outline" title="No athletes found" body={`Nobody matches “${query.trim()}”.`} />}
+          renderItem={({ item }) => (
+            <View style={styles.row}>
+              <Pressable
+                style={styles.rowMain}
+                onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: item.id } })}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.displayName}'s profile`}>
+                <Avatar uri={item.avatarUrl} name={item.displayName} size={48} />
+                <View style={{ flex: 1, marginLeft: space.md }}>
+                  <AppText variant="title3" numberOfLines={1}>{item.displayName}</AppText>
+                  {item.city ? (
+                    <AppText variant="caption" color="inkTertiary" numberOfLines={1}>{item.city}</AppText>
+                  ) : null}
+                </View>
+              </Pressable>
+              <Button
+                label={item.isFollowing ? 'Following' : 'Follow'}
+                size="sm"
+                variant={item.isFollowing ? 'outline' : 'primary'}
+                loading={item.pending}
+                onPress={() => onFollow(item)}
+              />
             </View>
-          }
+          )}
         />
       )}
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: color.surface },
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: space.sm,
+    paddingVertical: space.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: color.border,
+  },
+  searchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 44,
+    marginLeft: space.xs,
+    paddingLeft: space.md,
+    borderRadius: radius.pill,
+    backgroundColor: color.canvas,
+  },
+  input: { flex: 1, marginLeft: space.sm, color: color.ink, paddingVertical: 0 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.gutter, paddingVertical: space.md },
+  rowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', marginRight: space.md },
+});

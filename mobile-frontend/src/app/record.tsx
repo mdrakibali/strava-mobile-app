@@ -1,349 +1,327 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { RecordSettingsModal } from '../components/record/RecordSettingsModal';
-import { SportPickerModal } from '../components/record/SportPickerModal';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MapView } from '../components/map/MapView';
+import { loadLastSport, SportSheet } from '../components/record/SportSheet';
 import { useApp } from '../context/AppContext';
-import { api } from '../services/api';
+import {
+  AppText,
+  Button,
+  color,
+  elevation,
+  IconButton,
+  MetricTile,
+  radius,
+  space,
+} from '../design';
+import { LngLat } from '../lib/activityView';
+import { estimateCalories } from '../lib/calories';
+import { DASH, formatClock, formatElevation, kmValue, paceValue, speedValue } from '../lib/format';
+import { sportConfig } from '../lib/sports';
 import { SportType } from '../types';
 
-export default function RecordCockpitScreen() {
+type PreviewGps =
+  | { state: 'acquiring' }
+  | { state: 'denied' }
+  | { state: 'off' }
+  | { state: 'fix'; accuracy: number; position: LngLat };
+
+const GOOD_ACCURACY_M = 20;
+
+/**
+ * Recorder (reference: ScreensDesign 374878 pre-start, 374732 recording, 374733 paused,
+ * 374717 stats view). Behaviour rules: research §3, §5, §8.
+ *
+ * Recording logic is unchanged (use-gps-recorder); this screen only presents it.
+ * Closing the screen never discards — discarding is only offered on the Save screen.
+ */
+export default function RecordScreen() {
   const router = useRouter();
-  const {
-    activeRecording,
-    startRecording,
-    pauseRecording,
-    resumeRecording,
-    discardRecording,
-    finishRecording,
-    toggleSimulation,
-  } = useApp();
+  const insets = useSafeAreaInsets();
+  const { activeRecording: rec, startRecording, pauseRecording, resumeRecording } = useApp();
 
-  const [selectedSport, setSelectedSport] = useState<SportType>(activeRecording.sportType || 'Run');
-  const [showSportPicker, setShowSportPicker] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [beaconToken, setBeaconToken] = useState<string | null>(null);
-  const [isBeaconActive, setIsBeaconActive] = useState(false);
-  const lastPingTimeRef = useRef<number>(0);
+  const [sport, setSport] = useState<SportType>(rec.isRecording ? rec.sportType : 'Run');
+  const [sportSheet, setSportSheet] = useState(false);
+  const [statsView, setStatsView] = useState(false);
+  const [following, setFollowing] = useState(true);
+  const [preview, setPreview] = useState<PreviewGps>({ state: 'acquiring' });
 
-  // Periodic Beacon Ping every 5 seconds if Beacon is active
+  const isIdle = !rec.isRecording;
+  const cfg = sportConfig(isIdle ? sport : rec.sportType);
+
+  // Preselect the last-used sport (research §1).
   useEffect(() => {
-    if (
-      activeRecording.isRecording &&
-      !activeRecording.isPaused &&
-      beaconToken &&
-      activeRecording.routeCoordinates.length > 0
-    ) {
-      const now = Date.now();
-      if (now - lastPingTimeRef.current >= 5000) {
-        lastPingTimeRef.current = now;
-        const last = activeRecording.routeCoordinates[activeRecording.routeCoordinates.length - 1];
-        api.beacon
-          .ping(beaconToken, {
-            latitude: last.latitude,
-            longitude: last.longitude,
-            speedMps: activeRecording.currentSpeedMps,
+    if (!isIdle) return;
+    loadLastSport().then((s) => s && setSport(s));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Pre-start GPS status: a lightweight foreground watch while idle only. The recorder starts
+  // its own subscription on Start, so this one is removed as soon as recording begins.
+  useEffect(() => {
+    if (!isIdle || Platform.OS === 'web') return;
+    let sub: Location.LocationSubscription | null = null;
+    let cancelled = false;
+    (async () => {
+      const perm = await Location.requestForegroundPermissionsAsync().catch(() => null);
+      if (cancelled) return;
+      if (!perm || perm.status !== 'granted') return setPreview({ state: 'denied' });
+      const enabled = await Location.hasServicesEnabledAsync().catch(() => false);
+      if (cancelled) return;
+      if (!enabled) return setPreview({ state: 'off' });
+      sub = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, timeInterval: 2000, distanceInterval: 0 },
+        (loc) =>
+          setPreview({
+            state: 'fix',
+            accuracy: loc.coords.accuracy ?? 99,
+            position: [loc.coords.longitude, loc.coords.latitude],
           })
-          .catch(console.warn);
-      }
-    }
-  }, [activeRecording.routeCoordinates, activeRecording.isRecording, activeRecording.isPaused, beaconToken]);
+      ).catch(() => null);
+      if (cancelled) sub?.remove();
+    })();
+    return () => {
+      cancelled = true;
+      sub?.remove();
+    };
+  }, [isIdle]);
 
-  // Format timer into HH:MM:SS or MM:SS
-  const formatTimerDigits = (secs: number) => {
-    const h = Math.floor(secs / 3600);
-    const m = Math.floor((secs % 3600) / 60);
-    const s = secs % 60;
-    const hh = String(h).padStart(2, '0');
-    const mm = String(m).padStart(2, '0');
-    const ss = String(s).padStart(2, '0');
-    return h > 0 ? `${hh}:${mm}:${ss}` : `${mm}:${ss}`;
+  const route = useMemo<LngLat[]>(
+    () => rec.routeCoordinates.map((p) => [p.longitude, p.latitude] as LngLat),
+    // routeCoordinates is replaced (not mutated) on every fix
+    [rec.routeCoordinates]
+  );
+  const userPosition: LngLat | null =
+    route.length > 0 ? route[route.length - 1] : preview.state === 'fix' ? preview.position : null;
+
+  // ---- Status strip -------------------------------------------------------------------------
+  let strip: { text: string; bg: string; fg: string; action?: () => void };
+  if (isIdle) {
+    if (preview.state === 'denied')
+      strip = { text: 'Location access needed · Open settings', bg: color.dangerSoft, fg: color.danger, action: () => Linking.openSettings() };
+    else if (preview.state === 'off')
+      strip = { text: 'Location is off · Turn on', bg: color.dangerSoft, fg: color.danger, action: () => Linking.openSettings() };
+    else if (preview.state === 'acquiring')
+      strip = { text: 'Acquiring GPS…', bg: color.canvas, fg: color.inkSecondary };
+    else if (preview.accuracy <= GOOD_ACCURACY_M)
+      strip = { text: 'GPS ready', bg: color.successSoft, fg: color.successText };
+    else strip = { text: `Weak GPS (±${Math.round(preview.accuracy)} m)`, bg: color.warningSoft, fg: color.ink };
+  } else if (rec.isPaused) {
+    strip = { text: 'PAUSED', bg: color.warning, fg: color.ink };
+  } else {
+    const weak = rec.gpsSignal === 'searching' || rec.gpsSignal === 'denied' || rec.gpsSignal === 'disabled';
+    strip = { text: `${cfg.label.toUpperCase()}${weak ? ' · WEAK GPS' : ''}`, bg: color.surface, fg: color.ink };
+  }
+
+  // ---- Metrics (research §5: runs show avg pace; rides show current speed, avg when paused) ----
+  const time = formatClock(rec.elapsedSeconds);
+  const distance = kmValue(rec.distanceMeters);
+  const second =
+    cfg.primaryMetric === 'speed'
+      ? !isIdle && !rec.isPaused
+        ? { label: 'Speed (km/h)', value: speedValue(rec.currentSpeedMps) }
+        : { label: 'Avg speed (km/h)', value: isIdle ? DASH : speedValue(rec.averageSpeedMps) }
+      : { label: 'Avg pace (/km)', value: paceValue(rec.distanceMeters, rec.movingSeconds) };
+  const calories = estimateCalories(cfg.id, rec.distanceMeters, rec.movingSeconds);
+
+  const onStart = () => {
+    setFollowing(true);
+    startRecording(sport);
   };
 
-  const handleDiscard = () => {
-    Alert.alert('Discard Activity?', 'This recorded workout data will be permanently cleared.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Discard',
-        style: 'destructive',
-        onPress: () => {
-          if (beaconToken) {
-            api.beacon.stop(beaconToken).catch(console.warn);
-            setBeaconToken(null);
-          }
-          discardRecording();
-          router.back();
-        },
-      },
-    ]);
-  };
+  const onFinish = () => router.push('/save-activity');
 
-  const handleFinish = () => {
-    if (beaconToken) {
-      api.beacon.stop(beaconToken).catch(console.warn);
-      setBeaconToken(null);
-    }
-    finishRecording();
-    router.push('/save-activity');
-  };
-
-  const isPaused = activeRecording.isPaused;
-  const isRecording = activeRecording.isRecording;
-
-  // Pace calculations
-  const paceSeconds =
-    activeRecording.distanceMeters > 50 && activeRecording.movingSeconds > 0
-      ? Math.round(activeRecording.movingSeconds / (activeRecording.distanceMeters / 1000))
-      : 0;
-  const paceM = Math.floor(paceSeconds / 60);
-  const paceS = paceSeconds % 60;
-  const currentPaceFormatted = paceSeconds > 0 ? `${paceM}:${String(paceS).padStart(2, '0')}` : '-:--';
-
-  const speedKmh = (activeRecording.currentSpeedMps * 3.6).toFixed(1);
-
-  // Approximate calories calculation: ~60 kcal per km run, or time based
-  const estimatedCalories = Math.max(
-    0,
-    Math.round(
-      (activeRecording.distanceMeters / 1000) * 65 +
-        (activeRecording.movingSeconds / 60) * 4
-    )
+  const statusStrip = (
+    <Pressable
+      onPress={strip.action}
+      disabled={!strip.action}
+      accessibilityRole={strip.action ? 'button' : 'text'}
+      accessibilityLiveRegion="polite"
+      style={[styles.strip, { backgroundColor: strip.bg }]}>
+      <AppText variant="strip" style={{ color: strip.fg, textAlign: 'center' }}>
+        {strip.text}
+      </AppText>
+    </Pressable>
   );
 
+  // ---- Controls -----------------------------------------------------------------------------
+  const controls = isIdle ? (
+    <View style={styles.idleControls}>
+      <Pressable
+        onPress={() => setSportSheet(true)}
+        accessibilityRole="button"
+        accessibilityLabel={`Sport: ${cfg.label}. Change sport`}
+        style={styles.sideControl}>
+        <View style={styles.sportCircle}>
+          <Ionicons name={cfg.icon} size={26} color={color.brandText} />
+        </View>
+        <AppText variant="label" style={{ marginTop: space.xs, fontWeight: '600' }}>
+          {cfg.label}
+        </AppText>
+      </Pressable>
+      <Pressable
+        onPress={onStart}
+        accessibilityRole="button"
+        accessibilityLabel={`Start ${cfg.label}`}
+        style={({ pressed }) => [styles.startButton, pressed && { backgroundColor: color.brandPressed }]}>
+        <Ionicons name="play" size={36} color={color.inverse} style={{ marginLeft: 4 }} />
+      </Pressable>
+      <View style={styles.sideControl} />
+    </View>
+  ) : rec.isPaused ? (
+    <View style={styles.row}>
+      <Button label="Resume" icon="play" size="lg" onPress={resumeRecording} style={{ flex: 1 }} />
+      <Button label="Finish" icon="flag" size="lg" variant="dark" onPress={onFinish} style={{ flex: 1, marginLeft: space.md }} />
+    </View>
+  ) : (
+    <Button label="Pause" icon="pause" size="lg" fullWidth onPress={pauseRecording} />
+  );
+
+  // ---- Stats-only view (reference 374717) ---------------------------------------------------
+  if (statsView) {
+    return (
+      <View style={[styles.statsScreen, { paddingTop: insets.top }]}>
+        <View style={styles.statsTop}>
+          <IconButton icon="chevron-down" accessibilityLabel="Minimize recorder" onPress={() => router.back()} />
+          <View style={{ flex: 1 }} />
+          <IconButton icon="map-outline" accessibilityLabel="Show map" onPress={() => setStatsView(false)} />
+        </View>
+        {statsStrip(statusStrip)}
+        <View style={styles.statsBody}>
+          <MetricTile label="Time" value={time} size="display" align="center" />
+          <MetricTile label={second.label} value={second.value} size="display" align="center" />
+          <MetricTile label="Distance (km)" value={distance} size="display" align="center" />
+          <View style={[styles.row, { marginTop: space.lg }]}>
+            <MetricTile label="Elevation gain" value={formatElevation(rec.elevationGainMeters)} size="L" align="center" style={{ flex: 1 }} />
+            <MetricTile label="Calories (est.)" value={calories ? String(calories) : DASH} size="L" align="center" style={{ flex: 1 }} />
+          </View>
+        </View>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + space.lg }]}>{controls}</View>
+        <SportSheet visible={sportSheet} selected={sport} onSelect={(s) => { setSport(s); setSportSheet(false); }} onClose={() => setSportSheet(false)} />
+      </View>
+    );
+  }
+
+  // ---- Map view (default) -------------------------------------------------------------------
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-      {/* Top Navigation & Status Bar */}
-      <View
-        className={`px-4 py-3 flex-row items-center justify-between border-b ${
-          isPaused && isRecording
-            ? 'bg-[#FFC700] border-amber-400'
-            : 'bg-white border-gray-100'
-        }`}>
-        <TouchableOpacity
-          onPress={() => {
-            if (isRecording) {
-              Alert.alert(
-                'Workout in Progress',
-                'Pause or finish your workout to exit, or stay on this screen while time continues.',
-                [
-                  { text: 'Keep Going', style: 'cancel' },
-                  { text: 'Discard', style: 'destructive', onPress: handleDiscard },
-                ]
-              );
-            } else {
-              router.back();
-            }
-          }}
-          className="p-1">
-          <Ionicons name="chevron-back" size={26} color="#111827" />
-        </TouchableOpacity>
+    <View style={styles.screen}>
+      <MapView
+        mode="live"
+        route={route}
+        userPosition={userPosition}
+        following={following}
+        onFollowingChange={setFollowing}
+        padding={{ bottom: 280 }}
+      />
 
-        <TouchableOpacity
-          disabled={isRecording}
-          onPress={() => setShowSportPicker(true)}
-          className="flex-row items-center bg-gray-100 px-3.5 py-1.5 rounded-full">
-          <Ionicons
-            name={
-              selectedSport === 'Ride'
-                ? 'bicycle'
-                : selectedSport === 'Workout'
-                ? 'barbell'
-                : 'fitness'
-            }
-            size={16}
-            color="#FC4C02"
-            style={{ marginRight: 6 }}
-          />
-          <Text className="text-xs font-black text-gray-900 mr-1">{selectedSport}</Text>
-          {!isRecording && <Ionicons name="chevron-down" size={12} color="#4B5563" />}
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => setShowSettings(true)} className="p-1">
-          <Ionicons name="settings-outline" size={24} color="#111827" />
-        </TouchableOpacity>
+      <View style={[styles.topOverlay, { top: insets.top + space.sm }]} pointerEvents="box-none">
+        <IconButton
+          icon="chevron-down"
+          appearance="floating"
+          accessibilityLabel={isIdle ? 'Close recorder' : 'Minimize recorder, recording continues'}
+          onPress={() => router.back()}
+        />
+        {!following ? (
+          <IconButton icon="locate" appearance="floating" accessibilityLabel="Recenter on my location" onPress={() => setFollowing(true)} />
+        ) : null}
       </View>
 
-      {/* STOPPED Status Banner */}
-      {isPaused && isRecording && (
-        <View className="bg-[#FFC700] py-1.5 items-center justify-center">
-          <Text className="text-xs font-black uppercase tracking-widest text-gray-950">
-            PAUSED
-          </Text>
-        </View>
-      )}
-
-      {/* Main Full-Screen Workout Dashboard (NO MAP - Pure Focused Telemetry) */}
-      <View className="flex-1 px-6 justify-between py-6 bg-white">
-        {/* Top: Massive Digital Time Counter */}
-        <View className="items-center justify-center pt-4 pb-2">
-          <Text className="text-[12px] font-black uppercase tracking-widest text-gray-400 mb-1">
-            TIME
-          </Text>
-          <Text className="text-6xl font-black text-gray-950 tracking-tight font-mono">
-            {formatTimerDigits(activeRecording.movingSeconds)}
-          </Text>
-        </View>
-
-        {/* Middle Section: Big Primary Workout Metrics */}
-        <View className="w-full">
-          {/* Distance & Pace / Speed */}
-          <View className="flex-row items-center justify-between py-6 border-t border-b border-gray-100">
-            {/* Metric 1: Distance */}
-            <View className="items-center flex-1">
-              <Text className="text-4xl font-black text-gray-950 tracking-tight">
-                {(activeRecording.distanceMeters / 1000).toFixed(2)}
-              </Text>
-              <Text className="text-[11px] font-black uppercase tracking-wider text-gray-400 mt-1">
-                KILOMETERS
-              </Text>
-            </View>
-
-            {/* Vertical Divider */}
-            <View className="w-[1px] h-14 bg-gray-200" />
-
-            {/* Metric 2: Pace or Speed */}
-            <View className="items-center flex-1">
-              <Text className="text-4xl font-black text-gray-950 tracking-tight">
-                {selectedSport === 'Ride' ? speedKmh : currentPaceFormatted}
-              </Text>
-              <Text className="text-[11px] font-black uppercase tracking-wider text-gray-400 mt-1">
-                {selectedSport === 'Ride' ? 'SPEED (KM/H)' : 'PACE (/KM)'}
-              </Text>
-            </View>
+      <View style={[styles.bottomArea]} pointerEvents="box-none">
+        <View style={[styles.metricsCard, elevation.floating]}>
+          <View style={styles.stripRow}>
+            <View style={{ flex: 1 }}>{statusStrip}</View>
+            <IconButton icon="expand-outline" size={40} accessibilityLabel="Show large stats" onPress={() => setStatsView(true)} style={styles.expand} />
           </View>
-
-          {/* Secondary Stats Grid: Elevation, Heart Rate, Calories */}
-          <View className="flex-row justify-between items-center pt-6 pb-2">
-            {/* Elevation */}
-            <View className="items-center flex-1">
-              <View className="flex-row items-baseline">
-                <Text className="text-2xl font-black text-gray-900">
-                  {activeRecording.elevationGainMeters}
-                </Text>
-                <Text className="text-xs font-bold text-gray-500 ml-1">m</Text>
-              </View>
-              <Text className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mt-1">
-                ELEVATION
-              </Text>
-            </View>
-
-            {/* Heart Rate */}
-            <View className="items-center flex-1">
-              <View className="flex-row items-center">
-                <Text className="text-2xl font-black text-gray-900">
-                  {activeRecording.currentHeartRate > 0 ? activeRecording.currentHeartRate : '--'}
-                </Text>
-                <Ionicons name="heart" size={14} color="#EF4444" style={{ marginLeft: 4 }} />
-              </View>
-              <Text className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mt-1">
-                HEART RATE
-              </Text>
-            </View>
-
-            {/* Calories */}
-            <View className="items-center flex-1">
-              <View className="flex-row items-baseline">
-                <Text className="text-2xl font-black text-gray-900">
-                  {estimatedCalories}
-                </Text>
-                <Text className="text-xs font-bold text-gray-500 ml-1">kcal</Text>
-              </View>
-              <Text className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mt-1">
-                CALORIES
-              </Text>
-            </View>
+          <View style={styles.metricsRow}>
+            <MetricTile label="Time" value={time} size="XL" align="center" style={styles.metricCell} />
+            <MetricTile label={second.label} value={second.value} size="XL" align="center" style={styles.metricCell} />
+            <MetricTile label="Distance (km)" value={distance} size="XL" align="center" style={styles.metricCell} />
           </View>
         </View>
-
-        {/* GPS Sensor Status Bar */}
-        <View className="flex-row items-center justify-center space-x-2 py-2">
-          <View
-            className={`w-2.5 h-2.5 rounded-full mr-2 ${
-              activeRecording.gpsSignal === 'strong' || activeRecording.gpsSignal === 'good'
-                ? 'bg-emerald-500'
-                : 'bg-amber-500'
-            }`}
-          />
-          <Text className="text-xs font-bold text-gray-600">
-            {activeRecording.gpsSignal === 'strong'
-              ? 'GPS Signal Strong'
-              : activeRecording.gpsSignal === 'good'
-              ? 'GPS Signal Good'
-              : 'Acquiring GPS...'}
-          </Text>
-        </View>
-
-        {/* Bottom Primary Action Controls */}
-        <View className="w-full pb-4">
-          {!isRecording ? (
-            /* Start Workout Button */
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => startRecording(selectedSport)}
-              className="w-full py-5 bg-[#FC4C02] rounded-full flex-row items-center justify-center shadow-xl active:bg-[#E03A00]">
-              <Ionicons name="play" size={24} color="#FFFFFF" />
-              <Text className="text-lg font-black text-white ml-2 tracking-wide uppercase">
-                START {selectedSport}
-              </Text>
-            </TouchableOpacity>
-          ) : !isPaused ? (
-            /* Active Recording: Pause Button */
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={pauseRecording}
-              className="w-full py-5 bg-[#FC4C02] rounded-full flex-row items-center justify-center shadow-xl active:bg-[#E03A00]">
-              <Ionicons name="pause" size={24} color="#FFFFFF" />
-              <Text className="text-lg font-black text-white ml-2 tracking-wide uppercase">
-                PAUSE
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            /* Paused State: Resume (Orange) and Finish (Black) side-by-side */
-            <View className="space-y-3">
-              <View className="flex-row space-x-3">
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={resumeRecording}
-                  className="flex-1 py-4.5 bg-[#FC4C02] rounded-full flex-row items-center justify-center shadow-lg mr-3 active:bg-[#E03A00]">
-                  <Ionicons name="play" size={20} color="#FFFFFF" />
-                  <Text className="text-base font-black text-white ml-2 uppercase">RESUME</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={handleFinish}
-                  className="flex-1 py-4.5 bg-gray-950 rounded-full flex-row items-center justify-center shadow-lg active:bg-gray-800">
-                  <Ionicons name="square" size={18} color="#FFFFFF" />
-                  <Text className="text-base font-black text-white ml-2 uppercase">FINISH</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Discard Workout Link */}
-              <TouchableOpacity onPress={handleDiscard} className="items-center py-2 mt-2">
-                <Text className="text-xs font-bold text-red-600">Discard Activity</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+        <View style={[styles.sheet, elevation.sheet, { paddingBottom: insets.bottom + space.lg }]}>
+          <View style={styles.handle} />
+          {controls}
         </View>
       </View>
 
-      {/* Sport Picker & Settings Modals */}
-      <SportPickerModal
-        visible={showSportPicker}
-        onClose={() => setShowSportPicker(false)}
-        selectedSport={selectedSport}
-        onSelectSport={(s) => setSelectedSport(s)}
+      <SportSheet
+        visible={sportSheet}
+        selected={sport}
+        onSelect={(s) => {
+          setSport(s);
+          setSportSheet(false);
+        }}
+        onClose={() => setSportSheet(false)}
       />
-      <RecordSettingsModal
-        visible={showSettings}
-        onClose={() => setShowSettings(false)}
-        isSimulated={activeRecording.isSimulated}
-        onToggleSimulation={toggleSimulation}
-        beacon={isBeaconActive}
-        onToggleBeacon={setIsBeaconActive}
-      />
-    </SafeAreaView>
+    </View>
   );
 }
+
+const statsStrip = (strip: React.ReactNode) => (
+  <View style={{ marginHorizontal: space.gutter, borderRadius: radius.md, overflow: 'hidden' }}>{strip}</View>
+);
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: color.canvas },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  topOverlay: {
+    position: 'absolute',
+    left: space.gutter,
+    right: space.gutter,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  bottomArea: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  metricsCard: {
+    marginHorizontal: space.gutter,
+    marginBottom: space.md,
+    backgroundColor: color.surface,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  stripRow: { flexDirection: 'row', alignItems: 'stretch' },
+  strip: { minHeight: 40, justifyContent: 'center', paddingHorizontal: space.md },
+  expand: { position: 'absolute', right: 2, top: 0 },
+  metricsRow: { flexDirection: 'row', paddingVertical: space.lg, paddingHorizontal: space.sm },
+  metricCell: { flex: 1 },
+  sheet: {
+    backgroundColor: color.surface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    paddingHorizontal: space.gutter,
+    paddingTop: space.sm,
+  },
+  handle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: color.borderStrong,
+    marginBottom: space.lg,
+  },
+  idleControls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sideControl: { width: 88, alignItems: 'center' },
+  sportCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: color.brandSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  startButton: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: color.brand,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...elevation.floating,
+  },
+  statsScreen: { flex: 1, backgroundColor: color.surface },
+  statsTop: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.sm, height: 56 },
+  statsBody: { flex: 1, justifyContent: 'space-evenly', paddingHorizontal: space.gutter },
+});

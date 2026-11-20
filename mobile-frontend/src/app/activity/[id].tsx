@@ -2,409 +2,423 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
+  StyleSheet,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ActivitySplitsTable } from '../../components/activity/ActivitySplitsTable';
-import { HeartRateIntensityCard } from '../../components/activity/HeartRateIntensityCard';
-import { MatchedSegmentsSection } from '../../components/activity/MatchedSegmentsSection';
-import { ElevationChart } from '../../components/common/ElevationChart';
-import { ShareModal } from '../../components/common/ShareModal';
-import { StravaMapView } from '../../components/map/StravaMapView';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ElevationProfile } from '../../components/activity/ElevationProfile';
+import { VISIBILITY_LABEL } from '../../components/activity/FeedCard';
+import { MapView } from '../../components/map/MapView';
 import { useApp } from '../../context/AppContext';
+import {
+  AppBar,
+  AppText,
+  Avatar,
+  Button,
+  color,
+  Divider,
+  EmptyState,
+  ErrorState,
+  IconButton,
+  MetricTile,
+  radius,
+  SectionTitle,
+  Skeleton,
+  space,
+  TextField,
+} from '../../design';
+import { ActivityView, avgSpeedOf, CommentView, fromDetailResponse, toAthleteSummary } from '../../lib/activityView';
+import { estimateCalories } from '../../lib/calories';
+import {
+  DASH,
+  formatActivityDate,
+  formatCalories,
+  formatClock,
+  formatDistance,
+  formatElevation,
+  formatPace,
+  formatRelative,
+  formatSpeed,
+} from '../../lib/format';
+import { giveKudos } from '../../lib/social';
+import { sportConfig } from '../../lib/sports';
 import { api } from '../../services/api';
 
+type State =
+  | { status: 'loading' }
+  | { status: 'notFound' }
+  | { status: 'error'; message: string }
+  | { status: 'ready'; activity: ActivityView; isOwner: boolean };
+
+/**
+ * Activity detail (reference: ScreensDesign 374822 / 374861; research §10).
+ * Map first, then a sheet with athlete, title, 2-column stats, splits, elevation, kudos, comments.
+ * Never shows a different activity on failure (UI/UX audit X-6).
+ */
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { activities, toggleKudos, addComment, currentUser } = useApp();
-  const [commentInput, setCommentInput] = useState('');
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [serverActivity, setServerActivity] = useState<any>(null);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  const { currentUser } = useApp();
+  const [fetched, setState] = useState<State>({ status: 'loading' });
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const localActivity = activities.find((act) => act.id === id);
-  const activity = serverActivity || localActivity || activities[0];
-
+  // State is only set in promise callbacks; a missing id is derived, not stored.
   useEffect(() => {
-    let isMounted = true;
     if (!id) return;
-
-    const fetchDetail = async () => {
-      try {
-        const res = await api.activities.get(id);
-        if (isMounted && res?.activity) {
-          const item = res.activity;
-          const distKm = (Number(item.distanceMeters) / 1000).toFixed(2);
-          const mins = Math.floor(item.movingTimeSeconds / 60);
-          const secs = item.movingTimeSeconds % 60;
-          const timeFormatted = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-          const paceSeconds =
-            item.distanceMeters > 0
-              ? Math.round(item.movingTimeSeconds / (item.distanceMeters / 1000))
-              : 300;
-          const paceMin = Math.floor(paceSeconds / 60);
-          const paceSec = paceSeconds % 60;
-          const paceFormatted =
-            item.sportType === 'Ride'
-              ? `${((item.averageSpeedMps || 0) * 3.6).toFixed(1)} km/h`
-              : `${paceMin}:${paceSec < 10 ? '0' : ''}${paceSec} /km`;
-
-          setServerActivity({
-            id: item.id,
-            athlete: {
-              id: item.athlete?.id || item.athleteId || 'ath_athlete',
-              displayName: item.athlete?.displayName || 'Athlete',
-              username: item.athlete?.username || 'athlete',
-              avatarUrl:
-                item.athlete?.avatarUrl ||
-                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
-              city: item.athlete?.city || 'Manhattan',
-              country: item.athlete?.country || 'USA',
-              followersCount: 0,
-              followingCount: 0,
-              isFollowing: false,
-            },
-            title: item.title,
-            description: item.description || '',
-            sportType: item.sportType,
-            visibility: item.visibility,
-            startTime: item.startTime,
-            distanceMeters: Number(item.distanceMeters),
-            movingTimeSeconds: item.movingTimeSeconds,
-            elapsedTimeSeconds: item.elapsedTimeSeconds,
-            elevationGainMeters: item.elevationGainMeters || 0,
-            averageSpeedMps: item.averageSpeedMps || 3.0,
-            maxSpeedMps: item.maxSpeedMps || 4.5,
-            averageHeartRate: item.averageHeartRate || 0,
-            maxHeartRate: 175,
-            calories: item.calories || Math.round((Number(item.distanceMeters) / 1000) * 65),
-            distanceFormatted: `${distKm} km`,
-            movingTimeFormatted: timeFormatted,
-            paceFormatted,
-            elevationFormatted: `${item.elevationGainMeters || 0} m`,
-            gapFormatted: item.gapFormatted || paceFormatted,
-            relativeEffortScore: item.relativeEffortScore || 45,
-            kudosCount: item.kudosCount || 0,
-            hasKudos: item.hasKudos || false,
-            commentsCount: item.commentsCount || 0,
-            comments: item.comments || [],
-            routePoints: item.polyline || [],
-            photos: item.photos,
-            splits: item.splits,
-            elevationProfile: item.elevationProfile,
-          });
-        }
-      } catch (err) {
-        console.warn('Failed to fetch activity detail:', err);
+    let cancelled = false;
+    api.activities.get(id).then(
+      (res) => {
+        if (cancelled) return;
+        if (!res?.activity) setState({ status: 'notFound' });
+        else setState({ status: 'ready', activity: fromDetailResponse(res), isOwner: Boolean(res.isOwner) });
+      },
+      (e: any) => {
+        if (cancelled) return;
+        const msg = String(e?.message || '');
+        if (/not found/i.test(msg)) setState({ status: 'notFound' });
+        else setState({ status: 'error', message: msg || 'Check your connection and try again.' });
       }
-    };
-
-    fetchDetail();
+    );
     return () => {
-      isMounted = false;
+      cancelled = true;
     };
-  }, [id]);
+  }, [id, reloadKey]);
 
-  if (!activity) {
+  const state: State = id ? fetched : { status: 'notFound' };
+  const retry = () => {
+    setState({ status: 'loading' });
+    setReloadKey((k) => k + 1);
+  };
+
+  if (state.status !== 'ready') {
     return (
-      <SafeAreaView className="flex-1 bg-white items-center justify-center">
-        <Text className="text-xs text-gray-400">Activity not found</Text>
+      <SafeAreaView style={styles.screen}>
+        <AppBar title={state.status === 'loading' ? '' : 'Activity'} />
+        {state.status === 'loading' ? (
+          <DetailSkeleton />
+        ) : state.status === 'notFound' ? (
+          <EmptyState
+            icon="eye-off-outline"
+            title="This activity isn’t available"
+            body="It may have been deleted, or its owner made it private."
+            primary={{ label: 'Go back', onPress: () => router.back() }}
+          />
+        ) : (
+          <ErrorState message={state.message} onRetry={retry} />
+        )}
       </SafeAreaView>
     );
   }
 
-  const handlePostComment = () => {
-    if (commentInput.trim()) {
-      addComment(activity.id, commentInput);
-      setCommentInput('');
+  const { activity, isOwner } = state;
+  const hasMap = activity.route.length > 1;
+  const mapHeight = Math.round(height * 0.42);
+
+  return (
+    <View style={styles.screen}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + space.xxxl }} keyboardShouldPersistTaps="handled">
+          {hasMap ? (
+            <View style={{ height: mapHeight }}>
+              <MapView mode="route" route={activity.route} padding={{ top: insets.top, bottom: 24 }} />
+            </View>
+          ) : (
+            <View style={{ height: insets.top + 56 }} />
+          )}
+          <View style={[styles.sheet, hasMap && styles.sheetOverlap]}>
+            <ActivityBody activity={activity} isOwner={isOwner} currentUserId={currentUser.id} currentUserName={currentUser.displayName} currentUserAvatar={currentUser.avatarUrl} />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <View style={[styles.backOverlay, { top: insets.top + space.sm }]}>
+        <IconButton icon="arrow-back" appearance="floating" accessibilityLabel="Back" onPress={() => router.back()} />
+      </View>
+    </View>
+  );
+}
+
+const ActivityBody: React.FC<{
+  activity: ActivityView;
+  isOwner: boolean;
+  currentUserId: string;
+  currentUserName: string;
+  currentUserAvatar?: string;
+}> = ({ activity, isOwner, currentUserId, currentUserName, currentUserAvatar }) => {
+  const router = useRouter();
+  const sport = sportConfig(activity.sportType);
+  const [kudos, setKudos] = useState({ has: activity.hasKudos, count: activity.kudosCount });
+  const [kudosPending, setKudosPending] = useState(false);
+  const [comments, setComments] = useState<CommentView[]>(activity.comments);
+  const [draft, setDraft] = useState('');
+  const [posting, setPosting] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
+
+  const avgSpeed = avgSpeedOf(activity);
+  const calories =
+    activity.calories ?? estimateCalories(activity.sportType, activity.distanceMeters, activity.movingTimeSeconds);
+
+  const stats: { label: string; value: string }[] = [
+    { label: 'Distance', value: formatDistance(activity.distanceMeters) },
+    { label: 'Moving time', value: formatClock(activity.movingTimeSeconds) },
+    sport.primaryMetric === 'speed'
+      ? { label: 'Avg speed', value: formatSpeed(avgSpeed) }
+      : { label: 'Avg pace', value: formatPace(activity.distanceMeters, activity.movingTimeSeconds) },
+    { label: 'Elevation gain', value: formatElevation(activity.elevationGainMeters) },
+    { label: 'Elapsed time', value: formatClock(activity.elapsedTimeSeconds) },
+    { label: 'Calories (est.)', value: formatCalories(calories) },
+  ];
+  if (sport.primaryMetric === 'speed' && activity.maxSpeedMps) {
+    stats.push({ label: 'Max speed', value: formatSpeed(activity.maxSpeedMps) });
+  }
+
+  const onKudos = async () => {
+    if (kudosPending || kudos.has) return;
+    const prev = kudos;
+    setKudosPending(true);
+    setKudos({ has: true, count: prev.count + 1 });
+    try {
+      const res = await giveKudos(activity.id, prev.has);
+      setKudos({ has: res.hasKudos, count: res.kudosCount });
+    } catch {
+      setKudos(prev);
+    } finally {
+      setKudosPending(false);
     }
   };
 
-  const routeCoords: [number, number][] = (activity.routePoints || []).map(
-    (p: any) => (Array.isArray(p) ? p : [p.longitude, p.latitude]) as [number, number]
-  );
+  const onPostComment = async () => {
+    const content = draft.trim();
+    if (!content || posting) return;
+    setPosting(true);
+    setCommentError(null);
+    try {
+      const res = await api.activities.addComment(activity.id, content);
+      const c = res?.comment;
+      setComments((prev) => [
+        ...prev,
+        {
+          id: String(c?.id ?? `local_${Date.now()}`),
+          content,
+          createdAt: c?.createdAt ?? new Date().toISOString(),
+          author: toAthleteSummary({ id: currentUserId, displayName: currentUserName, avatarUrl: currentUserAvatar }),
+        },
+      ]);
+      setDraft('');
+    } catch (e: any) {
+      setCommentError(e?.message || 'Couldn’t post your comment. Try again.');
+    } finally {
+      setPosting(false);
+    }
+  };
 
-  const formattedDate = new Date(activity.startTime || Date.now()).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  const visibility = VISIBILITY_LABEL[activity.visibility] ?? VISIBILITY_LABEL.PUBLIC;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-      {/* Top Header Bar */}
-      <View className="flex-row justify-between items-center bg-white px-4 py-3 border-b border-gray-100 z-30">
-        <TouchableOpacity onPress={() => router.back()} className="p-1">
-          <Ionicons name="chevron-back" size={28} color="#111827" />
-        </TouchableOpacity>
+    <View>
+      <Pressable
+        onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: activity.athlete.id } })}
+        accessibilityRole="button"
+        accessibilityLabel={`${activity.athlete.displayName}'s profile`}
+        style={styles.athleteRow}>
+        <Avatar uri={activity.athlete.avatarUrl} name={activity.athlete.displayName} size={48} />
+        <View style={{ flex: 1, marginLeft: space.md }}>
+          <AppText variant="title3">{activity.athlete.displayName}</AppText>
+          <View style={styles.meta}>
+            <Ionicons name={sport.icon} size={14} color={color.inkTertiary} />
+            <AppText variant="caption" color="inkTertiary" style={{ marginLeft: space.xs, flexShrink: 1 }}>
+              {formatActivityDate(activity.startTime)}
+              {activity.athlete.city ? ` · ${activity.athlete.city}` : ''}
+            </AppText>
+          </View>
+        </View>
+      </Pressable>
 
-        <Text className="text-base font-black text-gray-900" numberOfLines={1}>
-          {activity.title}
-        </Text>
+      <AppText variant="title1" style={{ marginTop: space.lg }}>
+        {activity.title}
+      </AppText>
+      {isOwner ? (
+        <View style={[styles.meta, { marginTop: space.xs }]}>
+          <Ionicons name={visibility.icon} size={14} color={color.inkSecondary} />
+          <AppText variant="label" color="inkSecondary" style={{ marginLeft: space.xs }}>
+            Visible to: {visibility.label}
+          </AppText>
+        </View>
+      ) : null}
+      {activity.description ? (
+        <AppText variant="body" color="inkSecondary" style={{ marginTop: space.sm }}>
+          {activity.description}
+        </AppText>
+      ) : null}
 
-        <View className="flex-row items-center gap-3">
-          <TouchableOpacity onPress={() => setShowShareModal(true)} className="p-1">
-            <Ionicons name="bookmark-outline" size={22} color="#111827" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowShareModal(true)} className="p-1">
-            <Ionicons name="ellipsis-horizontal" size={22} color="#111827" />
-          </TouchableOpacity>
+      <View style={styles.grid}>
+        {stats.map((s) => (
+          <View key={s.label} style={styles.gridCell}>
+            <MetricTile label={s.label} value={s.value} size="L" align="center" />
+          </View>
+        ))}
+      </View>
+
+      {sport.primaryMetric === 'pace' && activity.splits.length > 0 ? (
+        <View style={styles.section}>
+          <SectionTitle title="Splits" />
+          <View style={styles.splitHeader}>
+            <AppText variant="label" color="inkSecondary" style={styles.splitKm}>Km</AppText>
+            <AppText variant="label" color="inkSecondary" style={styles.splitPace}>Pace</AppText>
+            <AppText variant="label" color="inkSecondary" style={styles.splitElev}>Elev</AppText>
+          </View>
+          {activity.splits.map((s) => (
+            <View key={s.index} style={styles.splitRow}>
+              <AppText variant="bodyStrong" style={styles.splitKm}>{s.index}</AppText>
+              <AppText variant="bodyStrong" style={[styles.splitPace, { fontVariant: ['tabular-nums'] }]}>
+                {s.pace ? `${s.pace} /km` : DASH}
+              </AppText>
+              <AppText variant="body" color="inkSecondary" style={styles.splitElev}>
+                {s.elevationDeltaMeters == null ? DASH : `${s.elevationDeltaMeters > 0 ? '+' : ''}${Math.round(s.elevationDeltaMeters)} m`}
+              </AppText>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {activity.elevationProfile.length > 1 ? (
+        <View style={styles.section}>
+          <SectionTitle title="Elevation" />
+          <ElevationProfile samples={activity.elevationProfile} />
+        </View>
+      ) : null}
+
+      <View style={styles.section}>
+        <View style={styles.kudosRow}>
+          <Ionicons name="thumbs-up" size={18} color={kudos.count > 0 ? color.brand : color.inkTertiary} />
+          <AppText variant="bodyStrong" style={{ flex: 1, marginLeft: space.sm }}>
+            {kudos.count > 0 ? `${kudos.count} gave kudos` : 'No kudos yet'}
+          </AppText>
+          {!isOwner ? (
+            <Button
+              label={kudos.has ? 'Kudos given' : 'Give kudos'}
+              icon={kudos.has ? 'thumbs-up' : 'thumbs-up-outline'}
+              size="sm"
+              variant={kudos.has ? 'secondary' : 'primary'}
+              disabled={kudos.has === true}
+              loading={kudosPending}
+              onPress={onKudos}
+            />
+          ) : null}
         </View>
       </View>
 
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          className="flex-1 bg-gray-50"
-          contentContainerStyle={{ paddingBottom: 110 }}>
-          {/* Interactive Map View with Route */}
-          <View className="h-72 w-full bg-gray-100 relative">
-            <StravaMapView
-              routeCoordinates={routeCoords}
-              showControls={false}
-              showUserLocation={false}
-              mode="view-route"
-              autoFitRoute={true}
-              className="w-full h-full"
-            />
-            {/* Flyover Replay Button on bottom right of map (Screenshot 2) */}
-            <TouchableOpacity
-              onPress={() =>
-                alert('3D Aerial Flyover: Replays your GPS effort with realistic elevation curves.')
-              }
-              className="absolute bottom-4 right-4 w-12 h-12 bg-white rounded-full items-center justify-center shadow-lg border border-gray-200 active:scale-95">
-              <Ionicons name="play" size={22} color="#111827" style={{ marginLeft: 3 }} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Activity Information Card (Matching Screenshot 2) */}
-          <View className="bg-white px-5 pt-5 pb-6 border-b border-gray-100">
-            {/* Athlete Profile Header */}
-            <View className="flex-row items-center justify-between mb-4">
-              <TouchableOpacity
-                onPress={() => router.push(`/athlete/${activity.athlete.id}`)}
-                className="flex-row items-center flex-1 mr-3">
-                <Image
-                  source={{ uri: activity.athlete.avatarUrl }}
-                  className="w-12 h-12 rounded-full mr-3 bg-gray-100 border border-gray-200"
-                />
-                <View>
-                  <Text className="text-base font-black text-gray-900">
-                    {activity.athlete.displayName}
-                  </Text>
-                  <Text className="text-xs text-gray-500 mt-0.5">
-                    {formattedDate} · {activity.athlete.city || 'Athletic Course'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              {activity.athlete.id !== currentUser.id && (
-                <TouchableOpacity
-                  onPress={() => setIsFollowing(!isFollowing)}
-                  className={`px-5 py-2 rounded-full ${
-                    isFollowing ? 'bg-gray-100' : 'bg-[#FC4C02]'
-                  }`}>
-                  <Text
-                    className={`text-xs font-black ${
-                      isFollowing ? 'text-gray-700' : 'text-white'
-                    }`}>
-                    {isFollowing ? 'Following' : 'Follow'}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Title & Description */}
-            <Text className="text-2xl font-black text-gray-900 mb-1">{activity.title}</Text>
-            {activity.description ? (
-              <Text className="text-sm text-gray-600 mb-4 leading-relaxed">
-                {activity.description}
-              </Text>
-            ) : null}
-
-            {/* 6-Grid Performance Telemetry (Exact Screenshot 2 Match) */}
-            <View className="border-t border-b border-gray-100 py-4 my-2">
-              {/* Row 1 */}
-              <View className="flex-row justify-between mb-4">
-                <View className="w-[48%]">
-                  <Text className="text-[11px] font-bold text-gray-400 uppercase">Distance</Text>
-                  <Text className="text-2xl font-black text-gray-900 mt-0.5">
-                    {activity.distanceFormatted}
-                  </Text>
-                </View>
-                <View className="w-[48%]">
-                  <Text className="text-[11px] font-bold text-gray-400 uppercase">Avg Pace</Text>
-                  <Text className="text-2xl font-black text-gray-900 mt-0.5">
-                    {activity.paceFormatted}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Row 2 */}
-              <View className="flex-row justify-between mb-4">
-                <View className="w-[48%]">
-                  <Text className="text-[11px] font-bold text-gray-400 uppercase">Moving Time</Text>
-                  <Text className="text-2xl font-black text-gray-900 mt-0.5">
-                    {activity.movingTimeFormatted}
-                  </Text>
-                </View>
-                <View className="w-[48%]">
-                  <Text className="text-[11px] font-bold text-gray-400 uppercase">
-                    Elevation Gain
-                  </Text>
-                  <Text className="text-2xl font-black text-gray-900 mt-0.5">
-                    {activity.elevationFormatted}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Row 3 */}
-              <View className="flex-row justify-between">
-                <View className="w-[48%]">
-                  <Text className="text-[11px] font-bold text-gray-400 uppercase">Calories</Text>
-                  <Text className="text-2xl font-black text-gray-900 mt-0.5">
-                    {activity.calories ? `${activity.calories.toLocaleString()} Cal` : '— —'}
-                  </Text>
-                </View>
-                <View className="w-[48%]">
-                  <Text className="text-[11px] font-bold text-gray-400 uppercase">
-                    Avg Heart Rate
-                  </Text>
-                  <Text className="text-2xl font-black text-gray-900 mt-0.5">
-                    {activity.averageHeartRate > 0 ? `${activity.averageHeartRate} bpm` : '— —'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Social Kudos & Comments Counter */}
-            <View className="flex-row justify-between items-center pt-3 border-t border-gray-100 mt-2">
-              <Text className="text-xs text-gray-500 font-medium">
-                {activity.kudosCount > 0 ? `${activity.kudosCount} gave kudos` : 'No kudos yet'}
-              </Text>
-              <Text className="text-xs text-gray-500 font-medium">
-                {activity.commentsCount > 0
-                  ? `${activity.commentsCount} comments`
-                  : '0 comments'}
-              </Text>
-            </View>
-
-            {/* Action Bar (Thumbs up, Comment, Share) */}
-            <View className="flex-row justify-around border-t border-gray-100 pt-3 mt-3">
-              <TouchableOpacity
-                onPress={() => toggleKudos(activity.id)}
-                className="flex-row items-center px-4 py-1"
-                activeOpacity={0.7}>
-                <Ionicons
-                  name={activity.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'}
-                  size={22}
-                  color={activity.hasKudos ? '#FC4C02' : '#111827'}
-                />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => null}
-                className="flex-row items-center px-4 py-1"
-                activeOpacity={0.7}>
-                <Ionicons name="chatbubble-outline" size={21} color="#111827" />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setShowShareModal(true)}
-                className="flex-row items-center px-4 py-1"
-                activeOpacity={0.7}>
-                <Ionicons name="share-social-outline" size={22} color="#111827" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Elevation Profile Area Chart */}
-          <View className="bg-white mt-3 p-5 border-y border-gray-100">
-            <Text className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
-              Elevation Profile
-            </Text>
-            <ElevationChart elevations={activity.elevationProfile} height={120} />
-          </View>
-
-          {/* Heart Rate Intensity Distribution */}
-          <HeartRateIntensityCard
-            averageHeartRate={activity.averageHeartRate}
-            maxHeartRate={activity.maxHeartRate}
-            calories={activity.calories}
-          />
-
-          {/* 1km Splits Table */}
-          <ActivitySplitsTable splits={activity.splits || []} />
-
-          {/* Matched Segments & Leaderboards */}
-          <MatchedSegmentsSection />
-
-          {/* Comments Stream */}
-          <View className="bg-white mt-3 p-5 border-y border-gray-100">
-            <Text className="text-sm font-black text-gray-900 mb-3">
-              Comments ({activity.commentsCount || 0})
-            </Text>
-
-            <View className="space-y-3">
-              {activity.comments && activity.comments.length > 0 ? (
-                activity.comments.map((c: any) => (
-                  <View key={c.id} className="flex-row space-x-2.5 mb-3">
-                    <Image
-                      source={{ uri: c.athlete.avatarUrl }}
-                      className="w-8 h-8 rounded-full bg-gray-100 mr-2.5"
-                    />
-                    <View className="flex-1 bg-gray-50 p-3 rounded-2xl border border-gray-100">
-                      <View className="flex-row justify-between items-center mb-1">
-                        <Text className="text-xs font-black text-gray-900">
-                          {c.athlete.displayName}
-                        </Text>
-                        <Text className="text-[10px] text-gray-400">{c.createdAt}</Text>
-                      </View>
-                      <Text className="text-xs text-gray-700 leading-relaxed">{c.content}</Text>
-                    </View>
+      <View style={styles.section}>
+        <SectionTitle title={comments.length > 0 ? `Comments (${comments.length})` : 'Comments'} />
+        {comments.length === 0 ? (
+          <AppText variant="body" color="inkSecondary">
+            No comments yet.
+          </AppText>
+        ) : (
+          comments.map((c, i) => (
+            <View key={c.id}>
+              {i > 0 ? <Divider inset={48} /> : null}
+              <View style={styles.comment}>
+                <Avatar uri={c.author.avatarUrl} name={c.author.displayName} size={32} />
+                <View style={{ flex: 1, marginLeft: space.md }}>
+                  <View style={styles.meta}>
+                    <AppText variant="bodyStrong" style={{ flexShrink: 1 }}>{c.author.displayName}</AppText>
+                    <AppText variant="caption" color="inkTertiary" style={{ marginLeft: space.sm }}>
+                      {formatRelative(c.createdAt)}
+                    </AppText>
                   </View>
-                ))
-              ) : (
-                <Text className="text-xs text-gray-400 italic text-center py-2">
-                  No comments yet. Be the first to cheer!
-                </Text>
-              )}
+                  <AppText variant="body" style={{ marginTop: 2 }}>{c.content}</AppText>
+                </View>
+              </View>
             </View>
+          ))
+        )}
+        <View style={styles.composer}>
+          <View style={{ flex: 1 }}>
+            <TextField
+              value={draft}
+              onChangeText={setDraft}
+              placeholder="Add a comment"
+              accessibilityLabel="Add a comment"
+              maxLength={1000}
+              multiline
+              style={{ minHeight: 48, paddingTop: 12 }}
+            />
           </View>
-        </ScrollView>
-
-        {/* Comment Posting Input Bar */}
-        <View className="flex-row items-center bg-white px-4 py-3 border-t border-gray-200">
-          <TextInput
-            className="flex-1 h-11 bg-gray-100 rounded-full px-4 text-xs text-gray-900 mr-2.5"
-            placeholder="Write a comment or cheer..."
-            placeholderTextColor="#9CA3AF"
-            value={commentInput}
-            onChangeText={setCommentInput}
-          />
-          <TouchableOpacity
-            onPress={handlePostComment}
-            className="w-10 h-10 bg-[#FC4C02] rounded-full items-center justify-center active:bg-[#E03A00]">
-            <Ionicons name="send" size={16} color="#FFFFFF" />
-          </TouchableOpacity>
+          <Button label="Post" size="md" onPress={onPostComment} loading={posting} disabled={!draft.trim()} style={{ marginLeft: space.sm }} />
         </View>
-      </KeyboardAvoidingView>
-
-      <ShareModal
-        visible={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        activityTitle={activity.title}
-      />
-    </SafeAreaView>
+        {commentError ? (
+          <View style={{ marginTop: space.sm }}>
+            <ErrorState compact message={commentError} />
+          </View>
+        ) : null}
+      </View>
+    </View>
   );
-}
+};
+
+const DetailSkeleton: React.FC = () => (
+  <View>
+    <Skeleton style={{ height: 260, borderRadius: 0 }} />
+    <View style={{ padding: space.gutter }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Skeleton style={{ width: 48, height: 48, borderRadius: 24 }} />
+        <View style={{ marginLeft: space.md, flex: 1 }}>
+          <Skeleton style={{ width: '50%', height: 16 }} />
+          <Skeleton style={{ width: '70%', height: 12, marginTop: space.sm }} />
+        </View>
+      </View>
+      <Skeleton style={{ width: '70%', height: 28, marginTop: space.xl }} />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: space.lg, gap: space.lg }}>
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} style={{ width: '45%', height: 48 }} />
+        ))}
+      </View>
+    </View>
+  </View>
+);
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: color.surface },
+  sheet: { backgroundColor: color.surface, padding: space.gutter, paddingTop: space.xl },
+  sheetOverlap: { marginTop: -radius.lg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg },
+  backOverlay: { position: 'absolute', left: space.gutter },
+  athleteRow: { flexDirection: 'row', alignItems: 'center' },
+  meta: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: space.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: color.border,
+    paddingVertical: space.sm,
+  },
+  gridCell: { width: '50%', paddingVertical: space.md },
+  section: {
+    marginTop: space.xl,
+    paddingTop: space.xl,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: color.border,
+  },
+  splitHeader: { flexDirection: 'row', paddingBottom: space.sm },
+  splitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 40,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: color.border,
+  },
+  splitKm: { width: 48 },
+  splitPace: { flex: 1 },
+  splitElev: { width: 80, textAlign: 'right' },
+  kudosRow: { flexDirection: 'row', alignItems: 'center' },
+  comment: { flexDirection: 'row', paddingVertical: space.md },
+  composer: { flexDirection: 'row', alignItems: 'flex-end', marginTop: space.md },
+});

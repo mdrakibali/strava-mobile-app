@@ -11,9 +11,12 @@ import {
   NotificationItem,
   Segment,
 } from '../types';
-import { AppContextType } from './appContextTypes';
+import { FEATURES } from '../config/features';
+import { estimateCalories } from '../lib/calories';
+import { formatRelative } from '../lib/format';
+import { AppContextType, SaveActivityInput } from './appContextTypes';
 
-export { ActiveRecordingState, AppContextType };
+export { ActiveRecordingState, AppContextType, SaveActivityInput };
 
 const INITIAL_ATHLETE: Athlete = {
   id: 'ath_initial',
@@ -52,65 +55,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toggleSimulation,
   } = useGpsRecorder();
 
-  // Helper: map backend activity format to frontend Activity interface
-  const mapBackendActivity = (item: any): Activity => {
-    const distKm = (item.distanceMeters / 1000).toFixed(2);
-    const mins = Math.floor(item.movingTimeSeconds / 60);
-    const secs = item.movingTimeSeconds % 60;
-    const timeFormatted = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-    const paceSeconds =
-      item.distanceMeters > 0
-        ? Math.round(item.movingTimeSeconds / (item.distanceMeters / 1000))
-        : 300;
-    const paceMin = Math.floor(paceSeconds / 60);
-    const paceSec = paceSeconds % 60;
-    const paceFormatted =
-      item.sportType === 'Ride'
-        ? `${((item.averageSpeedMps || 0) * 3.6).toFixed(1)} km/h`
-        : `${paceMin}:${paceSec < 10 ? '0' : ''}${paceSec} /km`;
-
-    return {
-      id: item.id,
-      athlete: {
-        id: item.athlete.id,
-        displayName: item.athlete.displayName,
-        username: item.athlete.username,
-        avatarUrl: item.athlete.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
-        city: item.athlete.city || 'Dhaka',
-        country: 'Bangladesh',
-        bio: 'Runner & Cyclist',
-        followersCount: 142,
-        followingCount: 98,
-        isFollowing: false,
-      },
-      title: item.title,
-      description: item.description || '',
-      sportType: item.sportType,
-      visibility: item.visibility,
-      startTime: item.startTime,
-      distanceMeters: item.distanceMeters,
-      movingTimeSeconds: item.movingTimeSeconds,
-      elapsedTimeSeconds: item.elapsedTimeSeconds,
-      elevationGainMeters: item.elevationGainMeters,
-      averageSpeedMps: item.averageSpeedMps || 3.0,
-      maxSpeedMps: item.maxSpeedMps || 4.5,
-      averageHeartRate: item.averageHeartRate || 150,
-      maxHeartRate: 175,
-      distanceFormatted: `${distKm} km`,
-      movingTimeFormatted: timeFormatted,
-      paceFormatted,
-      elevationFormatted: `${item.elevationGainMeters} m`,
-      gapFormatted: item.gapFormatted || paceFormatted,
-      relativeEffortScore: item.relativeEffortScore || 45,
-      kudosCount: item.kudosCount || 0,
-      hasKudos: item.hasKudos || false,
-      commentsCount: item.commentsCount || 0,
-      comments: [],
-      routePoints: item.polyline || [],
-      photos: item.photos || undefined,
-    };
-  };
-
   // Helper: map backend club format
   const mapBackendClub = (item: any): Club => ({
     id: item.id,
@@ -145,22 +89,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const loadFeedData = async () => {
     setIsSyncing(true);
     try {
-      // 1. Fetch REAL timeline feed from Database
-      const feedRes = await api.feed.getFeed('all').catch(() => null);
-      if (feedRes?.feed) {
-        setActivities(feedRes.feed.map(mapBackendActivity));
-      }
-
-      // 2. Fetch REAL clubs from Database
-      const clubsRes = await api.clubs.list().catch(() => null);
-      if (clubsRes?.clubs) {
-        setClubs(clubsRes.clubs.map(mapBackendClub));
-      }
-
-      // 3. Fetch REAL challenges from Database
-      const chRes = await api.challenges.list().catch(() => null);
-      if (chRes?.challenges) {
-        setChallenges(chRes.challenges.map(mapBackendChallenge));
+      // The home feed, profile and activity screens load their own data (paginated, with
+      // error states). Here we only load app-wide data: notifications, plus out-of-scope
+      // modules when their feature flag is on (ADR-15).
+      if (FEATURES.groups) {
+        const clubsRes = await api.clubs.list().catch(() => null);
+        if (clubsRes?.clubs) {
+          setClubs(clubsRes.clubs.map(mapBackendClub));
+        }
+        const chRes = await api.challenges.list().catch(() => null);
+        if (chRes?.challenges) {
+          setChallenges(chRes.challenges.map(mapBackendChallenge));
+        }
       }
 
       // 4. Fetch REAL notifications from Database
@@ -182,19 +122,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             },
             message: n.message,
             targetActivityId: n.targetActivityId,
-            timeAgo: n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently',
+            timeAgo: formatRelative(n.createdAt),
             isRead: n.isRead,
           }))
         );
       }
 
-      // 5. Fetch REAL events from Database
+      if (!FEATURES.groups && !FEATURES.explore) return;
+
       const eventsRes = await api.events.list().catch(() => null);
       if (eventsRes?.events && eventsRes.events.length > 0) {
         setEvents(eventsRes.events);
       }
 
-      // 6. Fetch REAL segments from Database
       const segRes = await api.segments.list().catch(() => null);
       if (segRes?.segments && segRes.segments.length > 0) {
         setSegments(
@@ -394,6 +334,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  /** Apply server-confirmed profile changes locally and to the persisted session profile. */
+  const updateCurrentUser = async (patch: Partial<Athlete>) => {
+    const next = { ...currentUser, ...patch };
+    setCurrentUser(next);
+    await AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(next)).catch(() => {});
+  };
+
   const toggleKudos = (activityId: string) => {
     // 1. Optimistic UI update
     setActivities((prev) =>
@@ -523,90 +470,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     api.notifications.markAllRead().catch(console.warn);
   };
 
-  // Upload activity to Live Cloudflare Workers + Neon Database
-  const saveNewActivity = async (
-    title: string,
-    description: string,
-    visibility: 'PUBLIC' | 'FOLLOWERS_ONLY' | 'ONLY_ME'
-  ) => {
-    const distKm = (activeRecording.distanceMeters / 1000).toFixed(2);
-    const mins = Math.floor(activeRecording.movingSeconds / 60);
-    const secs = activeRecording.movingSeconds % 60;
-    const timeFormatted = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-    const paceSeconds =
-      activeRecording.distanceMeters > 0
-        ? Math.round(activeRecording.movingSeconds / (activeRecording.distanceMeters / 1000))
-        : 300;
-    const paceMin = Math.floor(paceSeconds / 60);
-    const paceSec = paceSeconds % 60;
-    const paceFormatted =
-      activeRecording.sportType === 'Ride'
-        ? `${(activeRecording.currentSpeedMps * 3.6).toFixed(1)} km/h`
-        : `${paceMin}:${paceSec < 10 ? '0' : ''}${paceSec} /km`;
+  /**
+   * Upload the current recording.
+   * - Sends what the user chose on the Save screen: title, description, sport, visibility
+   *   (previously visibility/start time/sport were dropped → every activity was stored PUBLIC
+   *   with the upload time as start; technical audit SYNC-01/SYNC-06).
+   * - On failure the recording is KEPT and the error is rethrown so the Save screen can offer a
+   *   retry (previously it was discarded while logging "saved locally"; SYNC-02).
+   * - Returns the server activity id. The caller discards the recording after navigating.
+   */
+  const saveNewActivity = async (input: SaveActivityInput): Promise<string> => {
+    const rec = activeRecording;
+    const elapsed = rec.elapsedSeconds;
+    const startedAt = rec.startedAt ?? Date.now() - elapsed * 1000;
+    const calories = estimateCalories(input.sportType, rec.distanceMeters, rec.movingSeconds);
 
-    const optimisticId = `act_${Date.now()}`;
-    const newActivity: Activity = {
-      id: optimisticId,
-      athlete: currentUser,
-      title: title || `${activeRecording.sportType} Workout`,
-      description: description || 'Recorded with Open Strava GPS',
-      sportType: activeRecording.sportType,
-      visibility,
-      startTime: new Date().toISOString(),
-      distanceMeters: activeRecording.distanceMeters,
-      movingTimeSeconds: activeRecording.movingSeconds,
-      elapsedTimeSeconds: activeRecording.elapsedSeconds,
-      elevationGainMeters: activeRecording.elevationGainMeters,
-      averageSpeedMps: activeRecording.currentSpeedMps,
-      maxSpeedMps: activeRecording.maxSpeedMps || activeRecording.currentSpeedMps * 1.3,
-      averageHeartRate: activeRecording.currentHeartRate > 0 ? activeRecording.currentHeartRate : undefined,
-      maxHeartRate: activeRecording.currentHeartRate > 0 ? activeRecording.currentHeartRate + 12 : undefined,
-      distanceFormatted: `${distKm} km`,
-      movingTimeFormatted: timeFormatted,
-      paceFormatted,
-      elevationFormatted: `${activeRecording.elevationGainMeters} m`,
-      gapFormatted: activeRecording.sportType === 'Run' ? paceFormatted : undefined,
-      relativeEffortScore: Math.max(1, Math.round(activeRecording.movingSeconds / 45)),
-      kudosCount: 0,
-      hasKudos: false,
-      commentsCount: 0,
-      comments: [],
-      routePoints: activeRecording.routeCoordinates || [],
-      splits: activeRecording.splits.length > 0 ? activeRecording.splits : undefined,
-      elevationProfile: activeRecording.elevationProfile || [],
-    };
+    const serverRes = await api.activities.create({
+      title: input.title.trim() || 'Activity',
+      description: input.description.trim() || undefined,
+      sportType: input.sportType,
+      visibility: input.visibility,
+      startTime: new Date(startedAt).toISOString(),
+      distanceMeters: rec.distanceMeters,
+      movingTimeSeconds: rec.movingSeconds,
+      elapsedTimeSeconds: Math.max(elapsed, rec.movingSeconds),
+      elevationGainMeters: rec.elevationGainMeters,
+      maxSpeedMps: rec.maxSpeedMps > 0 ? rec.maxSpeedMps : undefined,
+      calories: calories ?? undefined,
+      rawPolyline: rec.routeCoordinates || [],
+      // Splits carry no heart-rate (the recorder's HR values are not from a sensor).
+      splits: rec.splits.map(({ averageHeartRate: _hr, ...s }) => s),
+      elevationProfile: rec.elevationProfile || [],
+    });
 
-    // 1. Optimistic insert
-    setActivities((prev) => [newActivity, ...prev]);
-
-    // 2. Fire live backend upload API call
-    try {
-      const serverRes = await api.activities.create({
-        title: newActivity.title,
-        description: newActivity.description,
-        sportType: newActivity.sportType,
-        distanceMeters: activeRecording.distanceMeters,
-        movingTimeSeconds: activeRecording.movingSeconds,
-        elapsedTimeSeconds: activeRecording.elapsedSeconds,
-        elevationGainMeters: activeRecording.elevationGainMeters,
-        rawPolyline: newActivity.routePoints || [],
-        splits: newActivity.splits,
-        elevationProfile: newActivity.elevationProfile,
-      });
-
-      if (serverRes?.activity?.id) {
-        // Update optimistic item with real server-generated activity ID & masked coordinates
-        setActivities((prev) =>
-          prev.map((a) =>
-            a.id === optimisticId ? { ...a, id: serverRes.activity.id } : a
-          )
-        );
-      }
-    } catch (err) {
-      console.warn('Background activity upload to Neon failed (saved locally):', err);
-    }
-
-    discardRecording();
+    const id = serverRes?.activity?.id;
+    if (!id) throw new Error('The server did not confirm the upload.');
+    return String(id);
   };
 
   const unreadNotificationCount = notifications.filter((n) => !n.isRead).length;
@@ -648,6 +547,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         finishRecording,
         toggleSimulation,
         saveNewActivity,
+        updateCurrentUser,
       }}>
       {children}
     </AppContext.Provider>

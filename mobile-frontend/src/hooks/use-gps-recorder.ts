@@ -29,6 +29,8 @@ export interface ActiveRecordingState {
   splits: SplitItem[];
   elevationProfile: number[];
   isSimulated: boolean;
+  /** Wall-clock start (ms). Sent as the activity start time on save (technical audit SYNC-01). */
+  startedAt: number | null;
 }
 
 const INITIAL_RECORDING_STATE: ActiveRecordingState = {
@@ -51,6 +53,7 @@ const INITIAL_RECORDING_STATE: ActiveRecordingState = {
   splits: [],
   elevationProfile: [],
   isSimulated: false,
+  startedAt: null,
 };
 
 // Geodesic distance using Haversine formula
@@ -338,6 +341,7 @@ export const useGpsRecorder = () => {
       isRecording: true,
       sportType: sport,
       isSimulated: simulate,
+      startedAt: Date.now(),
     });
 
     if (!simulate && Platform.OS !== 'web') {

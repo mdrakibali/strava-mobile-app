@@ -1,253 +1,263 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import {
-  Alert,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { SportPickerModal } from '../components/record/SportPickerModal';
+import React, { useMemo, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { VISIBILITY_LABEL } from '../components/activity/FeedCard';
+import { RoutePreview } from '../components/map/RoutePreview';
+import { SportSheet } from '../components/record/SportSheet';
 import { useApp } from '../context/AppContext';
-import { SportType } from '../types';
+import {
+  AppText,
+  BottomSheet,
+  Button,
+  color,
+  EmptyState,
+  ErrorState,
+  MetricRow,
+  MetricTile,
+  OptionRow,
+  radius,
+  SectionTitle,
+  SelectField,
+  space,
+  TextField,
+} from '../design';
+import { LngLat } from '../lib/activityView';
+import {
+  defaultActivityTitle,
+  formatDuration,
+  formatElevation,
+  kmValue,
+  paceValue,
+  speedValue,
+} from '../lib/format';
+import { sportConfig } from '../lib/sports';
+import { ActivityVisibility, SportType } from '../types';
 
+const VISIBILITY_OPTIONS: { id: ActivityVisibility; title: string; description: string }[] = [
+  { id: 'PUBLIC', title: 'Everyone', description: 'Anyone can view this activity.' },
+  { id: 'FOLLOWERS_ONLY', title: 'Followers', description: 'Only people who follow you can view this activity.' },
+  { id: 'ONLY_ME', title: 'Only you', description: 'Private. Only you can view this activity.' },
+];
+
+/**
+ * Save Activity (reference: ScreensDesign 374734 / 374750 / 374747; research §3).
+ * Only fields the backend actually stores are shown (UI/UX audit: no fake controls).
+ */
 export default function SaveActivityScreen() {
   const router = useRouter();
-  const { activeRecording, saveNewActivity } = useApp();
+  const insets = useSafeAreaInsets();
+  const { activeRecording: rec, saveNewActivity, discardRecording, resumeRecording } = useApp();
 
-  const [title, setTitle] = useState(`${activeRecording.sportType || 'Workout'}`);
+  const [startDate] = useState(() => new Date(rec.startedAt ?? Date.now()));
+  const [sport, setSport] = useState<SportType>(rec.sportType);
+  const [title, setTitle] = useState(() => defaultActivityTitle(sportConfig(rec.sportType).label, startDate));
+  const [titleEdited, setTitleEdited] = useState(false);
   const [description, setDescription] = useState('');
-  const [sport, setSport] = useState<SportType>(activeRecording.sportType || 'Workout');
-  const [showSportPicker, setShowSportPicker] = useState(false);
-  const [activityTag, setActivityTag] = useState<string>('Normal');
-  const [showTagPicker, setShowTagPicker] = useState(false);
-  const [perceivedExertion, setPerceivedExertion] = useState<string>('Moderate');
-  const [showExertionPicker, setShowExertionPicker] = useState(false);
-  const [privateNotes, setPrivateNotes] = useState('');
-  const [visibility, setVisibility] = useState<'PUBLIC' | 'FOLLOWERS_ONLY' | 'ONLY_ME'>('PUBLIC');
-  const [isSaving, setIsSaving] = useState(false);
+  const [visibility, setVisibility] = useState<ActivityVisibility>('PUBLIC');
+  const [sportSheet, setSportSheet] = useState(false);
+  const [visibilitySheet, setVisibilitySheet] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSave = async () => {
-    setIsSaving(true);
+  const cfg = sportConfig(sport);
+  const route = useMemo<LngLat[]>(
+    () => rec.routeCoordinates.map((p) => [p.longitude, p.latitude] as LngLat),
+    [rec.routeCoordinates]
+  );
+
+  if (!rec.isRecording) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <EmptyState
+          icon="checkmark-done-outline"
+          title="Nothing to save"
+          body="There is no recorded activity waiting to be saved."
+          primary={{ label: 'Close', onPress: () => router.back() }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const onResume = () => {
+    resumeRecording();
+    router.back();
+  };
+
+  const onDiscard = () =>
+    Alert.alert('Discard activity?', 'This recording will be deleted. This can’t be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Discard',
+        style: 'destructive',
+        onPress: () => {
+          discardRecording();
+          router.dismissAll();
+        },
+      },
+    ]);
+
+  const onSave = async () => {
+    setSaving(true);
+    setError(null);
     try {
-      await saveNewActivity(title, description, visibility);
-      router.replace('/(tabs)');
-    } catch (err: any) {
-      Alert.alert('Save Failed', err.message || 'Could not save workout to database');
-    } finally {
-      setIsSaving(false);
+      const id = await saveNewActivity({ title, description, sportType: sport, visibility });
+      router.dismissAll();
+      router.push({ pathname: '/activity/[id]', params: { id } });
+      discardRecording(); // only after the server confirmed the upload
+    } catch (e: any) {
+      setError(
+        `${e?.message || 'Upload failed.'} Your activity is still here — check your connection and tap Save again.`
+      );
+      setSaving(false);
     }
   };
 
+  const second =
+    cfg.primaryMetric === 'speed'
+      ? { label: 'Avg speed', value: speedValue(rec.averageSpeedMps), unit: 'km/h' }
+      : { label: 'Avg pace', value: paceValue(rec.distanceMeters, rec.movingSeconds), unit: '/km' };
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-      {/* Header */}
-      <View className="flex-row items-center px-4 py-3 border-b border-gray-100">
-        <TouchableOpacity onPress={() => router.back()} className="p-1 mr-3">
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text className="text-xl font-black text-gray-900">Save Activity</Text>
+    <SafeAreaView edges={['top']} style={styles.screen}>
+      <View style={styles.header}>
+        <Button label="Resume" variant="outline" size="sm" onPress={onResume} disabled={saving} />
+        <AppText variant="title2" accessibilityRole="header" style={styles.headerTitle}>
+          Save Activity
+        </AppText>
+        <View style={{ width: 88 }} />
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        style={{ flex: 1 }}
-        className="px-4"
-        contentContainerStyle={{ paddingTop: 16, paddingBottom: 110 }}>
-        {/* Title Input */}
-        <View className="bg-white border border-gray-200 rounded-2xl px-4 py-3.5 mb-3 shadow-xs">
-          <TextInput
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Title your activity"
-            placeholderTextColor="#9CA3AF"
-            className="text-base font-semibold text-gray-900"
-          />
-        </View>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <View style={styles.summary}>
+            <MetricRow>
+              <MetricTile label="Distance" value={kmValue(rec.distanceMeters)} unit="km" />
+              <MetricTile label="Moving time" value={formatDuration(rec.movingSeconds)} />
+              <MetricTile label={second.label} value={second.value} unit={second.value === '–' ? undefined : second.unit} />
+              <MetricTile label="Elev gain" value={formatElevation(rec.elevationGainMeters)} />
+            </MetricRow>
+          </View>
+          {route.length > 1 ? (
+            <View style={styles.preview}>
+              <RoutePreview route={route} height={150} rounded />
+            </View>
+          ) : null}
 
-        {/* Description Input */}
-        <View className="bg-white border border-gray-200 rounded-2xl px-4 py-3.5 mb-3 h-28 shadow-xs">
-          <TextInput
+          <TextField
+            value={title}
+            onChangeText={(t) => {
+              setTitle(t);
+              setTitleEdited(true);
+            }}
+            placeholder="Title your activity"
+            accessibilityLabel="Activity title"
+            maxLength={100}
+            returnKeyType="next"
+          />
+          <View style={{ height: space.md }} />
+          <TextField
             value={description}
             onChangeText={setDescription}
-            placeholder="How'd it go? Share more about your activity and use @ to tag someone."
-            placeholderTextColor="#9CA3AF"
+            placeholder="How did it go? Share more about your activity."
+            accessibilityLabel="Description"
             multiline
-            numberOfLines={4}
-            className="text-sm text-gray-900 h-full"
-            textAlignVertical="top"
+            maxLength={2000}
+          />
+          <View style={{ height: space.md }} />
+          <SelectField value={cfg.label} icon={cfg.icon} onPress={() => setSportSheet(true)} accessibilityLabel="Sport" />
+
+          <SectionTitle title="Visibility" style={{ marginTop: space.xxl }} />
+          <AppText variant="label" color="inkSecondary" style={{ marginBottom: space.sm }}>
+            Who can view
+          </AppText>
+          <SelectField
+            value={VISIBILITY_LABEL[visibility].label}
+            icon={VISIBILITY_LABEL[visibility].icon}
+            onPress={() => setVisibilitySheet(true)}
+            accessibilityLabel="Who can view"
+          />
+
+          {error ? (
+            <View style={{ marginTop: space.lg }}>
+              <ErrorState compact message={error} />
+            </View>
+          ) : null}
+
+          <Button
+            label="Discard Activity"
+            variant="danger"
+            onPress={onDiscard}
+            disabled={saving}
+            style={{ alignSelf: 'center', marginTop: space.xxl }}
+          />
+        </ScrollView>
+
+        <View style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}>
+          <Button
+            label={error ? 'Try again' : 'Save Activity'}
+            size="lg"
+            fullWidth
+            loading={saving}
+            onPress={onSave}
+            disabled={!title.trim()}
           />
         </View>
+      </KeyboardAvoidingView>
 
-        {/* Sport Picker Dropdown */}
-        <TouchableOpacity
-          onPress={() => setShowSportPicker(true)}
-          className="flex-row items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-4 mb-4 shadow-xs">
-          <View className="flex-row items-center">
-            <Ionicons name="fitness-outline" size={20} color="#111827" />
-            <Text className="text-base font-bold text-gray-900 ml-3">{sport}</Text>
-          </View>
-          <Ionicons name="chevron-down" size={18} color="#6B7280" />
-        </TouchableOpacity>
-
-        {/* Add Photos/Videos Dashed Box */}
-        <TouchableOpacity
-          onPress={() => Alert.alert('Photos & Media', 'Photos are synced directly to your cloud workout gallery.')}
-          className="w-full py-8 border-2 border-dashed border-[#FC4C02]/60 rounded-3xl items-center justify-center mb-6 bg-orange-50/20">
-          <Ionicons name="image-outline" size={32} color="#FC4C02" />
-          <Text className="text-sm font-black text-[#FC4C02] mt-2 tracking-wide">
-            Add Photos/Videos
-          </Text>
-        </TouchableOpacity>
-
-        {/* Section: Details */}
-        <Text className="text-xl font-black text-gray-900 mb-3">Details</Text>
-
-        {/* Activity Tag */}
-        <TouchableOpacity
-          onPress={() => setShowTagPicker(!showTagPicker)}
-          className="flex-row items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-4 mb-3 shadow-xs">
-          <View className="flex-row items-center">
-            <Ionicons name="pricetag-outline" size={18} color="#6B7280" />
-            <Text className="text-sm font-bold text-gray-800 ml-3">
-              Activity Tag: <Text className="font-semibold text-gray-500">{activityTag}</Text>
-            </Text>
-          </View>
-          <Ionicons name="chevron-down" size={18} color="#6B7280" />
-        </TouchableOpacity>
-
-        {showTagPicker && (
-          <View className="flex-row flex-wrap mb-3 pl-2">
-            {['Normal', 'Race', 'Long Run', 'Workout', 'Commute'].map((t) => (
-              <TouchableOpacity
-                key={t}
-                onPress={() => {
-                  setActivityTag(t);
-                  setShowTagPicker(false);
-                }}
-                className={`px-3 py-1.5 rounded-full mr-2 mb-2 border ${
-                  activityTag === t
-                    ? 'bg-[#FC4C02] border-[#FC4C02]'
-                    : 'bg-gray-100 border-gray-200'
-                }`}>
-                <Text
-                  className={`text-xs font-bold ${
-                    activityTag === t ? 'text-white' : 'text-gray-700'
-                  }`}>
-                  {t}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {/* How did that activity feel? */}
-        <TouchableOpacity
-          onPress={() => setShowExertionPicker(!showExertionPicker)}
-          className="flex-row items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-4 mb-3 shadow-xs">
-          <View className="flex-row items-center">
-            <Ionicons name="speedometer-outline" size={18} color="#6B7280" />
-            <Text className="text-sm font-bold text-gray-800 ml-3">
-              How did that activity feel?{' '}
-              <Text className="font-semibold text-gray-500">{perceivedExertion}</Text>
-            </Text>
-          </View>
-          <Ionicons name="chevron-down" size={18} color="#6B7280" />
-        </TouchableOpacity>
-
-        {showExertionPicker && (
-          <View className="flex-row flex-wrap mb-3 pl-2">
-            {[
-              { label: 'Easy (1-3)', val: 'Easy' },
-              { label: 'Moderate (4-6)', val: 'Moderate' },
-              { label: 'Hard (7-8)', val: 'Hard' },
-              { label: 'Max Effort (9-10)', val: 'Max Effort' },
-            ].map((e) => (
-              <TouchableOpacity
-                key={e.val}
-                onPress={() => {
-                  setPerceivedExertion(e.val);
-                  setShowExertionPicker(false);
-                }}
-                className={`px-3 py-1.5 rounded-full mr-2 mb-2 border ${
-                  perceivedExertion === e.val
-                    ? 'bg-[#FC4C02] border-[#FC4C02]'
-                    : 'bg-gray-100 border-gray-200'
-                }`}>
-                <Text
-                  className={`text-xs font-bold ${
-                    perceivedExertion === e.val ? 'text-white' : 'text-gray-700'
-                  }`}>
-                  {e.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {/* Private Notes Input */}
-        <View className="flex-row items-start bg-white border border-gray-200 rounded-2xl px-4 py-3.5 mb-6 shadow-xs">
-          <Ionicons name="lock-closed-outline" size={18} color="#6B7280" className="mt-1 mr-2" />
-          <TextInput
-            value={privateNotes}
-            onChangeText={setPrivateNotes}
-            placeholder="Jot down private notes here. Only you can see these."
-            placeholderTextColor="#9CA3AF"
-            multiline
-            className="flex-1 text-sm text-gray-900 h-16 ml-1"
-            textAlignVertical="top"
-          />
-        </View>
-
-        {/* Section: Visibility */}
-        <Text className="text-xl font-black text-gray-900 mb-3">Visibility</Text>
-        <View className="bg-gray-50 border border-gray-200 rounded-2xl p-2 mb-8">
-          {(
-            [
-              { id: 'PUBLIC', label: 'Everyone', desc: 'Visible to all athletes and leaderboards' },
-              { id: 'FOLLOWERS_ONLY', label: 'Followers Only', desc: 'Only approved followers' },
-              { id: 'ONLY_ME', label: 'Only You', desc: 'Hidden private log entry' },
-            ] as const
-          ).map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              onPress={() => setVisibility(item.id)}
-              className={`p-3 rounded-xl flex-row items-center justify-between ${
-                visibility === item.id ? 'bg-white shadow-xs' : ''
-              }`}>
-              <View>
-                <Text className="text-sm font-bold text-gray-900">{item.label}</Text>
-                <Text className="text-xs text-gray-400">{item.desc}</Text>
-              </View>
-              {visibility === item.id && (
-                <Ionicons name="checkmark-circle" size={20} color="#FC4C02" />
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Full-Width Black Save Activity Button */}
-        <TouchableOpacity
-          disabled={isSaving}
-          onPress={handleSave}
-          className="w-full py-4 bg-black rounded-full items-center justify-center shadow-lg active:opacity-80">
-          <Text className="text-base font-black text-white">Save Activity</Text>
-        </TouchableOpacity>
-      </ScrollView>
-
-      {/* Sport Picker Modal */}
-      <SportPickerModal
-        visible={showSportPicker}
-        selectedSport={sport}
-        onSelectSport={(s: SportType) => {
+      <SportSheet
+        visible={sportSheet}
+        selected={sport}
+        onSelect={(s) => {
           setSport(s);
-          setShowSportPicker(false);
+          if (!titleEdited) setTitle(defaultActivityTitle(sportConfig(s).label, startDate));
+          setSportSheet(false);
         }}
-        onClose={() => setShowSportPicker(false)}
+        onClose={() => setSportSheet(false)}
       />
+      <BottomSheet visible={visibilitySheet} onClose={() => setVisibilitySheet(false)} title="Who can view">
+        {VISIBILITY_OPTIONS.map((o) => (
+          <OptionRow
+            key={o.id}
+            title={o.title}
+            description={o.description}
+            icon={VISIBILITY_LABEL[o.id].icon}
+            selected={visibility === o.id}
+            onPress={() => {
+              setVisibility(o.id);
+              setVisibilitySheet(false);
+            }}
+          />
+        ))}
+      </BottomSheet>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: color.surface },
+  header: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: space.gutter,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: color.border,
+  },
+  headerTitle: { flex: 1, textAlign: 'center' },
+  content: { padding: space.gutter, paddingBottom: space.xxxl },
+  summary: {
+    padding: space.lg,
+    backgroundColor: color.canvas,
+    borderRadius: radius.md,
+    marginBottom: space.md,
+  },
+  preview: { marginBottom: space.lg },
+  footer: {
+    paddingHorizontal: space.gutter,
+    paddingTop: space.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: color.border,
+    backgroundColor: color.surface,
+  },
+});
