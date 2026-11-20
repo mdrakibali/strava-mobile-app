@@ -1,196 +1,428 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import {
   SafeAreaView,
-  ScrollView,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { StravaMapView } from '../components/map/StravaMapView';
-import { useApp } from '../context/AppContext';
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { VISIBILITY_LABEL } from "../components/activity/FeedCard";
+import { RoutePreview } from "../components/map/RoutePreview";
+import { SportSheet } from "../components/record/SportSheet";
+import {
+  BottomSheet,
+  Button,
+  EmptyState,
+  ErrorState,
+  MetricRow,
+  MetricTile,
+  OptionRow,
+  SectionTitle,
+  SelectField,
+  TextField,
+} from "../design";
+import {
+  defaultActivityTitle,
+  formatDuration,
+  formatElevation,
+  kmValue,
+  paceValue,
+  speedValue,
+} from "../lib/format";
+import { plannedRouteStore } from "../lib/plannedRoute";
+import { sportConfig } from "../lib/sports";
+import { recordingEngine } from "../tracking/engine";
+import { TrackSummary } from "../tracking/shared";
+import { syncWorker } from "../tracking/sync";
+import { useRecording } from "../tracking/useRecording";
+import { ActivityVisibility, SportType } from "../types";
 
+const VISIBILITY_OPTIONS: {
+  id: ActivityVisibility;
+  title: string;
+  description: string;
+}[] = [
+  {
+    id: "PUBLIC",
+    title: "Everyone",
+    description: "Anyone can view this activity.",
+  },
+  {
+    id: "FOLLOWERS_ONLY",
+    title: "Followers",
+    description: "Only people who follow you can view this activity.",
+  },
+  {
+    id: "ONLY_ME",
+    title: "Only you",
+    description: "Private. Only you can view this activity.",
+  },
+];
+
+/**
+ * Save Activity (reference: ScreensDesign 374734 / 374750 / 374747; research §3).
+ * Only fields the backend actually stores are shown (UI/UX audit: no fake controls).
+ */
 export default function SaveActivityScreen() {
   const router = useRouter();
-  const { activeRecording, saveNewActivity } = useApp();
+  const insets = useSafeAreaInsets();
+  const rec = useRecording();
+  const active =
+    rec.lifecycle.status === "recording" || rec.lifecycle.status === "paused";
 
-  const defaultTitle = `${activeRecording.sportType} Workout`;
-  const [title, setTitle] = useState(defaultTitle);
-  const [description, setDescription] = useState('');
-  const [visibility, setVisibility] = useState<'PUBLIC' | 'FOLLOWERS_ONLY' | 'ONLY_ME'>('PUBLIC');
-  const [applyPrivacyZone, setApplyPrivacyZone] = useState(true);
-  const [excludeFromFeed, setExcludeFromFeed] = useState(false);
+  const [startDate] = useState(
+    () => new Date(rec.lifecycle.startedAt ?? Date.now()),
+  );
+  const [sport, setSport] = useState<SportType>(rec.sport as SportType);
+  const [title, setTitle] = useState(() =>
+    defaultActivityTitle(sportConfig(rec.sport).label, startDate),
+  );
+  const [titleEdited, setTitleEdited] = useState(false);
+  const [description, setDescription] = useState("");
+  const [visibility, setVisibility] = useState<ActivityVisibility>("PUBLIC");
+  const [sportSheet, setSportSheet] = useState(false);
+  const [visibilitySheet, setVisibilitySheet] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Summary exactly as the activity will be stored: same shared math the server re-runs.
+  const [summary, setSummary] = useState<TrackSummary | null>(null);
 
-  const handleSave = () => {
-    saveNewActivity(title, description, visibility);
-    router.replace('/(tabs)');
+  useEffect(() => {
+    let cancelled = false;
+    recordingEngine.previewSummary().then((s) => !cancelled && setSummary(s));
+    return () => {
+      cancelled = true;
+    };
+  }, [rec.distanceM]);
+
+  const cfg = sportConfig(sport);
+  const route = rec.route;
+
+  if (!active && !saving) {
+    return (
+      <SafeAreaView className="flex-1 bg-white">
+        <EmptyState
+          icon="checkmark-done-outline"
+          title="Nothing to save"
+          body="There is no recorded activity waiting to be saved."
+          primary={{ label: "Close", onPress: () => router.back() }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const onResume = async () => {
+    await recordingEngine.resume();
+    router.back();
   };
 
-  const routeCoords = activeRecording.routeCoordinates.map(
-    (c) => [c.longitude, c.latitude] as [number, number]
-  );
-  const centerCoord = routeCoords[0] || [90.4125, 23.7745];
+  const onDiscard = () =>
+    Alert.alert(
+      "Discard activity?",
+      "This recording will be deleted. This can’t be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Discard",
+          style: "destructive",
+          onPress: async () => {
+            await recordingEngine.discard();
+            plannedRouteStore.set(null);
+            router.dismissAll();
+          },
+        },
+      ],
+    );
+
+  /**
+   * Local-first save: the activity is committed to the phone's database first (it can't be lost
+   * from here on), then uploaded. We wait briefly so a good connection lands on the new activity;
+   * otherwise the upload continues in the background and Home shows it as pending.
+   */
+  const onSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    let sessionId: string;
+    try {
+      sessionId = await recordingEngine.complete({
+        title: title.trim(),
+        description: description.trim(),
+        sportType: sport,
+        visibility,
+      });
+    } catch (e: any) {
+      setError(e?.message ?? "Could not save the activity.");
+      setSaving(false);
+      return;
+    }
+    plannedRouteStore.set(null); // the saved activity is the recorded track only
+    const { synced, activityId } = await syncWorker.waitFor(sessionId, 8000);
+    router.dismissAll();
+    if (synced && activityId)
+      router.push({ pathname: "/activity/[id]", params: { id: activityId } });
+    else if (!synced)
+      Alert.alert(
+        "Saved on this phone",
+        "Your activity will upload automatically when the connection is back.",
+      );
+  };
+
+  const s = summary;
+  const distanceM = s?.distanceM ?? rec.distanceM;
+  const movingS = s?.movingTimeS ?? rec.movingTimeS;
+  const second =
+    cfg.primaryMetric === "speed"
+      ? {
+          label: "Avg speed",
+          value: speedValue(movingS > 0 ? distanceM / movingS : null),
+          unit: "km/h",
+        }
+      : {
+          label: "Avg pace",
+          value: paceValue(distanceM, movingS),
+          unit: "/km",
+        };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      {/* Top Header */}
-      <View className="flex-row justify-between items-center px-4 py-3 border-b border-gray-200">
-        <TouchableOpacity onPress={() => router.back()} className="p-1">
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900">Save Activity</Text>
-        <TouchableOpacity onPress={handleSave} className="p-1">
-          <Text className="text-base font-black text-[#FC4C02]">Save</Text>
-        </TouchableOpacity>
+    <SafeAreaView edges={["top"]} className="flex-1 bg-white">
+      <View className="h-14 flex-row items-center px-4 border-b border-gray-100 justify-between">
+        <Button
+          label="Resume"
+          variant="outline"
+          size="sm"
+          onPress={onResume}
+          disabled={saving}
+        />
+        <Text className="text-lg font-bold text-gray-900 text-center flex-1">
+          Save Activity
+        </Text>
+        <View className="w-20" />
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerClassName="p-4 pb-20 space-y-4">
-        {/* Real Route Map Preview Thumbnail */}
-        <View className="w-full h-44 rounded-2xl overflow-hidden border border-gray-200 bg-stone-100 mb-3" pointerEvents="none">
-          <StravaMapView
-            styleKey="positron"
-            centerCoordinate={centerCoord}
-            routeCoordinates={routeCoords.length > 0 ? routeCoords : undefined}
-            zoomLevel={13}
-            showControls={false}
-            showUserLocation={false}
-            className="w-full h-full"
-          />
-        </View>
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={{ padding: 16, paddingBottom: 64 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="p-4 bg-gray-50 rounded-2xl mb-4">
+            <MetricRow>
+              <MetricTile
+                label="Distance"
+                value={kmValue(distanceM)}
+                unit="km"
+              />
+              <MetricTile label="Moving time" value={formatDuration(movingS)} />
+              <MetricTile
+                label={second.label}
+                value={second.value}
+                unit={second.value === "–" ? undefined : second.unit}
+              />
+              <MetricTile
+                label="Elev gain"
+                value={formatElevation(s ? s.elevGainM : rec.elevGainM)}
+              />
+            </MetricRow>
+          </View>
+          {route.length > 1 ? (
+            <View className="mb-4">
+              <RoutePreview route={route} height={150} rounded />
+            </View>
+          ) : null}
 
-        {/* Workout Quick Summary */}
-        <View className="flex-row justify-between bg-gray-50 p-4 rounded-2xl border border-gray-100 mb-3">
-          <View className="items-center">
-            <Text className="text-[10px] text-gray-400 font-bold uppercase">DISTANCE</Text>
-            <Text className="text-base font-black text-gray-900 mt-0.5">
-              {(activeRecording.distanceMeters / 1000).toFixed(2)} km
-            </Text>
-          </View>
-          <View className="items-center">
-            <Text className="text-[10px] text-gray-400 font-bold uppercase">TIME</Text>
-            <Text className="text-base font-black text-gray-900 mt-0.5">
-              {Math.floor(activeRecording.movingSeconds / 60)}m {activeRecording.movingSeconds % 60}s
-            </Text>
-          </View>
-          <View className="items-center">
-            <Text className="text-[10px] text-gray-400 font-bold uppercase">ELEVATION</Text>
-            <Text className="text-base font-black text-gray-900 mt-0.5">
-              +{activeRecording.elevationGainMeters} m
-            </Text>
-          </View>
-        </View>
-
-        {/* Title Input */}
-        <View className="mb-3">
-          <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-            Activity Title
-          </Text>
-          <TextInput
-            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
+          <TextField
             value={title}
-            onChangeText={setTitle}
-            placeholder="Give your workout an epic title"
-            placeholderTextColor="#9CA3AF"
+            onChangeText={(t) => {
+              setTitle(t);
+              setTitleEdited(true);
+            }}
+            placeholder="Title your activity"
+            accessibilityLabel="Activity title"
+            maxLength={100}
+            returnKeyType="next"
           />
-        </View>
-
-        {/* Description Input */}
-        <View className="mb-3">
-          <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-            Description
-          </Text>
-          <TextInput
-            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 h-20"
+          <View className="h-4" />
+          <TextField
             value={description}
             onChangeText={setDescription}
-            placeholder="How did the pace and elevation feel?"
-            placeholderTextColor="#9CA3AF"
+            placeholder="How did it go? Share more about your activity."
+            accessibilityLabel="Description"
             multiline
-            numberOfLines={3}
+            maxLength={2000}
           />
-        </View>
+          <View className="h-4" />
+          <SelectField
+            value={cfg.label}
+            icon={cfg.icon}
+            onPress={() => setSportSheet(true)}
+            accessibilityLabel="Sport"
+          />
 
-        {/* Visibility Controls */}
-        <View className="mb-3">
-          <Text className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-            Who Can See This Activity?
-          </Text>
-          <View className="space-y-2">
-            {(
-              [
-                { id: 'PUBLIC', label: 'Everyone', desc: 'Visible on feeds, segments, and leaderboards' },
-                { id: 'FOLLOWERS_ONLY', label: 'Followers Only', desc: 'Only athletes who follow you' },
-                { id: 'ONLY_ME', label: 'Only You', desc: 'Private training log entry' },
-              ] as const
-            ).map((opt) => (
-              <TouchableOpacity
-                key={opt.id}
-                className={`flex-row items-center justify-between p-3.5 rounded-xl border mb-2 ${
-                  visibility === opt.id ? 'border-[#FC4C02] bg-orange-50/50' : 'border-gray-200 bg-gray-50'
-                }`}
-                onPress={() => setVisibility(opt.id)}>
-                <View className="flex-1 mr-2">
-                  <Text
-                    className={`text-sm font-bold ${
-                      visibility === opt.id ? 'text-[#FC4C02]' : 'text-gray-900'
-                    }`}>
-                    {opt.label}
-                  </Text>
-                  <Text className="text-xs text-gray-500 mt-0.5">{opt.desc}</Text>
-                </View>
-                {visibility === opt.id && (
-                  <Ionicons name="checkmark-circle" size={20} color="#FC4C02" />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+          {/* Add Photos/Videos Dashed Box (Strava Style) */}
+          <Pressable
+            onPress={() =>
+              Alert.alert(
+                "Photos & Videos",
+                "Photo and video upload feature will be available in the next cloud storage update.",
+              )
+            }
+            className="mt-4 border-2 border-dashed border-[#FC4C02] rounded-2xl py-6 items-center justify-center bg-[#FFF9F6]"
+          >
+            <Ionicons name="image-outline" size={32} color="#FC4C02" />
+            <Text className="text-sm font-bold text-[#FC4C02] mt-1">
+              Add Photos/Videos
+            </Text>
+          </Pressable>
 
-        {/* Privacy Zone Masking */}
-        <View className="flex-row justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200 mb-3">
-          <View className="flex-1 mr-3">
-            <Text className="text-sm font-bold text-gray-900">Privacy Zone Masking</Text>
-            <Text className="text-xs text-gray-500 mt-0.5">
-              Hides start and finish GPS points within 500m of your home.
+          {/* Details Section */}
+          <SectionTitle title="Details" className="mt-6" />
+          <Pressable
+            onPress={() =>
+              Alert.alert(
+                "Activity Tag",
+                "Select a tag (Workout, Race, Long Run).",
+              )
+            }
+            className="flex-row items-center justify-between bg-gray-50 rounded-xl px-4 py-3.5 border border-gray-100"
+          >
+            <View className="flex-row items-center">
+              <Ionicons
+                name="pricetag-outline"
+                size={18}
+                color="#6B7280"
+              />
+              <Text className="text-sm font-medium text-gray-800 ml-2">
+                Activity Tag
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-down"
+              size={16}
+              color="#6B7280"
+            />
+          </Pressable>
+
+          <Pressable
+            onPress={() =>
+              Alert.alert(
+                "Perceived Exertion",
+                "Rate how hard the activity felt (1-10).",
+              )
+            }
+            className="flex-row items-center justify-between bg-gray-50 rounded-xl px-4 py-3.5 border border-gray-100 mt-2.5"
+          >
+            <View className="flex-row items-center">
+              <Ionicons
+                name="speedometer-outline"
+                size={18}
+                color="#6B7280"
+              />
+              <Text className="text-sm font-medium text-gray-800 ml-2">
+                How did that activity feel?
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-down"
+              size={16}
+              color="#6B7280"
+            />
+          </Pressable>
+
+          <View className="flex-row items-start bg-gray-50 rounded-xl p-3 border border-gray-100 mt-2.5">
+            <Ionicons
+              name="lock-closed-outline"
+              size={16}
+              color="#6B7280"
+              className="mt-0.5 mr-1.5"
+            />
+            <Text className="text-xs text-gray-500 flex-1 leading-4">
+              Jot down private notes here. Only you can see these.
             </Text>
           </View>
-          <Switch
-            value={applyPrivacyZone}
-            onValueChange={setApplyPrivacyZone}
-            trackColor={{ false: '#E5E7EB', true: '#FC4C02' }}
-          />
-        </View>
 
-        {/* Exclude From Home Feed Toggle */}
-        <View className="flex-row justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4">
-          <View className="flex-1 mr-3">
-            <Text className="text-sm font-bold text-gray-900">Mute Activity</Text>
-            <Text className="text-xs text-gray-500 mt-0.5">
-              Don't publish this activity to followers' home or club feeds.
-            </Text>
-          </View>
-          <Switch
-            value={excludeFromFeed}
-            onValueChange={setExcludeFromFeed}
-            trackColor={{ false: '#E5E7EB', true: '#FC4C02' }}
-          />
-        </View>
-
-        {/* Big Save Button */}
-        <TouchableOpacity
-          className="bg-[#FC4C02] py-4 rounded-2xl items-center justify-center shadow-lg"
-          onPress={handleSave}
-          activeOpacity={0.85}>
-          <Text className="text-base font-black text-white tracking-wider uppercase">
-            Save Activity
+          <SectionTitle title="Visibility" className="mt-6" />
+          <Text className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">
+            Who can view
           </Text>
-        </TouchableOpacity>
-      </ScrollView>
+          <SelectField
+            value={VISIBILITY_LABEL[visibility].label}
+            icon={VISIBILITY_LABEL[visibility].icon}
+            onPress={() => setVisibilitySheet(true)}
+            accessibilityLabel="Who can view"
+          />
+
+          {error ? (
+            <View className="mt-4">
+              <ErrorState compact message={error} />
+            </View>
+          ) : null}
+
+          <Button
+            label="Discard Activity"
+            variant="danger"
+            onPress={onDiscard}
+            disabled={saving}
+            className="self-center mt-7"
+          />
+        </ScrollView>
+
+        <View
+          style={{ paddingBottom: insets.bottom + 12 }}
+          className="px-4 pt-3 bg-white border-t border-gray-100"
+        >
+          <Button
+            label={error ? "Try again" : "Save Activity"}
+            variant="dark"
+            size="lg"
+            fullWidth
+            loading={saving}
+            onPress={onSave}
+            disabled={!title.trim()}
+          />
+        </View>
+      </KeyboardAvoidingView>
+
+      <SportSheet
+        visible={sportSheet}
+        selected={sport}
+        onSelect={(s) => {
+          setSport(s);
+          if (!titleEdited)
+            setTitle(defaultActivityTitle(sportConfig(s).label, startDate));
+          setSportSheet(false);
+        }}
+        onClose={() => setSportSheet(false)}
+      />
+      <BottomSheet
+        visible={visibilitySheet}
+        onClose={() => setVisibilitySheet(false)}
+        title="Who can view"
+      >
+        {VISIBILITY_OPTIONS.map((o) => (
+          <OptionRow
+            key={o.id}
+            title={o.title}
+            description={o.description}
+            icon={VISIBILITY_LABEL[o.id].icon}
+            selected={visibility === o.id}
+            onPress={() => {
+              setVisibility(o.id);
+              setVisibilitySheet(false);
+            }}
+          />
+        ))}
+      </BottomSheet>
     </SafeAreaView>
   );
 }

@@ -1,133 +1,88 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useMemo, useState } from 'react';
+import { View } from 'react-native';
+import { FormScreen } from '../../components/forms/FormScreen';
+import { Chip, ChipRow, SectionTitle, space, TextField } from '../../design';
+import { MVP_SPORTS } from '../../lib/sports';
+import { api } from '../../services/api';
 
+const TIMES = Array.from({ length: 33 }, (_, i) => 5 * 60 + i * 30); // 05:00 … 21:00, every 30 min
+const label = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+
+/** Create a group event (POST /events). The creator is automatically "going". */
 export default function CreateEventScreen() {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [sportType, setSportType] = useState('Run');
-  const [date, setDate] = useState('Saturday, Nov 29');
-  const [time, setTime] = useState('06:30 AM');
-  const [meetingPoint, setMeetingPoint] = useState('Police Plaza Promenade, Gulshan 1');
-  const [paceDescription, setPaceDescription] = useState('5:30 - 6:00 /km conversational pace');
-  const [distanceKm, setDistanceKm] = useState('12');
+  const [dayOffset, setDayOffset] = useState(1);
+  const [time, setTime] = useState(6 * 60 + 30);
+  const [meetingPoint, setMeetingPoint] = useState('');
+  const [pace, setPace] = useState('');
+  const [distanceKm, setDistanceKm] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleCreate = () => {
-    if (!title.trim()) {
-      alert('Please enter an event title');
-      return;
+  const [now] = useState(() => Date.now());
+  const days = useMemo(() => {
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    return Array.from({ length: 14 }, (_, i) => new Date(base.getTime() + i * 86_400_000));
+  }, []);
+  const when = new Date(days[dayOffset].getTime() + time * 60_000);
+  const km = distanceKm ? Number(distanceKm.replace(',', '.')) : null;
+  const valid = title.trim().length > 2 && meetingPoint.trim().length > 1 && when.getTime() > now && (km == null || (Number.isFinite(km) && km >= 0));
+
+  const submit = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await api.events.create({
+        title: title.trim(),
+        sportType,
+        eventDate: when.toISOString(),
+        meetingPoint: meetingPoint.trim(),
+        paceDescription: pace.trim() || undefined,
+        distanceMeters: km != null ? Math.round(km * 1000) : undefined,
+      });
+      router.replace({ pathname: '/event/[id]', params: { id: res.event.id } });
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not create the event.');
+      setSaving(false);
     }
-    alert(`Event "${title}" published to your club!`);
-    router.back();
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white justify-between p-6">
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View className="flex-row items-center justify-between mb-4">
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="close" size={24} color="#111827" />
-          </TouchableOpacity>
-          <Text className="text-base font-black text-gray-900">Host Group Workout</Text>
-          <TouchableOpacity onPress={handleCreate}>
-            <Text className="text-sm font-black text-[#FC4C02]">Publish</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text className="text-2xl font-black text-gray-900 mb-2">Plan a Group Meetup</Text>
-        <Text className="text-xs text-gray-500 mb-6">
-          Rally your club or friends for an organized group run, social cycling spin, or weekend trail adventure.
-        </Text>
-
-        <View className="space-y-4 mb-6">
-          <View>
-            <Text className="text-xs font-bold text-gray-600 mb-1">Event Title</Text>
-            <TextInput
-              value={title}
-              onChangeText={setTitle}
-              placeholder="e.g. Saturday Morning Aerobic Long Run"
-              className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
-            />
-          </View>
-
-          <View>
-            <Text className="text-xs font-bold text-gray-600 mb-1">Sport Type</Text>
-            <View className="flex-row gap-2">
-              {['Run', 'Ride', 'Trail Run', 'Hike'].map((sport) => (
-                <TouchableOpacity
-                  key={sport}
-                  onPress={() => setSportType(sport)}
-                  className={`px-4 py-2 rounded-xl border ${
-                    sportType === sport
-                      ? 'border-[#FC4C02] bg-[#FC4C02]'
-                      : 'border-gray-200 bg-gray-50'
-                  }`}>
-                  <Text className={`text-xs font-bold ${sportType === sport ? 'text-white' : 'text-gray-700'}`}>
-                    {sport}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View className="flex-row space-x-3">
-            <View className="flex-1 mr-2">
-              <Text className="text-xs font-bold text-gray-600 mb-1">Date</Text>
-              <TextInput
-                value={date}
-                onChangeText={setDate}
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
-              />
-            </View>
-            <View className="flex-1 ml-2">
-              <Text className="text-xs font-bold text-gray-600 mb-1">Time</Text>
-              <TextInput
-                value={time}
-                onChangeText={setTime}
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
-              />
-            </View>
-          </View>
-
-          <View>
-            <Text className="text-xs font-bold text-gray-600 mb-1">Meeting Location</Text>
-            <TextInput
-              value={meetingPoint}
-              onChangeText={setMeetingPoint}
-              className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
-            />
-          </View>
-
-          <View className="flex-row space-x-3">
-            <View className="w-32 mr-2">
-              <Text className="text-xs font-bold text-gray-600 mb-1">Distance (km)</Text>
-              <TextInput
-                value={distanceKm}
-                onChangeText={setDistanceKm}
-                keyboardType="numeric"
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
-              />
-            </View>
-            <View className="flex-1 ml-2">
-              <Text className="text-xs font-bold text-gray-600 mb-1">Target Pace / Effort</Text>
-              <TextInput
-                value={paceDescription}
-                onChangeText={setPaceDescription}
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
-              />
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-
-      <TouchableOpacity
-        onPress={handleCreate}
-        className="w-full py-4 bg-[#FC4C02] rounded-2xl items-center shadow-md">
-        <Text className="text-base font-black text-white">Create Group Event</Text>
-      </TouchableOpacity>
-    </SafeAreaView>
+    <FormScreen title="Create Event" submitLabel="Create event" canSubmit={valid} submitting={saving} error={error} onSubmit={submit}>
+      <TextField value={title} onChangeText={setTitle} placeholder="Event name (e.g. Saturday long run)" accessibilityLabel="Event name" maxLength={120} />
+      <SectionTitle title="Sport" className="mt-5" />
+      <ChipRow>
+        {MVP_SPORTS.map((s) => (
+          <Chip key={s.id} label={s.label} icon={s.icon} selected={sportType === s.id} onPress={() => setSportType(s.id)} />
+        ))}
+      </ChipRow>
+      <SectionTitle title="Day" className="mt-5" />
+      <ChipRow>
+        {days.map((d, i) => (
+          <Chip
+            key={i}
+            label={i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+            selected={dayOffset === i}
+            onPress={() => setDayOffset(i)}
+          />
+        ))}
+      </ChipRow>
+      <SectionTitle title="Start time" className="mt-5" />
+      <ChipRow>
+        {TIMES.map((t) => (
+          <Chip key={t} label={label(t)} selected={time === t} onPress={() => setTime(t)} />
+        ))}
+      </ChipRow>
+      <View className="h-4" />
+      <TextField value={meetingPoint} onChangeText={setMeetingPoint} placeholder="Meeting point" accessibilityLabel="Meeting point" maxLength={200} />
+      <View className="h-3" />
+      <TextField value={distanceKm} onChangeText={setDistanceKm} placeholder="Distance (km, optional)" accessibilityLabel="Distance in kilometres" keyboardType="decimal-pad" maxLength={6} />
+      <View className="h-3" />
+      <TextField value={pace} onChangeText={setPace} placeholder="Pace / level (optional)" accessibilityLabel="Pace or level" maxLength={200} />
+    </FormScreen>
   );
 }
-

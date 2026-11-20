@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -12,32 +13,93 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MOCK_CONVERSATIONS, MOCK_MESSAGES } from '../../mock/data';
-import { DirectMessage } from '../../types';
+import { useApp } from '../../context/AppContext';
+import { api } from '../../services/api';
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { currentUser } = useApp();
 
-  const conversation =
-    MOCK_CONVERSATIONS.find((c) => c.id === id) || MOCK_CONVERSATIONS[0];
-
-  const [messages, setMessages] = useState<DirectMessage[]>(
-    (id && MOCK_MESSAGES[id]) || MOCK_MESSAGES['conv_1'] || []
-  );
+  const [partner, setPartner] = useState<any>({
+    id: id || 'partner',
+    displayName: 'Athlete',
+    username: 'athlete',
+    avatarUrl: '',
+  });
+  const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const scrollViewRef = useRef<any>(null);
 
-  const handleSendMessage = () => {
-    if (!inputText.trim()) return;
-    const newMsg: DirectMessage = {
-      id: `m_${Date.now()}`,
-      senderId: 'user_current',
-      text: inputText.trim(),
-      timestamp: 'Just now',
-      isRead: true,
-    };
-    setMessages((prev) => [...prev, newMsg]);
+  const fetchChatHistory = async () => {
+    if (!id) return;
+    try {
+      // 1. Fetch partner details
+      const profileRes = await api.athletes.getProfile(id).catch(() => null);
+      if (profileRes?.athlete) {
+        setPartner(profileRes.athlete);
+      }
+
+      // 2. Fetch real message thread
+      const res = await api.messages.getThread(id);
+      if (res?.messages) {
+        setMessages(res.messages);
+      }
+    } catch (err) {
+      console.warn('Failed to load chat history:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchChatHistory();
+    // Poll every 4 seconds for new incoming messages while in chat
+    const interval = setInterval(() => {
+      if (id) {
+        api.messages.getThread(id).then((res) => {
+          if (res?.messages) {
+            setMessages(res.messages);
+          }
+        }).catch(() => null);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [id]);
+
+  const handleSendMessage = async () => {
+    if (!inputText.trim() || !id || isSending) return;
+    const textToSend = inputText.trim();
     setInputText('');
+    setIsSending(true);
+
+    // Optimistic UI insert
+    const tempId = `temp_${Date.now()}`;
+    const optimisticMsg = {
+      id: tempId,
+      senderId: currentUser.id,
+      recipientId: id,
+      text: textToSend,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+
+    try {
+      const res = await api.messages.send(id, textToSend);
+      if (res?.directMessage) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? res.directMessage : m))
+        );
+      }
+    } catch (err: any) {
+      console.warn('Send message error:', err);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -50,23 +112,23 @@ export default function ChatScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => router.push(`/athlete/${conversation.participant.id}`)}
+            onPress={() => router.push(`/athlete/${partner.id}`)}
             className="flex-row items-center flex-1">
             <Image
-              source={{ uri: conversation.participant.avatarUrl }}
+              source={{ uri: partner.avatarUrl || undefined }}
               className="w-9 h-9 rounded-full bg-gray-100 mr-2.5"
             />
             <View>
               <Text className="text-sm font-bold text-gray-900" numberOfLines={1}>
-                {conversation.participant.displayName}
+                {partner.displayName}
               </Text>
-              <Text className="text-[10px] text-emerald-600 font-semibold">Active now</Text>
+              <Text className="text-[10px] text-emerald-600 font-semibold">Athlete</Text>
             </View>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity
-          onPress={() => router.push(`/athlete/${conversation.participant.id}`)}
+          onPress={() => router.push(`/athlete/${partner.id}`)}
           className="p-1">
           <Ionicons name="person-circle-outline" size={24} color="#6B7280" />
         </TouchableOpacity>
@@ -76,36 +138,57 @@ export default function ChatScreen() {
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/* Messages Stream */}
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          className="flex-1"
-          contentContainerClassName="p-4 pb-6 space-y-3">
-          {messages.map((m) => {
-            const isMe = m.senderId === 'user_current';
-            return (
-              <View
-                key={m.id}
-                className={`max-w-[80%] rounded-2xl px-4 py-2.5 mb-2 ${
-                  isMe
-                    ? 'self-end bg-[#FC4C02] rounded-br-xs'
-                    : 'self-start bg-white border border-gray-200 rounded-bl-xs'
-                }`}>
-                <Text
-                  className={`text-xs leading-4 ${
-                    isMe ? 'text-white font-medium' : 'text-gray-900 font-normal'
-                  }`}>
-                  {m.text}
-                </Text>
-                <Text
-                  className={`text-[9px] mt-1 text-right ${
-                    isMe ? 'text-orange-200' : 'text-gray-400'
-                  }`}>
-                  {m.timestamp}
+        {isLoading ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color="#FC4C02" />
+          </View>
+        ) : (
+          <ScrollView
+            ref={scrollViewRef}
+            showsVerticalScrollIndicator={false}
+            className="flex-1"
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+            contentContainerClassName="p-4 pb-6 space-y-3">
+            {messages.length > 0 ? (
+              messages.map((m) => {
+                const isMe = m.senderId === currentUser.id;
+                const timeString = m.createdAt
+                  ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : 'Just now';
+
+                return (
+                  <View
+                    key={m.id}
+                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 mb-2 ${
+                      isMe
+                        ? 'self-end bg-[#FC4C02] rounded-br-xs'
+                        : 'self-start bg-white border border-gray-200 rounded-bl-xs'
+                    }`}>
+                    <Text
+                      className={`text-xs leading-4 ${
+                        isMe ? 'text-white font-medium' : 'text-gray-900 font-normal'
+                      }`}>
+                      {m.text}
+                    </Text>
+                    <Text
+                      className={`text-[9px] mt-1 text-right ${
+                        isMe ? 'text-orange-200' : 'text-gray-400'
+                      }`}>
+                      {timeString}
+                    </Text>
+                  </View>
+                );
+              })
+            ) : (
+              <View className="items-center justify-center py-24">
+                <Ionicons name="chatbubble-ellipses-outline" size={40} color="#D1D5DB" />
+                <Text className="text-xs font-bold text-gray-400 mt-2">
+                  Say hi to {partner.displayName}!
                 </Text>
               </View>
-            );
-          })}
-        </ScrollView>
+            )}
+          </ScrollView>
+        )}
 
         {/* Input Bar */}
         <View className="flex-row items-center bg-white px-4 py-2.5 border-t border-gray-200">
@@ -118,9 +201,9 @@ export default function ChatScreen() {
           />
           <TouchableOpacity
             onPress={handleSendMessage}
-            disabled={!inputText.trim()}
+            disabled={!inputText.trim() || isSending}
             className={`w-9 h-9 rounded-full bg-[#FC4C02] items-center justify-center ${
-              !inputText.trim() ? 'opacity-40' : ''
+              !inputText.trim() || isSending ? 'opacity-40' : ''
             }`}>
             <Ionicons name="send" size={16} color="#FFFFFF" />
           </TouchableOpacity>
@@ -129,4 +212,3 @@ export default function ChatScreen() {
     </SafeAreaView>
   );
 }
-

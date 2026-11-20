@@ -5,15 +5,22 @@ import { Modal, Switch, Text, TouchableOpacity, View } from 'react-native';
 interface RecordSettingsModalProps {
   visible: boolean;
   onClose: () => void;
+  isSimulated?: boolean;
+  onToggleSimulation?: () => void;
+  beacon?: boolean;
+  onToggleBeacon?: (val: boolean) => void;
 }
 
 export const RecordSettingsModal: React.FC<RecordSettingsModalProps> = ({
   visible,
   onClose,
+  isSimulated = false,
+  onToggleSimulation,
+  beacon = false,
+  onToggleBeacon,
 }) => {
   const [autoPause, setAutoPause] = useState(true);
   const [audioCues, setAudioCues] = useState(true);
-  const [beacon, setBeacon] = useState(false);
   const [offRouteAlert, setOffRouteAlert] = useState(true);
 
   return (
@@ -54,12 +61,34 @@ export const RecordSettingsModal: React.FC<RecordSettingsModalProps> = ({
               <Switch value={offRouteAlert} onValueChange={setOffRouteAlert} trackColor={{ true: '#FC4C02', false: '#E5E7EB' }} />
             </View>
 
-            <View className="flex-row items-center justify-between py-2">
+            <View className="flex-row items-center justify-between py-2 border-b border-gray-100">
               <View className="flex-1 mr-3">
                 <Text className="text-sm font-bold text-gray-900">Beacon Live Safety</Text>
                 <Text className="text-xs text-gray-500">Share real-time GPS location with trusted contacts</Text>
               </View>
-              <Switch value={beacon} onValueChange={setBeacon} trackColor={{ true: '#FC4C02', false: '#E5E7EB' }} />
+              <Switch
+                value={beacon}
+                onValueChange={(val) => onToggleBeacon?.(val)}
+                trackColor={{ true: '#FC4C02', false: '#E5E7EB' }}
+              />
+            </View>
+
+            {/* Test Simulation Mode Toggle */}
+            <View className="flex-row items-center justify-between py-2">
+              <View className="flex-1 mr-3">
+                <View className="flex-row items-center">
+                  <Text className="text-sm font-black text-amber-700">Simulate Movement</Text>
+                  <View className="bg-amber-100 px-1.5 py-0.5 rounded ml-2">
+                    <Text className="text-[9px] font-black text-amber-800">DEV MODE</Text>
+                  </View>
+                </View>
+                <Text className="text-xs text-gray-500">Simulate pacing & GPS track indoors or in simulator</Text>
+              </View>
+              <Switch
+                value={isSimulated}
+                onValueChange={onToggleSimulation}
+                trackColor={{ true: '#F59E0B', false: '#E5E7EB' }}
+              />
             </View>
           </View>
         </View>
@@ -67,4 +96,3 @@ export const RecordSettingsModal: React.FC<RecordSettingsModalProps> = ({
     </Modal>
   );
 };
-

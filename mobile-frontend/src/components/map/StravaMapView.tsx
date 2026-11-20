@@ -1,216 +1,52 @@
-import { Ionicons } from '@expo/vector-icons';
-import Constants, { ExecutionEnvironment } from 'expo-constants';
-import React, { useEffect, useRef, useState } from 'react';
-import { Platform, Text, TouchableOpacity, View } from 'react-native';
-import { MapFallbackView } from './MapFallbackView';
-import {
-  MAP_STYLES,
-  MapMarkerItem,
-  MapStyleKey,
-  StravaMapViewProps,
-} from './mapTypes';
+/**
+ * Compatibility adapter for screens written against the old StravaMapView API (route detail,
+ * route navigation, route builder, segment, heatmap). It renders the single working map
+ * (MapView: MapLibre v11 + OpenFreeMap). The old implementation used the non-existent v10 API
+ * and defaulted to hard-coded Dhaka coordinates; this one never invents a position.
+ */
+import React from 'react';
+import { View } from 'react-native';
+import { MapView } from './MapView';
+import { MapMarkerItem, MapStyleKey, StravaMapViewProps } from './mapTypes';
 
-export { MAP_STYLES, MapMarkerItem, MapStyleKey, StravaMapViewProps };
+export type { HeatmapTypeOption, MapMarkerItem, MapStyleKey, MapTypeOption, TerrainTypeOption } from './mapTypes';
 
-let MapLibreGL: any = null;
-try {
-  MapLibreGL = require('@maplibre/maplibre-react-native').default;
-  if (MapLibreGL?.setAccessToken) {
-    MapLibreGL.setAccessToken(null);
-  }
-} catch {
-  MapLibreGL = null;
-}
+const toStyle = (k?: string): MapStyleKey => (k === 'positron' ? 'positron' : k === 'bright' ? 'bright' : 'liberty');
 
 export const StravaMapView: React.FC<StravaMapViewProps> = ({
-  styleKey = 'positron',
-  centerCoordinate = [90.4125, 23.7745],
-  zoomLevel = 13,
-  routeCoordinates,
-  markers = [],
+  styleKey,
+  centerCoordinate,
+  userLocation,
+  zoomLevel,
+  routeCoordinates = [],
+  heatmapRoutes,
+  markers,
   selectedMarkerId,
   onMarkerPress,
   onMapPress,
-  showControls = true,
-  showUserLocation = true,
-  className = 'w-full h-full',
+  showUserLocation,
+  mode = 'view-route',
+  followUser,
   children,
 }) => {
-  const [currentStyle, setCurrentStyle] = useState<MapStyleKey>(styleKey);
-  const [zoom, setZoom] = useState(zoomLevel);
-  const [center, setCenter] = useState<[number, number]>(centerCoordinate);
-  const cameraRef = useRef<any>(null);
-
-  useEffect(() => {
-    setCurrentStyle(styleKey);
-  }, [styleKey]);
-
-  useEffect(() => {
-    setCenter(centerCoordinate);
-  }, [centerCoordinate[0], centerCoordinate[1]]);
-
-  const routeGeoJSON: any = routeCoordinates && routeCoordinates.length > 1
-    ? {
-        type: 'FeatureCollection',
-        features: [
-          {
-            type: 'Feature',
-            geometry: {
-              type: 'LineString',
-              coordinates: routeCoordinates,
-            },
-            properties: {},
-          },
-        ],
-      }
-    : null;
-
-  const handleRecenter = () => {
-    setCenter(centerCoordinate);
-    if (cameraRef.current?.setCamera) {
-      cameraRef.current.setCamera({
-        centerCoordinate,
-        zoomLevel: 14,
-        animationDuration: 600,
-      });
-    }
-  };
-
-  const handleZoomIn = () => {
-    const nextZoom = Math.min(zoom + 1, 18);
-    setZoom(nextZoom);
-    cameraRef.current?.zoomTo?.(nextZoom, 300);
-  };
-
-  const handleZoomOut = () => {
-    const nextZoom = Math.max(zoom - 1, 3);
-    setZoom(nextZoom);
-    cameraRef.current?.zoomTo?.(nextZoom, 300);
-  };
-
-  const cycleStyle = () => {
-    const styles: MapStyleKey[] = ['positron', 'voyager', 'dark'];
-    const nextIdx = (styles.indexOf(currentStyle) + 1) % styles.length;
-    setCurrentStyle(styles[nextIdx]);
-  };
-
-  const isExpoGo =
-    Constants.appOwnership === 'expo' ||
-    Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-  const isMapLibreAvailable =
-    !isExpoGo && Boolean(MapLibreGL && MapLibreGL.MapView && Platform.OS !== 'web');
-
+  const byId = new Map<string, MapMarkerItem>((markers ?? []).map((m) => [m.id, m]));
   return (
-    <View className={`relative overflow-hidden bg-gray-100 ${className}`}>
-      {isMapLibreAvailable ? (
-        <MapLibreGL.MapView
-          style={{ flex: 1 }}
-          styleURL={MAP_STYLES[currentStyle]}
-          logoEnabled={false}
-          attributionEnabled={true}
-          attributionPosition={{ bottom: 8, right: 8 }}
-          onPress={(e: any) => {
-            if (onMapPress && e.geometry?.coordinates) {
-              onMapPress(e.geometry.coordinates);
-            }
-          }}>
-          <MapLibreGL.Camera
-            ref={cameraRef}
-            defaultSettings={{
-              centerCoordinate: center,
-              zoomLevel: zoom,
-            }}
-          />
-
-          {showUserLocation && (
-            <MapLibreGL.UserLocation visible={true} showsUserHeadingIndicator={true} />
-          )}
-
-          {routeGeoJSON && (
-            <MapLibreGL.ShapeSource id="routeSource" shape={routeGeoJSON}>
-              <MapLibreGL.LineLayer
-                id="routeLineCasing"
-                style={{
-                  lineColor: '#FFFFFF',
-                  lineWidth: 6,
-                  lineCap: 'round',
-                  lineJoin: 'round',
-                }}
-              />
-              <MapLibreGL.LineLayer
-                id="routeLineLayer"
-                style={{
-                  lineColor: '#FC4C02',
-                  lineWidth: 4,
-                  lineCap: 'round',
-                  lineJoin: 'round',
-                }}
-              />
-            </MapLibreGL.ShapeSource>
-          )}
-
-          {markers.map((m) => {
-            const isSelected = m.id === selectedMarkerId;
-            return (
-              <MapLibreGL.PointAnnotation
-                key={m.id}
-                id={m.id}
-                coordinate={m.coordinate}
-                onSelected={() => onMarkerPress && onMarkerPress(m)}>
-                <View
-                  className={`w-8 h-8 rounded-full items-center justify-center border-2 border-white shadow-md ${
-                    isSelected ? 'bg-black' : m.type === 'segment' ? 'bg-amber-500' : 'bg-[#FC4C02]'
-                  }`}>
-                  <Ionicons
-                    name={m.type === 'segment' ? 'trophy' : 'navigate'}
-                    size={16}
-                    color="#FFFFFF"
-                  />
-                </View>
-              </MapLibreGL.PointAnnotation>
-            );
-          })}
-        </MapLibreGL.MapView>
-      ) : (
-        <MapFallbackView
-          routeCoordinates={routeCoordinates}
-          markers={markers}
-          onMarkerPress={onMarkerPress}
-        />
-      )}
-
-      {showControls && (
-        <View className="absolute top-4 right-4 space-y-2 z-20">
-          <TouchableOpacity
-            onPress={cycleStyle}
-            className="w-10 h-10 rounded-full bg-white shadow-md items-center justify-center border border-gray-100 mb-2">
-            <Ionicons name="layers-outline" size={20} color="#111827" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleZoomIn}
-            className="w-10 h-10 rounded-full bg-white shadow-md items-center justify-center border border-gray-100 mb-2">
-            <Ionicons name="add" size={22} color="#111827" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleZoomOut}
-            className="w-10 h-10 rounded-full bg-white shadow-md items-center justify-center border border-gray-100 mb-2">
-            <Ionicons name="remove" size={22} color="#111827" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleRecenter}
-            className="w-10 h-10 rounded-full bg-white shadow-md items-center justify-center border border-gray-100">
-            <Ionicons name="locate" size={20} color="#FC4C02" />
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <View className="absolute bottom-2 left-2 bg-white/80 px-2 py-0.5 rounded shadow-sm z-10">
-        <Text className="text-[9px] text-gray-600 font-medium">
-          © CARTO · © OpenStreetMap
-        </Text>
-      </View>
-
-      {children}
+    <View className="flex-1">
+      <MapView
+        mode={mode === 'live-record' ? 'live' : 'route'}
+        route={routeCoordinates}
+        userPosition={userLocation ?? null}
+        following={mode === 'live-record' ? followUser !== false : undefined}
+        showUserLocation={showUserLocation}
+        otherRoutes={heatmapRoutes}
+        markers={markers?.map((m) => ({ id: m.id, coordinate: m.coordinate, selected: m.id === selectedMarkerId }))}
+        onMarkerPress={onMarkerPress ? (id) => byId.get(id) && onMarkerPress(byId.get(id)!) : undefined}
+        onMapPress={onMapPress}
+        focus={routeCoordinates.length === 0 && centerCoordinate ? { center: centerCoordinate, zoom: zoomLevel ?? 14 } : null}
+        frameKey={`${routeCoordinates.length}:${centerCoordinate?.join(',') ?? ''}`}
+        styleKey={toStyle(styleKey)}>
+        {children}
+      </MapView>
     </View>
   );
 };

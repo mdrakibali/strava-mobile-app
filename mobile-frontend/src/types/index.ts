@@ -7,7 +7,10 @@ export type SportType =
   | 'Gravel Ride'
   | 'Mountain Bike'
   | 'Virtual Ride'
-  | 'Workout';
+  | 'Workout'
+  | 'Yoga'
+  | 'Swim'
+  | 'E-Bike Ride';
 
 export type ActivityVisibility = 'PUBLIC' | 'FOLLOWERS_ONLY' | 'ONLY_ME';
 
@@ -47,8 +50,9 @@ export interface CommentItem {
 export interface LatLngPoint {
   latitude: number;
   longitude: number;
-  altitude?: number;
+  altitude?: number | null;
   timestamp?: number;
+  speed?: number | null;
 }
 
 export interface Activity {
@@ -137,6 +141,7 @@ export interface Challenge {
   isJoined: boolean;
   isCompleted: boolean;
   badgeUrl: string;
+  participantsCount?: number;
 }
 
 export interface GroupEvent {
@@ -155,7 +160,7 @@ export interface GroupEvent {
 
 export interface NotificationItem {
   id: string;
-  actionType: 'KUDOS' | 'COMMENT' | 'FOLLOW' | 'CHALLENGE_WON' | 'CLUB_INVITE';
+  actionType: 'KUDOS' | 'COMMENT' | 'FOLLOW' | 'CHALLENGE_WON' | 'CLUB_INVITE' | 'MESSAGE';
   actor: Athlete;
   message: string;
   timeAgo: string;

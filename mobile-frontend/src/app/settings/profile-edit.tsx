@@ -1,117 +1,71 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CURRENT_USER } from '../../mock/data';
+import { useApp } from '../../context/AppContext';
+import { AppBar, Button, ErrorState, space, TextField } from '../../design';
+import { api } from '../../services/api';
 
+/**
+ * Edit profile — now saves via the existing PUT /athletes/me (it previously showed
+ * "Profile Updated" without calling the API; UI/UX audit X-5). No invented defaults.
+ */
 export default function ProfileEditScreen() {
   const router = useRouter();
-  const [displayName, setDisplayName] = useState(CURRENT_USER.displayName);
-  const [bio, setBio] = useState(CURRENT_USER.bio || '');
-  const [city, setCity] = useState(CURRENT_USER.city);
-  const [country, setCountry] = useState(CURRENT_USER.country);
-  const [weightKg, setWeightKg] = useState('68');
-  const [maxHr, setMaxHr] = useState('188');
+  const { currentUser, updateCurrentUser } = useApp();
+  const [displayName, setDisplayName] = useState(currentUser.displayName || '');
+  const [city, setCity] = useState(currentUser.city || '');
+  const [country, setCountry] = useState(currentUser.country || '');
+  const [bio, setBio] = useState(currentUser.bio || '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSave = () => {
-    alert('Profile updated successfully!');
-    router.back();
+  const onSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await api.athletes.updateMe({
+        displayName: displayName.trim(),
+        city: city.trim(),
+        country: country.trim(),
+        bio: bio.trim(),
+      });
+      const a = res.athlete ?? {};
+      await updateCurrentUser({
+        displayName: a.displayName ?? displayName.trim(),
+        city: a.city ?? city.trim(),
+        country: a.country ?? country.trim(),
+        bio: a.bio ?? bio.trim(),
+      });
+      router.back();
+    } catch (e: any) {
+      setError(e?.message || 'Couldn’t save your profile. Try again.');
+      setSaving(false);
+    }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white justify-between p-6">
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View className="flex-row items-center justify-between mb-4">
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="close" size={24} color="#111827" />
-          </TouchableOpacity>
-          <Text className="text-base font-black text-gray-900">Edit Profile</Text>
-          <TouchableOpacity onPress={handleSave}>
-            <Text className="text-sm font-black text-[#FC4C02]">Save</Text>
-          </TouchableOpacity>
+    <SafeAreaView className="flex-1 bg-white">
+      <AppBar title="Edit profile" leading="close" />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+          <TextField label="Name" value={displayName} onChangeText={setDisplayName} maxLength={100} autoCapitalize="words" />
+          <View className="h-4" />
+          <TextField label="City" value={city} onChangeText={setCity} maxLength={100} placeholder="e.g. Dhaka" />
+          <View className="h-4" />
+          <TextField label="Country" value={country} onChangeText={setCountry} maxLength={100} placeholder="e.g. Bangladesh" />
+          <View className="h-4" />
+          <TextField label="Bio" value={bio} onChangeText={setBio} multiline maxLength={300} placeholder="Tell other athletes about yourself" />
+          {error ? (
+            <View style={{ marginTop: space.lg }}>
+              <ErrorState compact message={error} />
+            </View>
+          ) : null}
+        </ScrollView>
+        <View className="p-4 border-t border-gray-100 bg-white">
+          <Button label="Save" size="lg" fullWidth loading={saving} disabled={!displayName.trim()} onPress={onSave} />
         </View>
-
-        {/* Avatar Section */}
-        <View className="items-center mb-6">
-          <Image
-            source={{ uri: CURRENT_USER.avatarUrl }}
-            className="w-20 h-20 rounded-full border-2 border-[#FC4C02] mb-2"
-          />
-          <TouchableOpacity className="bg-gray-100 px-3 py-1 rounded-full">
-            <Text className="text-xs font-bold text-gray-600">Change Photo</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View className="space-y-4 mb-6">
-          <View>
-            <Text className="text-xs font-bold text-gray-600 mb-1">Display Name</Text>
-            <TextInput
-              value={displayName}
-              onChangeText={setDisplayName}
-              className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
-            />
-          </View>
-
-          <View>
-            <Text className="text-xs font-bold text-gray-600 mb-1">Athlete Bio</Text>
-            <TextInput
-              value={bio}
-              onChangeText={setBio}
-              multiline
-              numberOfLines={3}
-              className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm text-gray-900 h-20"
-            />
-          </View>
-
-          <View className="flex-row space-x-3">
-            <View className="flex-1 mr-2">
-              <Text className="text-xs font-bold text-gray-600 mb-1">City</Text>
-              <TextInput
-                value={city}
-                onChangeText={setCity}
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
-              />
-            </View>
-            <View className="flex-1 ml-2">
-              <Text className="text-xs font-bold text-gray-600 mb-1">Country</Text>
-              <TextInput
-                value={country}
-                onChangeText={setCountry}
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
-              />
-            </View>
-          </View>
-
-          <View className="flex-row space-x-3">
-            <View className="flex-1 mr-2">
-              <Text className="text-xs font-bold text-gray-600 mb-1">Weight (kg)</Text>
-              <TextInput
-                value={weightKg}
-                onChangeText={setWeightKg}
-                keyboardType="numeric"
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
-              />
-            </View>
-            <View className="flex-1 ml-2">
-              <Text className="text-xs font-bold text-gray-600 mb-1">Max HR (bpm)</Text>
-              <TextInput
-                value={maxHr}
-                onChangeText={setMaxHr}
-                keyboardType="numeric"
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
-              />
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-
-      <TouchableOpacity
-        onPress={handleSave}
-        className="w-full py-4 bg-[#FC4C02] rounded-2xl items-center shadow-md">
-        <Text className="text-base font-black text-white">Save Changes</Text>
-      </TouchableOpacity>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-

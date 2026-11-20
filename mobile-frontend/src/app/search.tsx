@@ -1,109 +1,140 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import {
-  FlatList,
-  Image,
-  SafeAreaView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
-import { MOCK_ATHLETES } from '../mock/data';
-import { Athlete } from '../types';
+import {
+  AppText,
+  Avatar,
+  Button,
+  Divider,
+  EmptyState,
+  ErrorState,
+  IconButton,
+  space,
+} from '../design';
+import { AthleteSummary, toAthleteSummary } from '../lib/activityView';
+import { setFollowing } from '../lib/social';
+import { api } from '../services/api';
 
+type Row = AthleteSummary & { isFollowing: boolean; pending?: boolean };
+
+/**
+ * Find athletes (reference: ScreensDesign 374842). One follow request per tap, UI follows the
+ * server's returned state (the old screen toggled twice per tap — a no-op; UI/UX audit X-7).
+ */
 export default function SearchScreen() {
   const router = useRouter();
-  const { toggleFollowAthlete } = useApp();
+  const { currentUser } = useApp();
   const [query, setQuery] = useState('');
-  const [athletes, setAthletes] = useState<Athlete[]>(MOCK_ATHLETES);
+  const [rows, setRows] = useState<Row[]>([]);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const requestId = useRef(0);
 
-  const filtered = athletes.filter(
-    (a) =>
-      a.displayName.toLowerCase().includes(query.toLowerCase()) ||
-      a.username.toLowerCase().includes(query.toLowerCase()) ||
-      a.city.toLowerCase().includes(query.toLowerCase())
-  );
-
-  const handleToggleFollow = (id: string) => {
-    toggleFollowAthlete(id);
-    setAthletes((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, isFollowing: !a.isFollowing } : a))
-    );
+  const runSearch = async (q: string) => {
+    const myId = ++requestId.current;
+    setStatus('loading');
+    try {
+      const res = await api.athletes.search(q.trim());
+      if (myId !== requestId.current) return; // stale response
+      setRows(
+        (res.athletes || [])
+          .filter((a: any) => a.id !== currentUser.id)
+          .map((a: any) => ({ ...toAthleteSummary(a), isFollowing: Boolean(a.isFollowing) }))
+      );
+      setStatus('ready');
+    } catch {
+      if (myId === requestId.current) setStatus('error');
+    }
   };
 
-  const renderAthleteItem = ({ item }: { item: Athlete }) => (
-    <View className="flex-row items-center px-4 py-3.5 border-b border-gray-100">
-      <Image source={{ uri: item.avatarUrl }} className="w-12 h-12 rounded-full bg-gray-100 mr-3" />
+  const tooShort = query.trim().length < 2;
 
-      <View className="flex-1">
-        <Text className="text-sm font-bold text-gray-900">{item.displayName}</Text>
-        <Text className="text-xs text-[#FC4C02] mt-0.5">@{item.username}</Text>
-        <View className="flex-row items-center mt-0.5">
-          <Ionicons name="location-outline" size={11} color="#9CA3AF" />
-          <Text className="text-[10px] text-gray-400 ml-0.5">{item.city}, {item.country}</Text>
-        </View>
-        {item.bio && <Text className="text-xs text-gray-600 mt-1" numberOfLines={1}>{item.bio}</Text>}
-      </View>
+  useEffect(() => {
+    if (tooShort) {
+      requestId.current++; // drop any in-flight response
+      return;
+    }
+    const t = setTimeout(() => runSearch(query), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, tooShort]);
 
-      <TouchableOpacity
-        className={`px-3.5 py-1.5 rounded-lg border ${
-          item.isFollowing
-            ? 'bg-gray-100 border-gray-200'
-            : 'bg-[#FC4C02] border-[#FC4C02]'
-        }`}
-        onPress={() => handleToggleFollow(item.id)}>
-        <Text
-          className={`text-xs font-bold ${
-            item.isFollowing ? 'text-gray-600' : 'text-white'
-          }`}>
-          {item.isFollowing ? 'Following' : 'Follow'}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const onFollow = async (row: Row) => {
+    setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, pending: true } : r)));
+    try {
+      const res = await setFollowing(row.id, row.isFollowing, !row.isFollowing);
+      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, isFollowing: res.isFollowing, pending: false } : r)));
+    } catch {
+      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, pending: false } : r)));
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      {/* Top Search Bar */}
-      <View className="flex-row items-center px-3 py-2 border-b border-gray-200 gap-2">
-        <TouchableOpacity onPress={() => router.back()} className="p-1">
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-
-        <View className="flex-1 flex-row items-center bg-gray-100 px-3 h-10 rounded-lg gap-2">
-          <Ionicons name="search-outline" size={18} color="#9CA3AF" />
+      <View className="flex-row items-center px-2 py-2 border-b border-gray-100">
+        <IconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => router.back()} />
+        <View className="flex-1 flex-row items-center h-11 ml-1 pl-3 rounded-full bg-gray-100">
+          <Ionicons name="search" size={18} color="#9CA3AF" />
           <TextInput
-            className="flex-1 text-sm text-gray-900"
-            placeholder="Search athletes by name or city..."
-            placeholderTextColor="#9CA3AF"
             value={query}
             onChangeText={setQuery}
+            placeholder="Search athletes by name or city"
+            placeholderTextColor="#9CA3AF"
             autoFocus
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            accessibilityLabel="Search athletes"
+            className="flex-1 ml-2 text-base text-gray-900 py-0"
           />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')}>
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-            </TouchableOpacity>
-          )}
+          {query.length > 0 ? (
+            <IconButton icon="close-circle" size={32} iconColor="#9CA3AF" accessibilityLabel="Clear search" onPress={() => setQuery('')} />
+          ) : null}
         </View>
       </View>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        renderItem={renderAthleteItem}
-        contentContainerStyle={{ paddingVertical: 4 }}
-        ListEmptyComponent={
-          <View className="items-center justify-center py-20 gap-2">
-            <Ionicons name="people-outline" size={48} color="#9CA3AF" />
-            <Text className="text-base font-bold text-gray-900">No athletes found</Text>
-            <Text className="text-xs text-gray-400">Try searching for a different name or city.</Text>
-          </View>
-        }
-      />
+      {tooShort || status === 'idle' ? (
+        <EmptyState icon="people-outline" title="Find athletes" body="Search by name or city, then follow athletes to see their activities in your feed." />
+      ) : status === 'loading' && rows.length === 0 ? (
+        <ActivityIndicator style={{ marginTop: space.xxxl }} color="#FC4C02" />
+      ) : status === 'error' ? (
+        <ErrorState message="Search failed. Check your connection and try again." onRetry={() => runSearch(query)} />
+      ) : (
+        <FlatList
+          data={rows}
+          keyExtractor={(r) => r.id}
+          keyboardShouldPersistTaps="handled"
+          ItemSeparatorComponent={() => <Divider inset={space.gutter + 48 + space.md} />}
+          contentContainerStyle={rows.length === 0 ? { flexGrow: 1 } : undefined}
+          ListEmptyComponent={<EmptyState icon="search-outline" title="No athletes found" body={`Nobody matches “${query.trim()}”.`} />}
+          renderItem={({ item }) => (
+            <View className="flex-row items-center px-4 py-3">
+              <Pressable
+                className="flex-1 flex-row items-center mr-3"
+                onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: item.id } })}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.displayName}'s profile`}>
+                <Avatar uri={item.avatarUrl} name={item.displayName} size={48} />
+                <View style={{ flex: 1, marginLeft: space.md }}>
+                  <AppText variant="title3" numberOfLines={1}>{item.displayName}</AppText>
+                  {item.city ? (
+                    <AppText variant="caption" color="inkTertiary" numberOfLines={1}>{item.city}</AppText>
+                  ) : null}
+                </View>
+              </Pressable>
+              <Button
+                label={item.isFollowing ? 'Following' : 'Follow'}
+                size="sm"
+                variant={item.isFollowing ? 'outline' : 'primary'}
+                loading={item.pending}
+                onPress={() => onFollow(item)}
+              />
+            </View>
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 }

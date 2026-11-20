@@ -1,29 +1,82 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import * as Location from 'expo-location';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StravaMapView } from '../../components/map/StravaMapView';
-import { MOCK_ROUTES } from '../../mock/data';
+import { useApp } from '../../context/AppContext';
+import { api } from '../../services/api';
 
 export default function RouteNavigationScreen() {
   const router = useRouter();
-  const [distanceRemainingMeters, setDistanceRemainingMeters] = useState(6400);
-  const [distanceToTurnMeters, setDistanceToTurnMeters] = useState(180);
-  const [currentSpeedKmh, setCurrentSpeedKmh] = useState(12.4);
+  const params = useLocalSearchParams<{ routeId?: string }>();
+  const { activities } = useApp();
+  
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [distanceRemainingMeters, setDistanceRemainingMeters] = useState(5000);
+  const [distanceToTurnMeters, setDistanceToTurnMeters] = useState(120);
+  const [currentSpeedKmh, setCurrentSpeedKmh] = useState(0);
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const [serverRoute, setServerRoute] = useState<any>(null);
 
-  const route = MOCK_ROUTES[0];
-  const routeCoords = route.polylinePoints.map((p) => [p.longitude, p.latitude] as [number, number]);
+  // Pick route from activities or server
+  const activityRoute = activities.find((a) => a.id === params.routeId);
 
-  // Simulation of turn countdown
   useEffect(() => {
+    if (params.routeId) {
+      api.routes.get(params.routeId).then((res) => {
+        if (res?.route) setServerRoute(res.route);
+      }).catch(() => null);
+    }
+  }, [params.routeId]);
+
+  const routeName = serverRoute?.name || activityRoute?.title || 'Selected Route';
+  const routeDistance = serverRoute?.distanceMeters || activityRoute?.distanceMeters || 5000;
+  const activePoints = serverRoute?.polylinePoints || activityRoute?.routePoints || [];
+  const routeCoords = activePoints.map((p: any) =>
+    Array.isArray(p) ? p : ([p.longitude, p.latitude] as [number, number])
+  );
+
+  // Live GPS tracking during navigation
+  useEffect(() => {
+    let sub: Location.LocationSubscription | null = null;
+    let isMounted = true;
+
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const initial = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).catch(() => null);
+        if (initial && isMounted) {
+          setUserLocation([initial.coords.longitude, initial.coords.latitude]);
+          if (initial.coords.speed && initial.coords.speed > 0) {
+            setCurrentSpeedKmh(+(initial.coords.speed * 3.6).toFixed(1));
+          }
+        }
+
+        sub = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 2 },
+          (loc) => {
+            if (!isMounted) return;
+            setUserLocation([loc.coords.longitude, loc.coords.latitude]);
+            const speed = loc.coords.speed ? Math.max(0, loc.coords.speed * 3.6) : 0;
+            setCurrentSpeedKmh(+speed.toFixed(1));
+          }
+        );
+      }
+    })();
+
+    // Simulated progress countdown if stationary or testing
     const interval = setInterval(() => {
       setDistanceToTurnMeters((prev) => (prev > 10 ? prev - 5 : 250));
       setDistanceRemainingMeters((prev) => Math.max(0, prev - 5));
-      setCurrentSpeedKmh((prev) => +(12.0 + Math.random() * 1.5).toFixed(1));
     }, 1000);
-    return () => clearInterval(interval);
+
+    return () => {
+      isMounted = false;
+      if (sub) sub.remove();
+      clearInterval(interval);
+    };
   }, []);
 
   const handleEndNavigation = () => {
@@ -32,7 +85,17 @@ export default function RouteNavigationScreen() {
       'Are you sure you want to stop turn-by-turn guidance?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'End', style: 'destructive', onPress: () => router.back() },
+        {
+          text: 'End',
+          style: 'destructive',
+          onPress: () => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)/maps');
+            }
+          },
+        },
       ]
     );
   };
@@ -41,29 +104,35 @@ export default function RouteNavigationScreen() {
   const estMins = Math.round((distanceRemainingMeters / 1000) * 4.8);
 
   return (
-    <View className="flex-1 bg-stone-950 relative">
-      {/* Real Full-Screen MapLibre Navigation Map */}
+    <View style={{ flex: 1 }} className="bg-stone-950 relative">
+      {/* Real Full-Screen Map */}
       <StravaMapView
         styleKey="positron"
         routeCoordinates={routeCoords}
+        userLocation={userLocation || undefined}
+        centerCoordinate={userLocation || routeCoords[0]}
         showControls={false}
         showUserLocation={true}
         className="w-full h-full">
         {/* Top Floating Turn-by-Turn Guidance Banner */}
-        <SafeAreaView className="absolute top-2 left-4 right-4 z-30">
+        <SafeAreaView edges={['top']} className="absolute top-2 left-4 right-4 z-30">
           <View className="bg-stone-900/95 p-4 rounded-3xl border border-stone-800 shadow-2xl">
             <View className="flex-row items-center justify-between mb-2">
               <View className="flex-row items-center flex-1 mr-2">
-                <View className="w-12 h-12 rounded-2xl bg-[#FC4C02] items-center justify-center mr-3 shadow-md">
-                  <Ionicons name="arrow-forward" size={26} color="#FFFFFF" />
-                </View>
+                <TouchableOpacity
+                  onPress={handleEndNavigation}
+                  className="w-10 h-10 rounded-full bg-stone-800 items-center justify-center mr-3 border border-stone-700">
+                  <Ionicons name="close" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+
                 <View className="flex-1">
                   <Text className="text-xl font-black text-white">In {distanceToTurnMeters}m</Text>
                   <Text className="text-xs font-semibold text-gray-300" numberOfLines={1}>
-                    Turn Right onto Hatirjheel Promenade
+                    Turn Right onto {routeName}
                   </Text>
                 </View>
               </View>
+
               <TouchableOpacity
                 onPress={() => setAudioEnabled(!audioEnabled)}
                 className="w-10 h-10 rounded-full bg-stone-800 items-center justify-center border border-stone-700">
@@ -77,16 +146,16 @@ export default function RouteNavigationScreen() {
 
             <View className="flex-row items-center pt-2.5 border-t border-stone-800 justify-between">
               <View className="flex-row items-center">
-                <View className="w-2 h-2 rounded-full bg-emerald-400 mr-1.5 animate-pulse" />
-                <Text className="text-[11px] font-bold text-emerald-400">On Course (±3m)</Text>
+                <View className="w-2 h-2 rounded-full bg-emerald-400 mr-1.5" />
+                <Text className="text-[11px] font-bold text-emerald-400">GPS On Course</Text>
               </View>
-              <Text className="text-[11px] font-bold text-gray-400">Next: Continue 1.2 km</Text>
+              <Text className="text-[11px] font-bold text-gray-400">Target: {(routeDistance / 1000).toFixed(1)} km</Text>
             </View>
           </View>
         </SafeAreaView>
 
         {/* Bottom Floating Telemetry HUD */}
-        <SafeAreaView className="absolute bottom-4 left-4 right-4 z-30">
+        <SafeAreaView edges={['bottom']} className="absolute bottom-4 left-4 right-4 z-30">
           <View className="bg-stone-900/95 p-4 rounded-3xl border border-stone-800 shadow-2xl">
             <View className="flex-row justify-around mb-4">
               <View className="items-center">

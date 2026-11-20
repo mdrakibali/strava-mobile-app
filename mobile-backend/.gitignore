@@ -26,3 +26,7 @@ lerna-debug.log*
 
 # misc
 .DS_Store
+
+# local PGlite database (npm run dev:local)
+.local-db/
+.dev.vars

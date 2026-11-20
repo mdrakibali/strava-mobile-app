@@ -1,27 +1,33 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function PermissionsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const handleFinish = () => {
     router.replace('/(tabs)');
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white justify-between p-6">
-      <View>
-        <TouchableOpacity onPress={() => router.back()} className="mb-4">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
+        className="px-6 pt-2 pb-6">
+        
+        <TouchableOpacity onPress={() => router.back()} className="p-1 mb-4 self-start">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
 
-        <Text className="text-2xl font-black text-gray-900 mb-2">
+        <Text className="text-2xl font-black text-gray-900 mb-1.5">
           Permissions & Safety
         </Text>
-        <Text className="text-xs text-gray-500 mb-6">
+        <Text className="text-xs text-gray-500 mb-6 leading-4">
           To provide real-time GPS tracking and instant community kudos, Open Strava requires two system permissions:
         </Text>
 
@@ -59,21 +65,25 @@ export default function PermissionsScreen() {
           </View>
 
           {/* Privacy Zone Guarantee */}
-          <View className="flex-row items-center p-3 bg-green-50 rounded-xl border border-green-200">
-            <Ionicons name="shield-checkmark" size={20} color="#16A34A" />
-            <Text className="text-[11px] text-green-800 font-semibold ml-2 flex-1">
+          <View className="flex-row items-center p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+            <Ionicons name="shield-checkmark" size={20} color="#059669" />
+            <Text className="text-[11px] text-emerald-800 font-semibold ml-2 flex-1">
               Privacy Zones active: Your home and office coordinates will be automatically clipped from public routes.
             </Text>
           </View>
         </View>
-      </View>
 
-      <TouchableOpacity
-        onPress={handleFinish}
-        className="w-full py-4 bg-[#FC4C02] rounded-2xl items-center shadow-md">
-        <Text className="text-base font-black text-white">Enable Permissions & Enter</Text>
-      </TouchableOpacity>
+        {/* Bottom Button */}
+        <View className="mt-auto pt-4" style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
+          <TouchableOpacity
+            onPress={handleFinish}
+            activeOpacity={0.85}
+            className="w-full py-4 bg-[#FC4C02] rounded-full items-center justify-center shadow-lg">
+            <Text className="text-base font-black text-white">Enable Permissions & Enter</Text>
+          </TouchableOpacity>
+        </View>
+
+      </ScrollView>
     </SafeAreaView>
   );
 }
-

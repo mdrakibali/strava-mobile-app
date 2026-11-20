@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "open-strava-backend",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-11-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "account_id": "1f5806581fa2928a69c62e788e63acca",
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "abb5f1ceb7e9424fba7a5c315f190fe8"
+    }
+  ],
+  "vars": {
+    "ENVIRONMENT": "production",
+    "CORS_ORIGIN": "*",
+    "GOOGLE_CLIENT_ID": "123496427764-733qtd6vqvlpc2uj1m9nvpg17g4qg48k.apps.googleusercontent.com"
+  }
+}

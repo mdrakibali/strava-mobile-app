@@ -1,4 +1,3 @@
-import { ActiveRecordingState } from '../hooks/use-gps-recorder';
 import {
   Activity,
   Athlete,
@@ -7,11 +6,12 @@ import {
   GroupEvent,
   NotificationItem,
   Segment,
-  SportType,
 } from '../types';
 
 export interface AppContextType {
   currentUser: Athlete;
+  isAuthenticated: boolean;
+  isAuthLoading: boolean;
   activities: Activity[];
   clubs: Club[];
   challenges: Challenge[];
@@ -19,7 +19,7 @@ export interface AppContextType {
   segments: Segment[];
   notifications: NotificationItem[];
   unreadNotificationCount: number;
-  activeRecording: ActiveRecordingState;
+  isSyncing: boolean;
 
   // Actions
   toggleKudos: (activityId: string) => void;
@@ -30,17 +30,12 @@ export interface AppContextType {
   markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: () => void;
   toggleFollowAthlete: (athleteId: string) => void;
+  refreshFeed: () => Promise<void>;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  registerWithEmail: (data: { email: string; password: string; displayName: string; username?: string }) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
+  logout: () => Promise<void>;
+  updateCurrentUser: (patch: Partial<Athlete>) => Promise<void>;
 
-  // Recording Controls
-  startRecording: (sport?: SportType) => void;
-  pauseRecording: () => void;
-  resumeRecording: () => void;
-  discardRecording: () => void;
-  finishRecording: () => ActiveRecordingState;
-  saveNewActivity: (
-    title: string,
-    description: string,
-    visibility: 'PUBLIC' | 'FOLLOWERS_ONLY' | 'ONLY_ME'
-  ) => void;
 }
 

@@ -1,115 +1,71 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View } from 'react-native';
+import { FormScreen } from '../../components/forms/FormScreen';
+import { Chip, ChipRow, SectionTitle, space, TextField } from '../../design';
+import { MVP_SPORTS } from '../../lib/sports';
+import { api } from '../../services/api';
 
+const DURATIONS = [
+  { label: '1 week', days: 7 },
+  { label: '2 weeks', days: 14 },
+  { label: '1 month', days: 30 },
+  { label: '3 months', days: 90 },
+];
+
+/** Create a distance challenge (POST /challenges). Progress counts the joined athletes' activities. */
 export default function CreateChallengeScreen() {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [sportType, setSportType] = useState('Run');
-  const [targetKm, setTargetKm] = useState('100');
-  const [duration, setDuration] = useState('1 Month');
+  const [targetKm, setTargetKm] = useState('');
+  const [days, setDays] = useState(30);
   const [description, setDescription] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleCreate = () => {
-    if (!title.trim()) {
-      alert('Please enter a challenge title');
-      return;
+  const km = Number(targetKm.replace(',', '.'));
+  const valid = title.trim().length > 2 && Number.isFinite(km) && km > 0 && km <= 100_000;
+
+  const submit = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const start = new Date();
+      const res = await api.challenges.create({
+        title: title.trim(),
+        sportType,
+        targetMeters: Math.round(km * 1000),
+        description: description.trim() || undefined,
+        startDate: start.toISOString(),
+        endDate: new Date(start.getTime() + days * 86_400_000).toISOString(),
+      });
+      router.replace({ pathname: '/challenge/[id]', params: { id: res.challenge.id } });
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not create the challenge.');
+      setSaving(false);
     }
-    alert(`Challenge "${title}" created and open for athletes!`);
-    router.back();
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white justify-between p-6">
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View className="flex-row items-center justify-between mb-4">
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="close" size={24} color="#111827" />
-          </TouchableOpacity>
-          <Text className="text-base font-black text-gray-900">Create Challenge</Text>
-          <TouchableOpacity onPress={handleCreate}>
-            <Text className="text-sm font-black text-[#FC4C02]">Create</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text className="text-2xl font-black text-gray-900 mb-2">Launch a Challenge</Text>
-        <Text className="text-xs text-gray-500 mb-6">
-          Set a collective distance or elevation goal for your friends and club members to conquer together.
-        </Text>
-
-        <View className="space-y-4 mb-6">
-          <View>
-            <Text className="text-xs font-bold text-gray-600 mb-1">Challenge Title</Text>
-            <TextInput
-              value={title}
-              onChangeText={setTitle}
-              placeholder="e.g. December 100k Winter Base Challenge"
-              className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
-            />
-          </View>
-
-          <View>
-            <Text className="text-xs font-bold text-gray-600 mb-1">Sport Type</Text>
-            <View className="flex-row gap-2">
-              {['Run', 'Ride', 'Trail Run', 'Walk'].map((sport) => (
-                <TouchableOpacity
-                  key={sport}
-                  onPress={() => setSportType(sport)}
-                  className={`px-4 py-2 rounded-xl border ${
-                    sportType === sport
-                      ? 'border-[#FC4C02] bg-[#FC4C02]'
-                      : 'border-gray-200 bg-gray-50'
-                  }`}>
-                  <Text className={`text-xs font-bold ${sportType === sport ? 'text-white' : 'text-gray-700'}`}>
-                    {sport}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View className="flex-row space-x-3">
-            <View className="flex-1 mr-2">
-              <Text className="text-xs font-bold text-gray-600 mb-1">Target Distance (km)</Text>
-              <TextInput
-                value={targetKm}
-                onChangeText={setTargetKm}
-                keyboardType="numeric"
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
-              />
-            </View>
-            <View className="flex-1 ml-2">
-              <Text className="text-xs font-bold text-gray-600 mb-1">Timeframe</Text>
-              <TextInput
-                value={duration}
-                onChangeText={setDuration}
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
-              />
-            </View>
-          </View>
-
-          <View>
-            <Text className="text-xs font-bold text-gray-600 mb-1">Description & Motivation</Text>
-            <TextInput
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Describe the challenge rules, milestone tips, and inspiration..."
-              multiline
-              numberOfLines={4}
-              className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-900 h-28"
-            />
-          </View>
-        </View>
-      </ScrollView>
-
-      <TouchableOpacity
-        onPress={handleCreate}
-        className="w-full py-4 bg-[#FC4C02] rounded-2xl items-center shadow-md">
-        <Text className="text-base font-black text-white">Publish Challenge</Text>
-      </TouchableOpacity>
-    </SafeAreaView>
+    <FormScreen title="Create Challenge" submitLabel="Create challenge" canSubmit={valid} submitting={saving} error={error} onSubmit={submit}>
+      <TextField value={title} onChangeText={setTitle} placeholder="Challenge name (e.g. 100 km in December)" accessibilityLabel="Challenge name" maxLength={100} />
+      <SectionTitle title="Sport" className="mt-5" />
+      <ChipRow>
+        {MVP_SPORTS.map((s) => (
+          <Chip key={s.id} label={s.label} icon={s.icon} selected={sportType === s.id} onPress={() => setSportType(s.id)} />
+        ))}
+      </ChipRow>
+      <View className="h-4" />
+      <TextField value={targetKm} onChangeText={setTargetKm} placeholder="Distance goal (km)" accessibilityLabel="Distance goal in kilometres" keyboardType="decimal-pad" maxLength={7} />
+      <SectionTitle title="Duration" className="mt-5" />
+      <ChipRow>
+        {DURATIONS.map((d) => (
+          <Chip key={d.days} label={d.label} selected={days === d.days} onPress={() => setDays(d.days)} />
+        ))}
+      </ChipRow>
+      <View className="h-4" />
+      <TextField value={description} onChangeText={setDescription} placeholder="Description (optional)" accessibilityLabel="Description" multiline maxLength={1000} />
+    </FormScreen>
   );
 }
-

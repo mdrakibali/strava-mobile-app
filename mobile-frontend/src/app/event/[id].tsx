@@ -1,165 +1,144 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RouteMapPreview } from '../../components/common/RouteMapPreview';
-import { StatBox } from '../../components/common/StatBox';
-import { MOCK_ATHLETES, MOCK_EVENTS } from '../../mock/data';
+import { useApp } from '../../context/AppContext';
+import { AppBar, AppText, Avatar, Button, color, EmptyState, ErrorState, LoadingState, radius, SectionTitle, space } from '../../design';
+import { kmValue } from '../../lib/format';
+import { sportConfig } from '../../lib/sports';
+import { api } from '../../services/api';
 
+type Rsvp = 'GOING' | 'MAYBE' | null;
+
+/**
+ * Group event detail (GET /events/:id). Shows only what the server returns — no placeholder event,
+ * no default RSVP, no invented pace or route. Your RSVP is read from the attendee list.
+ */
 export default function EventDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { id } = useLocalSearchParams();
-  const event = MOCK_EVENTS.find((e) => e.id === id) || MOCK_EVENTS[0];
-  const [rsvpStatus, setRsvpStatus] = useState<'GOING' | 'MAYBE' | 'DECLINED'>(event.rsvpStatus || 'GOING');
-  const [attendeeCount, setAttendeeCount] = useState(event.attendeesCount);
+  const { currentUser } = useApp();
+  const [event, setEvent] = useState<any>(null);
+  const [attendees, setAttendees] = useState<any[]>([]);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'notFound' | 'error'>('loading');
+  const [busy, setBusy] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const handleRsvp = (status: 'GOING' | 'MAYBE' | 'DECLINED') => {
-    if (rsvpStatus !== 'GOING' && status === 'GOING') {
-      setAttendeeCount((prev) => prev + 1);
-    } else if (rsvpStatus === 'GOING' && status !== 'GOING') {
-      setAttendeeCount((prev) => prev - 1);
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    api.events.get(id).then(
+      (res) => {
+        if (cancelled) return;
+        setEvent(res.event);
+        setAttendees(res.attendees ?? []);
+        setStatus('ready');
+      },
+      (e: any) => !cancelled && setStatus(/not found/i.test(String(e?.message)) ? 'notFound' : 'error')
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [id, reloadKey]);
+
+  const mine: Rsvp = (attendees.find((a) => a.athleteId === currentUser.id)?.status as Rsvp) ?? null;
+  const going = attendees.filter((a) => a.status === 'GOING');
+
+  const setRsvp = async (next: 'GOING' | 'MAYBE' | 'DECLINED') => {
+    setBusy(true);
+    try {
+      const res = await api.events.rsvp(id!, next);
+      setAttendees((prev) => {
+        const others = prev.filter((a) => a.athleteId !== currentUser.id);
+        return res.status
+          ? [...others, { athleteId: currentUser.id, status: res.status, displayName: currentUser.displayName, avatarUrl: currentUser.avatarUrl }]
+          : others;
+      });
+    } catch (e: any) {
+      Alert.alert('RSVP not updated', e?.message ?? 'Please try again.');
+    } finally {
+      setBusy(false);
     }
-    setRsvpStatus(status);
   };
 
-  const distKm = (event.distanceMeters / 1000).toFixed(0);
+  if (status !== 'ready' || !event) {
+    return (
+      <SafeAreaView className="flex-1 bg-white">
+        <AppBar title="Event" />
+        {status === 'loading' ? (
+          <LoadingState />
+        ) : status === 'notFound' ? (
+          <EmptyState icon="calendar-outline" title="Event not found" primary={{ label: 'Go back', onPress: () => router.back() }} />
+        ) : (
+          <ErrorState message="We couldn’t load this event." onRetry={() => { setStatus('loading'); setReloadKey((k) => k + 1); }} />
+        )}
+      </SafeAreaView>
+    );
+  }
+
+  const when = new Date(event.eventDate);
+  const sport = sportConfig(event.sportType);
+  const distance = event.distanceMeters != null ? Number(event.distanceMeters) : null;
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Top Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
-        <TouchableOpacity onPress={() => router.back()} className="p-1">
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text className="text-base font-black text-gray-900 flex-1 text-center mx-2" numberOfLines={1}>
-          {event.title}
-        </Text>
-        <TouchableOpacity onPress={() => alert('Event shared!')} className="p-1">
-          <Ionicons name="share-social-outline" size={22} color="#111827" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-28">
-        {/* Event Header Banner */}
-        <View className="p-4 bg-white border-b border-gray-200">
-          <View className="flex-row items-center mb-2">
-            <View className="bg-orange-50 px-2.5 py-1 rounded-md mr-2">
-              <Text className="text-xs font-bold text-[#FC4C02]">{event.sportType}</Text>
-            </View>
-            <Text className="text-xs font-semibold text-gray-500">
-              Hosted by <Text className="font-bold text-gray-900">{event.clubName}</Text>
-            </Text>
-          </View>
-
-          <Text className="text-xl font-black text-gray-900 mb-2 leading-6">{event.title}</Text>
-
-          {/* Time & Location Box */}
-          <View className="bg-gray-50 p-3.5 rounded-2xl border border-gray-100 space-y-2 mt-2">
-            <View className="flex-row items-center mb-1.5">
-              <Ionicons name="calendar" size={16} color="#FC4C02" />
-              <Text className="text-xs font-bold text-gray-900 ml-2">
-                {event.dateFormatted} at {event.timeFormatted}
-              </Text>
-            </View>
-            <View className="flex-row items-center mb-1.5">
-              <Ionicons name="location" size={16} color="#FC4C02" />
-              <Text className="text-xs font-bold text-gray-900 ml-2">{event.meetingPoint}</Text>
-            </View>
-            <View className="flex-row items-center">
-              <Ionicons name="speedometer" size={16} color="#FC4C02" />
-              <Text className="text-xs font-bold text-gray-900 ml-2">{event.paceDescription}</Text>
-            </View>
-          </View>
+    <SafeAreaView edges={['top']} className="flex-1 bg-white">
+      <AppBar title="Event" />
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 64 }}>
+        <AppText variant="label" color="brandText" style={{ fontWeight: '700' }}>
+          {when.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} ·{' '}
+          {when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+        </AppText>
+        <AppText variant="title1" style={{ marginTop: space.xs }}>{event.title}</AppText>
+        <View className="flex-row items-center mt-2">
+          <Ionicons name={sport.icon} size={16} color={color.inkSecondary} />
+          <AppText variant="label" color="inkSecondary" style={{ marginLeft: space.xs, flex: 1 }}>
+            {sport.label}
+            {event.club?.name ? ` · ${event.club.name}` : ''}
+            {event.creator?.displayName ? ` · hosted by ${event.creator.displayName}` : ''}
+          </AppText>
         </View>
 
-        {/* Stats */}
-        <View className="flex-row justify-between bg-white px-4 py-3 border-b border-gray-200">
-          <StatBox label="Route Distance" value={`${distKm} km`} />
-          <StatBox label="Target Pace" value="5:30 /km" />
-          <StatBox label="Confirmed Athletes" value={`${attendeeCount}`} />
+        <View className="mt-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
+          <Info icon="location-outline" label="Meeting point" value={event.meetingPoint} />
+          {distance ? <Info icon="resize-outline" label="Distance" value={`${kmValue(distance)} km`} /> : null}
+          {event.paceDescription ? <Info icon="speedometer-outline" label="Pace / level" value={event.paceDescription} /> : null}
+          <Info icon="people-outline" label="Going" value={String(going.length)} />
         </View>
 
-        {/* Route Preview */}
-        <View className="bg-white p-4 border-b border-gray-200 mt-3">
-          <View className="flex-row justify-between items-center mb-2">
-            <Text className="text-sm font-black text-gray-900">Official Group Route</Text>
-            <TouchableOpacity onPress={() => router.push('/routes/route_1')}>
-              <Text className="text-xs font-bold text-[#FC4C02]">Inspect Route →</Text>
-            </TouchableOpacity>
-          </View>
-          <RouteMapPreview height={180} />
+        <View className="flex-row items-center mt-4">
+          <Button label={mine === 'GOING' ? 'Going ✓' : 'Going'} variant={mine === 'GOING' ? 'secondary' : 'primary'} loading={busy} style={{ flex: 1 }} onPress={() => setRsvp('GOING')} />
+          <Button label={mine === 'MAYBE' ? 'Maybe ✓' : 'Maybe'} variant="outline" disabled={busy} style={{ flex: 1, marginLeft: space.sm }} onPress={() => setRsvp('MAYBE')} />
+          {mine ? <Button label="Can’t go" variant="ghost" disabled={busy} style={{ marginLeft: space.sm }} onPress={() => setRsvp('DECLINED')} /> : null}
         </View>
 
-        {/* Attendees List */}
-        <View className="bg-white p-4 border-b border-gray-200 mt-3">
-          <Text className="text-sm font-black text-gray-900 mb-3">
-            Attending Athletes ({attendeeCount})
-          </Text>
-          <View className="flex-row flex-wrap gap-2">
-            {MOCK_ATHLETES.map((athlete) => (
-              <TouchableOpacity
-                key={athlete.id}
-                onPress={() => router.push(`/athlete/${athlete.id}`)}
-                className="items-center mr-3 mb-2">
-                <Image source={{ uri: athlete.avatarUrl }} className="w-12 h-12 rounded-full bg-gray-100 border border-gray-200" />
-                <Text className="text-[10px] font-bold text-gray-700 mt-1" numberOfLines={1}>
-                  {athlete.displayName.split(' ')[0]}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+        <SectionTitle title={`Attendees (${attendees.length})`} style={{ marginTop: space.xl }} />
+        {attendees.length === 0 ? (
+          <AppText variant="body" color="inkSecondary">No one has responded yet.</AppText>
+        ) : (
+          attendees.map((a) => (
+            <Pressable
+              key={a.athleteId}
+              onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: a.athleteId } })}
+              className="flex-row items-center py-2"
+              accessibilityRole="button">
+              <Avatar uri={a.avatarUrl} name={a.displayName} size={40} />
+              <AppText variant="bodyStrong" style={{ flex: 1, marginLeft: space.md }}>{a.displayName}</AppText>
+              <AppText variant="label" color="inkSecondary">{a.status === 'GOING' ? 'Going' : 'Maybe'}</AppText>
+            </Pressable>
+          ))
+        )}
       </ScrollView>
-
-      {/* Sticky RSVP Controls */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white p-4 border-t border-gray-200 flex-row justify-between">
-        <TouchableOpacity
-          onPress={() => handleRsvp('GOING')}
-          className={`flex-1 py-3.5 rounded-2xl flex-row items-center justify-center mr-2 shadow-sm ${
-            rsvpStatus === 'GOING' ? 'bg-[#FC4C02]' : 'bg-gray-100'
-          }`}>
-          <Ionicons
-            name="checkmark"
-            size={14}
-            color={rsvpStatus === 'GOING' ? '#ffffff' : '#374151'}
-          />
-          <Text className={`text-xs font-black ml-1 ${rsvpStatus === 'GOING' ? 'text-white' : 'text-gray-700'}`}>
-            Going
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => handleRsvp('MAYBE')}
-          className={`flex-1 py-3.5 rounded-2xl flex-row items-center justify-center mx-1 ${
-            rsvpStatus === 'MAYBE' ? 'bg-[#FC4C02]' : 'bg-gray-100'
-          }`}>
-          <Ionicons
-            name="help-circle-outline"
-            size={14}
-            color={rsvpStatus === 'MAYBE' ? '#ffffff' : '#374151'}
-          />
-          <Text className={`text-xs font-black ml-1 ${rsvpStatus === 'MAYBE' ? 'text-white' : 'text-gray-700'}`}>
-            Maybe
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => handleRsvp('DECLINED')}
-          className={`flex-1 py-3.5 rounded-2xl flex-row items-center justify-center ml-2 ${
-            rsvpStatus === 'DECLINED' ? 'bg-[#FC4C02]' : 'bg-gray-100'
-          }`}>
-          <Ionicons
-            name="close"
-            size={14}
-            color={rsvpStatus === 'DECLINED' ? '#ffffff' : '#374151'}
-          />
-          <Text className={`text-xs font-black ml-1 ${rsvpStatus === 'DECLINED' ? 'text-white' : 'text-gray-700'}`}>
-            Can't Go
-          </Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
 
+const Info: React.FC<{ icon: keyof typeof Ionicons.glyphMap; label: string; value: string }> = ({ icon, label, value }) => (
+  <View className="flex-row items-center py-2">
+    <Ionicons name={icon} size={20} color={color.inkSecondary} />
+    <View style={{ marginLeft: space.md, flex: 1 }}>
+      <AppText variant="label" color="inkSecondary">{label}</AppText>
+      <AppText variant="bodyStrong">{value}</AppText>
+    </View>
+  </View>
+);
