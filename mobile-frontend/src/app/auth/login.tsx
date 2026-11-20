@@ -56,7 +56,7 @@ export default function LoginScreen() {
 
   const googleClientId =
     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
-    '923419495380-p8senmhosq66vltjdviijc08dbunhmsd.apps.googleusercontent.com';
+    '123496427764-00sln89ecf8mlo19n1fuqkevgfqsvje7.apps.googleusercontent.com';
 
   // Configure native Google Sign-In on mount if native module is compiled into the binary
   useEffect(() => {

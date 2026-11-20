@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -6,15 +7,24 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+dotenv.config();
+dotenv.config({ path: path.join(__dirname, '../.env') });
+dotenv.config({ path: path.join(__dirname, '../.dev.vars') });
+
 const databaseUrl = process.env.DATABASE_URL;
 
 async function runMigration() {
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is not defined in environment, .env, or .dev.vars');
+  }
   console.log('Connecting to Neon Database...');
   const sql = neon(databaseUrl);
 
   const migrationFiles = [
     path.join(__dirname, '../drizzle/0000_amazing_hex.sql'),
     path.join(__dirname, '../drizzle/0001_clean_payback.sql'),
+    path.join(__dirname, '../drizzle/0002_batch_uploads.sql'),
+    path.join(__dirname, '../drizzle/0003_social.sql'),
   ];
 
   for (const migrationFile of migrationFiles) {

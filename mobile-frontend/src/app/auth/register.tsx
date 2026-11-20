@@ -52,7 +52,7 @@ export default function RegisterScreen() {
 
   const googleClientId =
     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
-    '923419495380-p8senmhosq66vltjdviijc08dbunhmsd.apps.googleusercontent.com';
+    '123496427764-00sln89ecf8mlo19n1fuqkevgfqsvje7.apps.googleusercontent.com';
 
   useEffect(() => {
     const native = loadNativeGoogleSignin();

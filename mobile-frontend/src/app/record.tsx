@@ -162,7 +162,18 @@ export default function RecordScreen() {
         style={({ pressed }) => [styles.startButton, pressed && { backgroundColor: color.brandPressed }]}>
         <Ionicons name="play" size={36} color={color.inverse} style={{ marginLeft: 4 }} />
       </Pressable>
-      <View style={styles.sideControl} />
+      <Pressable
+        onPress={() => router.push('/(tabs)/maps?source=routes')}
+        accessibilityRole="button"
+        accessibilityLabel="Add Route"
+        style={styles.sideControl}>
+        <View style={styles.sportCircle}>
+          <Ionicons name="git-branch-outline" size={24} color={color.ink} />
+        </View>
+        <AppText variant="label" style={{ marginTop: space.xs, fontWeight: '600' }}>
+          Routes
+        </AppText>
+      </Pressable>
     </View>
   ) : isPaused ? (
     <View style={styles.row}>
@@ -217,14 +228,22 @@ export default function RecordScreen() {
 
       <View style={[styles.topOverlay, { top: insets.top + space.sm }]} pointerEvents="box-none">
         <IconButton
-          icon="chevron-down"
+          icon="chevron-back"
           appearance="floating"
           accessibilityLabel={isIdle ? 'Close recorder' : 'Minimize recorder, recording continues'}
           onPress={() => router.back()}
         />
-        {!following ? (
-          <IconButton icon="locate" appearance="floating" accessibilityLabel="Recenter on my location" onPress={() => setFollowing(true)} />
-        ) : null}
+        <View style={{ flexDirection: 'row', gap: space.sm }}>
+          {!following ? (
+            <IconButton icon="locate" appearance="floating" accessibilityLabel="Recenter on my location" onPress={() => setFollowing(true)} />
+          ) : null}
+          <IconButton
+            icon="settings-outline"
+            appearance="floating"
+            accessibilityLabel="Recording Settings"
+            onPress={() => router.push('/settings/gps')}
+          />
+        </View>
       </View>
       {planned ? (
         <View style={[styles.plannedChip, elevation.floating, { top: insets.top + 64 }]}>

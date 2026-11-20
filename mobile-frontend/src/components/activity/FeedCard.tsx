@@ -74,25 +74,37 @@ export const FeedCard = memo(function FeedCard({
   return (
     <View style={styles.card}>
       {showAthlete ? (
-        <Pressable
-          onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: activity.athlete.id } })}
-          accessibilityRole="button"
-          accessibilityLabel={`${activity.athlete.displayName}'s profile`}
-          style={styles.athleteRow}>
-          <Avatar uri={activity.athlete.avatarUrl} name={activity.athlete.displayName} size={40} />
-          <View style={styles.athleteText}>
-            <AppText variant="title3" numberOfLines={1}>
-              {activity.athlete.displayName}
-            </AppText>
-            <View style={styles.metaRow}>
-              <Ionicons name={sport.icon} size={14} color={color.inkTertiary} />
-              <AppText variant="caption" color="inkTertiary" numberOfLines={1} style={styles.metaText}>
-                {formatActivityDate(activity.startTime)}
-                {location ? ` · ${location}` : ''}
-              </AppText>
+        <View style={styles.athleteRow}>
+          <Pressable
+            onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: activity.athlete.id } })}
+            accessibilityRole="button"
+            accessibilityLabel={`${activity.athlete.displayName}'s profile`}
+            style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <Avatar uri={activity.athlete.avatarUrl} name={activity.athlete.displayName} size={40} />
+            <View style={styles.athleteText}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <AppText variant="title3" numberOfLines={1}>
+                  {activity.athlete.displayName}
+                </AppText>
+              </View>
+              <View style={styles.metaRow}>
+                <Ionicons name={sport.icon} size={14} color={color.inkTertiary} />
+                <AppText variant="caption" color="inkTertiary" numberOfLines={1} style={styles.metaText}>
+                  {formatActivityDate(activity.startTime)}
+                  {location ? ` · ${location}` : ''}
+                </AppText>
+              </View>
             </View>
-          </View>
-        </Pressable>
+          </Pressable>
+          <Pressable
+            hitSlop={12}
+            onPress={() => shareActivity(activity)}
+            accessibilityRole="button"
+            accessibilityLabel="Activity options"
+            style={{ padding: 4 }}>
+            <Ionicons name="ellipsis-horizontal" size={20} color={color.inkSecondary} />
+          </Pressable>
+        </View>
       ) : (
         <View style={[styles.metaRow, styles.padded, { paddingTop: space.lg }]}>
           <Ionicons name={sport.icon} size={14} color={color.inkTertiary} />

@@ -7,6 +7,7 @@
  * as a line on a neutral background with a note — never a fake map and never an invented route.
  * Renders nothing when there is no route.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import React, { useEffect, useMemo, useState } from 'react';
 import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
@@ -78,6 +79,11 @@ export const RoutePreview: React.FC<{ route: LngLat[]; height?: number; rounded?
           <AppText variant="caption" color="inkTertiary" style={styles.note}>Map unavailable — route only</AppText>
         </>
       ) : null}
+      {showSnapshot || (showFallback && fallback) ? (
+        <View style={styles.playButtonOverlay}>
+          <Ionicons name="play" size={13} color="#FFFFFF" style={{ marginLeft: 2 }} />
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -87,4 +93,15 @@ const styles = StyleSheet.create({
   rounded: { borderRadius: 12 },
   attribution: { position: 'absolute', right: 4, bottom: 2, fontSize: 9, color: '#555', backgroundColor: 'rgba(255,255,255,0.7)', paddingHorizontal: 3 },
   note: { position: 'absolute', left: 8, bottom: 6 },
+  playButtonOverlay: {
+    position: 'absolute',
+    left: 10,
+    bottom: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

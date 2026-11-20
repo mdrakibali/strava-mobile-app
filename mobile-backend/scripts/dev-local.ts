@@ -30,7 +30,7 @@ const main = async () => {
   const env = {
     JWT_SECRET: process.env.JWT_SECRET ?? 'local-dev-secret-not-for-production-0123456789',
     ENVIRONMENT: 'development',
-    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? '923419495380-p8senmhosq66vltjdviijc08dbunhmsd.apps.googleusercontent.com',
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? '123496427764-00sln89ecf8mlo19n1fuqkevgfqsvje7.apps.googleusercontent.com',
   };
   const port = Number(process.env.PORT ?? 8787);
   serve({ fetch: (req) => app.fetch(req, env), port, hostname: '0.0.0.0' });
