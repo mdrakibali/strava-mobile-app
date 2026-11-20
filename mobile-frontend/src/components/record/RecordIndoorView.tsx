@@ -4,8 +4,10 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '../../design';
 
+import { LifecycleStatus } from '../../tracking/shared';
+
 interface RecordIndoorViewProps {
-  status: 'idle' | 'preparing' | 'recording' | 'paused';
+  status: LifecycleStatus;
   time: string;
   heartRate?: number | string | null;
   onBack: () => void;

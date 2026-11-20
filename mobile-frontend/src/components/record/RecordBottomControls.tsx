@@ -3,9 +3,10 @@ import React from 'react';
 import { Pressable, View } from 'react-native';
 import { AppText } from '../../design';
 import { SportConfig } from '../../lib/sports';
+import { LifecycleStatus } from '../../tracking/shared';
 
 interface RecordBottomControlsProps {
-  status: 'idle' | 'preparing' | 'recording' | 'paused';
+  status: LifecycleStatus;
   sportConfig: SportConfig;
   starting: boolean;
   gpsDisabled: boolean;

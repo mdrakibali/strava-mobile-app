@@ -3,8 +3,10 @@ import React from 'react';
 import { Pressable, View } from 'react-native';
 import { AppText } from '../../design';
 
+import { LifecycleStatus } from '../../tracking/shared';
+
 interface RecordOutdoorHudProps {
-  status: 'idle' | 'preparing' | 'recording' | 'paused';
+  status: LifecycleStatus;
   sportLabel: string;
   gpsLabel: string;
   gpsColor: string;
