@@ -18,9 +18,8 @@ function NavigationRoot() {
     if (isAuthLoading) return;
 
     const inAuthGroup = segments[0] === 'auth';
-    const inOnboarding = segments[0] === 'onboarding';
 
-    if (!isAuthenticated && !inAuthGroup && !inOnboarding) {
+    if (!isAuthenticated && !inAuthGroup) {
       router.replace('/auth/login');
     } else if (isAuthenticated && inAuthGroup) {
       router.replace('/(tabs)');
@@ -44,14 +43,9 @@ function NavigationRoot() {
       {/* Root Entrypoint */}
       <Stack.Screen name="index" options={{ headerShown: false }} />
 
-      {/* Auth Screen */}
+      {/* Auth Screens */}
       <Stack.Screen name="auth/login" options={{ animation: 'fade' }} />
-
-      {/* Onboarding Screens */}
-      <Stack.Screen name="onboarding/welcome" options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="onboarding/sport-preferences" options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="onboarding/profile-setup" options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="onboarding/permissions" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="auth/register" options={{ animation: 'slide_from_right' }} />
 
       {/* Main Tabs */}
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

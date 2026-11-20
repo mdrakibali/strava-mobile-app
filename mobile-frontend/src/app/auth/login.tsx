@@ -326,16 +326,18 @@ export default function LoginScreen() {
             </View>
           )}
 
-          {/* Onboarding Tour Link */}
-          <View className="items-center pt-2 pb-4">
-            <TouchableOpacity
-              onPress={() => router.push('/onboarding/welcome')}
-              className="flex-row items-center py-2">
-              <Text className="text-xs font-bold text-gray-500 mr-1">
-                View Guided Onboarding Tour
+          {/* Switch to Register */}
+          <View className="items-center pt-3 pb-2">
+            <View className="flex-row items-center">
+              <Text className="text-xs font-medium text-gray-500">
+                Don't have an athlete account?{' '}
               </Text>
-              <Ionicons name="arrow-forward" size={14} color="#6B7280" />
-            </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.replace('/auth/register')}>
+                <Text className="text-xs font-bold text-[#F25C19]">
+                  Create Account
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
         </ScrollView>

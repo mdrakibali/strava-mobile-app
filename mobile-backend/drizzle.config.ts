@@ -1,7 +1,10 @@
+import { config } from 'dotenv';
 import { defineConfig } from 'drizzle-kit';
 
-// The connection string comes from the environment (never commit it). Technical audit SEC-01.
-//   DATABASE_URL=postgres://... npx drizzle-kit migrate
+config();
+config({ path: '.dev.vars' });
+
+// The connection string comes from the environment or .env / .dev.vars (never commit it). Technical audit SEC-01.
 export default defineConfig({
   schema: './src/db/schema.ts',
   out: './drizzle',
