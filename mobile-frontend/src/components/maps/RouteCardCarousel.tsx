@@ -73,14 +73,11 @@ export function RouteCardCarousel({
             return (
               <Pressable
                 onPress={() => {
-                  if (!isSelected) {
-                    onSelect(index);
-                  } else {
-                    onOpenDetail(item);
-                  }
+                  onSelect(index);
+                  onOpenDetail(item);
                 }}
                 style={{ width: cardWidth, marginRight: 12 }}
-                className={`bg-white rounded-2xl p-3 border shadow-lg flex-row items-center ${
+                className={`bg-white rounded-2xl p-3 border shadow-lg flex-row items-center active:opacity-95 ${
                   isSelected ? 'border-[#FC4C02]' : 'border-gray-200'
                 }`}>
                 {/* Photo Thumbnail */}
@@ -103,7 +100,13 @@ export function RouteCardCarousel({
                     <AppText className="text-gray-900 text-sm font-bold flex-1 mr-2" numberOfLines={1}>
                       {item.name}
                     </AppText>
-                    <Pressable onPress={() => onToggleSave(item)} hitSlop={8} className="p-0.5">
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        onToggleSave(item);
+                      }}
+                      hitSlop={8}
+                      className="p-0.5">
                       <Ionicons
                         name={item.saved ? 'bookmark' : 'bookmark-outline'}
                         size={18}
@@ -124,11 +127,17 @@ export function RouteCardCarousel({
                   </View>
 
                   {/* Distance from me */}
-                  <View className="flex-row items-center">
-                    <Ionicons name="locate-outline" size={13} color="#6B7280" />
-                    <AppText className="text-gray-500 text-[11px] font-medium ml-1">
-                      From your location
-                    </AppText>
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-row items-center">
+                      <Ionicons name="locate-outline" size={13} color="#6B7280" />
+                      <AppText className="text-gray-500 text-[11px] font-medium ml-1">
+                        From your location
+                      </AppText>
+                    </View>
+                    <View className="flex-row items-center">
+                      <AppText className="text-[#FC4C02] text-xs font-black mr-0.5">View</AppText>
+                      <Ionicons name="chevron-forward" size={13} color="#FC4C02" />
+                    </View>
                   </View>
 
                   {/* Made for you badge */}
@@ -155,4 +164,3 @@ export function RouteCardCarousel({
     </View>
   );
 }
-

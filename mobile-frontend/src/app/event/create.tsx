@@ -1,15 +1,15 @@
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { FormScreen } from '../../components/forms/FormScreen';
-import { Chip, ChipRow, SectionTitle, space, TextField } from '../../design';
+import { Chip, ChipRow, SectionTitle, TextField } from '../../design';
 import { MVP_SPORTS } from '../../lib/sports';
 import { api } from '../../services/api';
 
-const TIMES = Array.from({ length: 33 }, (_, i) => 5 * 60 + i * 30); // 05:00 … 21:00, every 30 min
-const label = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+const TIMES = Array.from({ length: 33 }, (_, i) => 5 * 60 + i * 30);
+const label = (min: number) =>
+  `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 
-/** Create a group event (POST /events). The creator is automatically "going". */
 export default function CreateEventScreen() {
   const router = useRouter();
   const [title, setTitle] = useState('');
@@ -30,9 +30,22 @@ export default function CreateEventScreen() {
   }, []);
   const when = new Date(days[dayOffset].getTime() + time * 60_000);
   const km = distanceKm ? Number(distanceKm.replace(',', '.')) : null;
-  const valid = title.trim().length > 2 && meetingPoint.trim().length > 1 && when.getTime() > now && (km == null || (Number.isFinite(km) && km >= 0));
+  const valid =
+    title.trim().length > 2 &&
+    meetingPoint.trim().length > 1 &&
+    when.getTime() > now &&
+    (km == null || (Number.isFinite(km) && km >= 0));
 
   const submit = async () => {
+    if (!title.trim() || title.trim().length < 3) {
+      Alert.alert('Required', 'Please enter an event name (at least 3 characters).');
+      return;
+    }
+    if (!meetingPoint.trim() || meetingPoint.trim().length < 2) {
+      Alert.alert('Required', 'Please enter a meeting point location.');
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
@@ -52,12 +65,30 @@ export default function CreateEventScreen() {
   };
 
   return (
-    <FormScreen title="Create Event" submitLabel="Create event" canSubmit={valid} submitting={saving} error={error} onSubmit={submit}>
-      <TextField value={title} onChangeText={setTitle} placeholder="Event name (e.g. Saturday long run)" accessibilityLabel="Event name" maxLength={120} />
+    <FormScreen
+      title="Create Event"
+      submitLabel="Create Event"
+      canSubmit={valid}
+      submitting={saving}
+      error={error}
+      onSubmit={submit}>
+      <TextField
+        value={title}
+        onChangeText={setTitle}
+        placeholder="Event name (e.g. Saturday long run)"
+        accessibilityLabel="Event name"
+        maxLength={120}
+      />
       <SectionTitle title="Sport" className="mt-5" />
       <ChipRow>
         {MVP_SPORTS.map((s) => (
-          <Chip key={s.id} label={s.label} icon={s.icon} selected={sportType === s.id} onPress={() => setSportType(s.id)} />
+          <Chip
+            key={s.id}
+            label={s.label}
+            icon={s.icon}
+            selected={sportType === s.id}
+            onPress={() => setSportType(s.id)}
+          />
         ))}
       </ChipRow>
       <SectionTitle title="Day" className="mt-5" />
@@ -65,7 +96,13 @@ export default function CreateEventScreen() {
         {days.map((d, i) => (
           <Chip
             key={i}
-            label={i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+            label={
+              i === 0
+                ? 'Today'
+                : i === 1
+                ? 'Tomorrow'
+                : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+            }
             selected={dayOffset === i}
             onPress={() => setDayOffset(i)}
           />
@@ -78,11 +115,30 @@ export default function CreateEventScreen() {
         ))}
       </ChipRow>
       <View className="h-4" />
-      <TextField value={meetingPoint} onChangeText={setMeetingPoint} placeholder="Meeting point" accessibilityLabel="Meeting point" maxLength={200} />
+      <TextField
+        value={meetingPoint}
+        onChangeText={setMeetingPoint}
+        placeholder="Meeting point"
+        accessibilityLabel="Meeting point"
+        maxLength={200}
+      />
       <View className="h-3" />
-      <TextField value={distanceKm} onChangeText={setDistanceKm} placeholder="Distance (km, optional)" accessibilityLabel="Distance in kilometres" keyboardType="decimal-pad" maxLength={6} />
+      <TextField
+        value={distanceKm}
+        onChangeText={setDistanceKm}
+        placeholder="Distance (km, optional)"
+        accessibilityLabel="Distance in kilometres"
+        keyboardType="decimal-pad"
+        maxLength={6}
+      />
       <View className="h-3" />
-      <TextField value={pace} onChangeText={setPace} placeholder="Pace / level (optional)" accessibilityLabel="Pace or level" maxLength={200} />
+      <TextField
+        value={pace}
+        onChangeText={setPace}
+        placeholder="Pace / level (optional)"
+        accessibilityLabel="Pace or level"
+        maxLength={200}
+      />
     </FormScreen>
   );
 }

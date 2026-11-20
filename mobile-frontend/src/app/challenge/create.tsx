@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { FormScreen } from '../../components/forms/FormScreen';
-import { Chip, ChipRow, SectionTitle, space, TextField } from '../../design';
+import { Chip, ChipRow, SectionTitle, TextField } from '../../design';
 import { MVP_SPORTS } from '../../lib/sports';
 import { api } from '../../services/api';
 
@@ -13,7 +13,6 @@ const DURATIONS = [
   { label: '3 months', days: 90 },
 ];
 
-/** Create a distance challenge (POST /challenges). Progress counts the joined athletes' activities. */
 export default function CreateChallengeScreen() {
   const router = useRouter();
   const [title, setTitle] = useState('');
@@ -28,6 +27,15 @@ export default function CreateChallengeScreen() {
   const valid = title.trim().length > 2 && Number.isFinite(km) && km > 0 && km <= 100_000;
 
   const submit = async () => {
+    if (!title.trim() || title.trim().length < 3) {
+      Alert.alert('Required', 'Please enter a challenge name (at least 3 characters).');
+      return;
+    }
+    if (!Number.isFinite(km) || km <= 0) {
+      Alert.alert('Required', 'Please enter a valid distance goal in kilometres.');
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
@@ -48,24 +56,61 @@ export default function CreateChallengeScreen() {
   };
 
   return (
-    <FormScreen title="Create Challenge" submitLabel="Create challenge" canSubmit={valid} submitting={saving} error={error} onSubmit={submit}>
-      <TextField value={title} onChangeText={setTitle} placeholder="Challenge name (e.g. 100 km in December)" accessibilityLabel="Challenge name" maxLength={100} />
+    <FormScreen
+      title="Create Challenge"
+      submitLabel="Create Challenge"
+      canSubmit={valid}
+      submitting={saving}
+      error={error}
+      onSubmit={submit}>
+      <TextField
+        value={title}
+        onChangeText={setTitle}
+        placeholder="Challenge name (e.g. 100 km in December)"
+        accessibilityLabel="Challenge name"
+        maxLength={100}
+      />
       <SectionTitle title="Sport" className="mt-5" />
       <ChipRow>
         {MVP_SPORTS.map((s) => (
-          <Chip key={s.id} label={s.label} icon={s.icon} selected={sportType === s.id} onPress={() => setSportType(s.id)} />
+          <Chip
+            key={s.id}
+            label={s.label}
+            icon={s.icon}
+            selected={sportType === s.id}
+            onPress={() => setSportType(s.id)}
+          />
         ))}
       </ChipRow>
       <View className="h-4" />
-      <TextField value={targetKm} onChangeText={setTargetKm} placeholder="Distance goal (km)" accessibilityLabel="Distance goal in kilometres" keyboardType="decimal-pad" maxLength={7} />
+      <TextField
+        value={targetKm}
+        onChangeText={setTargetKm}
+        placeholder="Distance goal (km)"
+        accessibilityLabel="Distance goal in kilometres"
+        keyboardType="decimal-pad"
+        maxLength={7}
+      />
       <SectionTitle title="Duration" className="mt-5" />
       <ChipRow>
         {DURATIONS.map((d) => (
-          <Chip key={d.days} label={d.label} selected={days === d.days} onPress={() => setDays(d.days)} />
+          <Chip
+            key={d.days}
+            label={d.label}
+            selected={days === d.days}
+            onPress={() => setDays(d.days)}
+          />
         ))}
       </ChipRow>
       <View className="h-4" />
-      <TextField value={description} onChangeText={setDescription} placeholder="Description (optional)" accessibilityLabel="Description" multiline maxLength={1000} />
+      <TextField
+        value={description}
+        onChangeText={setDescription}
+        placeholder="Description (optional)"
+        accessibilityLabel="Description"
+        multiline
+        maxLength={1000}
+      />
     </FormScreen>
   );
 }
