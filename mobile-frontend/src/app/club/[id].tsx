@@ -209,7 +209,7 @@ export default function ClubDetailScreen() {
                     </Text>
 
                     <Image
-                      source={{ uri: row.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}
+                      source={{ uri: row.avatarUrl || undefined }}
                       className="w-9 h-9 rounded-full mx-2 bg-gray-100"
                     />
 

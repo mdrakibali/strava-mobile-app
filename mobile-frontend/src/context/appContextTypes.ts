@@ -34,8 +34,6 @@ export interface AppContextType {
   loginWithEmail: (email: string, password: string) => Promise<void>;
   registerWithEmail: (data: { email: string; password: string; displayName: string; username?: string }) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
-  loginWithDemo: () => Promise<void>;
-  loginAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
   updateCurrentUser: (patch: Partial<Athlete>) => Promise<void>;
 

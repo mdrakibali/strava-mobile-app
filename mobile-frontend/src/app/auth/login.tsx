@@ -1,9 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { makeRedirectUri } from 'expo-auth-session';
 import { APP_NAME } from '../../config/app';
-import * as Google from 'expo-auth-session/providers/google';
 import { useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,7 +17,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 
-WebBrowser.maybeCompleteAuthSession();
 
 /**
  * Safely probes for native @react-native-google-signin/google-signin TurboModule.
@@ -62,25 +58,17 @@ export default function LoginScreen() {
     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
     '923419495380-p8senmhosq66vltjdviijc08dbunhmsd.apps.googleusercontent.com';
 
-  // Fallback Google Auth Request for Expo Go environments
-  const redirectUri = makeRedirectUri({
-    preferLocalhost: false,
-  });
-
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: googleClientId,
-    webClientId: googleClientId,
-    redirectUri,
-  });
-
   // Configure native Google Sign-In on mount if native module is compiled into the binary
   useEffect(() => {
     const native = loadNativeGoogleSignin();
     if (native) {
       try {
         native.GoogleSignin.configure({
+          // The ID token's audience is this WEB client id; the backend verifies exactly that
+          // audience. The Android OAuth client (package + SHA-1) must exist in the same Google
+          // Cloud project — see docs/STRAVA_FINAL_QA_REPORT.md §Google Sign-In setup.
           webClientId: googleClientId,
-          offlineAccess: true,
+          offlineAccess: false,
           scopes: ['profile', 'email'],
         });
       } catch (err) {
@@ -91,7 +79,7 @@ export default function LoginScreen() {
 
   const handleServerVerification = async (idToken: string) => {
     setIsLoading(true);
-    setStatusMessage('Authenticating athlete account on Neon DB...');
+    setStatusMessage('Signing you in…');
     try {
       await loginWithGoogle(idToken);
       router.replace('/(tabs)');
@@ -103,74 +91,46 @@ export default function LoginScreen() {
     }
   };
 
-  // Handle Expo Go Google Auth response
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const idToken = response.params?.id_token || (response as any).authentication?.idToken;
-      if (idToken) {
-        handleServerVerification(idToken);
-      }
-    }
-  }, [response]);
-
-
-  // Smart Google Sign-In: Native Google Play Services when built natively, Expo Go fallback otherwise
+  /**
+   * Native Google Sign-In (Google Play Services / Credential Manager) → Google ID token →
+   * POST /auth/google, where the backend verifies the token signature, issuer, audience and
+   * expiry against Google's JWKS before issuing our session JWT. No browser fallback: the
+   * Expo Go web flow doesn't work for this setup, so Expo Go users are told to use the dev build.
+   */
   const handleGoogleSignInPress = async () => {
     const native = loadNativeGoogleSignin();
-
-    if (native) {
-      // 1. Native @react-native-google-signin/google-signin flow
-      setIsLoading(true);
-      setStatusMessage('Connecting to Google Play Services...');
-      try {
-        await native.GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-        const res = await native.GoogleSignin.signIn();
-        const idToken = (res as any).data?.idToken || (res as any).idToken;
-
-        if (idToken) {
-          await handleServerVerification(idToken);
-        } else {
-          Alert.alert('Google Sign-In', 'No ID token received from Google.');
-        }
-      } catch (error: any) {
-        if (error.code === native.statusCodes?.SIGN_IN_CANCELLED) {
-          console.log('User cancelled Google Sign-In');
-        } else if (error.code === native.statusCodes?.IN_PROGRESS) {
-          console.log('Google Sign-In is already running');
-        } else if (error.code === native.statusCodes?.PLAY_SERVICES_NOT_AVAILABLE) {
-          Alert.alert(
-            'Google Play Services',
-            'Google Play Services is not available or outdated on this device.'
-          );
-        } else {
-          console.error('Native Google Sign-In Error:', error);
-          Alert.alert(
-            'Google Sign-In',
-            error.message || 'Unable to authenticate with Google. Please try email or dev build.'
-          );
-        }
-      } finally {
-        setIsLoading(false);
-        setStatusMessage(null);
+    if (!native) {
+      Alert.alert('Google Sign-In', 'Google Sign-In needs the app’s development or release build (it is not available in Expo Go). You can sign in with email meanwhile.');
+      return;
+    }
+    setIsLoading(true);
+    setStatusMessage('Opening Google…');
+    try {
+      await native.GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const res: any = await native.GoogleSignin.signIn();
+      // v13+ returns { type: 'cancelled' } instead of throwing when the user backs out.
+      if (res?.type === 'cancelled') return;
+      const idToken = res?.data?.idToken ?? res?.idToken;
+      if (!idToken) {
+        Alert.alert('Google Sign-In', 'Google did not return an ID token. Check the OAuth client configuration (web client ID).');
+        return;
       }
-    } else {
-      // 2. Safe Expo Go flow (prevents TurboModule red screen)
-      setIsLoading(true);
-      setStatusMessage('Opening Google Sign-In in Expo Go...');
-      try {
-        const result = await promptAsync();
-        if (result.type !== 'success') {
-          setIsLoading(false);
-          setStatusMessage(null);
-        }
-      } catch (err: any) {
-        setIsLoading(false);
-        setStatusMessage(null);
-        Alert.alert(
-          'Google Sign-In Notice',
-          'For native Google Play prompt without browser, an Expo Development Build (npx expo run:android) is required. You can also log in directly using Email.'
-        );
+      await handleServerVerification(idToken);
+    } catch (error: any) {
+      const codes = native.statusCodes ?? {};
+      if (error?.code === codes.SIGN_IN_CANCELLED) return;
+      if (error?.code === codes.IN_PROGRESS) return;
+      if (error?.code === codes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('Google Play Services', 'Google Play Services is not available or needs an update on this device.');
+      } else if (String(error?.code) === '10' || /DEVELOPER_ERROR/i.test(String(error?.message))) {
+        // Status 10 = this build's package name / SHA-1 is not registered for the OAuth client.
+        Alert.alert('Google Sign-In not configured', 'This app build is not registered with Google (package name / SHA-1). See the setup notes in the QA report.');
+      } else {
+        Alert.alert('Google Sign-In', error?.message || 'Unable to sign in with Google. Please try again or use email.');
       }
+    } finally {
+      setIsLoading(false);
+      setStatusMessage(null);
     }
   };
 
@@ -188,8 +148,8 @@ export default function LoginScreen() {
     setIsLoading(true);
     setStatusMessage(
       authMode === 'login'
-        ? 'Logging in to athlete account...'
-        : 'Creating your athlete account on Neon DB...'
+        ? 'Signing you in…'
+        : 'Creating your account…'
     );
 
     try {
@@ -276,7 +236,7 @@ export default function LoginScreen() {
                   <Text className="text-xs font-bold text-gray-700 mb-1.5">Full Name</Text>
                   <TextInput
                     className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-sm text-gray-900"
-                    placeholder="e.g. Md Rakib Ali"
+                    placeholder="Your name"
                     placeholderTextColor="#9CA3AF"
                     value={displayName}
                     onChangeText={setDisplayName}

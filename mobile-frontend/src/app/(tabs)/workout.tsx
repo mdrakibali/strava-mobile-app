@@ -5,9 +5,10 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { saveLastSport } from '../../components/record/SportSheet';
 import { useApp } from '../../context/AppContext';
-import { AppBar, AppText, Button, color, radius, space } from '../../design';
+import { AppBar, AppText, Button, Chip, ChipRow, color, radius, SectionTitle, space } from '../../design';
 import { formatClock, formatDuration, kmValue } from '../../lib/format';
 import { MVP_SPORTS, sportConfig } from '../../lib/sports';
+import { PLACE_LABEL, useNearbyPlaces } from '../../lib/useNearbyPlaces';
 import { api } from '../../services/api';
 import { syncWorker } from '../../tracking/sync';
 import { isRecordingActive, timerSeconds, useNow, usePendingUploads, useRecording } from '../../tracking/useRecording';
@@ -28,6 +29,8 @@ export default function WorkoutTab() {
   const now = useNow(active && rec.lifecycle.status === 'recording');
   const pending = usePendingUploads();
   const [totals, setTotals] = useState<Totals | null>(null);
+  const [placeSport, setPlaceSport] = useState<SportType>('Run');
+  const nearby = useNearbyPlaces(placeSport);
 
   // This year's totals per sport, from the server (policy-aware stats endpoint).
   useFocusEffect(
@@ -121,6 +124,61 @@ export default function WorkoutTab() {
           );
         })}
 
+        {/* Real OpenStreetMap places around the athlete's actual GPS position (GET /places/nearby). */}
+        <SectionTitle title="Places near you" style={{ marginTop: space.md }} />
+        <ChipRow>
+          {MVP_SPORTS.map((s) => (
+            <Chip key={s.id} label={s.label} icon={s.icon} selected={placeSport === s.id} onPress={() => setPlaceSport(s.id)} />
+          ))}
+        </ChipRow>
+        <View style={[styles.card, { marginTop: space.sm }]}>
+          {nearby.state.status === 'ready' ? (
+            nearby.state.places.length === 0 ? (
+              <AppText variant="body" color="inkSecondary">
+                No {sportConfig(placeSport).label.toLowerCase()} places are mapped in OpenStreetMap within 5 km of you.
+              </AppText>
+            ) : (
+              <>
+                {nearby.state.places.slice(0, 3).map((p) => (
+                  <Pressable
+                    key={p.id}
+                    onPress={() => router.navigate({ pathname: '/maps', params: { source: 'nearby', sport: placeSport, place: p.id } })}
+                    accessibilityRole="button"
+                    style={styles.placeRow}>
+                    <Ionicons name={(PLACE_LABEL[p.category]?.icon ?? 'location-outline') as any} size={20} color={color.brandText} />
+                    <View style={{ flex: 1, marginLeft: space.md }}>
+                      <AppText variant="bodyStrong" numberOfLines={1}>{p.name}</AppText>
+                      <AppText variant="label" color="inkSecondary">
+                        {PLACE_LABEL[p.category]?.label ?? 'Place'} · {p.distanceM < 1000 ? `${p.distanceM} m` : `${kmValue(p.distanceM)} km`} away
+                      </AppText>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={color.inkTertiary} />
+                  </Pressable>
+                ))}
+                <AppText variant="caption" color="inkTertiary" style={{ marginTop: space.xs }}>{nearby.state.attribution}</AppText>
+              </>
+            )
+          ) : nearby.state.status === 'permission_denied' ? (
+            <>
+              <AppText variant="body" color="inkSecondary">Allow location to see parks, tracks and trails near you.</AppText>
+              <Button label="Allow location" size="sm" style={{ marginTop: space.sm, alignSelf: 'flex-start' }} onPress={nearby.retry} />
+            </>
+          ) : nearby.state.status === 'location_off' ? (
+            <AppText variant="body" color="inkSecondary">Turn on location to see places near you.</AppText>
+          ) : nearby.state.status === 'no_fix' || nearby.state.status === 'error' ? (
+            <>
+              <AppText variant="body" color="inkSecondary">
+                {nearby.state.status === 'no_fix' ? 'Couldn’t get a GPS fix.' : nearby.state.message}
+              </AppText>
+              <Button label="Retry" size="sm" variant="outline" style={{ marginTop: space.sm, alignSelf: 'flex-start' }} onPress={nearby.retry} />
+            </>
+          ) : (
+            <AppText variant="body" color="inkSecondary">
+              {nearby.state.status === 'locating' ? 'Finding your location…' : 'Searching nearby…'}
+            </AppText>
+          )}
+        </View>
+
         <Button
           label="Activity history"
           variant="outline"
@@ -143,5 +201,6 @@ const styles = StyleSheet.create({
     marginBottom: space.md,
   },
   cardHead: { flexDirection: 'row', alignItems: 'center' },
+  placeRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: space.sm },
   activeCard: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: color.brand },
 });

@@ -110,7 +110,7 @@ export default function ChallengeDetailScreen() {
         {/* Badge & Title */}
         <View className="bg-white p-6 items-center border-b border-gray-200">
           <Image
-            source={{ uri: challenge.badgeUrl || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=300' }}
+            source={{ uri: challenge.badgeUrl || undefined }}
             className="w-28 h-28 rounded-full border-4 border-orange-100 bg-orange-50 mb-3"
           />
           <Text className="text-xl font-black text-gray-900 text-center mb-1">{challenge.title}</Text>
@@ -191,7 +191,7 @@ export default function ChallengeDetailScreen() {
                   <View className="flex-row items-center flex-1 mr-3">
                     <Text className="text-xs font-black text-gray-400 w-6">#{index + 1}</Text>
                     <Image
-                      source={{ uri: item.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}
+                      source={{ uri: item.avatarUrl || undefined }}
                       className="w-9 h-9 rounded-full mr-2.5 bg-gray-100"
                     />
                     <View className="flex-1">

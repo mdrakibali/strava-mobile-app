@@ -100,7 +100,7 @@ export default function ClubMembersScreen() {
               className="flex-row items-center justify-between p-3.5 bg-white rounded-2xl mb-2.5 border border-gray-100 shadow-sm">
               <View className="flex-row items-center flex-1 mr-3">
                 <Image
-                  source={{ uri: member.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}
+                  source={{ uri: member.avatarUrl || undefined }}
                   className="w-12 h-12 rounded-full mr-3 bg-gray-100"
                 />
                 <View className="flex-1">

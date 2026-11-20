@@ -25,7 +25,7 @@ export default function ChatScreen() {
     id: id || 'partner',
     displayName: 'Athlete',
     username: 'athlete',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
+    avatarUrl: '',
   });
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState('');
@@ -115,7 +115,7 @@ export default function ChatScreen() {
             onPress={() => router.push(`/athlete/${partner.id}`)}
             className="flex-row items-center flex-1">
             <Image
-              source={{ uri: partner.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200' }}
+              source={{ uri: partner.avatarUrl || undefined }}
               className="w-9 h-9 rounded-full bg-gray-100 mr-2.5"
             />
             <View>

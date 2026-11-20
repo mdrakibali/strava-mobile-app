@@ -181,7 +181,7 @@ export default function SegmentDetailScreen() {
                   </View>
                   <Image
                     source={{
-                      uri: item.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
+                      uri: item.avatar || undefined,
                     }}
                     className="w-8 h-8 rounded-full mr-2.5 bg-gray-100"
                   />

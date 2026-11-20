@@ -62,7 +62,7 @@ export default function ProfileSetupScreen() {
                 value={displayName}
                 onChangeText={setDisplayName}
                 className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900"
-                placeholder="e.g. John Doe"
+                placeholder="Your name"
               />
             </View>
 

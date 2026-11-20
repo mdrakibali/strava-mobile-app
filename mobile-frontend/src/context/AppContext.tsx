@@ -18,14 +18,15 @@ import { AppContextType } from './appContextTypes';
 
 export { AppContextType };
 
+/** Signed-out placeholder only (never shown as a real profile): no invented city, photo or bio. */
 const INITIAL_ATHLETE: Athlete = {
-  id: 'ath_initial',
-  displayName: 'Athlete',
-  username: 'athlete',
-  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
-  city: 'Dhaka',
-  country: 'Bangladesh',
-  bio: 'Open Strava Runner',
+  id: '',
+  displayName: '',
+  username: '',
+  avatarUrl: '',
+  city: '',
+  country: '',
+  bio: '',
   followersCount: 0,
   followingCount: 0,
   isFollowing: false,
@@ -60,14 +61,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     id: item.id,
     name: item.name,
     sportType: item.sportType,
-    city: item.city || 'Dhaka',
+    city: item.city || '',
     description: item.description || '',
     avatarUrl: item.avatarUrl,
     bannerUrl: item.bannerUrl,
-    memberCount: item.membersCount || 0,
+    memberCount: Number(item.memberCount ?? item.membersCount) || 0,
     isMember: Boolean(item.isMember),
-    weeklyDistanceMeters: 42000,
-    weeklyActivitiesCount: 8,
+    // Not provided by the list endpoint — 0, never an invented number.
+    weeklyDistanceMeters: Number(item.weeklyDistanceMeters) || 0,
+    weeklyActivitiesCount: Number(item.weeklyActivitiesCount) || 0,
   });
 
   // Helper: map backend challenge format
@@ -82,7 +84,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isJoined: Boolean(item.isJoined),
     currentMeters: item.currentMeters || 0,
     isCompleted: Boolean(item.isCompleted),
-    daysRemaining: item.daysRemaining || 10,
+    daysRemaining: Number(item.daysRemaining) || 0,
   });
 
   // Load data from Neon PostgreSQL via Cloudflare Workers
@@ -114,9 +116,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               id: n.actor?.id || 'ath_unknown',
               displayName: n.actor?.displayName || 'Athlete',
               username: n.actor?.username || 'athlete',
-              avatarUrl: n.actor?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
-              city: 'Dhaka',
-              country: 'Bangladesh',
+              avatarUrl: n.actor?.avatarUrl || '',
+              city: '',
+              country: '',
               followersCount: 0,
               followingCount: 0,
             },
@@ -203,8 +205,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           displayName: res.athlete.displayName,
           username: res.athlete.username,
           avatarUrl: res.athlete.avatarUrl,
-          city: res.athlete.city || 'Dhaka',
-          country: res.athlete.country || 'Bangladesh',
+          city: res.athlete.city || '',
+          country: res.athlete.country || '',
           bio: res.athlete.bio || '',
           followersCount: res.athlete.followersCount || 0,
           followingCount: res.athlete.followingCount || 0,
@@ -234,8 +236,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           displayName: res.athlete.displayName,
           username: res.athlete.username,
           avatarUrl: res.athlete.avatarUrl,
-          city: res.athlete.city || 'Dhaka',
-          country: res.athlete.country || 'Bangladesh',
+          city: res.athlete.city || '',
+          country: res.athlete.country || '',
           bio: res.athlete.bio || '',
           followersCount: res.athlete.followersCount || 0,
           followingCount: res.athlete.followingCount || 0,
@@ -265,8 +267,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           displayName: res.athlete.displayName,
           username: res.athlete.username,
           avatarUrl: res.athlete.avatarUrl,
-          city: res.athlete.city || 'Dhaka',
-          country: res.athlete.country || 'Bangladesh',
+          city: res.athlete.city || '',
+          country: res.athlete.country || '',
           bio: res.athlete.bio || '',
           followersCount: res.athlete.followersCount || 0,
           followingCount: res.athlete.followingCount || 0,
@@ -286,43 +288,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const loginAsGuest = async () => {
-    setIsSyncing(true);
-    try {
-      const res = await api.auth.demoLogin();
-      if (res?.token && res?.athlete) {
-        const guestProfile: Athlete = {
-          id: res.athlete.id,
-          displayName: res.athlete.displayName,
-          username: res.athlete.username,
-          avatarUrl: res.athlete.avatarUrl,
-          city: res.athlete.city || 'Dhaka',
-          country: res.athlete.country || 'Bangladesh',
-          bio: res.athlete.bio || '',
-          followersCount: res.athlete.followersCount || 0,
-          followingCount: res.athlete.followingCount || 0,
-          isFollowing: false,
-        };
-
-        await AsyncStorage.setItem('@open_strava_token', res.token);
-        await AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(guestProfile));
-
-        setAuthToken(res.token);
-        setCurrentUser(guestProfile);
-        setIsAuthenticated(true);
-        await loadFeedData();
-      }
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  const loginWithDemo = async () => {
-    await loginAsGuest();
-  };
-
   const logout = async () => {
     try {
+      // Also end the Google session so the account chooser appears on the next Google sign-in.
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { TurboModuleRegistry } = require('react-native');
+        if (TurboModuleRegistry.get('RNGoogleSignin')) {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          await require('@react-native-google-signin/google-signin').GoogleSignin.signOut();
+        }
+      } catch {
+        // not signed in with Google / module unavailable
+      }
       await AsyncStorage.multiRemove(['@open_strava_token', '@open_strava_athlete']);
       setAuthToken(null);
       setCurrentUser(INITIAL_ATHLETE);
@@ -498,8 +476,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         loginWithEmail,
         registerWithEmail,
         loginWithGoogle,
-        loginWithDemo,
-        loginAsGuest,
         logout,
         updateCurrentUser,
       }}>

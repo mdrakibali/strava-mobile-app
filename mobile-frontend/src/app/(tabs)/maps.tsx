@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Linking,
   Pressable,
   StyleSheet,
   TextInput,
@@ -14,86 +15,117 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapView } from '../../components/map/MapView';
 import { useApp } from '../../context/AppContext';
-import { AppText, Chip, ChipRow, color, elevation, IconButton, radius, space } from '../../design';
+import { AppText, Button, Chip, ChipRow, color, elevation, IconButton, radius, space } from '../../design';
 import { LngLat, toRoute } from '../../lib/activityView';
 import { formatDuration, kmValue } from '../../lib/format';
+import { PLACE_LABEL, useNearbyPlaces } from '../../lib/useNearbyPlaces';
 import { MVP_SPORTS, sportConfig } from '../../lib/sports';
 import { api } from '../../services/api';
 import { haversineM } from '../../tracking/shared';
+import { SportType } from '../../types';
 
-type Source = 'routes' | 'saved' | 'activities';
+type Source = 'nearby' | 'routes' | 'saved' | 'activities';
 
 interface MapItem {
   id: string;
-  kind: 'route' | 'activity';
+  kind: 'route' | 'activity' | 'place';
   name: string;
+  subtitle: string;
   sportType: string;
-  distanceMeters: number;
-  elevationGainMeters: number | null;
-  timeSeconds: number | null;
-  path: LngLat[];
-  author: string | null;
+  /** Lines to draw for this item (routes/activities/linear places). */
+  paths: LngLat[][];
+  /** Where the item is (start of route, or the place). */
+  anchor: LngLat;
+  distanceFromMeM: number | null;
   saved: boolean;
+  osmUrl?: string;
 }
 
+const fmtAway = (m: number | null) => (m == null ? null : m < 1000 ? `${Math.round(m)} m away` : `${kmValue(m)} km away`);
+
 /**
- * Maps tab (reference: strava-screen/maps-tab.png): full-screen map with the user's location,
- * route discovery (all routes / saved / your own recorded activities), search, sport filter,
- * a card carousel that frames the selected route, and Create Route.
- * Everything shown comes from the API; no invented surface stats or authors.
+ * Maps tab (reference: strava-screen/maps-tab.png). Full-screen OpenFreeMap map with the user's
+ * real location and four sources:
+ *   Nearby      — real OSM places around the athlete's GPS position (parks, tracks, trails,
+ *                 cycleways), from GET /places/nearby; shown as markers + cards
+ *   Routes      — routes created in the app
+ *   Saved       — routes you saved
+ *   My activities — routes of your recorded activities
+ * Every item comes from an API. No location → permission/location states, never a default city.
  */
 export default function MapsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ source?: string; sport?: string; place?: string }>();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { currentUser } = useApp();
-  const [source, setSourceRaw] = useState<Source>('routes');
-  const [sport, setSportRaw] = useState<string>('All');
+  const [source, setSourceRaw] = useState<Source>(
+    params.source === 'routes' || params.source === 'saved' || params.source === 'activities' ? params.source : 'nearby'
+  );
+  const [sport, setSportRaw] = useState<string>(MVP_SPORTS.some((s) => s.id === params.sport) ? params.sport! : 'Run');
   const [query, setQueryRaw] = useState('');
-  const [items, setItems] = useState<MapItem[]>([]);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [selected, setSelected] = useState(0);
-  // Changing what is listed always re-selects the first (nearest) item.
-  const setSource = (v: Source) => (setSourceRaw(v), setSelected(0));
-  const setSport = (v: string) => (setSportRaw(v), setSelected(0));
-  const setQuery = (v: string) => (setQueryRaw(v), setSelected(0));
+  const [routeItems, setRouteItems] = useState<MapItem[]>([]);
+  const [routeStatus, setRouteStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [selectedId, setSelectedId] = useState<string | null>(params.place ?? null);
+  const setSource = (v: Source) => (setSourceRaw(v), setSelectedId(null));
+  const setSport = (v: string) => (setSportRaw(v), setSelectedId(null));
+  const setQuery = (v: string) => (setQueryRaw(v), setSelectedId(null));
   const [me, setMe] = useState<LngLat | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const listRef = useRef<FlatList<MapItem>>(null);
 
-  // Current location (one fix; the map's own user dot keeps tracking).
+  const nearby = useNearbyPlaces(sport, source === 'nearby');
+
+  // Links from other tabs (Workout → "Places near you") arrive as params on an already-mounted tab.
+  const lastParams = useRef('');
+  useFocusEffect(
+    useCallback(() => {
+      const sig = `${params.source ?? ''}|${params.sport ?? ''}|${params.place ?? ''}`;
+      if (sig === lastParams.current || !params.place) return;
+      lastParams.current = sig;
+      setSourceRaw('nearby');
+      if (params.sport && MVP_SPORTS.some((s) => s.id === params.sport)) setSportRaw(params.sport);
+      setSelectedId(params.place);
+    }, [params.source, params.sport, params.place])
+  );
+
+  // User position for the map / distances (Nearby already has its own fix).
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const perm = await Location.requestForegroundPermissionsAsync().catch(() => null);
+      const perm = await Location.getForegroundPermissionsAsync().catch(() => null);
       if (!perm?.granted || cancelled) return;
-      const last = await Location.getLastKnownPositionAsync().catch(() => null);
-      if (last && !cancelled) setMe([last.coords.longitude, last.coords.latitude]);
-      const fix = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null);
+      const fix =
+        (await Location.getLastKnownPositionAsync({ maxAge: 120_000 }).catch(() => null)) ??
+        (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null));
       if (fix && !cancelled) setMe([fix.coords.longitude, fix.coords.latitude]);
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [source]);
+  const position: LngLat | null = 'position' in nearby.state && nearby.state.position ? nearby.state.position : me;
 
-  const load = useCallback(async (): Promise<MapItem[]> => {
+  // Routes / saved / activities from the API.
+  const loadRoutes = useCallback(async (): Promise<MapItem[]> => {
     if (source === 'activities') {
       const res = await api.athletes.listActivities(currentUser.id, null, 50);
       return res.activities
-        .map((a: any) => ({
-          id: a.id,
-          kind: 'activity' as const,
-          name: a.title,
-          sportType: a.sportType,
-          distanceMeters: Number(a.distanceMeters) || 0,
-          elevationGainMeters: a.elevationGainMeters ?? null,
-          timeSeconds: a.movingTimeSeconds ?? null,
-          path: toRoute(a.polyline),
-          author: null,
-          saved: false,
-        }))
-        .filter((a: MapItem) => a.path.length > 1);
+        .map((a: any) => {
+          const path = toRoute(a.polyline);
+          return {
+            id: a.id,
+            kind: 'activity' as const,
+            name: a.title,
+            subtitle: `${kmValue(Number(a.distanceMeters) || 0)} km · ${formatDuration(a.movingTimeSeconds)}`,
+            sportType: a.sportType,
+            paths: [path],
+            anchor: path[0],
+            distanceFromMeM: null,
+            saved: false,
+          };
+        })
+        .filter((a: MapItem) => a.paths[0].length > 1);
     }
     const [list, saved] = await Promise.all([
       source === 'saved' ? Promise.resolve(null) : api.routes.list(),
@@ -102,73 +134,241 @@ export default function MapsScreen() {
     const savedIds = new Set(saved.savedRoutes.map((r: any) => r.id ?? r.routeId));
     const rows = source === 'saved' ? saved.savedRoutes : list!.routes;
     return rows
-      .map((r: any) => ({
-        id: r.id ?? r.routeId,
-        kind: 'route' as const,
-        name: r.name,
-        sportType: r.sportType,
-        distanceMeters: Number(r.distanceMeters) || 0,
-        elevationGainMeters: r.elevationGainMeters != null ? Number(r.elevationGainMeters) : null,
-        timeSeconds: r.estimatedTimeSeconds ?? null,
-        path: toRoute(r.polylinePoints),
-        author: r.creator?.displayName ?? null,
-        saved: savedIds.has(r.id ?? r.routeId),
-      }))
-      .filter((r: MapItem) => r.path.length > 1);
+      .map((r: any) => {
+        const path = toRoute(r.polylinePoints);
+        return {
+          id: r.id ?? r.routeId,
+          kind: 'route' as const,
+          name: r.name,
+          subtitle: `${kmValue(Number(r.distanceMeters) || 0)} km${r.estimatedTimeSeconds ? ` · ≈${formatDuration(r.estimatedTimeSeconds)}` : ''}${r.creator?.displayName ? ` · by ${r.creator.displayName}` : ''}`,
+          sportType: r.sportType,
+          paths: [path],
+          anchor: path[0],
+          distanceFromMeM: null,
+          saved: savedIds.has(r.id ?? r.routeId),
+        };
+      })
+      .filter((r: MapItem) => r.paths[0].length > 1);
   }, [source, currentUser.id]);
 
   useFocusEffect(
     useCallback(() => {
+      if (source === 'nearby') return;
       let cancelled = false;
-      void reloadKey; // retry trigger
-      load().then(
+      void reloadKey;
+      setRouteStatus('loading');
+      loadRoutes().then(
         (rows) => {
           if (cancelled) return;
-          setItems(rows);
-          setStatus('ready');
+          setRouteItems(rows);
+          setRouteStatus('ready');
         },
-        () => !cancelled && setStatus('error')
+        () => !cancelled && setRouteStatus('error')
       );
       return () => {
         cancelled = true;
       };
-    }, [load, reloadKey])
+    }, [loadRoutes, reloadKey, source])
   );
 
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const rows = items.filter((i) => (sport === 'All' || i.sportType === sport) && (!q || i.name.toLowerCase().includes(q)));
-    if (!me) return rows;
-    // Nearest first when we know where the athlete is.
-    const dist = (i: MapItem) => haversineM(me[1], me[0], i.path[0][1], i.path[0][0]);
-    return [...rows].sort((a, b) => dist(a) - dist(b));
-  }, [items, sport, query, me]);
+  const placeItems: MapItem[] = useMemo(() => {
+    if (nearby.state.status !== 'ready') return [];
+    return nearby.state.places.map((p) => ({
+      id: p.id,
+      kind: 'place' as const,
+      name: p.name,
+      subtitle: [PLACE_LABEL[p.category]?.label ?? 'Place', p.lengthM ? `${kmValue(p.lengthM)} km of path` : null, p.surface ? `surface: ${p.surface}` : null, p.lit ? 'lit at night' : null]
+        .filter(Boolean)
+        .join(' · '),
+      sportType: sport,
+      paths: p.path ?? [],
+      anchor: [p.lng, p.lat] as LngLat,
+      distanceFromMeM: p.distanceM,
+      saved: false,
+      osmUrl: p.osmUrl,
+    }));
+  }, [nearby.state, sport]);
 
-  const current = visible[Math.min(selected, Math.max(0, visible.length - 1))];
+  const visible = useMemo(() => {
+    const rows = source === 'nearby' ? placeItems : routeItems.filter((i) => source !== 'routes' || sport === 'All' || i.sportType === sport);
+    const q = query.trim().toLowerCase();
+    const filtered = q ? rows.filter((i) => i.name.toLowerCase().includes(q)) : rows;
+    if (source === 'nearby' || !position) return filtered;
+    const withDist = filtered.map((i) => ({ ...i, distanceFromMeM: haversineM(position[1], position[0], i.anchor[1], i.anchor[0]) }));
+    return withDist.sort((a, b) => a.distanceFromMeM! - b.distanceFromMeM!);
+  }, [source, placeItems, routeItems, sport, query, position]);
+
+  const selectedIndex = Math.max(0, visible.findIndex((v) => v.id === selectedId));
+  const current = visible[selectedIndex];
+  const select = (index: number, scroll = true) => {
+    const item = visible[index];
+    if (!item) return;
+    setSelectedId(item.id);
+    if (scroll) listRef.current?.scrollToIndex({ index, animated: true });
+  };
 
   const toggleSave = async (item: MapItem) => {
-    setItems((prev) => prev.map((x) => (x.id === item.id ? { ...x, saved: !x.saved } : x)));
+    setRouteItems((prev) => prev.map((x) => (x.id === item.id ? { ...x, saved: !x.saved } : x)));
     try {
       const res = await api.routes.toggleSave(item.id);
-      setItems((prev) => prev.map((x) => (x.id === item.id ? { ...x, saved: Boolean(res.isSaved) } : x)));
+      setRouteItems((prev) => prev.map((x) => (x.id === item.id ? { ...x, saved: Boolean(res.isSaved) } : x)));
     } catch {
-      setItems((prev) => prev.map((x) => (x.id === item.id ? { ...x, saved: item.saved } : x)));
+      setRouteItems((prev) => prev.map((x) => (x.id === item.id ? { ...x, saved: item.saved } : x)));
     }
   };
 
+  const directions = (item: MapItem) =>
+    Linking.openURL(`geo:${item.anchor[1]},${item.anchor[0]}?q=${item.anchor[1]},${item.anchor[0]}(${encodeURIComponent(item.name)})`).catch(() =>
+      Linking.openURL(`https://www.openstreetmap.org/directions?to=${item.anchor[1]}%2C${item.anchor[0]}`)
+    );
+
   const cardWidth = width - space.gutter * 2 - 24;
-  const others = useMemo(() => visible.filter((v) => v.id !== current?.id).slice(0, 30).map((v) => v.path), [visible, current]);
+  const isPlaces = source === 'nearby';
+  const others = useMemo(
+    () => (isPlaces ? [] : visible.filter((v) => v.id !== current?.id).slice(0, 30).flatMap((v) => v.paths)),
+    [visible, current, isPlaces]
+  );
+  const selectedPaths = current?.paths ?? [];
+  const mainRoute = selectedPaths[0] ?? [];
+
+  // ---- bottom panel content: states first (never invented content) ----
+  let panel: React.ReactNode = null;
+  const box = (children: React.ReactNode) => (
+    <View style={[styles.card, styles.center, { width: width - space.gutter * 2, marginLeft: space.gutter }]}>{children}</View>
+  );
+  if (isPlaces && nearby.state.status !== 'ready') {
+    const s = nearby.state;
+    if (s.status === 'locating' || s.status === 'loading')
+      panel = box(
+        <>
+          <ActivityIndicator color={color.brand} />
+          <AppText variant="label" color="inkSecondary" style={{ marginTop: space.sm }}>
+            {s.status === 'locating' ? 'Finding your location…' : 'Searching OpenStreetMap near you…'}
+          </AppText>
+        </>
+      );
+    else if (s.status === 'permission_denied')
+      panel = box(
+        <>
+          <AppText variant="bodyStrong">Location needed for nearby places</AppText>
+          <AppText variant="label" color="inkSecondary" style={styles.centerText}>We only use it to search around where you are.</AppText>
+          <Button label={s.canAskAgain ? 'Allow location' : 'Open settings'} size="sm" style={{ marginTop: space.sm }} onPress={() => (s.canAskAgain ? nearby.retry() : Linking.openSettings())} />
+        </>
+      );
+    else if (s.status === 'location_off')
+      panel = box(
+        <>
+          <AppText variant="bodyStrong">Location is turned off</AppText>
+          <Button label="Open settings" size="sm" style={{ marginTop: space.sm }} onPress={() => Linking.openSettings()} />
+        </>
+      );
+    else if (s.status === 'no_fix')
+      panel = box(
+        <>
+          <AppText variant="bodyStrong">Couldn’t get a GPS fix</AppText>
+          <AppText variant="label" color="inkSecondary" style={styles.centerText}>Go outside or near a window and try again.</AppText>
+          <Button label="Try again" size="sm" style={{ marginTop: space.sm }} onPress={nearby.retry} />
+        </>
+      );
+    else if (s.status === 'error')
+      panel = box(
+        <>
+          <AppText variant="bodyStrong">Nearby places unavailable</AppText>
+          <AppText variant="label" color="inkSecondary" style={styles.centerText}>{s.message}</AppText>
+          <Button label="Retry" size="sm" style={{ marginTop: space.sm }} onPress={nearby.retry} />
+        </>
+      );
+  } else if (!isPlaces && routeStatus === 'loading') {
+    panel = box(<ActivityIndicator color={color.brand} />);
+  } else if (!isPlaces && routeStatus === 'error') {
+    panel = box(
+      <>
+        <AppText variant="bodyStrong">Couldn’t load the map data</AppText>
+        <Button label="Retry" size="sm" style={{ marginTop: space.sm }} onPress={() => setReloadKey((k) => k + 1)} />
+      </>
+    );
+  } else if (visible.length === 0) {
+    panel = box(
+      <>
+        <AppText variant="bodyStrong">
+          {isPlaces ? `No ${sportConfig(sport).label.toLowerCase()} places found within 5 km` : source === 'saved' ? 'No saved routes yet' : source === 'activities' ? 'No recorded routes yet' : 'No routes found'}
+        </AppText>
+        <AppText variant="label" color="inkSecondary" style={styles.centerText}>
+          {isPlaces ? 'OpenStreetMap has no matching places mapped near you. Try another sport.' : source === 'activities' ? 'Record an activity with GPS to see it here.' : 'Create a route or change the filters.'}
+        </AppText>
+      </>
+    );
+  } else {
+    panel = (
+      <FlatList
+        ref={listRef}
+        data={visible}
+        horizontal
+        keyExtractor={(i) => `${i.kind}:${i.id}`}
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={cardWidth + space.md}
+        decelerationRate="fast"
+        getItemLayout={(_, index) => ({ length: cardWidth + space.md, offset: (cardWidth + space.md) * index, index })}
+        contentContainerStyle={{ paddingHorizontal: space.gutter }}
+        onMomentumScrollEnd={(e) => select(Math.round(e.nativeEvent.contentOffset.x / (cardWidth + space.md)), false)}
+        renderItem={({ item, index }) => {
+          const selected = index === selectedIndex;
+          return (
+            <Pressable
+              onPress={() =>
+                !selected
+                  ? select(index)
+                  : item.kind === 'route'
+                    ? router.push({ pathname: '/routes/[id]', params: { id: item.id } })
+                    : item.kind === 'activity'
+                      ? router.push({ pathname: '/activity/[id]', params: { id: item.id } })
+                      : undefined
+              }
+              accessibilityRole="button"
+              accessibilityLabel={`${item.name}. ${selected ? (item.kind === 'place' ? 'Selected' : 'Open') : 'Show on map'}`}
+              style={[styles.card, { width: cardWidth, marginRight: space.md }, selected && styles.cardSelected]}>
+              <View style={styles.row}>
+                <Ionicons name={item.kind === 'place' ? 'location' : sportConfig(item.sportType).icon} size={18} color={color.brandText} />
+                <AppText variant="title3" numberOfLines={1} style={{ flex: 1, marginLeft: space.sm }}>{item.name}</AppText>
+                {item.kind === 'route' ? (
+                  <IconButton icon={item.saved ? 'bookmark' : 'bookmark-outline'} size={36} accessibilityLabel={item.saved ? 'Remove from saved' : 'Save route'} onPress={() => toggleSave(item)} />
+                ) : null}
+              </View>
+              <AppText variant="label" color="inkSecondary" numberOfLines={1} style={{ marginTop: 2 }}>
+                {[item.subtitle, fmtAway(item.distanceFromMeM)].filter(Boolean).join(' · ')}
+              </AppText>
+              {item.kind === 'place' ? (
+                <View style={[styles.row, { marginTop: space.sm }]}>
+                  <Button label="Directions" icon="navigate-outline" variant="outline" size="sm" onPress={() => directions(item)} />
+                  <Button
+                    label={`Start ${sportConfig(sport).label}`}
+                    icon="play"
+                    size="sm"
+                    style={{ marginLeft: space.sm }}
+                    onPress={() => router.push({ pathname: '/record', params: { sport: sport as SportType } })}
+                  />
+                </View>
+              ) : null}
+            </Pressable>
+          );
+        }}
+      />
+    );
+  }
 
   return (
     <View style={styles.screen}>
       <MapView
         mode="route"
-        route={current?.path ?? []}
-        otherRoutes={others}
-        userPosition={me}
+        route={mainRoute}
+        otherRoutes={[...selectedPaths.slice(1), ...others]}
+        userPosition={position}
         showUserLocation
-        frameKey={current ? `${current.kind}:${current.id}` : me ? 'me' : 'none'}
-        padding={{ top: insets.top + 120, bottom: 190 }}
+        markers={isPlaces ? visible.map((v) => ({ id: v.id, coordinate: v.anchor, selected: v.id === current?.id })) : undefined}
+        onMarkerPress={(id) => select(visible.findIndex((v) => v.id === id))}
+        focus={current && mainRoute.length < 2 ? { center: current.anchor, zoom: 15 } : null}
+        frameKey={current ? `${current.kind}:${current.id}` : position ? 'me' : 'none'}
+        padding={{ top: insets.top + 120, bottom: 210 }}
       />
 
       <View style={[styles.top, { top: insets.top + space.sm }]} pointerEvents="box-none">
@@ -177,7 +377,7 @@ export default function MapsScreen() {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder={source === 'activities' ? 'Search your activities' : 'Search routes'}
+            placeholder={isPlaces ? 'Filter nearby places' : source === 'activities' ? 'Search your activities' : 'Search routes'}
             placeholderTextColor={color.inkTertiary}
             style={styles.searchInput}
             accessibilityLabel="Search"
@@ -186,136 +386,53 @@ export default function MapsScreen() {
           {query ? <IconButton icon="close-circle" size={32} accessibilityLabel="Clear search" onPress={() => setQuery('')} /> : null}
         </View>
         <ChipRow>
+          <Chip label="Nearby" icon="location-outline" selected={source === 'nearby'} onPress={() => setSource('nearby')} />
           <Chip label="Routes" icon="map-outline" selected={source === 'routes'} onPress={() => setSource('routes')} />
           <Chip label="Saved" icon="bookmark-outline" selected={source === 'saved'} onPress={() => setSource('saved')} />
           <Chip label="My activities" icon="pulse-outline" selected={source === 'activities'} onPress={() => setSource('activities')} />
-          <Chip label="All sports" selected={sport === 'All'} onPress={() => setSport('All')} />
-          {MVP_SPORTS.map((s) => (
-            <Chip key={s.id} label={s.label} icon={s.icon} selected={sport === s.id} onPress={() => setSport(s.id)} />
-          ))}
         </ChipRow>
+        {source === 'nearby' || source === 'routes' ? (
+          <ChipRow>
+            {source === 'routes' ? <Chip label="All sports" selected={sport === 'All'} onPress={() => setSport('All')} /> : null}
+            {MVP_SPORTS.map((s) => (
+              <Chip key={s.id} label={s.label} icon={s.icon} selected={sport === s.id} onPress={() => setSport(s.id)} />
+            ))}
+          </ChipRow>
+        ) : null}
       </View>
 
-      <View style={[styles.sideButtons, { bottom: 200 }]} pointerEvents="box-none">
-        <IconButton
-          icon="locate"
-          appearance="floating"
-          accessibilityLabel="Centre on my location"
-          onPress={() => {
-            setSelected(0);
-            setQuery('');
-          }}
-        />
-      </View>
-
-      <Pressable
-        onPress={() => router.push('/routes/builder')}
-        accessibilityRole="button"
-        style={[styles.create, elevation.floating, { bottom: 200 }]}>
+      <Pressable onPress={() => router.push('/routes/builder')} accessibilityRole="button" style={[styles.create, elevation.floating, { bottom: 220 }]}>
         <Ionicons name="create-outline" size={20} color={color.ink} />
         <AppText variant="bodyStrong" style={{ marginLeft: space.sm }}>Create Route</AppText>
       </Pressable>
+      {isPlaces && nearby.state.status === 'ready' ? (
+        <AppText variant="caption" color="inkTertiary" style={[styles.credit, { bottom: 196 }]}>
+          Places: {nearby.state.attribution}
+        </AppText>
+      ) : null}
 
-      <View style={styles.bottom}>
-        {status === 'loading' ? (
-          <View style={[styles.card, styles.center, { width: width - space.gutter * 2, marginLeft: space.gutter }]}>
-            <ActivityIndicator color={color.brand} />
-          </View>
-        ) : status === 'error' ? (
-          <Pressable
-            onPress={() => {
-              setStatus('loading');
-              setReloadKey((k) => k + 1);
-            }}
-            style={[styles.card, styles.center, { width: width - space.gutter * 2, marginLeft: space.gutter }]}>
-            <AppText variant="bodyStrong">Couldn’t load the map data</AppText>
-            <AppText variant="label" color="brandText">Tap to retry</AppText>
-          </Pressable>
-        ) : visible.length === 0 ? (
-          <View style={[styles.card, styles.center, { width: width - space.gutter * 2, marginLeft: space.gutter }]}>
-            <AppText variant="bodyStrong">
-              {source === 'saved' ? 'No saved routes yet' : source === 'activities' ? 'No recorded routes yet' : 'No routes found'}
-            </AppText>
-            <AppText variant="label" color="inkSecondary" style={{ textAlign: 'center', marginTop: 2 }}>
-              {source === 'activities' ? 'Record an activity with GPS to see it here.' : 'Create a route or change the filters.'}
-            </AppText>
-          </View>
-        ) : (
-          <FlatList
-            ref={listRef}
-            data={visible}
-            horizontal
-            keyExtractor={(i) => `${i.kind}:${i.id}`}
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={cardWidth + space.md}
-            decelerationRate="fast"
-            contentContainerStyle={{ paddingHorizontal: space.gutter }}
-            onMomentumScrollEnd={(e) => setSelected(Math.round(e.nativeEvent.contentOffset.x / (cardWidth + space.md)))}
-            renderItem={({ item, index }) => {
-              const away = me ? haversineM(me[1], me[0], item.path[0][1], item.path[0][0]) : null;
-              return (
-                <Pressable
-                  onPress={() =>
-                    index !== selected
-                      ? (setSelected(index), listRef.current?.scrollToIndex({ index, animated: true }))
-                      : router.push(
-                          item.kind === 'route'
-                            ? { pathname: '/routes/[id]', params: { id: item.id } }
-                            : { pathname: '/activity/[id]', params: { id: item.id } }
-                        )
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel={`${item.name}. ${index === selected ? 'Open' : 'Show on map'}`}
-                  style={[styles.card, { width: cardWidth, marginRight: space.md }, index === selected && styles.cardSelected]}>
-                  <View style={styles.row}>
-                    <Ionicons name={sportConfig(item.sportType).icon} size={18} color={color.brandText} />
-                    <AppText variant="title3" numberOfLines={1} style={{ flex: 1, marginLeft: space.sm }}>{item.name}</AppText>
-                    {item.kind === 'route' ? (
-                      <IconButton
-                        icon={item.saved ? 'bookmark' : 'bookmark-outline'}
-                        size={36}
-                        accessibilityLabel={item.saved ? 'Remove from saved' : 'Save route'}
-                        onPress={() => toggleSave(item)}
-                      />
-                    ) : null}
-                  </View>
-                  <AppText variant="label" color="inkSecondary" style={{ marginTop: 2 }}>
-                    {kmValue(item.distanceMeters)} km
-                    {item.elevationGainMeters != null ? ` · ${Math.round(item.elevationGainMeters)} m` : ''}
-                    {item.timeSeconds ? ` · ${formatDuration(item.timeSeconds)}` : ''}
-                  </AppText>
-                  <AppText variant="label" color="inkSecondary" style={{ marginTop: 2 }} numberOfLines={1}>
-                    {away != null ? (away < 1000 ? `${Math.round(away)} m from you` : `${kmValue(away)} km from you`) : 'Location unknown'}
-                    {item.author ? ` · by ${item.author}` : ''}
-                  </AppText>
-                </Pressable>
-              );
-            }}
-          />
-        )}
-      </View>
+      <View style={styles.bottom}>{panel}</View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.canvas },
-  top: { position: 'absolute', left: 0, right: 0 },
+  top: { position: 'absolute', left: 0, right: 0, gap: space.xs },
   search: {
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: space.gutter,
-    marginBottom: space.sm,
+    marginBottom: space.xs,
     paddingHorizontal: space.md,
     height: 48,
     borderRadius: radius.md,
     backgroundColor: color.surface,
   },
   searchInput: { flex: 1, marginLeft: space.sm, fontSize: 16, color: color.ink },
-  sideButtons: { position: 'absolute', right: space.gutter },
   create: {
     position: 'absolute',
-    right: space.gutter + 60,
+    right: space.gutter,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: color.surface,
@@ -323,9 +440,11 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
   },
+  credit: { position: 'absolute', left: space.gutter, backgroundColor: 'rgba(255,255,255,0.8)', paddingHorizontal: 4 },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: space.lg },
-  card: { backgroundColor: color.surface, borderRadius: radius.lg, padding: space.lg, minHeight: 110, ...elevation.floating },
+  card: { backgroundColor: color.surface, borderRadius: radius.lg, padding: space.lg, minHeight: 112, ...elevation.floating },
   cardSelected: { borderWidth: 2, borderColor: color.brand },
   center: { alignItems: 'center', justifyContent: 'center' },
+  centerText: { textAlign: 'center', marginTop: 2 },
   row: { flexDirection: 'row', alignItems: 'center' },
 });

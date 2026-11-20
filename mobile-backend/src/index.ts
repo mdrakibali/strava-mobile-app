@@ -9,6 +9,7 @@ import { challengesRouter } from './routes/challenges.route';
 import { clubsRouter } from './routes/clubs.route';
 import { feedRouter } from './routes/feed.route';
 import { notificationsRouter } from './routes/notifications.route';
+import { placesRouter } from './routes/places.route';
 import { privacyZonesRouter } from './routes/privacy-zones.route';
 import { messagesRouter } from './routes/messages.route';
 import { segmentsRouter } from './routes/segments.route';
@@ -61,6 +62,7 @@ export const createApp = (dbProvider: DbProvider = hyperdriveProvider) => {
   api.route('/feed', feedRouter);
   api.route('/notifications', notificationsRouter);
   api.route('/privacy-zones', privacyZonesRouter);
+  api.route('/places', placesRouter);
 
   // Other existing modules stay mounted: the product owner asked that no existing feature be
   // removed. They still go through the same auth middleware as before.

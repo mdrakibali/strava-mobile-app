@@ -2,11 +2,14 @@ import { haversineM } from '../../../shared/tracking/geo';
 import { HttpError } from '../lib/http';
 
 /**
- * Real nearby places for workouts, from OpenStreetMap via the Overpass API.
+ * Real nearby places for workouts, from OpenStreetMap data.
  *
- * Why Overpass: free, no API key, worldwide OSM coverage (good in Bangladesh), and it can answer
- * "named parks / tracks / trails / cycleways around this point". OpenFreeMap only serves map
- * tiles — it has no place search. Overpass is fair-use rate limited, so this service:
+ * Providers (both free, no API key, OSM-based; OpenFreeMap itself only serves tiles):
+ *   1. Photon (komoot) reverse search with OSM tag filters — fast (~1 s), answered reliably in
+ *      testing for Dhaka (parks, gardens, running tracks, nature reserves, cycleways).
+ *   2. Overpass API — failover; richer (path geometry/length) but the public instances are often
+ *      at capacity (observed 502s/timeouts during development).
+ * Both are fair-use services, so this service:
  *   - rounds the user's position to 3 decimals (~110 m) before it leaves our server (privacy, and
  *     nearby users share cache entries),
  *   - caches each (cell, sport, radius) answer for 24 h,
@@ -38,7 +41,8 @@ export interface NearbyResult {
   radiusM: number;
   /** Rounded query centre (what was actually sent to the provider). */
   center: { lat: number; lng: number };
-  source: 'OpenStreetMap (Overpass API)';
+  source: 'OpenStreetMap';
+  provider: 'photon' | 'overpass';
   attribution: '© OpenStreetMap contributors';
   fetchedAt: string;
   cached: boolean;
@@ -46,6 +50,110 @@ export interface NearbyResult {
 }
 
 export const OVERPASS_ENDPOINTS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+export const PHOTON_REVERSE = 'https://photon.komoot.io/reverse';
+
+/**
+ * OSM key:value tags per sport (Photon `osm_tag` filters). `specific` features are queried on
+ * their own so nearby parks can't crowd them out, and they rank ahead of general green space.
+ */
+export const PHOTON_TAGS: Record<PlaceSport, { specific: string[]; general: string[] }> = {
+  Run: { specific: ['leisure:track', 'leisure:recreation_ground'], general: ['leisure:park', 'leisure:nature_reserve'] },
+  // (highway:pedestrian was tried and returned foot-over-bridges and bazaar roads — not workout places)
+  Walk: { specific: ['leisure:garden'], general: ['leisure:park', 'leisure:nature_reserve', 'leisure:recreation_ground'] },
+  Hike: { specific: ['leisure:nature_reserve', 'boundary:protected_area', 'natural:wood', 'landuse:forest', 'route:hiking'], general: ['leisure:park'] },
+  Ride: { specific: ['highway:cycleway', 'route:bicycle', 'route:mtb'], general: ['leisure:park', 'leisure:recreation_ground'] },
+};
+
+/** Up to this many result slots are reserved for sport-specific places (tracks, cycleways…). */
+const SPECIFIC_SLOTS = 4;
+
+const photonCategory = (key: string, value: string): PlaceCategory | null => {
+  if (key === 'leisure') {
+    if (value === 'park') return 'park';
+    if (value === 'garden') return 'garden';
+    if (value === 'track') return 'track';
+    if (value === 'recreation_ground') return 'recreation';
+    if (value === 'nature_reserve') return 'nature';
+  }
+  if (key === 'boundary' || key === 'natural' || key === 'landuse') return 'nature';
+  if (key === 'highway' && value === 'cycleway') return 'cycleway';
+  if (key === 'highway' && value === 'pedestrian') return 'footpath';
+  if (key === 'route') return value === 'bicycle' || value === 'mtb' ? 'cycle_route' : 'hiking_route';
+  return null;
+};
+
+/** Areas smaller than this (bbox diagonal) are courtyards/school gardens, not workout places. */
+const MIN_AREA_DIAGONAL_M = 150;
+/** Gardens are often small or mis-tagged (shops, compounds): require a clearly walkable size. */
+const MIN_GARDEN_DIAGONAL_M = 300;
+
+/** Photon GeoJSON → places. Pure (unit-tested). */
+export const normalizePhoton = (
+  json: any,
+  lat: number,
+  lng: number,
+  radiusM: number,
+  limit = 12,
+  specificCategories: PlaceCategory[] = []
+): Place[] => {
+  const seen = new Set<string>();
+  const out: Place[] = [];
+  for (const f of json?.features ?? []) {
+    const p = f?.properties ?? {};
+    const name = String(p.name ?? '').trim();
+    const coords = f?.geometry?.coordinates;
+    if (!name || !Array.isArray(coords)) continue;
+    const category = photonCategory(p.osm_key, p.osm_value);
+    if (!category) continue;
+    const [pLng, pLat] = coords as [number, number];
+    const distanceM = Math.round(haversineM(lat, lng, pLat, pLng));
+    if (distanceM > radiusM) continue;
+    // extent = [minLon, maxLat, maxLon, minLat]
+    const linear = category === 'cycleway' || category === 'cycle_route' || category === 'hiking_route' || category === 'footpath';
+    if (!linear) {
+      const hasExtent = Array.isArray(p.extent) && p.extent.length === 4;
+      const diag = hasExtent ? haversineM(p.extent[1], p.extent[0], p.extent[3], p.extent[2]) : null;
+      if (category === 'garden' && (diag == null || diag < MIN_GARDEN_DIAGONAL_M)) continue;
+      // Running tracks are compact by design (an 84 m outline is a real track); other areas aren't.
+      if (diag != null && diag < (category === 'track' ? 50 : MIN_AREA_DIAGONAL_M)) continue;
+    }
+    const type = p.osm_type === 'N' ? 'node' : p.osm_type === 'R' ? 'relation' : 'way';
+    const id = `${type}/${p.osm_id}`;
+    const dupKey = `${category}:${name.toLowerCase()}`;
+    if (seen.has(id) || seen.has(dupKey)) continue;
+    seen.add(id);
+    seen.add(dupKey);
+    out.push({
+      id,
+      name,
+      category,
+      lat: pLat,
+      lng: pLng,
+      distanceM,
+      lengthM: null,
+      path: null,
+      surface: null,
+      lit: null,
+      osmUrl: `https://www.openstreetmap.org/${type}/${p.osm_id}`,
+    });
+  }
+  // Dense cities have many parks close by; reserve slots so the sport-specific places (running
+  // tracks for Run, cycleways for Ride, reserves for Hike) are never crowded out. Final order is
+  // nearest first.
+  const byDistance = (a: Place, b: Place) => a.distanceM - b.distanceM;
+  const specific = out.filter((p) => specificCategories.includes(p.category)).sort(byDistance).slice(0, SPECIFIC_SLOTS);
+  const general = out.filter((p) => !specific.includes(p)).sort(byDistance).slice(0, limit - specific.length);
+  return [...specific, ...general].sort(byDistance);
+};
+
+/** Categories produced by a sport's specific tags (for ranking). */
+export const specificCategoriesFor = (sport: PlaceSport): PlaceCategory[] =>
+  PHOTON_TAGS[sport].specific
+    .map((t) => {
+      const [k, v] = t.split(':');
+      return photonCategory(k, v);
+    })
+    .filter((c): c is PlaceCategory => c != null);
 
 type Fetcher = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -179,7 +287,8 @@ export class PlacesService {
   constructor(
     private fetcher: Fetcher = (u, i) => fetch(u, i),
     private endpoints: string[] = OVERPASS_ENDPOINTS,
-    private now: () => number = Date.now
+    private now: () => number = Date.now,
+    private photonUrl: string = PHOTON_REVERSE
   ) {}
 
   private cacheKey(sport: string, lat: number, lng: number, radius: number) {
@@ -214,8 +323,43 @@ export class PlacesService {
     const hit = await this.cacheGet(key);
     if (hit) return { ...hit, cached: true };
 
+    const finish = async (places: Place[], provider: NearbyResult['provider']) => {
+      const body: NearbyResult = {
+        sport,
+        radiusM,
+        center: { lat, lng },
+        source: 'OpenStreetMap',
+        provider,
+        attribution: '© OpenStreetMap contributors',
+        fetchedAt: new Date(this.now()).toISOString(),
+        cached: false,
+        places,
+      };
+      await this.cachePut(key, body, waitUntil);
+      return body;
+    };
+    let lastError = 'no provider';
+
+    // 1) Photon reverse search (primary): sport-specific and general green space in parallel.
+    try {
+      const photon = (tags: string[]) => {
+        const qs = new URLSearchParams({ lat: String(lat), lon: String(lng), radius: String(radiusM / 1000), limit: '30' });
+        for (const t of tags) qs.append('osm_tag', t);
+        return this.fetcher(`${this.photonUrl}?${qs.toString()}`, { headers: { 'User-Agent': 'OpenStrava/1.1 (fitness app; nearby places)' } });
+      };
+      const [spec, gen] = await Promise.all([photon(PHOTON_TAGS[sport].specific), photon(PHOTON_TAGS[sport].general)]);
+      if (spec.ok && gen.ok) {
+        const [a, b]: any[] = await Promise.all([spec.json(), gen.json()]);
+        const merged = { features: [...(a?.features ?? []), ...(b?.features ?? [])] };
+        return await finish(normalizePhoton(merged, lat, lng, radiusM, 12, specificCategoriesFor(sport)), 'photon');
+      }
+      lastError = `photon → HTTP ${spec.status}/${gen.status}`;
+    } catch (e: any) {
+      lastError = `photon → ${e?.message ?? 'network error'}`;
+    }
+
+    // 2) Overpass (failover)
     const query = buildOverpassQuery(sport, lat, lng, radiusM);
-    let lastError = 'no endpoint';
     for (const endpoint of this.endpoints) {
       try {
         const res = await this.fetcher(endpoint, {
@@ -227,24 +371,12 @@ export class PlacesService {
           lastError = `${endpoint} → HTTP ${res.status}`;
           continue;
         }
-        const json = await res.json();
-        const body: NearbyResult = {
-          sport,
-          radiusM,
-          center: { lat, lng },
-          source: 'OpenStreetMap (Overpass API)',
-          attribution: '© OpenStreetMap contributors',
-          fetchedAt: new Date(this.now()).toISOString(),
-          cached: false,
-          places: normalizeOverpass(json, lat, lng),
-        };
-        await this.cachePut(key, body, waitUntil);
-        return body;
+        return await finish(normalizeOverpass(await res.json(), lat, lng), 'overpass');
       } catch (e: any) {
         lastError = `${endpoint} → ${e?.message ?? 'network error'}`;
       }
     }
-    console.warn('Overpass unavailable:', lastError);
+    console.warn('Places providers unavailable:', lastError);
     throw new HttpError(503, 'places_unavailable', 'Nearby places are temporarily unavailable. Please try again.');
   }
 }

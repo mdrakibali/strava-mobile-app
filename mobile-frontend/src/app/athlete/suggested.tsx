@@ -87,7 +87,7 @@ export default function SuggestedAthletesScreen() {
                   onPress={() => router.push(`/athlete/${athlete.id}`)}
                   className="flex-row items-center flex-1 mr-3">
                   <Image
-                    source={{ uri: athlete.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}
+                    source={{ uri: athlete.avatarUrl || undefined }}
                     className="w-14 h-14 rounded-full mr-3 bg-gray-100"
                   />
                   <View className="flex-1">

@@ -15,6 +15,34 @@ export const API_BASE_URL =
 
 const TIMEOUT_MS = 30_000;
 
+export type PlaceCategory = 'park' | 'garden' | 'nature' | 'track' | 'trail' | 'footpath' | 'cycleway' | 'cycle_route' | 'hiking_route' | 'recreation';
+
+export interface NearbyPlace {
+  id: string;
+  name: string;
+  category: PlaceCategory;
+  lat: number;
+  lng: number;
+  distanceM: number;
+  lengthM: number | null;
+  path: [number, number][][] | null;
+  surface: string | null;
+  lit: boolean | null;
+  osmUrl: string;
+}
+
+export interface NearbyPlacesResponse {
+  sport: string;
+  radiusM: number;
+  center: { lat: number; lng: number };
+  source: string;
+  provider: 'photon' | 'overpass';
+  attribution: string;
+  fetchedAt: string;
+  cached: boolean;
+  places: NearbyPlace[];
+}
+
 export interface Totals {
   count: number;
   distanceMeters: number;
@@ -111,10 +139,6 @@ export const api = {
       request<{ token: string; athlete: any }>('/auth/google', {
         method: 'POST',
         body: JSON.stringify({ idToken }),
-      }),
-    demoLogin: () =>
-      request<{ token: string; athlete: any }>('/auth/demo-login', {
-        method: 'POST',
       }),
     getMe: () => request<{ athlete: any }>('/auth/me'),
   },
@@ -305,6 +329,14 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(data),
       }),
+  },
+
+  /** Real OSM places near a real position (backend proxies Photon/Overpass with caching). */
+  places: {
+    nearby: (lat: number, lng: number, sport: string, radiusM = 5000) =>
+      request<NearbyPlacesResponse>(
+        `/places/nearby?${new URLSearchParams({ lat: String(lat), lng: String(lng), sport, radius: String(radiusM) }).toString()}`
+      ),
   },
 
   // 10. Privacy Zones (Start/End masking)

@@ -116,8 +116,7 @@ export default function MessagesInboxScreen() {
                 <Image
                   source={{
                     uri:
-                      item.participant.avatarUrl ||
-                      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200",
+                      item.participant.avatarUrl || undefined,
                   }}
                   className="w-12 h-12 rounded-full bg-gray-100"
                 />
