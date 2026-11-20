@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { color, radius, space } from '../tokens';
+import { Pressable, ScrollView, View } from 'react-native';
+import { color } from '../tokens';
 import { AppText } from './AppText';
 
 export interface TabItem<K extends string> {
@@ -21,7 +21,7 @@ export function SegmentedTabs<K extends string>({
   onChange: (key: K) => void;
 }) {
   return (
-    <View style={styles.tabs} accessibilityRole="tablist">
+    <View className="flex-row bg-white border-b border-gray-200" accessibilityRole="tablist">
       {items.map((item) => {
         const active = item.key === value;
         return (
@@ -30,17 +30,17 @@ export function SegmentedTabs<K extends string>({
             onPress={() => onChange(item.key)}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            style={styles.tab}>
+            className="flex-1 items-center pt-3 min-h-[56px]">
             {item.icon ? (
               <Ionicons name={item.icon} size={22} color={active ? color.ink : color.inkTertiary} />
             ) : null}
             <AppText
               variant="label"
               color={active ? 'ink' : 'inkTertiary'}
-              style={{ fontWeight: active ? '700' : '500', marginTop: item.icon ? 2 : 0 }}>
+              className={`font-bold ${item.icon ? 'mt-0.5' : ''}`}>
               {item.label}
             </AppText>
-            <View style={[styles.underline, active && { backgroundColor: color.brand }]} />
+            <View className={`mt-2 h-[3px] w-[60%] rounded-t ${active ? 'bg-primary' : 'bg-transparent'}`} />
           </Pressable>
         );
       })}
@@ -58,20 +58,23 @@ export const Chip: React.FC<{
     onPress={onPress}
     accessibilityRole="button"
     accessibilityState={{ selected: !!selected }}
-    style={({ pressed }) => [
-      styles.chip,
-      selected ? styles.chipSelected : null,
-      pressed && !selected ? { backgroundColor: color.canvas } : null,
-    ]}>
+    className={`flex-row items-center h-9 px-3 rounded-full border ${
+      selected
+        ? 'bg-orange-50 border-primary'
+        : 'bg-white border-gray-300 active:bg-gray-100'
+    }`}>
     {icon ? (
       <Ionicons
         name={icon}
         size={16}
         color={selected ? color.brandText : color.inkSecondary}
-        style={{ marginRight: space.xs }}
+        className="mr-1"
       />
     ) : null}
-    <AppText variant="label" color={selected ? 'brandText' : 'inkSecondary'} style={{ fontWeight: '600' }}>
+    <AppText
+      variant="label"
+      color={selected ? 'brandText' : 'inkSecondary'}
+      className="font-semibold">
       {label}
     </AppText>
   </Pressable>
@@ -81,36 +84,7 @@ export const ChipRow: React.FC<{ children: React.ReactNode }> = ({ children }) =
   <ScrollView
     horizontal
     showsHorizontalScrollIndicator={false}
-    contentContainerStyle={{ gap: space.sm }}>
+    contentContainerStyle={{ gap: 8 }}>
     {children}
   </ScrollView>
 );
-
-const styles = StyleSheet.create({
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: color.surface,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.border,
-  },
-  tab: { flex: 1, alignItems: 'center', paddingTop: space.md, minHeight: 56 },
-  underline: {
-    marginTop: space.sm,
-    height: 3,
-    width: '60%',
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-    backgroundColor: 'transparent',
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 36,
-    paddingHorizontal: space.md,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: color.borderStrong,
-    backgroundColor: color.surface,
-  },
-  chipSelected: { backgroundColor: color.brandSoft, borderColor: color.brand },
-});

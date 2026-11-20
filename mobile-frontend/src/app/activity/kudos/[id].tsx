@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppBar, AppText, Avatar, color, EmptyState, ErrorState, LoadingState, space } from '../../../design';
 import { toAthleteSummary } from '../../../lib/activityView';
@@ -53,7 +53,7 @@ export default function KudosListScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
+    <SafeAreaView edges={['top']} className="flex-1 bg-white">
       <AppBar title={status === 'ready' ? `Kudos (${count})` : 'Kudos'} />
       {status === 'loading' ? (
         <LoadingState />
@@ -79,7 +79,7 @@ export default function KudosListScreen() {
               <Pressable
                 onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: a.id } })}
                 accessibilityRole="button"
-                style={({ pressed }) => [styles.row, pressed && { backgroundColor: color.canvas }]}>
+                className="flex-row items-center px-4 py-3 border-b border-gray-100 active:bg-gray-50">
                 <Avatar uri={a.avatarUrl} name={a.displayName} size={40} />
                 <View style={{ marginLeft: space.md, flex: 1 }}>
                   <AppText variant="bodyStrong">{a.displayName}</AppText>
@@ -97,15 +97,3 @@ export default function KudosListScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.surface },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: space.gutter,
-    paddingVertical: space.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.border,
-  },
-});

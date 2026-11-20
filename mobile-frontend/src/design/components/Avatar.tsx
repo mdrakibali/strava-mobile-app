@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { color } from '../tokens';
 import { AppText } from './AppText';
 
@@ -31,7 +31,8 @@ export const Avatar: React.FC<AvatarProps> = ({ uri, name, size = 40 }) => {
     return (
       <Image
         source={{ uri }}
-        style={[styles.image, style]}
+        style={style}
+        className="bg-gray-100"
         contentFit="cover"
         accessibilityIgnoresInvertColors
         accessible
@@ -41,19 +42,15 @@ export const Avatar: React.FC<AvatarProps> = ({ uri, name, size = 40 }) => {
   }
   return (
     <View
-      style={[styles.initials, style, { backgroundColor: tintOf(name || '?') }]}
+      style={[style, { backgroundColor: tintOf(name || '?') }]}
+      className="items-center justify-center"
       accessible
       accessibilityLabel={name ? `${name}'s avatar` : 'Avatar'}>
       <AppText
         variant={size >= 72 ? 'title1' : size >= 48 ? 'title3' : 'label'}
-        style={{ fontWeight: '700', color: color.inkSecondary }}>
+        className="font-bold text-gray-500">
         {initialsOf(name)}
       </AppText>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  image: { backgroundColor: color.canvas },
-  initials: { alignItems: 'center', justifyContent: 'center' },
-});

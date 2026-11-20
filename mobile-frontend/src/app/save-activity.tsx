@@ -7,7 +7,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
+  Text,
   View,
 } from "react-native";
 import {
@@ -18,19 +18,15 @@ import { VISIBILITY_LABEL } from "../components/activity/FeedCard";
 import { RoutePreview } from "../components/map/RoutePreview";
 import { SportSheet } from "../components/record/SportSheet";
 import {
-  AppText,
   BottomSheet,
   Button,
-  color,
   EmptyState,
   ErrorState,
   MetricRow,
   MetricTile,
   OptionRow,
-  radius,
   SectionTitle,
   SelectField,
-  space,
   TextField,
 } from "../design";
 import {
@@ -112,7 +108,7 @@ export default function SaveActivityScreen() {
 
   if (!active && !saving) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView className="flex-1 bg-white">
         <EmptyState
           icon="checkmark-done-outline"
           title="Nothing to save"
@@ -197,8 +193,8 @@ export default function SaveActivityScreen() {
         };
 
   return (
-    <SafeAreaView edges={["top"]} style={styles.screen}>
-      <View style={styles.header}>
+    <SafeAreaView edges={["top"]} className="flex-1 bg-white">
+      <View className="h-14 flex-row items-center px-4 border-b border-gray-100 justify-between">
         <Button
           label="Resume"
           variant="outline"
@@ -206,25 +202,21 @@ export default function SaveActivityScreen() {
           onPress={onResume}
           disabled={saving}
         />
-        <AppText
-          variant="title2"
-          accessibilityRole="header"
-          style={styles.headerTitle}
-        >
+        <Text className="text-lg font-bold text-gray-900 text-center flex-1">
           Save Activity
-        </AppText>
-        <View style={{ width: 88 }} />
+        </Text>
+        <View className="w-20" />
       </View>
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        className="flex-1"
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={{ padding: 16, paddingBottom: 64 }}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.summary}>
+          <View className="p-4 bg-gray-50 rounded-2xl mb-4">
             <MetricRow>
               <MetricTile
                 label="Distance"
@@ -244,7 +236,7 @@ export default function SaveActivityScreen() {
             </MetricRow>
           </View>
           {route.length > 1 ? (
-            <View style={styles.preview}>
+            <View className="mb-4">
               <RoutePreview route={route} height={150} rounded />
             </View>
           ) : null}
@@ -260,7 +252,7 @@ export default function SaveActivityScreen() {
             maxLength={100}
             returnKeyType="next"
           />
-          <View style={{ height: space.md }} />
+          <View className="h-4" />
           <TextField
             value={description}
             onChangeText={setDescription}
@@ -269,7 +261,7 @@ export default function SaveActivityScreen() {
             multiline
             maxLength={2000}
           />
-          <View style={{ height: space.md }} />
+          <View className="h-4" />
           <SelectField
             value={cfg.label}
             icon={cfg.icon}
@@ -285,19 +277,16 @@ export default function SaveActivityScreen() {
                 "Photo and video upload feature will be available in the next cloud storage update.",
               )
             }
-            style={styles.addMediaBox}
+            className="mt-4 border-2 border-dashed border-[#FC4C02] rounded-2xl py-6 items-center justify-center bg-[#FFF9F6]"
           >
-            <Ionicons name="image-outline" size={32} color={color.brand} />
-            <AppText
-              variant="bodyStrong"
-              style={{ color: color.brand, marginTop: space.xs }}
-            >
+            <Ionicons name="image-outline" size={32} color="#FC4C02" />
+            <Text className="text-sm font-bold text-[#FC4C02] mt-1">
               Add Photos/Videos
-            </AppText>
+            </Text>
           </Pressable>
 
           {/* Details Section */}
-          <SectionTitle title="Details" style={{ marginTop: space.xl }} />
+          <SectionTitle title="Details" className="mt-6" />
           <Pressable
             onPress={() =>
               Alert.alert(
@@ -305,22 +294,22 @@ export default function SaveActivityScreen() {
                 "Select a tag (Workout, Race, Long Run).",
               )
             }
-            style={styles.detailRow}
+            className="flex-row items-center justify-between bg-gray-50 rounded-xl px-4 py-3.5 border border-gray-100"
           >
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View className="flex-row items-center">
               <Ionicons
                 name="pricetag-outline"
                 size={18}
-                color={color.inkSecondary}
+                color="#6B7280"
               />
-              <AppText variant="body" style={{ marginLeft: space.sm }}>
+              <Text className="text-sm font-medium text-gray-800 ml-2">
                 Activity Tag
-              </AppText>
+              </Text>
             </View>
             <Ionicons
               name="chevron-down"
               size={16}
-              color={color.inkSecondary}
+              color="#6B7280"
             />
           </Pressable>
 
@@ -331,45 +320,41 @@ export default function SaveActivityScreen() {
                 "Rate how hard the activity felt (1-10).",
               )
             }
-            style={[styles.detailRow, { marginTop: space.sm }]}
+            className="flex-row items-center justify-between bg-gray-50 rounded-xl px-4 py-3.5 border border-gray-100 mt-2.5"
           >
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View className="flex-row items-center">
               <Ionicons
                 name="speedometer-outline"
                 size={18}
-                color={color.inkSecondary}
+                color="#6B7280"
               />
-              <AppText variant="body" style={{ marginLeft: space.sm }}>
+              <Text className="text-sm font-medium text-gray-800 ml-2">
                 How did that activity feel?
-              </AppText>
+              </Text>
             </View>
             <Ionicons
               name="chevron-down"
               size={16}
-              color={color.inkSecondary}
+              color="#6B7280"
             />
           </Pressable>
 
-          <View style={[styles.privateNoteBox, { marginTop: space.sm }]}>
+          <View className="flex-row items-start bg-gray-50 rounded-xl p-3 border border-gray-100 mt-2.5">
             <Ionicons
               name="lock-closed-outline"
               size={16}
-              color={color.inkSecondary}
-              style={{ marginTop: 2, marginRight: space.xs }}
+              color="#6B7280"
+              className="mt-0.5 mr-1.5"
             />
-            <AppText variant="caption" color="inkSecondary" style={{ flex: 1 }}>
+            <Text className="text-xs text-gray-500 flex-1 leading-4">
               Jot down private notes here. Only you can see these.
-            </AppText>
+            </Text>
           </View>
 
-          <SectionTitle title="Visibility" style={{ marginTop: space.xxl }} />
-          <AppText
-            variant="label"
-            color="inkSecondary"
-            style={{ marginBottom: space.sm }}
-          >
+          <SectionTitle title="Visibility" className="mt-6" />
+          <Text className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">
             Who can view
-          </AppText>
+          </Text>
           <SelectField
             value={VISIBILITY_LABEL[visibility].label}
             icon={VISIBILITY_LABEL[visibility].icon}
@@ -378,7 +363,7 @@ export default function SaveActivityScreen() {
           />
 
           {error ? (
-            <View style={{ marginTop: space.lg }}>
+            <View className="mt-4">
               <ErrorState compact message={error} />
             </View>
           ) : null}
@@ -388,12 +373,13 @@ export default function SaveActivityScreen() {
             variant="danger"
             onPress={onDiscard}
             disabled={saving}
-            style={{ alignSelf: "center", marginTop: space.xxl }}
+            className="self-center mt-7"
           />
         </ScrollView>
 
         <View
-          style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}
+          style={{ paddingBottom: insets.bottom + 12 }}
+          className="px-4 pt-3 bg-white border-t border-gray-100"
         >
           <Button
             label={error ? "Try again" : "Save Activity"}
@@ -440,62 +426,3 @@ export default function SaveActivityScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.surface },
-  header: {
-    height: 56,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: space.gutter,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.border,
-  },
-  headerTitle: { flex: 1, textAlign: "center" },
-  content: { padding: space.gutter, paddingBottom: space.xxxl },
-  summary: {
-    padding: space.lg,
-    backgroundColor: color.canvas,
-    borderRadius: radius.md,
-    marginBottom: space.md,
-  },
-  preview: { marginBottom: space.lg },
-  addMediaBox: {
-    marginTop: space.md,
-    borderWidth: 1.5,
-    borderColor: color.brand,
-    borderStyle: "dashed",
-    borderRadius: radius.md,
-    paddingVertical: space.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFF9F6",
-  },
-  detailRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: color.canvas,
-    borderRadius: radius.md,
-    paddingHorizontal: space.md,
-    paddingVertical: space.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
-  },
-  privateNoteBox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: color.canvas,
-    borderRadius: radius.md,
-    padding: space.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
-  },
-  footer: {
-    paddingHorizontal: space.gutter,
-    paddingTop: space.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
-    backgroundColor: color.surface,
-  },
-});

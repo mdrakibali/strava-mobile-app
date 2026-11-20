@@ -1,18 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedCard, FeedCardSkeleton } from '../../components/activity/FeedCard';
-import {
-  AppBar,
-  AppText,
-  color,
-  EmptyState,
-  ErrorState,
-  IconButton,
-  space,
-} from '../../design';
+import { EmptyState, ErrorState } from '../../design';
 import { useApp } from '../../context/AppContext';
 import { APP_NAME } from '../../config/app';
 import { ActivityView, fromFeedItem } from '../../lib/activityView';
@@ -249,8 +241,8 @@ export default function HomeFeedScreen() {
         renderItem={({ item }) => <FeedCard activity={item} currentUserId={currentUser.id} />}
         onEndReached={onEndReached}
         onEndReachedThreshold={0.6}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[color.brand]} />}
-        contentContainerStyle={items.length === 0 ? { flexGrow: 1 } : { paddingTop: space.sm, paddingBottom: space.xxxl }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />}
+        contentContainerStyle={items.length === 0 ? { flexGrow: 1 } : { paddingTop: 8, paddingBottom: 64 }}
         initialNumToRender={4}
         windowSize={7}
         ListEmptyComponent={
@@ -264,9 +256,9 @@ export default function HomeFeedScreen() {
         }
         ListFooterComponent={
           loadingMore ? (
-            <ActivityIndicator style={{ margin: space.xl }} color={color.brand} />
+            <ActivityIndicator className="m-6" color="#FC4C02" />
           ) : loadMoreError ? (
-            <View style={{ padding: space.gutter }}>
+            <View className="p-4">
               <ErrorState compact message="Couldn’t load more activities." onRetry={onEndReached} />
             </View>
           ) : undefined
@@ -284,23 +276,3 @@ export default function HomeFeedScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.canvas },
-  pending: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: color.surface,
-    paddingHorizontal: space.gutter,
-    paddingVertical: space.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.border,
-  },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: color.brand,
-    paddingHorizontal: space.gutter,
-    minHeight: 48,
-  },
-});

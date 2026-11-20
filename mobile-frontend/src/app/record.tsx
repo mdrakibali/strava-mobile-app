@@ -1,19 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, AppState, Linking, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapView } from '../components/map/MapView';
 import { loadLastSport, SportSheet } from '../components/record/SportSheet';
 import {
-  AppText,
   Button,
-  color,
-  elevation,
   IconButton,
   MetricTile,
-  radius,
-  space,
 } from '../design';
 import { estimateCalories } from '../lib/calories';
 import { DASH, formatClock, formatDuration, formatElevation, kmValue, paceValue, speedValue } from '../lib/format';
@@ -75,19 +70,19 @@ export default function RecordScreen() {
   // ---- Status strip -------------------------------------------------------------------------
   let strip: { text: string; bg: string; fg: string; action?: () => void };
   if (gps === 'denied')
-    strip = { text: 'Location access needed · Open settings', bg: color.dangerSoft, fg: color.danger, action: () => Linking.openSettings() };
+    strip = { text: 'Location access needed · Open settings', bg: '#FEE2E2', fg: '#DC2626', action: () => Linking.openSettings() };
   else if (gps === 'off')
-    strip = { text: 'Location is off · Turn on', bg: color.dangerSoft, fg: color.danger, action: () => Linking.openSettings() };
+    strip = { text: 'Location is off · Turn on', bg: '#FEE2E2', fg: '#DC2626', action: () => Linking.openSettings() };
   else if (interrupted)
-    strip = { text: 'RECORDING WAS INTERRUPTED · Resume or finish', bg: color.warning, fg: color.ink };
-  else if (isPaused) strip = { text: 'Stopped', bg: color.warning, fg: color.ink };
+    strip = { text: 'RECORDING WAS INTERRUPTED · Resume or finish', bg: '#F59E0B', fg: '#1F2937' };
+  else if (isPaused) strip = { text: 'Stopped', bg: '#F59E0B', fg: '#1F2937' };
   else if (isIdle) {
-    if (gps === 'acquiring') strip = { text: 'Acquiring GPS…', bg: color.canvas, fg: color.inkSecondary };
-    else if (gps === 'good') strip = { text: 'GPS ready', bg: color.successSoft, fg: color.successText };
-    else strip = { text: `Weak GPS (±${Math.round(rec.lastFix?.acc ?? 99)} m)`, bg: color.warningSoft, fg: color.ink };
+    if (gps === 'acquiring') strip = { text: 'Acquiring GPS…', bg: '#F3F4F6', fg: '#4B5563' };
+    else if (gps === 'good') strip = { text: 'GPS ready', bg: '#DCFCE7', fg: '#166534' };
+    else strip = { text: `Weak GPS (±${Math.round(rec.lastFix?.acc ?? 99)} m)`, bg: '#FEF3C7', fg: '#1F2937' };
   } else {
     const suffix = gps === 'lost' ? ' · GPS SIGNAL LOST' : gps === 'weak' || gps === 'acquiring' ? ' · WEAK GPS' : '';
-    strip = { text: `${cfg.label.toUpperCase()}${suffix}`, bg: suffix ? color.warningSoft : color.surface, fg: color.ink };
+    strip = { text: `${cfg.label.toUpperCase()}${suffix}`, bg: suffix ? '#FEF3C7' : '#FFFFFF', fg: '#1F2937' };
   }
 
   // ---- Metrics (research §5: runs show avg pace; rides show current speed, avg when paused) ----
@@ -98,12 +93,13 @@ export default function RecordScreen() {
     cfg.primaryMetric === 'speed'
       ? status === 'recording'
         ? { label: 'Speed (km/h)', value: speedValue(liveSpeed(rec, now)) }
-        : { label: 'Avg speed (km/h)', value: isIdle ? DASH : speedValue(avgSpeed) }
-      : { label: 'Avg pace (/km)', value: paceValue(rec.distanceM, rec.movingTimeS) };
-  const calories = estimateCalories(cfg.id, rec.distanceM, rec.movingTimeS);
-  // Planned route (from Maps) = reference overlay only. The engine never reads it; the saved
-  // activity uses recorded GPS points exclusively.
-  const planned = usePlannedRoute();
+        : { label: 'Avg speed (km/h)', value: speedValue(avgSpeed) }
+      : {
+          label: 'Avg pace (/km)',
+          value: paceValue(rec.distanceM, rec.movingTimeS),
+        };
+
+  // Instantaneous reading for the large stats screen.
   const current = liveSpeed(rec, now);
   const currentMetric =
     cfg.primaryMetric === 'speed'
@@ -132,82 +128,86 @@ export default function RecordScreen() {
       disabled={!strip.action}
       accessibilityRole={strip.action ? 'button' : 'text'}
       accessibilityLiveRegion="polite"
-      style={[styles.strip, { backgroundColor: strip.bg }]}>
-      <AppText variant="strip" style={{ color: strip.fg, textAlign: 'center' }}>
+      style={{ backgroundColor: strip.bg }}
+      className="min-h-[40px] justify-center px-4">
+      <Text style={{ color: strip.fg }} className="text-xs font-bold text-center tracking-wide uppercase">
         {strip.text}
-      </AppText>
+      </Text>
     </Pressable>
   );
 
   // ---- Controls -----------------------------------------------------------------------------
   const controls = isIdle ? (
-    <View style={styles.idleControls}>
+    <View className="flex-row items-center justify-between">
       <Pressable
         onPress={() => setSportSheet(true)}
         accessibilityRole="button"
         accessibilityLabel={`Sport: ${cfg.label}. Change sport`}
-        style={styles.sideControl}>
-        <View style={styles.sportCircle}>
-          <Ionicons name={cfg.icon} size={26} color={color.brandText} />
+        className="w-20 items-center">
+        <View className="w-14 h-14 rounded-full bg-[#FFF2EB] items-center justify-center">
+          <Ionicons name={cfg.icon} size={26} color="#FC4C02" />
         </View>
-        <AppText variant="label" style={{ marginTop: space.xs, fontWeight: '600' }}>
+        <Text className="text-xs font-semibold text-gray-800 mt-1">
           {cfg.label}
-        </AppText>
+        </Text>
       </Pressable>
       <Pressable
         onPress={onStart}
         disabled={starting || gps === 'denied' || gps === 'off'}
         accessibilityRole="button"
         accessibilityLabel={`Start ${cfg.label}`}
-        style={({ pressed }) => [styles.startButton, pressed && { backgroundColor: color.brandPressed }]}>
-        <Ionicons name="play" size={36} color={color.inverse} style={{ marginLeft: 4 }} />
+        className="w-20 h-20 rounded-full bg-[#FC4C02] items-center justify-center shadow-lg active:bg-[#E34402]">
+        <Ionicons name="play" size={36} color="#FFFFFF" className="ml-1" />
       </Pressable>
       <Pressable
         onPress={() => router.push('/(tabs)/maps?source=routes')}
         accessibilityRole="button"
         accessibilityLabel="Add Route"
-        style={styles.sideControl}>
-        <View style={styles.sportCircle}>
-          <Ionicons name="git-branch-outline" size={24} color={color.ink} />
+        className="w-20 items-center">
+        <View className="w-14 h-14 rounded-full bg-gray-100 items-center justify-center">
+          <Ionicons name="git-branch-outline" size={24} color="#1F2937" />
         </View>
-        <AppText variant="label" style={{ marginTop: space.xs, fontWeight: '600' }}>
+        <Text className="text-xs font-semibold text-gray-800 mt-1">
           Routes
-        </AppText>
+        </Text>
       </Pressable>
     </View>
   ) : isPaused ? (
-    <View style={styles.row}>
-      <Button label="Resume" icon="play" size="lg" onPress={resumeRecording} style={{ flex: 1 }} />
-      <Button label="Finish" icon="flag" size="lg" variant="dark" onPress={onFinish} style={{ flex: 1, marginLeft: space.md }} />
+    <View className="flex-row items-center gap-3">
+      <Button label="Resume" icon="play" size="lg" onPress={resumeRecording} className="flex-1" />
+      <Button label="Finish" icon="flag" size="lg" variant="dark" onPress={onFinish} className="flex-1" />
     </View>
   ) : (
     <Button label="Pause" icon="pause" size="lg" fullWidth onPress={pauseRecording} />
   );
 
+  const planned = usePlannedRoute();
+
   // ---- Stats-only view (reference 374717) ---------------------------------------------------
   if (statsView) {
+    const calories = estimateCalories(sport, rec.movingTimeS, rec.distanceM);
     return (
-      <View style={[styles.statsScreen, { paddingTop: insets.top }]}>
-        <View style={styles.statsTop}>
+      <View style={{ paddingTop: insets.top }} className="flex-1 bg-white">
+        <View className="flex-row items-center px-2 h-14">
           <IconButton icon="chevron-down" accessibilityLabel="Minimize recorder" onPress={() => router.back()} />
-          <View style={{ flex: 1 }} />
+          <View className="flex-1" />
           <IconButton icon="map-outline" accessibilityLabel="Show map" onPress={() => setStatsView(false)} />
         </View>
-        {statsStrip(statusStrip)}
-        <View style={styles.statsBody}>
+        <View className="mx-4 rounded-xl overflow-hidden">{statusStrip}</View>
+        <View className="flex-1 justify-evenly px-4">
           <MetricTile label="Time" value={time} size="display" align="center" />
           <MetricTile label={second.label} value={second.value} size="display" align="center" />
           <MetricTile label="Distance (km)" value={distance} size="display" align="center" />
-          <View style={[styles.row, { marginTop: space.lg }]}>
-            <MetricTile label="Moving time" value={formatClock(rec.movingTimeS)} size="L" align="center" style={{ flex: 1 }} />
-            <MetricTile label={currentMetric.label} value={currentMetric.value} size="L" align="center" style={{ flex: 1 }} />
+          <View className="flex-row items-center mt-4">
+            <MetricTile label="Moving time" value={formatClock(rec.movingTimeS)} size="L" align="center" className="flex-1" />
+            <MetricTile label={currentMetric.label} value={currentMetric.value} size="L" align="center" className="flex-1" />
           </View>
-          <View style={[styles.row, { marginTop: space.lg }]}>
-            <MetricTile label="Elevation gain" value={formatElevation(rec.elevGainM)} size="L" align="center" style={{ flex: 1 }} />
-            <MetricTile label="Calories (est.)" value={calories ? String(calories) : DASH} size="L" align="center" style={{ flex: 1 }} />
+          <View className="flex-row items-center mt-4">
+            <MetricTile label="Elevation gain" value={formatElevation(rec.elevGainM)} size="L" align="center" className="flex-1" />
+            <MetricTile label="Calories (est.)" value={calories ? String(calories) : DASH} size="L" align="center" className="flex-1" />
           </View>
         </View>
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + space.lg }]}>{controls}</View>
+        <View style={{ paddingBottom: insets.bottom + 16 }} className="bg-white rounded-t-3xl px-4 pt-2 shadow-2xl border-t border-gray-100">{controls}</View>
         <SportSheet visible={sportSheet} selected={sport} onSelect={(s) => { setSport(s); setSportSheet(false); }} onClose={() => setSportSheet(false)} />
       </View>
     );
@@ -215,7 +215,7 @@ export default function RecordScreen() {
 
   // ---- Map view (default) -------------------------------------------------------------------
   return (
-    <View style={styles.screen}>
+    <View className="flex-1 bg-white">
       <MapView
         mode="live"
         route={route}
@@ -226,14 +226,14 @@ export default function RecordScreen() {
         plannedRoute={planned?.geometry}
       />
 
-      <View style={[styles.topOverlay, { top: insets.top + space.sm }]} pointerEvents="box-none">
+      <View style={{ top: insets.top + 8 }} className="absolute left-4 right-4 flex-row justify-between" pointerEvents="box-none">
         <IconButton
           icon="chevron-back"
           appearance="floating"
           accessibilityLabel={isIdle ? 'Close recorder' : 'Minimize recorder, recording continues'}
           onPress={() => router.back()}
         />
-        <View style={{ flexDirection: 'row', gap: space.sm }}>
+        <View className="flex-row gap-2">
           {!following ? (
             <IconButton icon="locate" appearance="floating" accessibilityLabel="Recenter on my location" onPress={() => setFollowing(true)} />
           ) : null}
@@ -246,29 +246,29 @@ export default function RecordScreen() {
         </View>
       </View>
       {planned ? (
-        <View style={[styles.plannedChip, elevation.floating, { top: insets.top + 64 }]}>
-          <View style={styles.plannedSwatch} />
-          <AppText variant="label" numberOfLines={1} style={{ flex: 1 }}>
+        <View style={{ top: insets.top + 64 }} className="absolute left-4 right-4 flex-row items-center bg-white rounded-xl pl-3 shadow-lg border border-gray-100">
+          <View className="w-4.5 h-1 rounded-sm bg-[#FC4C02] mr-2" />
+          <Text className="text-xs font-semibold text-gray-800 flex-1" numberOfLines={1}>
             Planned: {planned.name} · {kmValue(planned.distanceM)} km · ≈{formatDuration(planned.durationS)}
-          </AppText>
+          </Text>
           <IconButton icon="close" size={32} accessibilityLabel="Hide planned route" onPress={() => plannedRouteStore.set(null)} />
         </View>
       ) : null}
 
-      <View style={[styles.bottomArea]} pointerEvents="box-none">
-        <View style={[styles.metricsCard, elevation.floating]}>
-          <View style={styles.stripRow}>
-            <View style={{ flex: 1 }}>{statusStrip}</View>
-            <IconButton icon="expand-outline" size={40} accessibilityLabel="Show large stats" onPress={() => setStatsView(true)} style={styles.expand} />
+      <View className="absolute left-0 right-0 bottom-0" pointerEvents="box-none">
+        <View className="mx-4 mb-3 bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100">
+          <View className="flex-row items-stretch">
+            <View className="flex-1">{statusStrip}</View>
+            <IconButton icon="expand-outline" size={40} accessibilityLabel="Show large stats" onPress={() => setStatsView(true)} className="absolute right-0.5 top-0" />
           </View>
-          <View style={styles.metricsRow}>
-            <MetricTile label="Time" value={time} size="XL" align="center" style={styles.metricCell} />
-            <MetricTile label={second.label} value={second.value} size="XL" align="center" style={styles.metricCell} />
-            <MetricTile label="Distance (km)" value={distance} size="XL" align="center" style={styles.metricCell} />
+          <View className="flex-row py-4 px-2">
+            <MetricTile label="Time" value={time} size="XL" align="center" className="flex-1" />
+            <MetricTile label={second.label} value={second.value} size="XL" align="center" className="flex-1" />
+            <MetricTile label="Distance (km)" value={distance} size="XL" align="center" className="flex-1" />
           </View>
         </View>
-        <View style={[styles.sheet, elevation.sheet, { paddingBottom: insets.bottom + space.lg }]}>
-          <View style={styles.handle} />
+        <View style={{ paddingBottom: insets.bottom + 16 }} className="bg-white rounded-t-3xl px-4 pt-2 shadow-2xl border-t border-gray-100">
+          <View className="self-center w-10 h-1 rounded bg-gray-300 mb-4" />
           {controls}
         </View>
       </View>
@@ -285,80 +285,3 @@ export default function RecordScreen() {
     </View>
   );
 }
-
-const statsStrip = (strip: React.ReactNode) => (
-  <View style={{ marginHorizontal: space.gutter, borderRadius: radius.md, overflow: 'hidden' }}>{strip}</View>
-);
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.canvas },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  topOverlay: {
-    position: 'absolute',
-    left: space.gutter,
-    right: space.gutter,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  bottomArea: { position: 'absolute', left: 0, right: 0, bottom: 0 },
-  metricsCard: {
-    marginHorizontal: space.gutter,
-    marginBottom: space.md,
-    backgroundColor: color.surface,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-  },
-  stripRow: { flexDirection: 'row', alignItems: 'stretch' },
-  strip: { minHeight: 40, justifyContent: 'center', paddingHorizontal: space.md },
-  expand: { position: 'absolute', right: 2, top: 0 },
-  metricsRow: { flexDirection: 'row', paddingVertical: space.lg, paddingHorizontal: space.sm },
-  metricCell: { flex: 1 },
-  sheet: {
-    backgroundColor: color.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    paddingHorizontal: space.gutter,
-    paddingTop: space.sm,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: color.borderStrong,
-    marginBottom: space.lg,
-  },
-  idleControls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sideControl: { width: 88, alignItems: 'center' },
-  sportCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: color.brandSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  startButton: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: color.brand,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...elevation.floating,
-  },
-  statsScreen: { flex: 1, backgroundColor: color.surface },
-  statsTop: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.sm, height: 56 },
-  plannedChip: {
-    position: 'absolute',
-    left: space.gutter,
-    right: space.gutter,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: color.surface,
-    borderRadius: radius.md,
-    paddingLeft: space.md,
-  },
-  plannedSwatch: { width: 18, height: 4, borderRadius: 2, backgroundColor: color.planned, marginRight: space.sm },
-  statsBody: { flex: 1, justifyContent: 'space-evenly', paddingHorizontal: space.gutter },
-});

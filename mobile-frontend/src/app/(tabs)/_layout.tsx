@@ -1,11 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FEATURES } from '../../config/features';
 import { isRecordingActive, useRecording } from '../../tracking/useRecording';
-import { color } from '../../design/tokens';
 
 /**
  * MVP bottom navigation: Home · Record · You (ADR-15). Explore and Groups are hidden behind
@@ -16,17 +15,16 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const recording = isRecordingActive(useRecording());
 
-
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: color.ink,
-        tabBarInactiveTintColor: color.ink,
+        tabBarActiveTintColor: '#1F2937',
+        tabBarInactiveTintColor: '#1F2937',
         tabBarStyle: {
-          backgroundColor: color.surface,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: color.border,
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: '#F3F4F6',
           height: 66 + insets.bottom,
           paddingBottom: Math.max(insets.bottom, 6),
           paddingTop: 6,
@@ -67,25 +65,9 @@ function icon(name: keyof typeof Ionicons.glyphMap, active: keyof typeof Ionicon
 /** Strava-style tab icon: inside a soft pill when active, orange when active (reference home-tab.png). */
 function TabIcon({ focused, name, active, badge }: { focused: boolean; name: keyof typeof Ionicons.glyphMap; active: keyof typeof Ionicons.glyphMap; badge: boolean }) {
   return (
-    <View style={[styles.pill, focused && styles.pillActive]}>
-      <Ionicons name={focused ? active : name} size={24} color={focused ? color.brand : color.ink} />
-      {badge ? <View style={styles.liveDot} /> : null}
+    <View className={`w-14 h-7.5 rounded-full items-center justify-center ${focused ? 'bg-[#FFF2EB]' : ''}`}>
+      <Ionicons name={focused ? active : name} size={24} color={focused ? '#FC4C02' : '#1F2937'} />
+      {badge ? <View className="absolute top-0 right-3 w-2.5 h-2.5 rounded-full bg-red-600 border-2 border-white" /> : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  pill: { width: 56, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  pillActive: { backgroundColor: color.brandSoft },
-  liveDot: {
-    position: 'absolute',
-    top: 0,
-    right: 12,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: color.danger,
-    borderWidth: 2,
-    borderColor: color.surface,
-  },
-});

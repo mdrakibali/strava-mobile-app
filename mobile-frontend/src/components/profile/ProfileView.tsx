@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   AppBar,
@@ -194,18 +194,18 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
 
   if (status !== 'ready' || !data || !progress) {
     return (
-      <SafeAreaView edges={['top']} style={styles.screen}>
+      <SafeAreaView edges={['top']} className="flex-1 bg-white">
         {header}
         {status === 'loading' ? (
-          <View style={{ padding: space.gutter }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Skeleton style={{ width: 72, height: 72, borderRadius: 36 }} />
-              <View style={{ flex: 1, marginLeft: space.lg }}>
-                <Skeleton style={{ width: '60%', height: 22 }} />
-                <Skeleton style={{ width: '40%', height: 14, marginTop: space.sm }} />
+          <View className="p-4">
+            <View className="flex-row items-center">
+              <Skeleton className="w-[72px] h-[72px] rounded-full" />
+              <View className="flex-1 ml-4">
+                <Skeleton className="w-[60%] h-5.5" />
+                <Skeleton className="w-[40%] h-3.5 mt-2" />
               </View>
             </View>
-            <Skeleton style={{ height: 160, marginTop: space.xl }} />
+            <Skeleton className="h-40 mt-6" />
           </View>
         ) : status === 'notFound' ? (
           <EmptyState icon="person-outline" title="Athlete not found" />
@@ -223,30 +223,30 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
   );
 
   return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
+    <SafeAreaView edges={['top']} className="flex-1 bg-gray-50">
       {header}
       <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[color.brand]} />}
-        contentContainerStyle={{ paddingBottom: space.xxxl }}>
-        <View style={styles.identity}>
-          <View style={styles.identityRow}>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />}
+        contentContainerStyle={{ paddingBottom: 64 }}>
+        <View className="bg-white p-4 border-b border-gray-100">
+          <View className="flex-row items-center">
             <Avatar uri={data.athlete.avatarUrl} name={data.athlete.displayName} size={72} />
-            <View style={{ flex: 1, marginLeft: space.lg }}>
+            <View className="flex-1 ml-4">
               <AppText variant="title1" numberOfLines={2}>{data.athlete.displayName}</AppText>
               {data.stats ? (
-                <AppText variant="body" color="inkSecondary" style={{ marginTop: 2 }}>
+                <AppText variant="body" color="inkSecondary" className="mt-0.5">
                   {data.stats.activityCount} {data.stats.activityCount === 1 ? 'activity' : 'activities'}
                 </AppText>
               ) : null}
               {location ? (
-                <AppText variant="label" color="inkSecondary" style={{ marginTop: 2 }}>{location}</AppText>
+                <AppText variant="label" color="inkSecondary" className="mt-0.5">{location}</AppText>
               ) : null}
             </View>
           </View>
           {data.athlete.bio ? (
-            <AppText variant="body" style={{ marginTop: space.md }}>{data.athlete.bio}</AppText>
+            <AppText variant="body" className="mt-3">{data.athlete.bio}</AppText>
           ) : null}
-          <View style={[styles.row, { marginTop: space.md }]}>
+          <View className="flex-row items-center mt-3">
             <Pressable
               onPress={() => router.push({ pathname: '/athlete/followers', params: { id: athleteId } })}
               accessibilityRole="button"
@@ -266,11 +266,11 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
               </AppText>
             </Pressable>
           </View>
-          <View style={[styles.row, { marginTop: space.lg }]}>
+          <View className="flex-row items-center mt-4">
             {isSelf ? (
               <>
-                <Button label="Edit profile" variant="outline" style={{ flex: 1 }} onPress={() => router.push('/settings/profile-edit')} />
-                <Button label="Share profile" variant="outline" style={{ flex: 1, marginLeft: space.md }} onPress={onShare} />
+                <Button label="Edit profile" variant="outline" className="flex-1" onPress={() => router.push('/settings/profile-edit')} />
+                <Button label="Share profile" variant="outline" className="flex-1 ml-3" onPress={onShare} />
               </>
             ) : (
               <Button
@@ -279,7 +279,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
                 variant={data.isFollowing ? 'outline' : 'primary'}
                 loading={followPending}
                 onPress={onToggleFollow}
-                style={{ flex: 1 }}
+                className="flex-1"
               />
             )}
           </View>
@@ -295,61 +295,60 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
         />
 
         {tab === 'progress' ? (
-          <View style={styles.card}>
+          <View className="bg-white m-4 p-4 rounded-2xl border border-gray-100 shadow-sm">
             <ChipRow>
               <Chip label="All sports" selected={sportFilter === 'All'} onPress={() => setSportFilter('All')} />
               {sportsPresent.map((s) => (
                 <Chip key={s.id} label={s.label} icon={s.icon} selected={sportFilter === s.id} onPress={() => setSportFilter(s.id)} />
               ))}
             </ChipRow>
-            <AppText variant="title2" style={{ marginTop: space.xl }}>This week</AppText>
-            <MetricRow style={{ marginTop: space.md }}>
+            <AppText variant="title2" className="mt-6">This week</AppText>
+            <MetricRow className="mt-3">
               <MetricTile label="Distance" value={kmValue(progress.week.meters)} unit="km" size="L" />
               <MetricTile label="Time" value={formatDuration(progress.week.seconds)} size="L" />
               <MetricTile label="Elev gain" value={formatElevation(progress.week.elev)} size="L" />
             </MetricRow>
             {!progress.weekComplete ? (
-              <AppText variant="caption" color="inkTertiary" style={{ marginTop: space.sm }}>
+              <AppText variant="caption" color="inkTertiary" className="mt-2">
                 Includes only the {RECENT_LIMIT} most recent activities.
               </AppText>
             ) : null}
 
-            <AppText variant="title3" style={{ marginTop: space.xl }}>Past 12 weeks · distance</AppText>
-            <View style={styles.chart} accessible accessibilityLabel="Weekly distance for the past 12 weeks">
+            <AppText variant="title3" className="mt-6">Past 12 weeks · distance</AppText>
+            <View className="h-24 flex-row items-end mt-4" accessible accessibilityLabel="Weekly distance for the past 12 weeks">
               {progress.weeks.map((w, i) => (
-                <View key={w.start} style={styles.barSlot}>
+                <View key={w.start} className="flex-1 h-full justify-end px-0.5">
                   <View
-                    style={[
-                      styles.bar,
-                      { height: `${Math.max(w.meters > 0 ? 6 : 2, (w.meters / maxWeek) * 100)}%` },
-                      i === 11 ? { backgroundColor: color.brand } : null,
-                    ]}
+                    style={{
+                      height: `${Math.max(w.meters > 0 ? 6 : 2, (w.meters / maxWeek) * 100)}%`,
+                    }}
+                    className={`rounded-t-sm ${i === 11 ? 'bg-[#FC4C02]' : 'bg-gray-300'}`}
                   />
                 </View>
               ))}
             </View>
-            <View style={[styles.row, { justifyContent: 'space-between', marginTop: space.xs }]}>
+            <View className="flex-row items-center justify-between mt-1">
               <AppText variant="caption" color="inkTertiary">
                 {new Date(progress.weeks[0].start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </AppText>
               <AppText variant="caption" color="inkTertiary">This week</AppText>
             </View>
             {!progress.windowComplete ? (
-              <AppText variant="caption" color="inkTertiary" style={{ marginTop: space.sm }}>
+              <AppText variant="caption" color="inkTertiary" className="mt-2">
                 Older weeks may be incomplete — only the {RECENT_LIMIT} most recent activities are loaded.
               </AppText>
             ) : null}
             {totals ? (
-              <View style={{ marginTop: space.xl }}>
+              <View className="mt-6">
                 <AppText variant="title3">This year</AppText>
-                <MetricRow style={{ marginTop: space.sm }}>
+                <MetricRow className="mt-2">
                   <MetricTile label="Activities" value={String(totals.ytd.count)} />
                   <MetricTile label="Distance" value={kmValue(totals.ytd.distanceMeters)} unit="km" />
                   <MetricTile label="Time" value={formatDuration(totals.ytd.movingTimeSeconds)} />
                   <MetricTile label="Elev gain" value={formatElevation(totals.ytd.elevationGainMeters)} />
                 </MetricRow>
-                <AppText variant="title3" style={{ marginTop: space.lg }}>All time</AppText>
-                <MetricRow style={{ marginTop: space.sm }}>
+                <AppText variant="title3" className="mt-4">All time</AppText>
+                <MetricRow className="mt-2">
                   <MetricTile label="Activities" value={String(totals.all.count)} />
                   <MetricTile label="Distance" value={kmValue(totals.all.distanceMeters)} unit="km" />
                   <MetricTile label="Time" value={formatDuration(totals.all.movingTimeSeconds)} />
@@ -384,22 +383,3 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.canvas },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  identity: { backgroundColor: color.surface, padding: space.gutter },
-  identityRow: { flexDirection: 'row', alignItems: 'center' },
-  card: {
-    backgroundColor: color.surface,
-    margin: space.gutter,
-    padding: space.gutter,
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
-  },
-  chart: { height: 96, flexDirection: 'row', alignItems: 'flex-end', marginTop: space.md },
-  barSlot: { flex: 1, height: '100%', justifyContent: 'flex-end', paddingHorizontal: 3 },
-  bar: { backgroundColor: color.borderStrong, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
-  note: { flexDirection: 'row', alignItems: 'center', padding: space.gutter },
-});

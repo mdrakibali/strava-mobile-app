@@ -10,7 +10,7 @@ import { AppBar, color, EmptyState } from '../../design';
 export const NotAvailableScreen: React.FC<{ title: string; reason: string }> = ({ title, reason }) => {
   const router = useRouter();
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: color.surface }}>
+    <SafeAreaView className="flex-1 bg-white">
       <AppBar title={title} />
       <EmptyState icon="construct-outline" title={`${title} isn’t available yet`} body={reason} primary={{ label: 'Go back', onPress: () => router.back() }} />
     </SafeAreaView>

@@ -1,6 +1,6 @@
 import React from 'react';
-import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
-import { space, TypeVariant } from '../tokens';
+import { StyleProp, View, ViewStyle } from 'react-native';
+import { TypeVariant } from '../tokens';
 import { AppText } from './AppText';
 
 export interface MetricTileProps {
@@ -11,6 +11,7 @@ export interface MetricTileProps {
   align?: 'start' | 'center';
   inverse?: boolean;
   style?: StyleProp<ViewStyle>;
+  className?: string;
 }
 
 const VALUE_VARIANT: Record<NonNullable<MetricTileProps['size']>, TypeVariant> = {
@@ -29,12 +30,14 @@ export const MetricTile: React.FC<MetricTileProps> = ({
   align = 'start',
   inverse = false,
   style,
+  className = '',
 }) => {
   const center = align === 'center';
   const unitVariant: TypeVariant = size === 'M' ? 'label' : 'title3';
   return (
     <View
-      style={[{ alignItems: center ? 'center' : 'flex-start' }, style]}
+      className={`${center ? 'items-center' : 'items-start'} ${className}`}
+      style={style}
       accessible
       accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ''}`}>
       {size === 'XL' || size === 'display' ? null : (
@@ -42,7 +45,7 @@ export const MetricTile: React.FC<MetricTileProps> = ({
           {label}
         </AppText>
       )}
-      <View style={styles.valueRow}>
+      <View className="flex-row items-baseline">
         <AppText
           variant={VALUE_VARIANT[size]}
           color={inverse ? 'inverse' : 'ink'}
@@ -55,7 +58,7 @@ export const MetricTile: React.FC<MetricTileProps> = ({
           <AppText
             variant={unitVariant}
             color={inverse ? 'inverse' : 'inkSecondary'}
-            style={{ marginLeft: space.xs }}>
+            className="ml-1">
             {unit}
           </AppText>
         ) : null}
@@ -69,19 +72,14 @@ export const MetricTile: React.FC<MetricTileProps> = ({
   );
 };
 
-export const MetricRow: React.FC<{ children: React.ReactNode; style?: StyleProp<ViewStyle> }> = ({
-  children,
-  style,
-}) => (
-  <View style={[styles.row, style]}>
+export const MetricRow: React.FC<{
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+  className?: string;
+}> = ({ children, style, className = '' }) => (
+  <View className={`flex-row ${className}`} style={style}>
     {React.Children.map(children, (child, i) =>
-      child ? <View style={[styles.cell, i > 0 && { marginLeft: space.lg }]}>{child}</View> : null
+      child ? <View className={`shrink ${i > 0 ? 'ml-4' : ''}`}>{child}</View> : null
     )}
   </View>
 );
-
-const styles = StyleSheet.create({
-  valueRow: { flexDirection: 'row', alignItems: 'baseline' },
-  row: { flexDirection: 'row' },
-  cell: { flexShrink: 1 },
-});

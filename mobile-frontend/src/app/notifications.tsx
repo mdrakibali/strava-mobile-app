@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FEATURES } from '../config/features';
 import { useApp } from '../context/AppContext';
@@ -10,9 +10,9 @@ import { toAthleteSummary } from '../lib/activityView';
 import { NotificationItem } from '../types';
 
 const TYPE_ICON: Record<string, { name: keyof typeof Ionicons.glyphMap; tint: string }> = {
-  KUDOS: { name: 'thumbs-up', tint: color.brand },
-  COMMENT: { name: 'chatbubble', tint: color.info },
-  FOLLOW: { name: 'person-add', tint: color.success },
+  KUDOS: { name: 'thumbs-up', tint: '#FC4C02' },
+  COMMENT: { name: 'chatbubble', tint: '#3B82F6' },
+  FOLLOW: { name: 'person-add', tint: '#10B981' },
 };
 
 /** Notifications (reference: ScreensDesign 374860). */
@@ -32,7 +32,7 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView className="flex-1 bg-white">
       <AppBar
         title="Notifications"
         right={
@@ -51,7 +51,7 @@ export default function NotificationsScreen() {
         }
         renderItem={({ item }) => {
           const actor = toAthleteSummary(item.actor);
-          const icon = TYPE_ICON[item.actionType] ?? { name: 'notifications' as const, tint: color.inkSecondary };
+          const icon = TYPE_ICON[item.actionType] ?? { name: 'notifications' as const, tint: '#6B7280' };
           // Backend messages start with the actor's username ("rakib gave you kudos…"); show the
           // display name in bold instead of repeating it.
           const prefix = actor.username ? `${actor.username} ` : '';
@@ -61,10 +61,10 @@ export default function NotificationsScreen() {
               onPress={() => open(item)}
               accessibilityRole="button"
               accessibilityLabel={`${item.isRead ? '' : 'Unread. '}${actor.displayName} ${message}`}
-              style={({ pressed }) => [styles.row, !item.isRead && styles.unread, pressed && { backgroundColor: color.canvas }]}>
+              className={`flex-row items-center px-4 py-3 ${!item.isRead ? 'bg-[#FFF9F6]' : ''} active:bg-gray-50`}>
               <View>
                 <Avatar uri={actor.avatarUrl} name={actor.displayName} size={48} />
-                <View style={styles.typeBadge}>
+                <View className="absolute -right-0.5 -bottom-0.5 w-5.5 h-5.5 rounded-full bg-white items-center justify-center border border-gray-100">
                   <Ionicons name={icon.name} size={12} color={icon.tint} />
                 </View>
               </View>
@@ -77,7 +77,7 @@ export default function NotificationsScreen() {
                   {item.timeAgo}
                 </AppText>
               </View>
-              {!item.isRead ? <View style={styles.dot} /> : null}
+              {!item.isRead ? <View className="w-2.5 h-2.5 rounded-full bg-[#FC4C02] ml-2" /> : null}
             </Pressable>
           );
         }}
@@ -85,23 +85,3 @@ export default function NotificationsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.surface },
-  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.gutter, paddingVertical: space.md },
-  unread: { backgroundColor: color.brandSoft },
-  typeBadge: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: color.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: color.border,
-  },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: color.brand, marginLeft: space.sm },
-});

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, TextInputProps, View } from 'react-native';
-import { color, radius, space, type } from '../tokens';
+import { Pressable, TextInput, TextInputProps, View } from 'react-native';
+import { color } from '../tokens';
 import { AppText } from './AppText';
 
 /** Bordered select row that opens a sheet (reference: Save Activity dropdown rows). */
@@ -15,9 +15,9 @@ export const SelectField: React.FC<{
     onPress={onPress}
     accessibilityRole="button"
     accessibilityLabel={`${accessibilityLabel}: ${value}`}
-    style={({ pressed }) => [styles.field, styles.select, pressed && { backgroundColor: color.canvas }]}>
-    {icon ? <Ionicons name={icon} size={20} color={color.ink} style={{ marginRight: space.md }} /> : null}
-    <AppText variant="body" style={{ flex: 1 }} numberOfLines={1}>
+    className="flex-row items-center min-h-[56px] border border-gray-300 rounded-xl px-4 bg-white active:bg-gray-100">
+    {icon ? <Ionicons name={icon} size={20} color={color.ink} className="mr-3" /> : null}
+    <AppText variant="body" className="flex-1" numberOfLines={1}>
       {value}
     </AppText>
     <Ionicons name="chevron-down" size={20} color={color.inkSecondary} />
@@ -34,7 +34,7 @@ export const TextField: React.FC<TextInputProps & { label?: string }> = ({
   return (
     <View>
       {label ? (
-        <AppText variant="label" color="inkSecondary" style={{ marginBottom: space.xs }}>
+        <AppText variant="label" color="inkSecondary" className="mb-1">
           {label}
         </AppText>
       ) : null}
@@ -51,39 +51,33 @@ export const TextField: React.FC<TextInputProps & { label?: string }> = ({
           rest.onBlur?.(e);
         }}
         accessibilityLabel={label ?? rest.placeholder}
+        className={`min-h-[56px] border rounded-xl px-4 bg-white text-base text-gray-900 ${
+          focused ? 'border-gray-900' : 'border-gray-300'
+        } ${multiline ? 'min-h-[104px] py-3' : ''}`}
         {...rest}
-        style={[
-          styles.field,
-          type.body,
-          { color: color.ink },
-          multiline ? styles.multiline : null,
-          focused ? { borderColor: color.ink } : null,
-          style,
-        ]}
+        style={style}
       />
     </View>
   );
 };
 
-export const SectionTitle: React.FC<{ title: string; style?: object }> = ({ title, style }) => (
-  <AppText variant="title2" accessibilityRole="header" style={[{ marginBottom: space.md }, style]}>
+export const SectionTitle: React.FC<{ title: string; style?: object; className?: string }> = ({
+  title,
+  style,
+  className = '',
+}) => (
+  <AppText
+    variant="title2"
+    accessibilityRole="header"
+    className={`mb-3 ${className}`}
+    style={style}>
     {title}
   </AppText>
 );
 
-export const Divider: React.FC<{ inset?: number }> = ({ inset = 0 }) => (
-  <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: color.border, marginLeft: inset }} />
+export const Divider: React.FC<{ inset?: number; className?: string }> = ({ inset = 0, className = '' }) => (
+  <View
+    className={`h-[1px] bg-gray-200 ${className}`}
+    style={inset ? { marginLeft: inset } : undefined}
+  />
 );
-
-const styles = StyleSheet.create({
-  field: {
-    minHeight: 56,
-    borderWidth: 1,
-    borderColor: color.borderStrong,
-    borderRadius: radius.md,
-    paddingHorizontal: space.lg,
-    backgroundColor: color.surface,
-  },
-  select: { flexDirection: 'row', alignItems: 'center' },
-  multiline: { minHeight: 104, paddingTop: space.md, paddingBottom: space.md },
-});

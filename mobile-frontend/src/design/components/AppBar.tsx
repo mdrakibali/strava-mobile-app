@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { color, space } from '../tokens';
+import { View } from 'react-native';
 import { AppText } from './AppText';
 import { IconButton } from './IconButton';
 
@@ -28,7 +27,7 @@ export const AppBar: React.FC<AppBarProps> = ({
   const handleLeading = onLeadingPress ?? (() => router.back());
 
   return (
-    <View style={[styles.bar, border && styles.border]}>
+    <View className={`h-14 flex-row items-center px-2 bg-white ${border ? 'border-b border-gray-100' : ''}`}>
       {leading !== 'none' ? (
         <IconButton
           icon={leading === 'close' ? 'close' : 'arrow-back'}
@@ -36,7 +35,7 @@ export const AppBar: React.FC<AppBarProps> = ({
           onPress={handleLeading}
         />
       ) : null}
-      <View style={[styles.titleWrap, leading !== 'none' && { marginLeft: space.xs }]}>
+      <View className={`flex-1 px-2 ${leading !== 'none' ? 'ml-1' : ''}`}>
         {title ? (
           <AppText
             variant={large ? 'title1' : 'title2'}
@@ -46,20 +45,7 @@ export const AppBar: React.FC<AppBarProps> = ({
           </AppText>
         ) : null}
       </View>
-      {right ? <View style={styles.right}>{right}</View> : null}
+      {right ? <View className="flex-row items-center">{right}</View> : null}
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  bar: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: space.sm,
-    backgroundColor: color.surface,
-  },
-  border: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
-  titleWrap: { flex: 1, paddingHorizontal: space.sm },
-  right: { flexDirection: 'row', alignItems: 'center' },
-});

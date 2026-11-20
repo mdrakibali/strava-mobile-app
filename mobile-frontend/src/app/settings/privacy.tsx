@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   AppBar,
@@ -95,7 +95,7 @@ export default function PrivacyZonesScreen() {
     ]);
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView className="flex-1 bg-gray-50">
       <AppBar title="Privacy zones" />
       {status === 'loading' ? (
         <LoadingState />
@@ -107,13 +107,13 @@ export default function PrivacyZonesScreen() {
           }}
         />
       ) : (
-        <ScrollView contentContainerStyle={{ padding: space.gutter }} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
           <AppText variant="body" color="inkSecondary">
             Parts of your route inside a privacy zone are hidden from other athletes on activities you upload
             from now on.
           </AppText>
 
-          <View style={[styles.card, { marginTop: space.lg }]}>
+          <View className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mt-4">
             {zones.length === 0 ? (
               <AppText variant="body" color="inkSecondary" style={{ padding: space.lg }}>
                 No privacy zones yet.
@@ -122,7 +122,7 @@ export default function PrivacyZonesScreen() {
               zones.map((z, i) => (
                 <View key={z.id}>
                   {i > 0 ? <Divider inset={space.lg} /> : null}
-                  <View style={styles.zoneRow}>
+                  <View className="flex-row items-center pl-4 pr-2 min-h-[64px]">
                     <Ionicons name="shield-checkmark" size={22} color={color.success} />
                     <View style={{ flex: 1, marginLeft: space.md }}>
                       <AppText variant="title3">{z.name}</AppText>
@@ -158,14 +158,3 @@ export default function PrivacyZonesScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.canvas },
-  card: {
-    backgroundColor: color.surface,
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
-  },
-  zoneRow: { flexDirection: 'row', alignItems: 'center', paddingLeft: space.lg, paddingRight: space.sm, minHeight: 64 },
-});

@@ -4,11 +4,10 @@ import {
   ActivityIndicator,
   Pressable,
   StyleProp,
-  StyleSheet,
   View,
   ViewStyle,
 } from 'react-native';
-import { color, hitSlop, minTouch, radius, space } from '../tokens';
+import { color, hitSlop, minTouch, space } from '../tokens';
 import { AppText } from './AppText';
 
 export type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'outline' | 'ghost' | 'danger';
@@ -24,6 +23,7 @@ export interface ButtonProps {
   disabled?: boolean;
   fullWidth?: boolean;
   style?: StyleProp<ViewStyle>;
+  className?: string;
   accessibilityHint?: string;
   testID?: string;
 }
@@ -49,6 +49,7 @@ export const Button: React.FC<ButtonProps> = ({
   disabled = false,
   fullWidth = false,
   style,
+  className,
   accessibilityHint,
   testID,
 }) => {
@@ -66,8 +67,8 @@ export const Button: React.FC<ButtonProps> = ({
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
+      className={`rounded-full items-center justify-center ${fullWidth ? 'self-stretch' : ''} ${className || ''}`}
       style={({ pressed }) => [
-        styles.base,
         {
           height: HEIGHT[size],
           minWidth: size === 'sm' ? 0 : minTouch,
@@ -77,19 +78,18 @@ export const Button: React.FC<ButtonProps> = ({
           borderWidth: v.border ? 1 : 0,
           opacity: isDisabled && !loading ? 0.45 : 1,
         },
-        fullWidth && styles.fullWidth,
         style,
       ]}>
       {loading ? (
         <ActivityIndicator color={v.fg} />
       ) : (
-        <View style={styles.row}>
+        <View className="flex-row items-center">
           {icon ? (
             <Ionicons
               name={icon}
               size={size === 'sm' ? 16 : 20}
               color={v.fg}
-              style={{ marginRight: space.sm }}
+              className="mr-2"
             />
           ) : null}
           <AppText variant={textVariant} style={{ color: v.fg }} numberOfLines={1}>
@@ -100,13 +100,3 @@ export const Button: React.FC<ButtonProps> = ({
     </Pressable>
   );
 };
-
-const styles = StyleSheet.create({
-  base: {
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fullWidth: { alignSelf: 'stretch' },
-  row: { flexDirection: 'row', alignItems: 'center' },
-});

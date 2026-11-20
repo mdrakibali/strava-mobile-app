@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
-import { AppBar, Button, color, ErrorState, space, TextField } from '../../design';
+import { AppBar, Button, ErrorState, space, TextField } from '../../design';
 import { api } from '../../services/api';
 
 /**
@@ -45,16 +45,16 @@ export default function ProfileEditScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView className="flex-1 bg-white">
       <AppBar title="Edit profile" leading="close" />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
           <TextField label="Name" value={displayName} onChangeText={setDisplayName} maxLength={100} autoCapitalize="words" />
-          <View style={styles.gap} />
+          <View className="h-4" />
           <TextField label="City" value={city} onChangeText={setCity} maxLength={100} placeholder="e.g. Dhaka" />
-          <View style={styles.gap} />
+          <View className="h-4" />
           <TextField label="Country" value={country} onChangeText={setCountry} maxLength={100} placeholder="e.g. Bangladesh" />
-          <View style={styles.gap} />
+          <View className="h-4" />
           <TextField label="Bio" value={bio} onChangeText={setBio} multiline maxLength={300} placeholder="Tell other athletes about yourself" />
           {error ? (
             <View style={{ marginTop: space.lg }}>
@@ -62,21 +62,10 @@ export default function ProfileEditScreen() {
             </View>
           ) : null}
         </ScrollView>
-        <View style={styles.footer}>
+        <View className="p-4 border-t border-gray-100 bg-white">
           <Button label="Save" size="lg" fullWidth loading={saving} disabled={!displayName.trim()} onPress={onSave} />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.surface },
-  content: { padding: space.gutter },
-  gap: { height: space.lg },
-  footer: {
-    padding: space.gutter,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
-  },
-});

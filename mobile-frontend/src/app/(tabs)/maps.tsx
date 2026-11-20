@@ -7,7 +7,6 @@ import {
   FlatList,
   Linking,
   Pressable,
-  StyleSheet,
   TextInput,
   useWindowDimensions,
   View,
@@ -81,7 +80,7 @@ export default function MapsScreen() {
 
   // Map style: only modes backed by real data (OpenFreeMap styles; 3D = Liberty's OSM buildings).
   const [mapMode, setMapMode] = useState<'standard' | 'light' | 'bright' | '3d'>('standard');
-  const [styleSheet, setStyleSheet] = useState(false);
+  const [styleModalVisible, setStyleModalVisible] = useState(false);
   const styleKey: MapStyleKey = mapMode === 'light' ? 'positron' : mapMode === 'bright' ? 'bright' : 'liberty';
 
   // Genuine photo/details for the selected place only (one lookup at a time; cached server-side).
@@ -257,15 +256,15 @@ export default function MapsScreen() {
   // ---- bottom panel content: states first (never invented content) ----
   let panel: React.ReactNode = null;
   const box = (children: React.ReactNode) => (
-    <View style={[styles.card, styles.center, { width: width - space.gutter * 2, marginLeft: space.gutter }]}>{children}</View>
+    <View style={{ width: width - 32, marginLeft: 16 }} className="bg-white rounded-2xl p-4 min-h-[112px] shadow-lg border border-gray-100 items-center justify-center">{children}</View>
   );
   if (isPlaces && nearby.state.status !== 'ready') {
     const s = nearby.state;
     if (s.status === 'locating' || s.status === 'loading')
       panel = box(
         <>
-          <ActivityIndicator color={color.brand} />
-          <AppText variant="label" color="inkSecondary" style={{ marginTop: space.sm }}>
+          <ActivityIndicator color="#FC4C02" />
+          <AppText variant="label" color="inkSecondary" className="mt-2">
             {s.status === 'locating' ? 'Finding your location…' : 'Searching OpenStreetMap near you…'}
           </AppText>
         </>
@@ -274,40 +273,40 @@ export default function MapsScreen() {
       panel = box(
         <>
           <AppText variant="bodyStrong">Location needed for nearby places</AppText>
-          <AppText variant="label" color="inkSecondary" style={styles.centerText}>We only use it to search around where you are.</AppText>
-          <Button label={s.canAskAgain ? 'Allow location' : 'Open settings'} size="sm" style={{ marginTop: space.sm }} onPress={() => (s.canAskAgain ? nearby.retry() : Linking.openSettings())} />
+          <AppText variant="label" color="inkSecondary" className="text-center mt-0.5">We only use it to search around where you are.</AppText>
+          <Button label={s.canAskAgain ? 'Allow location' : 'Open settings'} size="sm" className="mt-2" onPress={() => (s.canAskAgain ? nearby.retry() : Linking.openSettings())} />
         </>
       );
     else if (s.status === 'location_off')
       panel = box(
         <>
           <AppText variant="bodyStrong">Location is turned off</AppText>
-          <Button label="Open settings" size="sm" style={{ marginTop: space.sm }} onPress={() => Linking.openSettings()} />
+          <Button label="Open settings" size="sm" className="mt-2" onPress={() => Linking.openSettings()} />
         </>
       );
     else if (s.status === 'no_fix')
       panel = box(
         <>
           <AppText variant="bodyStrong">Couldn’t get a GPS fix</AppText>
-          <AppText variant="label" color="inkSecondary" style={styles.centerText}>Go outside or near a window and try again.</AppText>
-          <Button label="Try again" size="sm" style={{ marginTop: space.sm }} onPress={nearby.retry} />
+          <AppText variant="label" color="inkSecondary" className="text-center mt-0.5">Go outside or near a window and try again.</AppText>
+          <Button label="Try again" size="sm" className="mt-2" onPress={nearby.retry} />
         </>
       );
     else if (s.status === 'error')
       panel = box(
         <>
           <AppText variant="bodyStrong">Nearby places unavailable</AppText>
-          <AppText variant="label" color="inkSecondary" style={styles.centerText}>{s.message}</AppText>
-          <Button label="Retry" size="sm" style={{ marginTop: space.sm }} onPress={nearby.retry} />
+          <AppText variant="label" color="inkSecondary" className="text-center mt-0.5">{s.message}</AppText>
+          <Button label="Retry" size="sm" className="mt-2" onPress={nearby.retry} />
         </>
       );
   } else if (!isPlaces && routeStatus === 'loading') {
-    panel = box(<ActivityIndicator color={color.brand} />);
+    panel = box(<ActivityIndicator color="#FC4C02" />);
   } else if (!isPlaces && routeStatus === 'error') {
     panel = box(
       <>
         <AppText variant="bodyStrong">Couldn’t load the map data</AppText>
-        <Button label="Retry" size="sm" style={{ marginTop: space.sm }} onPress={() => setReloadKey((k) => k + 1)} />
+        <Button label="Retry" size="sm" className="mt-2" onPress={() => setReloadKey((k) => k + 1)} />
       </>
     );
   } else if (visible.length === 0) {
@@ -316,7 +315,7 @@ export default function MapsScreen() {
         <AppText variant="bodyStrong">
           {isPlaces ? `No ${sportConfig(sport).label.toLowerCase()} places found within 5 km` : source === 'saved' ? 'No saved routes yet' : source === 'activities' ? 'No recorded routes yet' : 'No routes found'}
         </AppText>
-        <AppText variant="label" color="inkSecondary" style={styles.centerText}>
+        <AppText variant="label" color="inkSecondary" style={{ textAlign: 'center', marginTop: 2 }}>
           {isPlaces ? 'OpenStreetMap has no matching places mapped near you. Try another sport.' : source === 'activities' ? 'Record an activity with GPS to see it here.' : 'Create a route or change the filters.'}
         </AppText>
       </>
@@ -349,18 +348,19 @@ export default function MapsScreen() {
               }
               accessibilityRole="button"
               accessibilityLabel={`${item.name}. ${selected ? (item.kind === 'place' ? 'Selected' : 'Open') : 'Show on map'}`}
-              style={[styles.card, { width: cardWidth, marginRight: space.md }, selected && styles.cardSelected]}>
+              style={{ width: cardWidth, marginRight: 16 }}
+              className={`bg-white rounded-2xl p-4 min-h-[112px] shadow-lg border border-gray-100 ${selected ? 'border-2 border-[#FC4C02]' : ''}`}>
               {item.kind === 'place' && selected && placeDetails[item.id]?.image ? (
                 <Image
                   source={{ uri: placeDetails[item.id]!.image!.url }}
-                  style={styles.cardPhoto}
+                  className="w-full h-28 rounded-xl mb-2 bg-gray-100"
                   contentFit="cover"
                   transition={150}
                   accessibilityLabel={`Photo of ${item.name} (${placeDetails[item.id]!.image!.author ?? 'Wikimedia Commons'}, ${placeDetails[item.id]!.image!.license ?? ''})`}
                 />
               ) : null}
-              <View style={styles.row}>
-                <Ionicons name={item.kind === 'place' ? 'location' : sportConfig(item.sportType).icon} size={18} color={color.brandText} />
+              <View className="flex-row items-center">
+                <Ionicons name={item.kind === 'place' ? 'location' : sportConfig(item.sportType).icon} size={18} color="#FC4C02" />
                 <AppText variant="title3" numberOfLines={1} style={{ flex: 1, marginLeft: space.sm }}>{item.name}</AppText>
                 {item.kind === 'route' ? (
                   <IconButton icon={item.saved ? 'bookmark' : 'bookmark-outline'} size={36} accessibilityLabel={item.saved ? 'Remove from saved' : 'Save route'} onPress={() => toggleSave(item)} />
@@ -371,7 +371,7 @@ export default function MapsScreen() {
               </AppText>
               {item.kind === 'place' ? (
                 <>
-                <View style={[styles.row, { marginTop: space.sm }]}>
+                <View className="flex-row items-center mt-2">
                   <Button
                     label="Route"
                     icon="git-branch-outline"
@@ -411,7 +411,7 @@ export default function MapsScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <View className="flex-1 bg-white">
       <MapView
         mode="route"
         route={mainRoute}
@@ -427,15 +427,15 @@ export default function MapsScreen() {
         pitch={mapMode === '3d' ? 55 : 0}
       />
 
-      <View style={[styles.top, { top: insets.top + space.sm }]} pointerEvents="box-none">
-        <View style={[styles.search, elevation.floating]}>
-          <Ionicons name="search" size={18} color={color.inkSecondary} />
+      <View style={{ top: insets.top + 8 }} className="absolute left-0 right-0 gap-1" pointerEvents="box-none">
+        <View className="flex-row items-center mx-4 mb-1 px-3 h-12 rounded-xl bg-white shadow-md border border-gray-100">
+          <Ionicons name="search" size={18} color="#6B7280" />
           <TextInput
             value={query}
             onChangeText={setQuery}
             placeholder={isPlaces ? 'Filter nearby places' : source === 'activities' ? 'Search your activities' : 'Search routes'}
-            placeholderTextColor={color.inkTertiary}
-            style={styles.searchInput}
+            placeholderTextColor="#9CA3AF"
+            className="flex-1 ml-2 text-base text-gray-900"
             accessibilityLabel="Search"
             returnKeyType="search"
           />
@@ -457,10 +457,10 @@ export default function MapsScreen() {
         ) : null}
       </View>
 
-      <View style={[styles.styleBtn, { top: insets.top + 168 }]}>
-        <IconButton icon="layers-outline" appearance="floating" accessibilityLabel="Map style" onPress={() => setStyleSheet(true)} />
+      <View style={{ top: insets.top + 168 }} className="absolute right-4">
+        <IconButton icon="layers-outline" appearance="floating" accessibilityLabel="Map style" onPress={() => setStyleModalVisible(true)} />
       </View>
-      <BottomSheet visible={styleSheet} onClose={() => setStyleSheet(false)} title="Map style">
+      <BottomSheet visible={styleModalVisible} onClose={() => setStyleModalVisible(false)} title="Map style">
         {(
           [
             ['standard', 'Standard', 'Streets, parks, water and paths', 'map-outline'],
@@ -469,58 +469,23 @@ export default function MapsScreen() {
             ['3d', '3D buildings', 'Tilted view with OpenStreetMap building heights', 'cube-outline'],
           ] as const
         ).map(([id, title, description, icon]) => (
-          <OptionRow key={id} title={title} description={description} icon={icon} selected={mapMode === id} onPress={() => (setMapMode(id), setStyleSheet(false))} />
+          <OptionRow key={id} title={title} description={description} icon={icon} selected={mapMode === id} onPress={() => (setMapMode(id), setStyleModalVisible(false))} />
         ))}
         <AppText variant="caption" color="inkTertiary" style={{ padding: space.gutter }}>
           Map data © OpenStreetMap contributors · tiles OpenFreeMap. Satellite and terrain views are not offered because no imagery or elevation tile source is configured.
         </AppText>
       </BottomSheet>
-      <Pressable onPress={() => router.push('/routes/builder')} accessibilityRole="button" style={[styles.create, elevation.floating, { top: insets.top + 224 }]}>
-        <Ionicons name="create-outline" size={20} color={color.ink} />
+      <Pressable onPress={() => router.push('/routes/builder')} accessibilityRole="button" style={{ top: insets.top + 224 }} className="absolute right-4 flex-row items-center bg-white px-4 h-12 rounded-full shadow-lg border border-gray-100">
+        <Ionicons name="create-outline" size={20} color="#1F2937" />
         <AppText variant="bodyStrong" style={{ marginLeft: space.sm }}>Create Route</AppText>
       </Pressable>
       {isPlaces && nearby.state.status === 'ready' ? (
-        <AppText variant="caption" color="inkTertiary" style={[styles.credit, { bottom: 196 }]}>
+        <AppText variant="caption" color="inkTertiary" style={{ bottom: 196 }} className="absolute left-4 bg-white/80 px-1 rounded">
           Places: {nearby.state.attribution}
         </AppText>
       ) : null}
 
-      <View style={styles.bottom}>{panel}</View>
+      <View className="absolute left-0 right-0 bottom-4">{panel}</View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.canvas },
-  top: { position: 'absolute', left: 0, right: 0, gap: space.xs },
-  search: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: space.gutter,
-    marginBottom: space.xs,
-    paddingHorizontal: space.md,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: color.surface,
-  },
-  searchInput: { flex: 1, marginLeft: space.sm, fontSize: 16, color: color.ink },
-  create: {
-    position: 'absolute',
-    right: space.gutter,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: color.surface,
-    paddingHorizontal: space.lg,
-    height: 48,
-    borderRadius: 24,
-  },
-  styleBtn: { position: 'absolute', right: space.gutter },
-  cardPhoto: { width: '100%', height: 110, borderRadius: radius.md, marginBottom: space.sm, backgroundColor: color.canvas },
-  credit: { position: 'absolute', left: space.gutter, backgroundColor: 'rgba(255,255,255,0.8)', paddingHorizontal: 4 },
-  bottom: { position: 'absolute', left: 0, right: 0, bottom: space.lg },
-  card: { backgroundColor: color.surface, borderRadius: radius.lg, padding: space.lg, minHeight: 112, ...elevation.floating },
-  cardSelected: { borderWidth: 2, borderColor: color.brand },
-  center: { alignItems: 'center', justifyContent: 'center' },
-  centerText: { textAlign: 'center', marginTop: 2 },
-  row: { flexDirection: 'row', alignItems: 'center' },
-});

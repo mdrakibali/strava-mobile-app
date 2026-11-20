@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Animated, StyleSheet, View, ViewStyle } from 'react-native';
-import { color, radius, space } from '../tokens';
+import { ActivityIndicator, Animated, View, ViewStyle } from 'react-native';
+import { color } from '../tokens';
 import { AppText } from './AppText';
 import { Button } from './Button';
 
@@ -12,27 +12,27 @@ export const EmptyState: React.FC<{
   primary?: { label: string; onPress: () => void };
   secondary?: { label: string; onPress: () => void };
 }> = ({ icon, title, body, primary, secondary }) => (
-  <View style={styles.center}>
-    <View style={styles.iconCircle}>
+  <View className="flex-grow items-center justify-center px-8 py-16">
+    <View className="w-[72px] h-[72px] rounded-full bg-gray-100 items-center justify-center">
       <Ionicons name={icon} size={30} color={color.inkSecondary} />
     </View>
-    <AppText variant="title2" align="center" style={{ marginTop: space.lg }}>
+    <AppText variant="title2" align="center" className="mt-4">
       {title}
     </AppText>
     {body ? (
-      <AppText variant="body" color="inkSecondary" align="center" style={{ marginTop: space.sm }}>
+      <AppText variant="body" color="inkSecondary" align="center" className="mt-2">
         {body}
       </AppText>
     ) : null}
     {primary ? (
-      <Button label={primary.label} onPress={primary.onPress} style={{ marginTop: space.xl }} />
+      <Button label={primary.label} onPress={primary.onPress} className="mt-5" />
     ) : null}
     {secondary ? (
       <Button
         label={secondary.label}
         onPress={secondary.onPress}
         variant="outline"
-        style={{ marginTop: space.sm }}
+        className="mt-2"
       />
     ) : null}
   </View>
@@ -44,36 +44,36 @@ export const ErrorState: React.FC<{ message?: string; onRetry?: () => void; comp
   compact,
 }) =>
   compact ? (
-    <View style={styles.banner} accessibilityRole="alert">
+    <View className="flex-row items-center p-3 rounded-lg bg-red-50" accessibilityRole="alert">
       <Ionicons name="alert-circle" size={20} color={color.danger} />
-      <AppText variant="label" style={{ flex: 1, marginLeft: space.sm }}>
+      <AppText variant="label" className="flex-1 ml-2">
         {message}
       </AppText>
       {onRetry ? <Button label="Retry" size="sm" variant="outline" onPress={onRetry} /> : null}
     </View>
   ) : (
-    <View style={styles.center} accessibilityRole="alert">
-      <View style={[styles.iconCircle, { backgroundColor: color.dangerSoft }]}>
+    <View className="flex-grow items-center justify-center px-8 py-16" accessibilityRole="alert">
+      <View className="w-[72px] h-[72px] rounded-full bg-red-100 items-center justify-center">
         <Ionicons name="cloud-offline-outline" size={30} color={color.danger} />
       </View>
-      <AppText variant="title2" align="center" style={{ marginTop: space.lg }}>
+      <AppText variant="title2" align="center" className="mt-4">
         Couldn’t load
       </AppText>
-      <AppText variant="body" color="inkSecondary" align="center" style={{ marginTop: space.sm }}>
+      <AppText variant="body" color="inkSecondary" align="center" className="mt-2">
         {message}
       </AppText>
-      {onRetry ? <Button label="Retry" onPress={onRetry} style={{ marginTop: space.xl }} /> : null}
+      {onRetry ? <Button label="Retry" onPress={onRetry} className="mt-5" /> : null}
     </View>
   );
 
 export const LoadingState: React.FC = () => (
-  <View style={styles.center} accessibilityLabel="Loading">
+  <View className="flex-grow items-center justify-center px-8 py-16" accessibilityLabel="Loading">
     <ActivityIndicator size="large" color={color.brand} />
   </View>
 );
 
 /** Pulsing grey block for skeleton layouts. */
-export const Skeleton: React.FC<{ style?: ViewStyle }> = ({ style }) => {
+export const Skeleton: React.FC<{ style?: ViewStyle; className?: string }> = ({ style, className = '' }) => {
   const [opacity] = useState(() => new Animated.Value(0.5));
   useEffect(() => {
     const loop = Animated.loop(
@@ -87,32 +87,8 @@ export const Skeleton: React.FC<{ style?: ViewStyle }> = ({ style }) => {
   }, [opacity]);
   return (
     <Animated.View
-      style={[{ backgroundColor: color.skeleton, borderRadius: radius.sm, opacity }, style]}
+      className={`bg-gray-200 rounded ${className}`}
+      style={[{ opacity }, style]}
     />
   );
 };
-
-const styles = StyleSheet.create({
-  center: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: space.xxxl,
-    paddingVertical: space.xxxl * 2,
-  },
-  iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: color.canvas,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: space.md,
-    borderRadius: radius.md,
-    backgroundColor: color.dangerSoft,
-  },
-});

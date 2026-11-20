@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedCard, FeedCardSkeleton } from '../../components/activity/FeedCard';
 import { useApp } from '../../context/AppContext';
@@ -74,7 +74,7 @@ export default function ActivityHistoryScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
+    <SafeAreaView edges={['top']} className="flex-1 bg-[#F7F7F8]">
       <AppBar title="Activities" />
       {status === 'loading' ? (
         <View>
@@ -105,10 +105,10 @@ export default function ActivityHistoryScreen() {
                 setRefreshing(true);
                 setReloadKey((k) => k + 1);
               }}
-              colors={[color.brand]}
+              colors={['#FC4C02']}
             />
           }
-          contentContainerStyle={items.length === 0 ? { flexGrow: 1 } : { paddingTop: space.sm, paddingBottom: space.xxxl }}
+          contentContainerStyle={items.length === 0 ? { flexGrow: 1 } : { paddingTop: 8, paddingBottom: 64 }}
           ListEmptyComponent={
             <EmptyState
               icon="footsteps-outline"
@@ -118,7 +118,7 @@ export default function ActivityHistoryScreen() {
           }
           ListFooterComponent={
             loadingMore ? (
-              <ActivityIndicator style={{ margin: space.xl }} color={color.brand} />
+              <ActivityIndicator style={{ margin: space.xl }} color="#FC4C02" />
             ) : moreError ? (
               <View style={{ padding: space.gutter }}>
                 <ErrorState compact message="Couldn’t load more activities." onRetry={loadMore} />
@@ -130,7 +130,3 @@ export default function ActivityHistoryScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.canvas },
-});

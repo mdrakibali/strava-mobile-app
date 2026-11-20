@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VISIBILITY_LABEL } from '../../../components/activity/FeedCard';
 import { SportSheet } from '../../../components/record/SportSheet';
@@ -8,7 +8,6 @@ import {
   AppBar,
   BottomSheet,
   Button,
-  color,
   ErrorState,
   LoadingState,
   OptionRow,
@@ -79,7 +78,7 @@ export default function EditActivityScreen() {
   const cfg = sportConfig(sport);
 
   return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
+    <SafeAreaView edges={['top']} className="flex-1 bg-white">
       <AppBar title="Edit Activity" />
       {loaded === 'loading' ? (
         <LoadingState />
@@ -87,7 +86,7 @@ export default function EditActivityScreen() {
         <ErrorState message="This activity can’t be edited." />
       ) : (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView contentContainerStyle={{ padding: space.gutter }} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
             <TextField value={title} onChangeText={setTitle} placeholder="Title" accessibilityLabel="Activity title" maxLength={100} />
             <View style={{ height: space.md }} />
             <TextField
@@ -113,7 +112,7 @@ export default function EditActivityScreen() {
               </View>
             ) : null}
           </ScrollView>
-          <View style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}>
+          <View style={{ paddingBottom: insets.bottom + 12 }} className="px-4 pt-3 border-t border-gray-100 bg-white">
             <Button label="Save changes" size="lg" fullWidth loading={saving} disabled={!title.trim()} onPress={onSave} />
           </View>
         </KeyboardAvoidingView>
@@ -145,13 +144,3 @@ export default function EditActivityScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.surface },
-  footer: {
-    paddingHorizontal: space.gutter,
-    paddingTop: space.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
-  },
-});

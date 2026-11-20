@@ -1,7 +1,7 @@
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapView } from '../../components/map/MapView';
 import { AppBar, AppText, Button, Chip, ChipRow, color, elevation, radius, space, TextField } from '../../design';
@@ -68,7 +68,7 @@ export default function RouteBuilderScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
+    <SafeAreaView edges={['top']} className="flex-1 bg-white">
       <AppBar title="Create Route" />
       <View style={{ flex: 1 }}>
         <MapView
@@ -80,7 +80,7 @@ export default function RouteBuilderScreen() {
           focus={me && points.length === 0 ? { center: me, zoom: 15 } : null}
           onMapPress={(p) => setPoints((prev) => [...prev, p])}
         />
-        <View style={[styles.hint, elevation.floating]} pointerEvents="none">
+        <View className="absolute top-4 left-4 right-4 bg-white rounded-xl p-3 shadow-lg border border-gray-100" pointerEvents="none">
           <AppText variant="bodyStrong">{kmValue(distance)} km</AppText>
           <AppText variant="label" color="inkSecondary">
             {points.length < 2
@@ -91,8 +91,8 @@ export default function RouteBuilderScreen() {
           </AppText>
         </View>
       </View>
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + space.md }]}>
-        <View style={styles.row}>
+      <View style={{ paddingBottom: insets.bottom + 12 }} className="p-4 gap-2 bg-white rounded-t-3xl shadow-xl border-t border-gray-100">
+        <View className="flex-row items-center">
           <Button label="Undo" icon="arrow-undo" variant="outline" size="sm" disabled={!points.length} onPress={() => setPoints((p) => p.slice(0, -1))} />
           <Button label="Clear" variant="ghost" size="sm" disabled={!points.length} onPress={() => setPoints([])} style={{ marginLeft: space.sm }} />
         </View>
@@ -116,10 +116,3 @@ export default function RouteBuilderScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.surface },
-  hint: { position: 'absolute', top: space.md, left: space.gutter, right: space.gutter, backgroundColor: color.surface, borderRadius: radius.md, padding: space.md },
-  sheet: { padding: space.gutter, gap: space.sm, backgroundColor: color.surface, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg },
-  row: { flexDirection: 'row', alignItems: 'center' },
-});

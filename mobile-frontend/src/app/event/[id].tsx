@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 import { AppBar, AppText, Avatar, Button, color, EmptyState, ErrorState, LoadingState, radius, SectionTitle, space } from '../../design';
@@ -64,7 +64,7 @@ export default function EventDetailScreen() {
 
   if (status !== 'ready' || !event) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView className="flex-1 bg-white">
         <AppBar title="Event" />
         {status === 'loading' ? (
           <LoadingState />
@@ -82,15 +82,15 @@ export default function EventDetailScreen() {
   const distance = event.distanceMeters != null ? Number(event.distanceMeters) : null;
 
   return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
+    <SafeAreaView edges={['top']} className="flex-1 bg-white">
       <AppBar title="Event" />
-      <ScrollView contentContainerStyle={{ padding: space.gutter, paddingBottom: space.xxxl }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 64 }}>
         <AppText variant="label" color="brandText" style={{ fontWeight: '700' }}>
           {when.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} ·{' '}
           {when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
         </AppText>
         <AppText variant="title1" style={{ marginTop: space.xs }}>{event.title}</AppText>
-        <View style={[styles.row, { marginTop: space.sm }]}>
+        <View className="flex-row items-center mt-2">
           <Ionicons name={sport.icon} size={16} color={color.inkSecondary} />
           <AppText variant="label" color="inkSecondary" style={{ marginLeft: space.xs, flex: 1 }}>
             {sport.label}
@@ -99,14 +99,14 @@ export default function EventDetailScreen() {
           </AppText>
         </View>
 
-        <View style={styles.card}>
+        <View className="mt-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
           <Info icon="location-outline" label="Meeting point" value={event.meetingPoint} />
           {distance ? <Info icon="resize-outline" label="Distance" value={`${kmValue(distance)} km`} /> : null}
           {event.paceDescription ? <Info icon="speedometer-outline" label="Pace / level" value={event.paceDescription} /> : null}
           <Info icon="people-outline" label="Going" value={String(going.length)} />
         </View>
 
-        <View style={[styles.row, { marginTop: space.lg }]}>
+        <View className="flex-row items-center mt-4">
           <Button label={mine === 'GOING' ? 'Going ✓' : 'Going'} variant={mine === 'GOING' ? 'secondary' : 'primary'} loading={busy} style={{ flex: 1 }} onPress={() => setRsvp('GOING')} />
           <Button label={mine === 'MAYBE' ? 'Maybe ✓' : 'Maybe'} variant="outline" disabled={busy} style={{ flex: 1, marginLeft: space.sm }} onPress={() => setRsvp('MAYBE')} />
           {mine ? <Button label="Can’t go" variant="ghost" disabled={busy} style={{ marginLeft: space.sm }} onPress={() => setRsvp('DECLINED')} /> : null}
@@ -120,7 +120,7 @@ export default function EventDetailScreen() {
             <Pressable
               key={a.athleteId}
               onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: a.athleteId } })}
-              style={styles.attendee}
+              className="flex-row items-center py-2"
               accessibilityRole="button">
               <Avatar uri={a.avatarUrl} name={a.displayName} size={40} />
               <AppText variant="bodyStrong" style={{ flex: 1, marginLeft: space.md }}>{a.displayName}</AppText>
@@ -134,7 +134,7 @@ export default function EventDetailScreen() {
 }
 
 const Info: React.FC<{ icon: keyof typeof Ionicons.glyphMap; label: string; value: string }> = ({ icon, label, value }) => (
-  <View style={[styles.row, { paddingVertical: space.sm }]}>
+  <View className="flex-row items-center py-2">
     <Ionicons name={icon} size={20} color={color.inkSecondary} />
     <View style={{ marginLeft: space.md, flex: 1 }}>
       <AppText variant="label" color="inkSecondary">{label}</AppText>
@@ -142,10 +142,3 @@ const Info: React.FC<{ icon: keyof typeof Ionicons.glyphMap; label: string; valu
     </View>
   </View>
 );
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.surface },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  card: { marginTop: space.lg, padding: space.lg, borderRadius: radius.lg, backgroundColor: color.canvas },
-  attendee: { flexDirection: 'row', alignItems: 'center', paddingVertical: space.sm },
-});

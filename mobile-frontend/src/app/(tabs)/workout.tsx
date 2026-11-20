@@ -170,7 +170,7 @@ export default function WorkoutTab() {
                   name={s.icon}
                   size={14}
                   color={placeSport === s.id ? '#FFFFFF' : '#4B5563'}
-                  style={{ marginRight: 6 }}
+                  className="mr-1.5"
                 />
                 <Text className={`text-xs font-bold ${placeSport === s.id ? 'text-white' : 'text-gray-700'}`}>
                   {s.label}

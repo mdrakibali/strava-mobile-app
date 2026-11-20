@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, elevation, radius, space } from '../tokens';
+import { color } from '../tokens';
 import { AppText } from './AppText';
 import { IconButton } from './IconButton';
 
@@ -24,18 +24,20 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, titl
       onRequestClose={onClose}
       statusBarTranslucent
       navigationBarTranslucent>
-      <View style={styles.root}>
+      <View className="flex-1 justify-end bg-black/40">
         <Pressable
-          style={StyleSheet.absoluteFill}
+          className="absolute inset-0"
           onPress={onClose}
           accessibilityRole="button"
           accessibilityLabel="Close sheet"
         />
-        <View style={[styles.sheet, elevation.sheet, { paddingBottom: insets.bottom + space.lg }]}>
-          <View style={styles.handle} />
+        <View
+          className="bg-white rounded-t-3xl pt-2 shadow-2xl"
+          style={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
+          <View className="self-center w-10 h-1 rounded-full bg-gray-300 mb-2" />
           {title ? (
-            <View style={styles.header}>
-              <AppText variant="title2" accessibilityRole="header" style={{ flex: 1 }}>
+            <View className="flex-row items-center pl-4 pr-2 pb-2">
+              <AppText variant="title2" accessibilityRole="header" className="flex-1">
                 {title}
               </AppText>
               <IconButton icon="close" accessibilityLabel="Close" onPress={onClose} />
@@ -60,16 +62,16 @@ export const OptionRow: React.FC<{
     onPress={onPress}
     accessibilityRole="radio"
     accessibilityState={{ checked: selected }}
-    style={({ pressed }) => [styles.option, pressed && { backgroundColor: color.canvas }]}>
+    className="flex-row items-center px-4 py-3 min-h-[64px] active:bg-gray-50">
     {icon ? (
-      <View style={styles.optionIcon}>
+      <View className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center mr-3">
         <Ionicons name={icon} size={20} color={color.ink} />
       </View>
     ) : null}
-    <View style={{ flex: 1 }}>
+    <View className="flex-1">
       <AppText variant="title3">{title}</AppText>
       {description ? (
-        <AppText variant="label" color="inkSecondary" style={{ marginTop: 2 }}>
+        <AppText variant="label" color="inkSecondary" className="mt-0.5">
           {description}
         </AppText>
       ) : null}
@@ -81,44 +83,3 @@ export const OptionRow: React.FC<{
     />
   </Pressable>
 );
-
-const styles = StyleSheet.create({
-  root: { flex: 1, justifyContent: 'flex-end', backgroundColor: color.overlay },
-  sheet: {
-    backgroundColor: color.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    paddingTop: space.sm,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: color.borderStrong,
-    marginBottom: space.sm,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: space.gutter,
-    paddingRight: space.sm,
-    paddingBottom: space.sm,
-  },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: space.gutter,
-    paddingVertical: space.md,
-    minHeight: 64,
-  },
-  optionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: color.canvas,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: space.md,
-  },
-});

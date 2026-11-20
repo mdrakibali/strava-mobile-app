@@ -16,5 +16,5 @@ export default function RecordTabRedirect() {
       router.push('/record');
     }, [router])
   );
-  return <View style={{ flex: 1, backgroundColor: color.surface }} />;
+  return <View className="flex-1 bg-white" />;
 }

@@ -5,7 +5,7 @@
  * and defaulted to hard-coded Dhaka coordinates; this one never invents a position.
  */
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { MapView } from './MapView';
 import { MapMarkerItem, MapStyleKey, StravaMapViewProps } from './mapTypes';
 
@@ -31,7 +31,7 @@ export const StravaMapView: React.FC<StravaMapViewProps> = ({
 }) => {
   const byId = new Map<string, MapMarkerItem>((markers ?? []).map((m) => [m.id, m]));
   return (
-    <View style={styles.fill}>
+    <View className="flex-1">
       <MapView
         mode={mode === 'live-record' ? 'live' : 'route'}
         route={routeCoordinates}
@@ -50,5 +50,3 @@ export const StravaMapView: React.FC<StravaMapViewProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({ fill: { flex: 1 } });

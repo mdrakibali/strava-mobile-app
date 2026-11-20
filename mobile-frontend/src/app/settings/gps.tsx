@@ -1,9 +1,9 @@
 import * as Location from 'expo-location';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Linking, PermissionsAndroid, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, PermissionsAndroid, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppBar, AppText, Button, color, radius, SectionTitle, space } from '../../design';
+import { AppBar, AppText, Button, SectionTitle, space } from '../../design';
 
 type Check = 'ok' | 'problem' | 'unknown';
 
@@ -46,9 +46,9 @@ export default function RecordingSettingsScreen() {
     Linking.sendIntent('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS').catch(() => Linking.openSettings());
 
   return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
+    <SafeAreaView edges={['top']} className="flex-1 bg-gray-50">
       <AppBar title="Recording & GPS" />
-      <ScrollView contentContainerStyle={{ padding: space.gutter, paddingBottom: space.xxxl }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 64 }}>
         <StatusRow
           title="Location permission"
           ok={location}
@@ -96,9 +96,9 @@ const StatusRow: React.FC<{
   problemText: string;
   action?: { label: string; onPress: () => void };
 }> = ({ title, ok, okText, problemText, action }) => (
-  <View style={[styles.card, ok === 'problem' && { borderColor: color.danger }]}>
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <View style={[styles.dot, { backgroundColor: ok === 'ok' ? color.success : ok === 'problem' ? color.danger : color.borderStrong }]} />
+  <View className={`bg-white rounded-2xl p-4 mb-3 border shadow-sm ${ok === 'problem' ? 'border-red-500' : 'border-gray-100'}`}>
+    <View className="flex-row items-center">
+      <View className={`w-2.5 h-2.5 rounded-full ${ok === 'ok' ? 'bg-green-600' : ok === 'problem' ? 'bg-red-600' : 'bg-gray-400'}`} />
       <AppText variant="bodyStrong" style={{ marginLeft: space.sm }}>{title}</AppText>
     </View>
     <AppText variant="label" color="inkSecondary" style={{ marginTop: space.xs }}>
@@ -107,9 +107,3 @@ const StatusRow: React.FC<{
     {action ? <Button label={action.label} size="sm" onPress={action.onPress} style={{ marginTop: space.md, alignSelf: 'flex-start' }} /> : null}
   </View>
 );
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.canvas },
-  card: { backgroundColor: color.surface, borderRadius: radius.md, padding: space.lg, marginBottom: space.md, borderWidth: 1, borderColor: color.border },
-  dot: { width: 10, height: 10, borderRadius: 5 },
-});

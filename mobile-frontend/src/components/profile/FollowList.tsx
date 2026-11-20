@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 import { AppBar, AppText, Avatar, Button, color, EmptyState, ErrorState, LoadingState, space } from '../../design';
@@ -86,7 +86,7 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
 
   const title = kind === 'followers' ? 'Followers' : 'Following';
   return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
+    <SafeAreaView edges={['top']} className="flex-1 bg-white">
       <AppBar title={title} />
       {status === 'loading' ? (
         <LoadingState />
@@ -97,7 +97,7 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
           data={rows}
           keyExtractor={(r) => r.id}
           onEndReached={more}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); setReloadKey((k) => k + 1); }} colors={[color.brand]} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); setReloadKey((k) => k + 1); }} colors={['#FC4C02']} />}
           contentContainerStyle={rows.length === 0 ? { flexGrow: 1 } : undefined}
           ListEmptyComponent={
             <EmptyState
@@ -106,14 +106,14 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
               primary={athleteId === currentUser.id ? { label: 'Find athletes', onPress: () => router.push('/search') } : undefined}
             />
           }
-          ListFooterComponent={loadingMore ? <ActivityIndicator color={color.brand} style={{ margin: space.lg }} /> : undefined}
+          ListFooterComponent={loadingMore ? <ActivityIndicator color="#FC4C02" style={{ margin: space.lg }} /> : undefined}
           renderItem={({ item: r }) => (
             <Pressable
               onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: r.id } })}
               accessibilityRole="button"
-              style={({ pressed }) => [styles.row, pressed && { backgroundColor: color.canvas }]}>
+              className="flex-row items-center px-4 py-3 border-b border-gray-100 active:bg-gray-50">
               <Avatar uri={r.avatarUrl} name={r.displayName} size={48} />
-              <View style={{ flex: 1, marginLeft: space.md }}>
+              <View className="flex-1 ml-3">
                 <AppText variant="bodyStrong">{r.displayName}</AppText>
                 {r.city ? <AppText variant="caption" color="inkSecondary">{r.city}</AppText> : null}
               </View>
@@ -132,9 +132,4 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
       )}
     </SafeAreaView>
   );
-};
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.surface },
-  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.gutter, paddingVertical: space.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border },
-});
+}

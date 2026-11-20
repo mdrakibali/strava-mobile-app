@@ -10,7 +10,7 @@
  */
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, View, ViewStyle } from 'react-native';
 import { AppText } from '../../design/components/AppText';
 import { color } from '../../design/tokens';
 import { LngLat } from '../../lib/activityView';
@@ -200,9 +200,9 @@ export const MapView: React.FC<MapViewProps> = ({
 
   if (!ML) {
     return (
-      <View style={[styles.fill, styles.center, style]}>
+      <View style={style} className="flex-1 bg-gray-50 items-center justify-center p-6">
         <AppText variant="bodyStrong">Map unavailable in Expo Go</AppText>
-        <AppText variant="label" color="inkSecondary" style={styles.msg}>
+        <AppText variant="label" color="inkSecondary" style={{ textAlign: 'center', marginTop: 4 }}>
           Maps and GPS recording need the development build (npx expo run:android).
         </AppText>
         {children}
@@ -239,10 +239,10 @@ export const MapView: React.FC<MapViewProps> = ({
   }
 
   return (
-    <View style={[styles.fill, style]}>
+    <View style={style} className="flex-1 bg-gray-50">
       <Map
         key={attempt}
-        style={styles.fill}
+        style={{ flex: 1 }}
         mapStyle={styleUrl(styleKey)}
         logo={false}
         compass={false}
@@ -327,16 +327,16 @@ export const MapView: React.FC<MapViewProps> = ({
         ) : null}
       </Map>
       {loadState === 'error' ? (
-        <View style={[StyleSheet.absoluteFill, styles.center, styles.errorBox]}>
+        <View className="absolute inset-0 items-center justify-center p-6 bg-[#F5F6F8]/95">
           <AppText variant="bodyStrong">The map couldn’t load</AppText>
-          <AppText variant="label" color="inkSecondary" style={styles.msg}>Check your connection.</AppText>
+          <AppText variant="label" color="inkSecondary" style={{ textAlign: 'center', marginTop: 4 }}>Check your connection.</AppText>
           <Pressable
             onPress={() => {
               setLoadState('loading');
               setAttempt((a) => a + 1);
             }}
             accessibilityRole="button"
-            style={styles.retry}>
+            className="mt-3 px-5 py-2.5">
             <AppText variant="bodyStrong" color="brandText">Retry</AppText>
           </Pressable>
         </View>
@@ -345,11 +345,3 @@ export const MapView: React.FC<MapViewProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: color.canvas },
-  center: { alignItems: 'center', justifyContent: 'center', padding: 24 },
-  msg: { textAlign: 'center', marginTop: 4 },
-  errorBox: { backgroundColor: 'rgba(245,246,248,0.94)' },
-  retry: { marginTop: 12, paddingHorizontal: 20, paddingVertical: 10 },
-});

@@ -7,7 +7,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -117,7 +116,7 @@ export default function ActivityDetailScreen() {
 
   if (state.status !== 'ready') {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView className="flex-1 bg-white">
         <AppBar title={state.status === 'loading' ? '' : 'Activity'} />
         {state.status === 'loading' ? (
           <DetailSkeleton />
@@ -157,9 +156,9 @@ export default function ActivityDetailScreen() {
   const mapHeight = Math.round(height * 0.42);
 
   return (
-    <View style={styles.screen}>
+    <View className="flex-1 bg-white">
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + space.xxxl }} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 64 }} keyboardShouldPersistTaps="handled">
           {hasMap ? (
             <View style={{ height: mapHeight }}>
               <MapView mode="route" route={activity.route} padding={{ top: insets.top, bottom: 24 }} />
@@ -167,16 +166,16 @@ export default function ActivityDetailScreen() {
           ) : (
             <View style={{ height: insets.top + 56 }} />
           )}
-          <View style={[styles.sheet, hasMap && styles.sheetOverlap]}>
+          <View className={`bg-white p-4 pt-6 ${hasMap ? '-mt-5 rounded-t-3xl' : ''}`}>
             <ActivityBody activity={activity} isOwner={isOwner} currentUserId={currentUser.id} currentUserName={currentUser.displayName} currentUserAvatar={currentUser.avatarUrl} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-      <View style={[styles.backOverlay, { top: insets.top + space.sm }]}>
+      <View style={{ top: insets.top + 8 }} className="absolute left-4">
         <IconButton icon="arrow-back" appearance="floating" accessibilityLabel="Back" onPress={() => router.back()} />
       </View>
       {isOwner ? (
-        <View style={[styles.menuOverlay, { top: insets.top + space.sm }]}>
+        <View style={{ top: insets.top + 8 }} className="absolute right-4">
           <IconButton
             icon="ellipsis-vertical"
             appearance="floating"
@@ -331,11 +330,11 @@ const ActivityBody: React.FC<{
         onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: activity.athlete.id } })}
         accessibilityRole="button"
         accessibilityLabel={`${activity.athlete.displayName}'s profile`}
-        style={styles.athleteRow}>
+        className="flex-row items-center">
         <Avatar uri={activity.athlete.avatarUrl} name={activity.athlete.displayName} size={48} />
         <View style={{ flex: 1, marginLeft: space.md }}>
           <AppText variant="title3">{activity.athlete.displayName}</AppText>
-          <View style={styles.meta}>
+          <View className="flex-row items-center mt-0.5">
             <Ionicons name={sport.icon} size={14} color={color.inkTertiary} />
             <AppText variant="caption" color="inkTertiary" style={{ marginLeft: space.xs, flexShrink: 1 }}>
               {formatActivityDate(activity.startTime)}
@@ -349,7 +348,7 @@ const ActivityBody: React.FC<{
         {activity.title}
       </AppText>
       {isOwner ? (
-        <View style={[styles.meta, { marginTop: space.xs }]}>
+        <View className="flex-row items-center mt-1">
           <Ionicons name={visibility.icon} size={14} color={color.inkSecondary} />
           <AppText variant="label" color="inkSecondary" style={{ marginLeft: space.xs }}>
             Visible to: {visibility.label}
@@ -362,29 +361,29 @@ const ActivityBody: React.FC<{
         </AppText>
       ) : null}
 
-      <View style={styles.grid}>
+      <View className="flex-row flex-wrap mt-4 border-y border-gray-100 py-2">
         {stats.map((s) => (
-          <View key={s.label} style={styles.gridCell}>
+          <View key={s.label} className="w-1/2 py-3">
             <MetricTile label={s.label} value={s.value} size="L" align="center" />
           </View>
         ))}
       </View>
 
       {sport.primaryMetric === 'pace' && activity.splits.length > 0 ? (
-        <View style={styles.section}>
+        <View className="mt-6 pt-6 border-t border-gray-100">
           <SectionTitle title="Splits" />
-          <View style={styles.splitHeader}>
-            <AppText variant="label" color="inkSecondary" style={styles.splitKm}>Km</AppText>
-            <AppText variant="label" color="inkSecondary" style={styles.splitPace}>Pace</AppText>
-            <AppText variant="label" color="inkSecondary" style={styles.splitElev}>Elev</AppText>
+          <View className="flex-row pb-2">
+            <AppText variant="label" color="inkSecondary" style={{ width: 48 }}>Km</AppText>
+            <AppText variant="label" color="inkSecondary" style={{ flex: 1 }}>Pace</AppText>
+            <AppText variant="label" color="inkSecondary" style={{ width: 80, textAlign: 'right' }}>Elev</AppText>
           </View>
           {activity.splits.map((s) => (
-            <View key={s.index} style={styles.splitRow}>
-              <AppText variant="bodyStrong" style={styles.splitKm}>{s.index}</AppText>
-              <AppText variant="bodyStrong" style={[styles.splitPace, { fontVariant: ['tabular-nums'] }]}>
+            <View key={s.index} className="flex-row items-center min-h-[40px] border-t border-gray-100">
+              <AppText variant="bodyStrong" style={{ width: 48 }}>{s.index}</AppText>
+              <AppText variant="bodyStrong" style={[{ flex: 1 }, { fontVariant: ['tabular-nums'] }]}>
                 {s.pace ? `${s.pace} /km` : DASH}
               </AppText>
-              <AppText variant="body" color="inkSecondary" style={styles.splitElev}>
+              <AppText variant="body" color="inkSecondary" style={{ width: 80, textAlign: 'right' }}>
                 {s.elevationDeltaMeters == null ? DASH : `${s.elevationDeltaMeters > 0 ? '+' : ''}${Math.round(s.elevationDeltaMeters)} m`}
               </AppText>
             </View>
@@ -393,14 +392,14 @@ const ActivityBody: React.FC<{
       ) : null}
 
       {activity.elevationProfile.length > 1 ? (
-        <View style={styles.section}>
+        <View className="mt-6 pt-6 border-t border-gray-100">
           <SectionTitle title="Elevation" />
           <ElevationProfile samples={activity.elevationProfile} />
         </View>
       ) : null}
 
-      <View style={styles.section}>
-        <View style={styles.kudosRow}>
+      <View className="mt-6 pt-6 border-t border-gray-100">
+        <View className="flex-row justify-between items-center">
           <Pressable onPress={openKudos} disabled={social.kudosCount === 0} accessibilityRole="button" style={{ flex: 1 }}>
             <AppText variant="bodyStrong" color={social.kudosCount > 0 ? 'ink' : 'inkSecondary'}>
               {social.kudosCount > 0 ? `${social.kudosCount} gave kudos ›` : 'No kudos yet'}
@@ -410,14 +409,14 @@ const ActivityBody: React.FC<{
             {social.commentsCount} {social.commentsCount === 1 ? 'comment' : 'comments'}
           </AppText>
         </View>
-        <View style={styles.actionBar}>
+        <View className="flex-row mt-3 border-y border-gray-100">
           <Pressable
             onPress={isOwner ? openKudos : onKudos}
             disabled={kudosPending}
             accessibilityRole="button"
             accessibilityLabel={isOwner ? 'See who gave kudos' : social.hasKudos ? 'Remove kudos' : 'Give kudos'}
             accessibilityState={{ selected: social.hasKudos === true, busy: kudosPending }}
-            style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: color.canvas }]}>
+            className="flex-1 flex-row items-center justify-center min-h-[52px] active:bg-gray-50">
             <Ionicons name={social.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'} size={24} color={social.hasKudos ? color.brand : color.ink} />
             <AppText variant="label" style={{ marginLeft: space.sm, fontWeight: '600' }} color={social.hasKudos ? 'brandText' : 'ink'}>
               {isOwner ? 'Kudos' : social.hasKudos ? 'Kudos given' : 'Give kudos'}
@@ -428,7 +427,7 @@ const ActivityBody: React.FC<{
               onPress={() => shareActivity(activity)}
               accessibilityRole="button"
               accessibilityLabel="Share activity"
-              style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: color.canvas }]}>
+              className="flex-1 flex-row items-center justify-center min-h-[52px] active:bg-gray-50">
               <Ionicons name="share-social-outline" size={24} color={color.ink} />
               <AppText variant="label" style={{ marginLeft: space.sm, fontWeight: '600' }}>Share</AppText>
             </Pressable>
@@ -436,7 +435,7 @@ const ActivityBody: React.FC<{
         </View>
       </View>
 
-      <View style={styles.section}>
+      <View className="mt-6 pt-6 border-t border-gray-100">
         <SectionTitle title={comments.length > 0 ? `Comments (${comments.length})` : 'Comments'} />
         {comments.length === 0 ? (
           <AppText variant="body" color="inkSecondary">
@@ -446,10 +445,10 @@ const ActivityBody: React.FC<{
           comments.map((c, i) => (
             <View key={c.id}>
               {i > 0 ? <Divider inset={48} /> : null}
-              <View style={styles.comment}>
+              <View className="flex-row items-start py-3">
                 <Avatar uri={c.author.avatarUrl} name={c.author.displayName} size={32} />
                 <View style={{ flex: 1, marginLeft: space.md }}>
-                  <View style={styles.meta}>
+                  <View className="flex-row items-center">
                     <AppText variant="bodyStrong" style={{ flexShrink: 1 }}>{c.author.displayName}</AppText>
                     <AppText variant="caption" color="inkTertiary" style={{ marginLeft: space.sm }}>
                       {formatRelative(c.createdAt)}
@@ -464,7 +463,7 @@ const ActivityBody: React.FC<{
                         maxLength={1000}
                         multiline
                       />
-                      <View style={[styles.meta, { marginTop: space.sm, justifyContent: 'flex-end' }]}>
+                      <View className="flex-row items-center mt-2 justify-end">
                         <Button label="Cancel" variant="ghost" size="sm" onPress={() => setEditing(null)} />
                         <Button label="Save" size="sm" loading={savingEdit} disabled={!editing.text.trim()} onPress={onSaveEdit} style={{ marginLeft: space.sm }} />
                       </View>
@@ -483,7 +482,7 @@ const ActivityBody: React.FC<{
             </View>
           ))
         )}
-        <View style={styles.composer}>
+        <View className="flex-row items-end mt-3">
           <View style={{ flex: 1 }}>
             <TextField
               value={draft}
@@ -527,51 +526,3 @@ const DetailSkeleton: React.FC = () => (
     </View>
   </View>
 );
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.surface },
-  sheet: { backgroundColor: color.surface, padding: space.gutter, paddingTop: space.xl },
-  sheetOverlap: { marginTop: -radius.lg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg },
-  backOverlay: { position: 'absolute', left: space.gutter },
-  menuOverlay: { position: 'absolute', right: space.gutter },
-  actionBar: {
-    flexDirection: 'row',
-    marginTop: space.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
-  },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 52 },
-  athleteRow: { flexDirection: 'row', alignItems: 'center' },
-  meta: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: space.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
-    paddingVertical: space.sm,
-  },
-  gridCell: { width: '50%', paddingVertical: space.md },
-  section: {
-    marginTop: space.xl,
-    paddingTop: space.xl,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
-  },
-  splitHeader: { flexDirection: 'row', paddingBottom: space.sm },
-  splitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 40,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
-  },
-  splitKm: { width: 48 },
-  splitPace: { flex: 1 },
-  splitElev: { width: 80, textAlign: 'right' },
-  kudosRow: { flexDirection: 'row', alignItems: 'center' },
-  comment: { flexDirection: 'row', paddingVertical: space.md },
-  composer: { flexDirection: 'row', alignItems: 'flex-end', marginTop: space.md },
-});

@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { memo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
-import { AppText, Avatar, color, MetricRow, MetricTile, Skeleton, space } from '../../design';
+import { Alert, Pressable, Text, View } from 'react-native';
+import { Avatar, Skeleton } from '../../design';
 import { ActivityView, avgSpeedOf } from '../../lib/activityView';
 import {
   formatActivityDate,
@@ -72,27 +72,27 @@ export const FeedCard = memo(function FeedCard({
   const location = activity.athlete.city;
 
   return (
-    <View style={styles.card}>
+    <View className="bg-white border-y border-gray-100 mb-2">
       {showAthlete ? (
-        <View style={styles.athleteRow}>
+        <View className="flex-row items-center px-4 pt-4">
           <Pressable
             onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: activity.athlete.id } })}
             accessibilityRole="button"
             accessibilityLabel={`${activity.athlete.displayName}'s profile`}
-            style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            className="flex-row items-center flex-1">
             <Avatar uri={activity.athlete.avatarUrl} name={activity.athlete.displayName} size={40} />
-            <View style={styles.athleteText}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <AppText variant="title3" numberOfLines={1}>
+            <View className="flex-1 ml-3">
+              <View className="flex-row items-center">
+                <Text className="text-sm font-bold text-gray-900" numberOfLines={1}>
                   {activity.athlete.displayName}
-                </AppText>
+                </Text>
               </View>
-              <View style={styles.metaRow}>
-                <Ionicons name={sport.icon} size={14} color={color.inkTertiary} />
-                <AppText variant="caption" color="inkTertiary" numberOfLines={1} style={styles.metaText}>
+              <View className="flex-row items-center mt-0.5">
+                <Ionicons name={sport.icon} size={14} color="#6B7280" />
+                <Text className="ml-1 text-xs text-gray-500 flex-shrink" numberOfLines={1}>
                   {formatActivityDate(activity.startTime)}
                   {location ? ` · ${location}` : ''}
-                </AppText>
+                </Text>
               </View>
             </View>
           </Pressable>
@@ -101,89 +101,108 @@ export const FeedCard = memo(function FeedCard({
             onPress={() => shareActivity(activity)}
             accessibilityRole="button"
             accessibilityLabel="Activity options"
-            style={{ padding: 4 }}>
-            <Ionicons name="ellipsis-horizontal" size={20} color={color.inkSecondary} />
+            className="p-1">
+            <Ionicons name="ellipsis-horizontal" size={20} color="#4B5563" />
           </Pressable>
         </View>
       ) : (
-        <View style={[styles.metaRow, styles.padded, { paddingTop: space.lg }]}>
-          <Ionicons name={sport.icon} size={14} color={color.inkTertiary} />
-          <AppText variant="caption" color="inkTertiary" style={styles.metaText}>
+        <View className="flex-row items-center px-4 pt-4">
+          <Ionicons name={sport.icon} size={14} color="#6B7280" />
+          <Text className="ml-1 text-xs text-gray-500">
             {formatActivityDate(activity.startTime)}
-          </AppText>
+          </Text>
         </View>
       )}
 
       <Pressable onPress={open} accessibilityRole="button" accessibilityLabel={`Open ${activity.title}`}>
-        <View style={styles.padded}>
-          <AppText variant="title2" style={{ marginTop: space.md }} numberOfLines={2}>
+        <View className="px-4">
+          <Text className="text-lg font-bold text-gray-900 mt-2.5" numberOfLines={2}>
             {activity.title}
-          </AppText>
+          </Text>
           {isOwn && activity.visibility !== 'PUBLIC' ? (
-            <View style={[styles.metaRow, { marginTop: space.xs }]}>
-              <Ionicons name={visibility.icon} size={13} color={color.inkSecondary} />
-              <AppText variant="caption" color="inkSecondary" style={styles.metaText}>
+            <View className="flex-row items-center mt-1">
+              <Ionicons name={visibility.icon} size={13} color="#4B5563" />
+              <Text className="ml-1 text-xs text-gray-600">
                 {visibility.label}
-              </AppText>
+              </Text>
             </View>
           ) : null}
           {activity.description ? (
-            <AppText variant="body" color="inkSecondary" numberOfLines={2} style={{ marginTop: space.xs }}>
+            <Text className="text-sm text-gray-600 mt-1" numberOfLines={2}>
               {activity.description}
-            </AppText>
+            </Text>
           ) : null}
-          <MetricRow style={{ marginTop: space.md, marginBottom: space.md }}>
-            <MetricTile label="Distance" value={kmValue(activity.distanceMeters)} unit="km" />
-            <MetricTile label={speedOrPace.label} value={speedOrPace.value} unit={speedOrPace.value === '–' ? undefined : speedOrPace.unit} />
-            <MetricTile label="Time" value={formatDuration(activity.movingTimeSeconds)} />
-          </MetricRow>
+          <View className="flex-row my-3 items-center">
+            <View className="flex-1">
+              <Text className="text-xs text-gray-500 font-medium">Distance</Text>
+              <View className="flex-row items-baseline mt-0.5">
+                <Text className="text-xl font-bold text-gray-900">{kmValue(activity.distanceMeters)}</Text>
+                <Text className="text-xs text-gray-500 ml-1 font-semibold">km</Text>
+              </View>
+            </View>
+            <View className="flex-1">
+              <Text className="text-xs text-gray-500 font-medium">{speedOrPace.label}</Text>
+              <View className="flex-row items-baseline mt-0.5">
+                <Text className="text-xl font-bold text-gray-900">{speedOrPace.value}</Text>
+                {speedOrPace.value !== '–' && speedOrPace.unit ? (
+                  <Text className="text-xs text-gray-500 ml-1 font-semibold">{speedOrPace.unit}</Text>
+                ) : null}
+              </View>
+            </View>
+            <View className="flex-1">
+              <Text className="text-xs text-gray-500 font-medium">Time</Text>
+              <View className="flex-row items-baseline mt-0.5">
+                <Text className="text-xl font-bold text-gray-900">{formatDuration(activity.movingTimeSeconds)}</Text>
+              </View>
+            </View>
+          </View>
         </View>
         <RoutePreview route={activity.route} height={240} />
       </Pressable>
 
-      <View style={[styles.padded, styles.socialSummary]}>
+      <View className="pt-3 px-4 flex-row justify-between">
         <Pressable onPress={openKudos} disabled={social.kudosCount === 0} accessibilityRole="button" hitSlop={8}>
-          <AppText variant="caption" color="inkSecondary">
+          <Text className="text-xs text-gray-500 font-medium">
             {social.kudosCount > 0 ? `${social.kudosCount} gave kudos` : isOwn ? 'No kudos yet' : 'Be the first to give kudos'}
-          </AppText>
+          </Text>
         </Pressable>
         {social.commentsCount > 0 ? (
           <Pressable onPress={openComments} accessibilityRole="button" hitSlop={8}>
-            <AppText variant="caption" color="inkSecondary">
+            <Text className="text-xs text-gray-500 font-medium">
               {social.commentsCount} {social.commentsCount === 1 ? 'comment' : 'comments'}
-            </AppText>
+            </Text>
           </Pressable>
         ) : null}
       </View>
 
-      <View style={styles.actions}>
+      <View className="flex-row mt-1 border-t border-gray-50">
         <Pressable
           onPress={onKudos}
           disabled={pending}
           accessibilityRole="button"
           accessibilityLabel={isOwn ? 'See who gave kudos' : social.hasKudos ? 'Remove kudos' : 'Give kudos'}
           accessibilityState={{ selected: social.hasKudos === true, busy: pending }}
-          style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}>
+          className="flex-1 flex-row items-center justify-center min-h-[48px] active:bg-gray-50">
           <Ionicons
             name={social.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'}
-            size={24}
-            color={social.hasKudos ? color.brand : color.ink}
+            size={22}
+            color={social.hasKudos ? '#FC4C02' : '#1F2937'}
           />
         </Pressable>
         <Pressable
           onPress={openComments}
           accessibilityRole="button"
           accessibilityLabel="Comment"
-          style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}>
-          <Ionicons name="chatbox-ellipses-outline" size={24} color={color.ink} />
+          className="flex-1 flex-row items-center justify-center min-h-[48px] active:bg-gray-50">
+          <Ionicons name="chatbox-ellipses-outline" size={22} color="#1F2937" />
         </Pressable>
         {activity.visibility !== 'ONLY_ME' ? (
           <Pressable
             onPress={() => shareActivity(activity)}
             accessibilityRole="button"
             accessibilityLabel="Share activity"
-            style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}>
-            <Ionicons name="share-social-outline" size={24} color={color.ink} />
+            className="flex-1 flex-row items-center justify-center min-h-[48px] active:bg-gray-50">
+            <Ionicons name="share-social-outline" size={22} color="#1F2937" />
           </Pressable>
         ) : null}
       </View>
@@ -192,56 +211,22 @@ export const FeedCard = memo(function FeedCard({
 });
 
 export const FeedCardSkeleton: React.FC = () => (
-  <View style={[styles.card, { paddingBottom: space.lg }]} accessibilityLabel="Loading activity">
-    <View style={styles.athleteRow}>
-      <Skeleton style={{ width: 40, height: 40, borderRadius: 20 }} />
-      <View style={styles.athleteText}>
-        <Skeleton style={{ width: '45%', height: 14 }} />
-        <Skeleton style={{ width: '65%', height: 12, marginTop: space.sm }} />
+  <View className="bg-white border-y border-gray-100 mb-2 pb-4" accessibilityLabel="Loading activity">
+    <View className="flex-row items-center px-4 pt-4">
+      <Skeleton className="w-10 h-10 rounded-full" />
+      <View className="flex-1 ml-3">
+        <Skeleton className="w-[45%] h-3.5" />
+        <Skeleton className="w-[65%] h-3 mt-2" />
       </View>
     </View>
-    <View style={styles.padded}>
-      <Skeleton style={{ width: '60%', height: 20, marginTop: space.lg }} />
-      <View style={{ flexDirection: 'row', marginTop: space.md, gap: space.lg }}>
-        <Skeleton style={{ width: 64, height: 34 }} />
-        <Skeleton style={{ width: 64, height: 34 }} />
-        <Skeleton style={{ width: 64, height: 34 }} />
+    <View className="px-4">
+      <Skeleton className="w-[60%] h-5 mt-4" />
+      <View className="flex-row mt-3 gap-4">
+        <Skeleton className="w-16 h-8.5" />
+        <Skeleton className="w-16 h-8.5" />
+        <Skeleton className="w-16 h-8.5" />
       </View>
     </View>
-    <Skeleton style={{ height: 180, borderRadius: 0, marginTop: space.md }} />
+    <Skeleton className="h-44 rounded-none mt-3" />
   </View>
 );
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: color.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
-    marginBottom: space.sm,
-  },
-  padded: { paddingHorizontal: space.gutter },
-  athleteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: space.gutter,
-    paddingTop: space.lg,
-  },
-  athleteText: { flex: 1, marginLeft: space.md },
-  metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  metaText: { marginLeft: space.xs, flexShrink: 1 },
-  socialSummary: { paddingTop: space.md, flexDirection: 'row', justifyContent: 'space-between' },
-  actions: {
-    flexDirection: 'row',
-    marginTop: space.xs,
-  },
-  action: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-  },
-  actionPressed: { backgroundColor: color.canvas },
-  actionLabel: { marginLeft: space.sm, fontWeight: '600' },
-});

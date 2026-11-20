@@ -1,7 +1,7 @@
 import React from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppBar, Button, color, ErrorState, space } from '../../design';
+import { AppBar, Button, ErrorState, space } from '../../design';
 
 /** Shared layout for create/edit forms: app bar, scrolling body, sticky submit button, error. */
 export const FormScreen: React.FC<{
@@ -15,10 +15,10 @@ export const FormScreen: React.FC<{
 }> = ({ title, submitLabel, canSubmit, submitting, error, onSubmit, children }) => {
   const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
+    <SafeAreaView edges={['top']} className="flex-1 bg-white">
       <AppBar title={title} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={{ padding: space.gutter, paddingBottom: space.xxxl }} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 64 }} keyboardShouldPersistTaps="handled">
           {children}
           {error ? (
             <View style={{ marginTop: space.lg }}>
@@ -26,15 +26,10 @@ export const FormScreen: React.FC<{
             </View>
           ) : null}
         </ScrollView>
-        <View style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}>
+        <View style={{ paddingBottom: insets.bottom + 12 }} className="px-4 pt-3 border-t border-gray-100 bg-white">
           <Button label={submitLabel} size="lg" variant="dark" fullWidth loading={submitting} disabled={!canSubmit} onPress={onSubmit} />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.surface },
-  footer: { paddingHorizontal: space.gutter, paddingTop: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border },
-});

@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
-import { color, elevation, hitSlop, minTouch } from '../tokens';
-import { AppText } from './AppText';
+import { Pressable, StyleProp, Text, View, ViewStyle } from 'react-native';
+import { hitSlop, minTouch } from '../tokens';
 
 export interface IconButtonProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -15,6 +14,7 @@ export interface IconButtonProps {
   badgeCount?: number;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  className?: string;
 }
 
 export const IconButton: React.FC<IconButtonProps> = ({
@@ -23,10 +23,11 @@ export const IconButton: React.FC<IconButtonProps> = ({
   onPress,
   appearance = 'plain',
   size = minTouch,
-  iconColor = color.ink,
+  iconColor = '#1F2937',
   badgeCount,
   disabled,
   style,
+  className = '',
 }) => (
   <Pressable
     onPress={onPress}
@@ -36,41 +37,21 @@ export const IconButton: React.FC<IconButtonProps> = ({
     accessibilityLabel={
       badgeCount ? `${accessibilityLabel}, ${badgeCount} unread` : accessibilityLabel
     }
-    style={({ pressed }) => [
-      styles.base,
+    style={[
       { width: size, height: size, borderRadius: size / 2 },
-      appearance === 'floating' && [styles.floating, elevation.floating],
-      pressed && { backgroundColor: appearance === 'floating' ? color.canvas : color.canvas },
-      disabled && { opacity: 0.4 },
+      disabled ? { opacity: 0.4 } : null,
       style,
-    ]}>
+    ]}
+    className={`items-center justify-center ${
+      appearance === 'floating' ? 'bg-white shadow-md active:bg-gray-50' : 'active:bg-gray-100'
+    } ${className}`}>
     <Ionicons name={icon} size={Math.round(size * 0.5)} color={iconColor} />
     {badgeCount ? (
-      <View style={styles.badge}>
-        <AppText variant="caption" color="inverse" style={styles.badgeText}>
+      <View className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#FC4C02] border-2 border-white items-center justify-center">
+        <Text className="text-[10px] font-bold text-white leading-none">
           {badgeCount > 9 ? '9+' : String(badgeCount)}
-        </AppText>
+        </Text>
       </View>
     ) : null}
   </Pressable>
 );
-
-const styles = StyleSheet.create({
-  base: { alignItems: 'center', justifyContent: 'center' },
-  floating: { backgroundColor: color.surface },
-  badge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 4,
-    borderRadius: 9,
-    backgroundColor: color.brand,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: color.surface,
-  },
-  badgeText: { fontSize: 10, lineHeight: 12, fontWeight: '700' },
-});

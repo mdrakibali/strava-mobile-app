@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { AppText, BottomSheet, color, space } from '../../design';
 import { MVP_SPORTS } from '../../lib/sports';
 import { SportType } from '../../types';
@@ -43,35 +43,17 @@ export const SportSheet: React.FC<{
             accessibilityRole="radio"
             accessibilityState={{ checked: active }}
             accessibilityLabel={s.label}
-            style={({ pressed }) => [styles.row, pressed && { backgroundColor: color.canvas }]}>
-            <View style={[styles.icon, active && { backgroundColor: color.brandSoft }]}>
-              <Ionicons name={s.icon} size={22} color={active ? color.brandText : color.ink} />
+            className="flex-row items-center px-4 min-h-[60px] active:bg-gray-50">
+            <View className={`w-11 h-11 rounded-full items-center justify-center mr-3 ${active ? 'bg-[#FFF2EB]' : 'bg-gray-100'}`}>
+              <Ionicons name={s.icon} size={22} color={active ? '#FC4C02' : '#1F2937'} />
             </View>
-            <AppText variant="title3" style={{ flex: 1 }}>
+            <AppText variant="title3" className="flex-1">
               {s.label}
             </AppText>
-            {active ? <Ionicons name="checkmark" size={24} color={color.brand} /> : null}
+            {active ? <Ionicons name="checkmark" size={24} color="#FC4C02" /> : null}
           </Pressable>
         );
       })}
     </View>
   </BottomSheet>
 );
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: space.gutter,
-    minHeight: 60,
-  },
-  icon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: color.canvas,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: space.md,
-  },
-});

@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ElevationProfile } from '../../components/activity/ElevationProfile';
 import { MapView } from '../../components/map/MapView';
@@ -118,26 +118,26 @@ export default function RoutePlanScreen() {
     status = (
       <>
         <AppText variant="body" color="inkSecondary">Location is needed to plan a route from where you are.</AppText>
-        <Button label="Open settings" size="sm" style={styles.inlineBtn} onPress={() => Linking.openSettings()} />
+        <Button label="Open settings" size="sm" className="mt-2 self-start" onPress={() => Linking.openSettings()} />
       </>
     );
   else if (state.status === 'no_fix')
     status = (
       <>
         <AppText variant="body" color="inkSecondary">Couldn’t get a GPS fix.</AppText>
-        <Button label="Try again" size="sm" style={styles.inlineBtn} onPress={() => setAttempt((a) => a + 1)} />
+        <Button label="Try again" size="sm" className="mt-2 self-start" onPress={() => setAttempt((a) => a + 1)} />
       </>
     );
   else if (state.status === 'error')
     status = (
       <>
         <AppText variant="body" color="inkSecondary">{state.message}</AppText>
-        <Button label="Retry" size="sm" style={styles.inlineBtn} onPress={() => setAttempt((a) => a + 1)} />
+        <Button label="Retry" size="sm" style={{ marginTop: 8, alignSelf: 'flex-start' }} onPress={() => setAttempt((a) => a + 1)} />
       </>
     );
 
   return (
-    <View style={styles.screen}>
+    <View className="flex-1 bg-white">
       <View style={{ height: height * 0.45 }}>
         <MapView
           mode="route"
@@ -150,15 +150,15 @@ export default function RoutePlanScreen() {
           frameKey={route ? `r${selected}:${sport}` : 'dest'}
           padding={{ top: insets.top + 20, bottom: 20 }}
         />
-        <View style={[styles.back, { top: insets.top + space.sm }]}>
+        <View style={{ top: insets.top + 8 }} className="absolute left-4">
           <IconButton icon="arrow-back" appearance="floating" accessibilityLabel="Back" onPress={() => router.back()} />
         </View>
       </View>
 
-      <ScrollView style={styles.sheet} contentContainerStyle={{ padding: space.gutter, paddingBottom: insets.bottom + space.xxxl }}>
+      <ScrollView className="flex-1 -mt-4 rounded-t-3xl bg-white" contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 64 }}>
         {details?.image ? (
-          <View style={styles.photoBox}>
-            <Image source={{ uri: details.image.url }} style={styles.photo} contentFit="cover" transition={200} accessibilityLabel={`Photo of ${name}`} />
+          <View className="mb-3">
+            <Image source={{ uri: details.image.url }} className="w-full h-44 rounded-xl bg-gray-100" contentFit="cover" transition={200} accessibilityLabel={`Photo of ${name}`} />
             <Pressable onPress={() => Linking.openURL(details.image!.pageUrl)} accessibilityRole="link">
               <AppText variant="caption" color="inkTertiary" style={{ marginTop: 4 }}>
                 Photo: {details.image.author ?? 'unknown author'} · {details.image.license ?? 'see licence'} · Wikimedia Commons
@@ -201,7 +201,7 @@ export default function RoutePlanScreen() {
               </View>
             ) : null}
             <Button label={`Start ${sportConfig(sport).label} with this route`} icon="play" size="lg" fullWidth onPress={startWorkout} style={{ marginTop: space.xl }} />
-            <View style={[styles.row, { marginTop: space.sm }]}>
+            <View className="flex-row items-center mt-2">
               <Button label="Save route" icon="bookmark-outline" variant="outline" loading={saving} style={{ flex: 1 }} onPress={saveRoute} />
               <Button
                 label="Start without route"
@@ -218,11 +218,11 @@ export default function RoutePlanScreen() {
             </AppText>
           </>
         ) : (
-          <View style={styles.statusBox}>{status}</View>
+          <View className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100">{status}</View>
         )}
 
         {details ? (
-          <Pressable onPress={() => Linking.openURL(details.osmUrl)} accessibilityRole="link" style={[styles.row, { marginTop: space.lg }]}>
+          <Pressable onPress={() => Linking.openURL(details.osmUrl)} accessibilityRole="link" className="flex-row items-center mt-4">
             <Ionicons name="open-outline" size={16} color={color.inkSecondary} />
             <AppText variant="caption" color="inkSecondary" style={{ marginLeft: space.xs }}>View on OpenStreetMap</AppText>
           </Pressable>
@@ -231,14 +231,3 @@ export default function RoutePlanScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.surface },
-  back: { position: 'absolute', left: space.gutter },
-  sheet: { flex: 1, marginTop: -16, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, backgroundColor: color.surface },
-  photoBox: { marginBottom: space.md },
-  photo: { width: '100%', height: 170, borderRadius: radius.md, backgroundColor: color.canvas },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  statusBox: { marginTop: space.lg, padding: space.lg, borderRadius: radius.md, backgroundColor: color.canvas },
-  inlineBtn: { marginTop: space.sm, alignSelf: 'flex-start' },
-});
