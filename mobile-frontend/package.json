@@ -62,7 +62,17 @@
     "lint": "eslint src",
     "postinstall": "node scripts/patch-asset.js",
     "test": "jest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prebuild": "expo prebuild",
+    "prebuild:clean": "expo prebuild --clean",
+    "export": "expo export",
+    "build:apk": "eas build --platform android --profile preview",
+    "build:apk:local": "eas build --platform android --profile preview --local",
+    "build:app-bundle": "eas build --platform android --profile production",
+    "build:ios": "eas build --platform ios --profile preview",
+    "build:all": "eas build --platform all",
+    "build:android:debug": "cd android && ./gradlew assembleDebug",
+    "build:android:release": "cd android && ./gradlew assembleRelease"
   },
   "overrides": {
     "lightningcss": "1.30.1"
