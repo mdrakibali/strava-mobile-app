@@ -7,7 +7,10 @@ export type SportType =
   | 'Gravel Ride'
   | 'Mountain Bike'
   | 'Virtual Ride'
-  | 'Workout';
+  | 'Workout'
+  | 'Yoga'
+  | 'Swim'
+  | 'E-Bike Ride';
 
 export type ActivityVisibility = 'PUBLIC' | 'FOLLOWERS_ONLY' | 'ONLY_ME';
 

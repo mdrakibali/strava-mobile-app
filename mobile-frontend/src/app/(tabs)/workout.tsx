@@ -1,36 +1,75 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
-import { Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { saveLastSport } from '../../components/record/SportSheet';
 import { useApp } from '../../context/AppContext';
-import { formatClock, formatDuration, kmValue } from '../../lib/format';
-import { MVP_SPORTS, sportConfig } from '../../lib/sports';
-import { PLACE_LABEL, useNearbyPlaces } from '../../lib/useNearbyPlaces';
+import { formatDuration, kmValue } from '../../lib/format';
+import { sportConfig } from '../../lib/sports';
 import { api } from '../../services/api';
-import { syncWorker } from '../../tracking/sync';
-import { isRecordingActive, timerSeconds, useNow, usePendingUploads, useRecording } from '../../tracking/useRecording';
+import { isRecordingActive, useRecording } from '../../tracking/useRecording';
 import { SportType } from '../../types';
 
 type Totals = Record<string, { count: number; distance: number; moving: number }>;
 
-/**
- * Workout tab (reference: strava-screen/workout-tab.png).
- * Clean NativeWind Tailwind styling matching Strava's Workout tab.
- */
+interface SportItem {
+  id: SportType;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  category: 'foot' | 'cycle' | 'other';
+}
+
+const ALL_SPORTS: SportItem[] = [
+  { id: 'Run', label: 'Run', icon: 'footsteps-outline', category: 'foot' },
+  { id: 'Trail Run', label: 'Trail Run', icon: 'trending-up-outline', category: 'foot' },
+  { id: 'Walk', label: 'Walk', icon: 'walk-outline', category: 'foot' },
+  { id: 'Hike', label: 'Hike', icon: 'trail-sign-outline', category: 'foot' },
+  { id: 'Ride', label: 'Ride', icon: 'bicycle-outline', category: 'cycle' },
+  { id: 'Gravel Ride', label: 'Gravel Ride', icon: 'bicycle-outline', category: 'cycle' },
+  { id: 'Mountain Bike', label: 'Mountain Bike', icon: 'bicycle-outline', category: 'cycle' },
+  { id: 'E-Bike Ride', label: 'E-Bike Ride', icon: 'flash-outline', category: 'cycle' },
+  { id: 'Yoga', label: 'Yoga', icon: 'body-outline', category: 'other' },
+  { id: 'Workout', label: 'Workout', icon: 'fitness-outline', category: 'other' },
+  { id: 'Swim', label: 'Swim', icon: 'water-outline', category: 'other' },
+];
+
+const TOP_SPORTS: SportItem[] = [
+  { id: 'Yoga', label: 'Yoga', icon: 'body-outline', category: 'other' },
+  { id: 'Run', label: 'Run', icon: 'footsteps-outline', category: 'foot' },
+  { id: 'Ride', label: 'Ride', icon: 'bicycle-outline', category: 'cycle' },
+  { id: 'Walk', label: 'Walk', icon: 'walk-outline', category: 'foot' },
+  { id: 'Hike', label: 'Hike', icon: 'trail-sign-outline', category: 'foot' },
+];
+
 export default function WorkoutTab() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { currentUser } = useApp();
   const rec = useRecording();
   const active = isRecordingActive(rec);
-  const now = useNow(active && rec.lifecycle.status === 'recording');
-  const pending = usePendingUploads();
   const [totals, setTotals] = useState<Totals | null>(null);
-  const [placeSport, setPlaceSport] = useState<SportType>('Run');
-  const nearby = useNearbyPlaces(placeSport);
+  const [showSportModal, setShowSportModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // This year's totals per sport, from the server
+  // If a workout is already in progress, navigate directly to the recorder screen.
+  useFocusEffect(
+    useCallback(() => {
+      if (active) {
+        router.replace('/record');
+      }
+    }, [active, router])
+  );
+
+  // Fetch yearly totals for sports stats
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
@@ -57,87 +96,60 @@ export default function WorkoutTab() {
 
   const start = (sport: SportType) => {
     saveLastSport(sport);
+    setShowSportModal(false);
     router.push({ pathname: '/record', params: { sport } });
   };
 
+  const filteredSports = useMemo(() => {
+    if (!searchQuery.trim()) return ALL_SPORTS;
+    const q = searchQuery.toLowerCase().trim();
+    return ALL_SPORTS.filter((s) => s.label.toLowerCase().includes(q));
+  }, [searchQuery]);
+
+  const footSports = filteredSports.filter((s) => s.category === 'foot');
+  const cycleSports = filteredSports.filter((s) => s.category === 'cycle');
+  const otherSports = filteredSports.filter((s) => s.category === 'other');
+
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-[#F7F7F8]">
+    <SafeAreaView edges={['top']} className="flex-1 bg-[#121212]">
       {/* Top Header */}
-      <View className="px-5 pt-3 pb-2 bg-white border-b border-gray-100">
-        <Text className="text-3xl font-black text-gray-900 tracking-tight">Workout</Text>
+      <View className="px-5 pt-3 pb-3 bg-[#121212] border-b border-[#27272A] flex-row items-center justify-between">
+        <Text className="text-3xl font-black text-white tracking-tight">Workout</Text>
+        <TouchableOpacity
+          onPress={() => router.push({ pathname: '/history/[athleteId]', params: { athleteId: currentUser.id } })}
+          accessibilityLabel="Activity History"
+          className="p-2 rounded-full bg-[#1E1E1E]">
+          <Ionicons name="time-outline" size={22} color="#D1D5DB" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
-        {/* Active Recording Banner */}
-        {active ? (
-          <Pressable
-            onPress={() => router.push('/record')}
-            className={`flex-row items-center bg-white p-4 rounded-2xl mb-4 border ${
-              rec.lifecycle.status === 'paused' ? 'border-amber-400 bg-amber-50/50' : 'border-[#FC4C02]'
-            } shadow-sm`}>
-            <Ionicons
-              name={rec.lifecycle.status === 'paused' ? 'pause-circle' : 'radio-button-on'}
-              size={28}
-              color="#FC4C02"
-            />
-            <View className="flex-1 ml-3">
-              <Text className="text-base font-bold text-gray-900">
-                {rec.lifecycle.pauseReason === 'interrupted'
-                  ? 'Recording interrupted'
-                  : rec.lifecycle.status === 'paused'
-                    ? `${sportConfig(rec.sport).label} paused`
-                    : `${sportConfig(rec.sport).label} in progress`}
-              </Text>
-              <Text className="text-xs font-semibold text-gray-500 mt-0.5">
-                {formatClock(timerSeconds(rec, now))} · {kmValue(rec.distanceM)} km · Tap to return
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-          </Pressable>
-        ) : null}
-
-        {/* Pending Uploads Banner */}
-        {pending.length > 0 ? (
-          <Pressable
-            onPress={() => syncWorker.kick(true)}
-            className="flex-row items-center bg-white p-4 rounded-2xl mb-4 border border-gray-200 shadow-sm">
-            <Ionicons name="cloud-upload-outline" size={24} color="#1F2937" />
-            <View className="flex-1 ml-3">
-              <Text className="text-sm font-bold text-gray-900">
-                {pending.length} {pending.length === 1 ? 'activity' : 'activities'} waiting to upload
-              </Text>
-              <Text className="text-xs text-gray-500 mt-0.5">Tap to retry upload now</Text>
-            </View>
-          </Pressable>
-        ) : null}
-
-        {/* Primary Sports Cards (Strava Reference workout-tab.png) */}
-        {MVP_SPORTS.map((s) => {
+        {/* Top 3 Featured Sports (Yoga, Run, Ride - Strava Reference) */}
+        {TOP_SPORTS.slice(0, 3).map((s) => {
           const t = totals?.[s.id];
           return (
-            <View key={s.id} className="bg-white rounded-3xl p-5 mb-4 border border-gray-200/70 shadow-xs">
+            <View key={s.id} className="bg-[#1C1C1E] rounded-3xl p-5 mb-4 border border-[#2C2C2E] shadow-sm">
               <View className="flex-row items-center justify-between mb-3">
                 <View className="flex-row items-center flex-1">
-                  <View className="w-10 h-10 rounded-xl bg-orange-50 items-center justify-center mr-3">
+                  <View className="w-11 h-11 rounded-2xl bg-[#2A2A2D] items-center justify-center mr-3.5">
                     <Ionicons name={s.icon} size={22} color="#FC4C02" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-xl font-black text-gray-900">{s.label}</Text>
-                    <Text className="text-xs font-medium text-gray-500 mt-0.5">
+                    <Text className="text-xl font-black text-white">{s.label}</Text>
+                    <Text className="text-xs font-medium text-gray-400 mt-0.5">
                       {t && t.count > 0
                         ? `This year: ${t.count} · ${kmValue(t.distance)} km · ${formatDuration(t.moving)}`
-                        : s.primaryMetric === 'speed'
+                        : sportConfig(s.id).primaryMetric === 'speed'
                           ? 'GPS · Speed, distance, elevation'
                           : 'GPS · Pace, distance, elevation'}
                     </Text>
                   </View>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+                <Ionicons name="chevron-forward" size={20} color="#6B7280" />
               </View>
 
               <TouchableOpacity
                 onPress={() => start(s.id)}
-                disabled={active}
                 activeOpacity={0.85}
                 className="w-full py-3.5 bg-[#FC4C02] rounded-full flex-row items-center justify-center active:bg-[#E34402]">
                 <Ionicons name="play" size={18} color="#FFFFFF" />
@@ -147,102 +159,126 @@ export default function WorkoutTab() {
           );
         })}
 
-        {/* More Sports Outline Button */}
+        {/* More Sports Button (Opens Filter by Sport Sheet) */}
         <TouchableOpacity
-          onPress={() => start('Workout')}
+          onPress={() => setShowSportModal(true)}
           activeOpacity={0.7}
-          className="w-full py-3.5 bg-white border border-[#FC4C02] rounded-full items-center justify-center my-2 shadow-2xs">
+          className="w-full py-4 bg-[#1C1C1E] border border-[#FC4C02]/80 rounded-full items-center justify-center my-3 shadow-xs active:bg-[#27272A]">
           <Text className="text-[#FC4C02] font-black text-sm">More sports</Text>
         </TouchableOpacity>
+      </ScrollView>
 
-        {/* Places near you */}
-        <View className="mt-6 mb-2">
-          <Text className="text-lg font-black text-gray-900 mb-3">Places near you</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row mb-3">
-            {MVP_SPORTS.map((s) => (
-              <TouchableOpacity
-                key={s.id}
-                onPress={() => setPlaceSport(s.id)}
-                className={`flex-row items-center px-4 py-2 rounded-full mr-2.5 ${
-                  placeSport === s.id ? 'bg-[#FC4C02]' : 'bg-white border border-gray-200'
-                }`}>
-                <Ionicons
-                  name={s.icon}
-                  size={14}
-                  color={placeSport === s.id ? '#FFFFFF' : '#4B5563'}
-                  className="mr-1.5"
-                />
-                <Text className={`text-xs font-bold ${placeSport === s.id ? 'text-white' : 'text-gray-700'}`}>
-                  {s.label}
-                </Text>
+      {/* Filter by Sport Modal (Strava Reference Image 5) */}
+      <Modal
+        visible={showSportModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowSportModal(false)}>
+        <View className="flex-1 justify-end bg-black/60">
+          <Pressable className="flex-1" onPress={() => setShowSportModal(false)} />
+          <View
+            style={{ paddingBottom: Math.max(insets.bottom, 16) + 16, maxHeight: '85%' }}
+            className="bg-[#1C1C1E] rounded-t-3xl pt-3 px-5 border-t border-[#2C2C2E]">
+            {/* Sheet Handle */}
+            <View className="self-center w-10 h-1 rounded-full bg-[#3F3F46] mb-3" />
+
+            {/* Header */}
+            <View className="flex-row items-center justify-between pb-3">
+              <Text className="text-xl font-bold text-white">Filter by Sport</Text>
+              <TouchableOpacity onPress={() => setShowSportModal(false)} className="p-1">
+                <Ionicons name="close" size={24} color="#D1D5DB" />
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            </View>
 
-          <View className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-xs mb-4">
-            {nearby.state.status === 'ready' ? (
-              nearby.state.places.length === 0 ? (
-                <Text className="text-xs text-gray-500 py-2">
-                  No {sportConfig(placeSport).label.toLowerCase()} places are mapped in OpenStreetMap within 5 km.
-                </Text>
-              ) : (
-                <>
-                  {nearby.state.places.slice(0, 3).map((p) => (
+            {/* Search Input */}
+            <View className="flex-row items-center bg-[#2A2A2D] rounded-2xl px-4 py-2.5 mb-5">
+              <Ionicons name="search" size={20} color="#9CA3AF" />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search"
+                placeholderTextColor="#9CA3AF"
+                className="flex-1 text-white text-base ml-2.5"
+              />
+              {searchQuery ? (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Your Top Sports */}
+              {!searchQuery ? (
+                <View className="mb-6">
+                  <Text className="text-sm font-bold text-white mb-3">Your Top Sports</Text>
+                  <View className="flex-row justify-between">
+                    {TOP_SPORTS.map((s) => (
+                      <TouchableOpacity
+                        key={s.id}
+                        onPress={() => start(s.id)}
+                        className="items-center">
+                        <View className="w-13 h-13 rounded-full bg-[#2A2A2D] items-center justify-center mb-1.5 active:bg-[#FC4C02]">
+                          <Ionicons name={s.icon} size={22} color="#FFFFFF" />
+                        </View>
+                        <Text className="text-xs font-medium text-gray-300">{s.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+
+              {/* Foot Sports */}
+              {footSports.length > 0 ? (
+                <View className="mb-5">
+                  <Text className="text-sm font-bold text-white mb-2">Foot Sports</Text>
+                  {footSports.map((s) => (
                     <TouchableOpacity
-                      key={p.id}
-                      onPress={() =>
-                        router.navigate({
-                          pathname: '/maps',
-                          params: { source: 'nearby', sport: placeSport, place: p.id },
-                        })
-                      }
-                      className="flex-row items-center py-3 border-b border-gray-100 last:border-b-0">
-                      <View className="w-8 h-8 rounded-full bg-orange-100 items-center justify-center mr-3">
-                        <Ionicons
-                          name={(PLACE_LABEL[p.category]?.icon ?? 'location-outline') as any}
-                          size={16}
-                          color="#FC4C02"
-                        />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-sm font-bold text-gray-900" numberOfLines={1}>
-                          {p.name}
-                        </Text>
-                        <Text className="text-xs text-gray-500 mt-0.5">
-                          {PLACE_LABEL[p.category]?.label ?? 'Place'} ·{' '}
-                          {p.distanceM < 1000 ? `${p.distanceM} m` : `${kmValue(p.distanceM)} km`} away
-                        </Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                      key={s.id}
+                      onPress={() => start(s.id)}
+                      className="flex-row items-center py-3 border-b border-[#2A2A2D]">
+                      <Ionicons name={s.icon} size={22} color="#D1D5DB" className="mr-3" />
+                      <Text className="text-base text-gray-200 ml-3">{s.label}</Text>
                     </TouchableOpacity>
                   ))}
-                  <Text className="text-[10px] text-gray-400 mt-2">{nearby.state.attribution}</Text>
-                </>
-              )
-            ) : nearby.state.status === 'permission_denied' ? (
-              <View className="py-2">
-                <Text className="text-xs text-gray-600 mb-2">Allow location to discover workout places near you.</Text>
-                <TouchableOpacity
-                  onPress={nearby.retry}
-                  className="px-4 py-2 bg-[#FC4C02] rounded-xl self-start">
-                  <Text className="text-xs font-bold text-white">Allow location</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <Text className="text-xs text-gray-500 py-2">Finding nearby places…</Text>
-            )}
+                </View>
+              ) : null}
+
+              {/* Cycle Sports */}
+              {cycleSports.length > 0 ? (
+                <View className="mb-5">
+                  <Text className="text-sm font-bold text-white mb-2">Cycle Sports</Text>
+                  {cycleSports.map((s) => (
+                    <TouchableOpacity
+                      key={s.id}
+                      onPress={() => start(s.id)}
+                      className="flex-row items-center py-3 border-b border-[#2A2A2D]">
+                      <Ionicons name={s.icon} size={22} color="#D1D5DB" className="mr-3" />
+                      <Text className="text-base text-gray-200 ml-3">{s.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : null}
+
+              {/* Other Sports */}
+              {otherSports.length > 0 ? (
+                <View className="mb-5">
+                  <Text className="text-sm font-bold text-white mb-2">Other Sports</Text>
+                  {otherSports.map((s) => (
+                    <TouchableOpacity
+                      key={s.id}
+                      onPress={() => start(s.id)}
+                      className="flex-row items-center py-3 border-b border-[#2A2A2D]">
+                      <Ionicons name={s.icon} size={22} color="#D1D5DB" className="mr-3" />
+                      <Text className="text-base text-gray-200 ml-3">{s.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : null}
+            </ScrollView>
           </View>
         </View>
-
-        {/* Activity History Button */}
-        <TouchableOpacity
-          onPress={() => router.push({ pathname: '/history/[athleteId]', params: { athleteId: currentUser.id } })}
-          activeOpacity={0.8}
-          className="w-full py-4 bg-white border border-gray-300 rounded-2xl flex-row items-center justify-center shadow-xs">
-          <Ionicons name="time-outline" size={18} color="#1F2937" />
-          <Text className="text-sm font-bold text-gray-900 ml-2">Activity History</Text>
-        </TouchableOpacity>
-      </ScrollView>
+      </Modal>
     </SafeAreaView>
   );
 }

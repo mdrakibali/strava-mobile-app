@@ -38,11 +38,11 @@ export default function CreateClubScreen() {
           <Chip key={s.id} label={s.label} icon={s.icon} selected={sportType === s.id} onPress={() => setSportType(s.id)} />
         ))}
       </ChipRow>
-      <View style={{ height: space.lg }} />
+      <View className="h-4" />
       <TextField value={city} onChangeText={setCity} placeholder="City (optional)" accessibilityLabel="City" maxLength={100} />
-      <View style={{ height: space.md }} />
+      <View className="h-3" />
       <TextField value={description} onChangeText={setDescription} placeholder="What is this club about?" accessibilityLabel="Description" multiline maxLength={1000} />
-      <SectionTitle title="Who can join" style={{ marginTop: space.xl }} />
+      <SectionTitle title="Who can join" className="mt-5" />
       <ChipRow>
         <Chip label="Anyone" icon="globe-outline" selected={!isPrivate} onPress={() => setIsPrivate(false)} />
         <Chip label="Private" icon="lock-closed-outline" selected={isPrivate} onPress={() => setIsPrivate(true)} />

@@ -168,35 +168,6 @@ export default function HomeFeedScreen() {
     </View>
   );
 
-  const recordingBanner = active ? (
-    <TouchableOpacity
-      onPress={() => router.push('/record')}
-      activeOpacity={0.85}
-      className={`flex-row items-center px-4 py-3 ${
-        paused ? 'bg-amber-400' : 'bg-[#FC4C02]'
-      }`}>
-      <Ionicons
-        name={interrupted ? 'alert-circle' : paused ? 'pause' : 'radio-button-on'}
-        size={18}
-        color={paused ? '#1F2937' : '#FFFFFF'}
-      />
-      <Text
-        className={`flex-1 text-sm font-bold ml-2.5 ${
-          paused ? 'text-gray-900' : 'text-white'
-        }`}>
-        {interrupted
-          ? 'Recording interrupted · Resume or finish'
-          : `${paused ? 'Recording paused' : 'Recording'} · ${formatClock(timerSeconds(rec, now))}`}
-      </Text>
-      <Text
-        className={`text-xs font-black uppercase tracking-wider ${
-          paused ? 'text-gray-900' : 'text-white'
-        }`}>
-        Open
-      </Text>
-    </TouchableOpacity>
-  ) : null;
-
   // Saved on the phone but not yet confirmed by the server (local-first; never silently dropped).
   const uploadsBanner =
     pending.length > 0 ? (
@@ -270,7 +241,6 @@ export default function HomeFeedScreen() {
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-[#F7F7F8]">
       {header}
-      {recordingBanner}
       {uploadsBanner}
       {body}
     </SafeAreaView>

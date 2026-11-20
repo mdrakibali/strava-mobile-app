@@ -50,21 +50,21 @@ export default function CreateChallengeScreen() {
   return (
     <FormScreen title="Create Challenge" submitLabel="Create challenge" canSubmit={valid} submitting={saving} error={error} onSubmit={submit}>
       <TextField value={title} onChangeText={setTitle} placeholder="Challenge name (e.g. 100 km in December)" accessibilityLabel="Challenge name" maxLength={100} />
-      <SectionTitle title="Sport" style={{ marginTop: space.xl }} />
+      <SectionTitle title="Sport" className="mt-5" />
       <ChipRow>
         {MVP_SPORTS.map((s) => (
           <Chip key={s.id} label={s.label} icon={s.icon} selected={sportType === s.id} onPress={() => setSportType(s.id)} />
         ))}
       </ChipRow>
-      <View style={{ height: space.lg }} />
+      <View className="h-4" />
       <TextField value={targetKm} onChangeText={setTargetKm} placeholder="Distance goal (km)" accessibilityLabel="Distance goal in kilometres" keyboardType="decimal-pad" maxLength={7} />
-      <SectionTitle title="Duration" style={{ marginTop: space.xl }} />
+      <SectionTitle title="Duration" className="mt-5" />
       <ChipRow>
         {DURATIONS.map((d) => (
           <Chip key={d.days} label={d.label} selected={days === d.days} onPress={() => setDays(d.days)} />
         ))}
       </ChipRow>
-      <View style={{ height: space.lg }} />
+      <View className="h-4" />
       <TextField value={description} onChangeText={setDescription} placeholder="Description (optional)" accessibilityLabel="Description" multiline maxLength={1000} />
     </FormScreen>
   );

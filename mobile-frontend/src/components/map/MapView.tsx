@@ -257,7 +257,7 @@ export const MapView: React.FC<MapViewProps> = ({
         onDidFailLoadingMap={() => setLoadState('error')}
         onPress={onMapPress ? (e) => onMapPress(e.nativeEvent.lngLat as LngLat) : undefined}>
         {cameraElement}
-        {mode === 'live' || showUserLocation ? <UserLocation animated accuracy /> : null}
+        {mode === 'live' || showUserLocation ? <UserLocation animated accuracy={false} heading={true} /> : null}
         {otherRoutes && otherRoutes.length ? (
           <GeoJSONSource id="other-routes" data={othersData}>
             <Layer
@@ -271,10 +271,16 @@ export const MapView: React.FC<MapViewProps> = ({
         {plannedRoute && plannedRoute.length > 1 ? (
           <GeoJSONSource id="planned-route" data={plannedData}>
             <Layer
+              id="planned-route-casing"
+              type="line"
+              layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+              paint={{ 'line-color': '#FFFFFF', 'line-width': 8 }}
+            />
+            <Layer
               id="planned-route-line"
               type="line"
               layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-              paint={{ 'line-color': color.planned, 'line-width': 5, 'line-opacity': 0.75, 'line-dasharray': [1.5, 1.2] }}
+              paint={{ 'line-color': color.brand, 'line-width': 5, 'line-opacity': 0.9 }}
             />
           </GeoJSONSource>
         ) : null}

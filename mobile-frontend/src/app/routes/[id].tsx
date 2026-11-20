@@ -7,6 +7,8 @@ import { ElevationChart } from '../../components/common/ElevationChart';
 import { StatBox } from '../../components/common/StatBox';
 import { StravaMapView } from '../../components/map/StravaMapView';
 import { api } from '../../services/api';
+import { CURATED_DHAKA_ROUTES } from '../../lib/curatedRoutes';
+import { plannedRouteStore } from '../../lib/plannedRoute';
 
 export default function RouteDetailScreen() {
   const router = useRouter();
@@ -22,10 +24,47 @@ export default function RouteDetailScreen() {
     api.routes
       .get(id)
       .then((res) => {
-        // Only the server's route — no invented elevation profile or surface split as a fallback.
-        if (res?.route) setRoute(res.route);
+        if (res?.route) {
+          setRoute(res.route);
+        } else {
+          const curated = CURATED_DHAKA_ROUTES.find((c) => c.id === id);
+          if (curated) {
+            setRoute({
+              id: curated.id,
+              name: curated.name,
+              description: curated.description,
+              sportType: curated.sportType,
+              distanceMeters: curated.distanceMeters,
+              elevationGainMeters: curated.elevationGainMeters,
+              estimatedTimeSeconds: curated.estimatedTimeSeconds,
+              polylinePoints: curated.polyline,
+              surfaceTypes: { pavedPercent: curated.surfacePercentPaved, unpavedPercent: 100 - curated.surfacePercentPaved },
+              creator: { displayName: curated.creatorName },
+            });
+          } else {
+            setRoute(null);
+          }
+        }
       })
-      .catch(() => setRoute(null))
+      .catch(() => {
+        const curated = CURATED_DHAKA_ROUTES.find((c) => c.id === id);
+        if (curated) {
+          setRoute({
+            id: curated.id,
+            name: curated.name,
+            description: curated.description,
+            sportType: curated.sportType,
+            distanceMeters: curated.distanceMeters,
+            elevationGainMeters: curated.elevationGainMeters,
+            estimatedTimeSeconds: curated.estimatedTimeSeconds,
+            polylinePoints: curated.polyline,
+            surfaceTypes: { pavedPercent: curated.surfacePercentPaved, unpavedPercent: 100 - curated.surfacePercentPaved },
+            creator: { displayName: curated.creatorName },
+          });
+        } else {
+          setRoute(null);
+        }
+      })
       .finally(() => {
         setIsLoading(false);
       });
@@ -161,16 +200,24 @@ export default function RouteDetailScreen() {
 
           {/* Start Navigation Action Button */}
           <TouchableOpacity
-            onPress={() =>
+            onPress={() => {
+              plannedRouteStore.set({
+                name: route.name,
+                sport: route.sportType || 'Ride',
+                geometry: coords,
+                distanceM: Number(route.distanceMeters) || 0,
+                durationS: Number(route.estimatedTimeSeconds) || 0,
+                elevationGainM: Number(route.elevationGainMeters) || 0,
+              });
               router.push({
-                pathname: '/routes/navigation',
-                params: { routeId: route.id },
-              })
-            }
+                pathname: '/record',
+                params: { sport: route.sportType || 'Ride' },
+              });
+            }}
             className="w-full py-4.5 bg-[#FC4C02] rounded-full flex-row items-center justify-center shadow-lg mt-4 active:bg-[#E03A00]">
-            <Ionicons name="navigate" size={20} color="#FFFFFF" />
+            <Ionicons name="play" size={20} color="#FFFFFF" />
             <Text className="text-base font-black text-white ml-2 tracking-wide">
-              Start Turn-by-Turn Navigation
+              Start Workout with this Route
             </Text>
           </TouchableOpacity>
         </View>

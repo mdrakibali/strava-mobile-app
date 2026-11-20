@@ -54,13 +54,13 @@ export default function CreateEventScreen() {
   return (
     <FormScreen title="Create Event" submitLabel="Create event" canSubmit={valid} submitting={saving} error={error} onSubmit={submit}>
       <TextField value={title} onChangeText={setTitle} placeholder="Event name (e.g. Saturday long run)" accessibilityLabel="Event name" maxLength={120} />
-      <SectionTitle title="Sport" style={{ marginTop: space.xl }} />
+      <SectionTitle title="Sport" className="mt-5" />
       <ChipRow>
         {MVP_SPORTS.map((s) => (
           <Chip key={s.id} label={s.label} icon={s.icon} selected={sportType === s.id} onPress={() => setSportType(s.id)} />
         ))}
       </ChipRow>
-      <SectionTitle title="Day" style={{ marginTop: space.xl }} />
+      <SectionTitle title="Day" className="mt-5" />
       <ChipRow>
         {days.map((d, i) => (
           <Chip
@@ -71,17 +71,17 @@ export default function CreateEventScreen() {
           />
         ))}
       </ChipRow>
-      <SectionTitle title="Start time" style={{ marginTop: space.xl }} />
+      <SectionTitle title="Start time" className="mt-5" />
       <ChipRow>
         {TIMES.map((t) => (
           <Chip key={t} label={label(t)} selected={time === t} onPress={() => setTime(t)} />
         ))}
       </ChipRow>
-      <View style={{ height: space.lg }} />
+      <View className="h-4" />
       <TextField value={meetingPoint} onChangeText={setMeetingPoint} placeholder="Meeting point" accessibilityLabel="Meeting point" maxLength={200} />
-      <View style={{ height: space.md }} />
+      <View className="h-3" />
       <TextField value={distanceKm} onChangeText={setDistanceKm} placeholder="Distance (km, optional)" accessibilityLabel="Distance in kilometres" keyboardType="decimal-pad" maxLength={6} />
-      <View style={{ height: space.md }} />
+      <View className="h-3" />
       <TextField value={pace} onChangeText={setPace} placeholder="Pace / level (optional)" accessibilityLabel="Pace or level" maxLength={200} />
     </FormScreen>
   );

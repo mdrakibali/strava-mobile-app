@@ -38,6 +38,14 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="workout"
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            if (recording) {
+              e.preventDefault();
+              navigation.navigate('record');
+            }
+          },
+        })}
         options={{
           title: 'Workout',
           tabBarAccessibilityLabel: recording ? 'Workout, recording in progress' : 'Workout',

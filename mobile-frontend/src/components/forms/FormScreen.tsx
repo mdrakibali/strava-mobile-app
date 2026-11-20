@@ -15,10 +15,17 @@ export const FormScreen: React.FC<{
 }> = ({ title, submitLabel, canSubmit, submitting, error, onSubmit, children }) => {
   const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-white">
+    <SafeAreaView edges={['top']} style={{ flex: 1 }} className="flex-1 bg-white">
       <AppBar title={title} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 64 }} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          style={{ flex: 1 }}
+          className="flex-1"
+          contentContainerStyle={{ padding: 16, paddingBottom: 64 }}
+          keyboardShouldPersistTaps="handled">
           {children}
           {error ? (
             <View style={{ marginTop: space.lg }}>
@@ -26,8 +33,18 @@ export const FormScreen: React.FC<{
             </View>
           ) : null}
         </ScrollView>
-        <View style={{ paddingBottom: insets.bottom + 12 }} className="px-4 pt-3 border-t border-gray-100 bg-white">
-          <Button label={submitLabel} size="lg" variant="dark" fullWidth loading={submitting} disabled={!canSubmit} onPress={onSubmit} />
+        <View
+          style={{ paddingBottom: Math.max(insets.bottom, 12) + 12 }}
+          className="px-4 pt-3 border-t border-gray-100 bg-white">
+          <Button
+            label={submitLabel}
+            size="lg"
+            variant="dark"
+            fullWidth
+            loading={submitting}
+            disabled={!canSubmit}
+            onPress={onSubmit}
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
