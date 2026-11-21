@@ -491,7 +491,7 @@ export const api = {
     create: (data: { title: string; sportType: string; eventDate: string; meetingPoint: string; paceDescription?: string; distanceMeters?: number; clubId?: string }) =>
       request<{ event: any }>('/events', { method: 'POST', body: JSON.stringify(data) }),
     rsvp: (id: string, status: 'GOING' | 'MAYBE' | 'DECLINED') =>
-      request<{ message: string; status: string | null }>(`/events/${id}/rsvp`, {
+      request<{ message: string; status: string | null; attendeesCount?: number }>(`/events/${id}/rsvp`, {
         method: 'POST',
         body: JSON.stringify({ status }),
       }),

@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { athletes, clubs, eventRsvps, groupEvents } from '../db/schema';
 import { z } from 'zod';
@@ -149,11 +149,19 @@ eventsRouter.post('/:id/rsvp', requireAuth, async (c) => {
 
     const db = getDb(c);
 
+    const goingCount = async () => {
+      const [res] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(eventRsvps)
+        .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.status, 'GOING')));
+      return Number(res?.count || 0);
+    };
+
     if (status === 'DECLINED') {
       await db
         .delete(eventRsvps)
         .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.athleteId, user.athleteId)));
-      return c.json({ message: 'RSVP removed', status: null });
+      return c.json({ message: 'RSVP removed', status: null, attendeesCount: await goingCount() });
     }
 
     await db
@@ -167,7 +175,7 @@ eventsRouter.post('/:id/rsvp', requireAuth, async (c) => {
         target: [eventRsvps.eventId, eventRsvps.athleteId],
         set: { status },
       });
-    return c.json({ message: 'RSVP recorded', status });
+    return c.json({ message: 'RSVP recorded', status, attendeesCount: await goingCount() });
   } catch (err: any) {
     console.error('RSVP error:', err);
     return c.json({ error: err.message || 'Failed to record RSVP' }, 500);

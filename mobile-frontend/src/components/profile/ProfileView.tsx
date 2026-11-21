@@ -12,6 +12,7 @@ import {
   Skeleton,
 } from '../../design';
 import { ActivityView, AthleteSummary, fromProfileActivity, toAthleteSummary } from '../../lib/activityView';
+import { markActivityRemoved, withoutRemoved } from '../../lib/removedActivities';
 import { captureFollowEpochs, commitServerFollow, setFollowing, socialStore, useFollow } from '../../lib/social';
 import { shareAthlete } from '../../lib/share';
 import { MVP_SPORTS } from '../../lib/sports';
@@ -50,7 +51,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
         api.athletes.stats(athleteId).catch(() => null),
       ]);
       const athlete = { ...toAthleteSummary(res.athlete), bio: res.athlete?.bio ?? null };
-      const all = (res.recentActivities || []).map((row: any) => fromProfileActivity(row, athlete));
+      const all = withoutRemoved((res.recentActivities || []).map((row: any) => fromProfileActivity(row, athlete)));
       const isFollowing = commitServerFollow(athleteId, Boolean(res.athlete?.isFollowing), snapshot);
       setData({
         athlete,
@@ -206,6 +207,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
             isSelf={isSelf}
             recentLimit={RECENT_LIMIT}
             onDeleteActivity={(deletedId) => {
+              markActivityRemoved(deletedId);
               setData((prev) =>
                 prev
                   ? {

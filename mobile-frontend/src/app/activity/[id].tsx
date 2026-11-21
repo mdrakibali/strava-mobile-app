@@ -14,6 +14,7 @@ import { MapView } from '../../components/map/MapView';
 import { useApp } from '../../context/AppContext';
 import { AppBar, EmptyState, ErrorState, IconButton } from '../../design';
 import { ActivityView, fromDetailResponse } from '../../lib/activityView';
+import { markActivityRemoved } from '../../lib/removedActivities';
 import { socialStore } from '../../lib/social';
 import { useKeyboardInset } from '../../lib/useKeyboardInset';
 import { api } from '../../services/api';
@@ -129,6 +130,7 @@ export default function ActivityDetailScreen() {
         onPress: async () => {
           try {
             await api.activities.remove(activityId);
+            markActivityRemoved(activityId);
             router.back();
           } catch (e: any) {
             Alert.alert('Couldn’t delete', e?.message ?? 'Please try again.');

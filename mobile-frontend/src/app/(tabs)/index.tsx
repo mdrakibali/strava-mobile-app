@@ -9,6 +9,7 @@ import { EmptyState, ErrorState } from '../../design';
 import { useApp } from '../../context/AppContext';
 import { APP_NAME } from '../../config/app';
 import { ActivityView, fromFeedItem } from '../../lib/activityView';
+import { withoutRemoved } from '../../lib/removedActivities';
 import { socialStore } from '../../lib/social';
 import { formatClock } from '../../lib/format';
 import { api } from '../../services/api';
@@ -57,7 +58,7 @@ export default function HomeFeedScreen() {
     if (!res?.feed?.length) {
       res = await api.feed.getFeed('all', undefined, 500);
     }
-    const items = (res?.feed || []).map(fromFeedItem).filter(visibleToMe);
+    const items = withoutRemoved((res?.feed || []).map(fromFeedItem).filter(visibleToMe));
     socialStore.seed(items, readTick);
     return {
       items,
@@ -123,7 +124,7 @@ export default function HomeFeedScreen() {
       if (gen !== generation.current) return; // a refresh replaced the list meanwhile
       cursorRef.current = res.nextCursor;
       hasNextRef.current = res.hasNextPage;
-      const next = res.feed.map(fromFeedItem).filter(visibleToMe);
+      const next = withoutRemoved(res.feed.map(fromFeedItem).filter(visibleToMe));
       socialStore.seed(next, readTick);
       setItems((prev) => {
         const seen = new Set(prev.map((p) => p.id));

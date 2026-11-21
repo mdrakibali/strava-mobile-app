@@ -37,6 +37,7 @@ export default function MapsScreen() {
 
   const [me, setMe] = useState<LngLat | null>(null);
   const listRef = useRef<FlatList<MapItem>>(null);
+  const pinned = useRef(Boolean(params.routeId));
 
   const [mapMode, setMapMode] = useState<'liberty' | 'positron' | 'bright'>('liberty');
   const [styleModalVisible, setStyleModalVisible] = useState(false);
@@ -72,9 +73,15 @@ export default function MapsScreen() {
   const select = (index: number) => {
     const item = visible[index];
     if (!item) return;
+    pinned.current = true;
     setSelectedId(item.id);
     listRef.current?.scrollToIndex({ index, animated: true });
   };
+
+  useEffect(() => {
+    if (pinned.current || !me || visible.length === 0) return;
+    if (visible[0].id !== selectedId) setSelectedId(visible[0].id);
+  }, [me, visible, selectedId, setSelectedId]);
 
   const startRoute = (item: MapItem) => {
     plannedRouteStore.set({
@@ -103,10 +110,15 @@ export default function MapsScreen() {
     else setDifficultyFilter(null);
   };
 
-  const mainRoute = current?.paths[0] ?? [];
+  const routeIsNear = !me || current?.distanceFromMeM == null || current.distanceFromMeM < 25_000;
+  const mainRoute = routeIsNear ? (current?.paths[0] ?? []) : [];
   const others = useMemo(
-    () => visible.filter((v) => v.id !== current?.id).slice(0, 15).flatMap((v) => v.paths),
-    [visible, current]
+    () =>
+      visible
+        .filter((v) => v.id !== current?.id && (!me || (v.distanceFromMeM != null && v.distanceFromMeM < 25_000)))
+        .slice(0, 15)
+        .flatMap((v) => v.paths),
+    [visible, current, me]
   );
   const routeMarkers = useMemo(
     () => visible.map((v) => ({ id: v.id, coordinate: v.anchor, selected: v.id === current?.id })),
@@ -126,8 +138,16 @@ export default function MapsScreen() {
           const idx = visible.findIndex((v) => v.id === id);
           if (idx !== -1) select(idx);
         }}
-        focus={current && mainRoute.length < 2 ? { center: current.anchor, zoom: 15 } : null}
-        frameKey={current ? `route:${current.id}` : me ? 'me' : 'none'}
+        focus={
+          mainRoute.length > 1
+            ? null
+            : me
+              ? { center: me, zoom: 14 }
+              : current
+                ? { center: current.anchor, zoom: 15 }
+                : null
+        }
+        frameKey={mainRoute.length > 1 && current ? `route:${current.id}` : me ? `me:${me[0].toFixed(3)},${me[1].toFixed(3)}` : 'none'}
         padding={{ top: insets.top + 120, bottom: 250 }}
         styleKey={mapMode as MapStyleKey}
         pitch={pitch}

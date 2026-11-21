@@ -6,6 +6,8 @@ import { FeedCard, FeedCardSkeleton } from '../../components/activity/FeedCard';
 import { useApp } from '../../context/AppContext';
 import { AppBar, color, EmptyState, ErrorState, space } from '../../design';
 import { ActivityView, fromProfileActivity, toAthleteSummary } from '../../lib/activityView';
+import { markActivityRemoved, withoutRemoved } from '../../lib/removedActivities';
+import { socialStore } from '../../lib/social';
 import { api } from '../../services/api';
 
 /**
@@ -31,13 +33,16 @@ export default function ActivityHistoryScreen() {
   useEffect(() => {
     if (!athleteId) return;
     let cancelled = false;
+    const readTick = socialStore.beginRead();
     Promise.all([api.athletes.getProfile(athleteId), api.athletes.listActivities(athleteId, null)]).then(
       ([profile, page]) => {
         if (cancelled) return;
         athleteRef.current = toAthleteSummary(profile.athlete);
         cursor.current = page.nextCursor;
         hasNext.current = page.hasNextPage;
-        setItems(page.activities.map((r) => fromProfileActivity(r, athleteRef.current)));
+        const rows = withoutRemoved(page.activities.map((r) => fromProfileActivity(r, athleteRef.current)));
+        socialStore.seed(rows, readTick);
+        setItems(rows);
         setStatus('ready');
         setRefreshing(false);
       },
@@ -57,11 +62,13 @@ export default function ActivityHistoryScreen() {
     if (loadingMore || !hasNext.current || !cursor.current || status !== 'ready') return;
     setLoadingMore(true);
     setMoreError(false);
+    const readTick = socialStore.beginRead();
     try {
       const page = await api.athletes.listActivities(athleteId!, cursor.current);
       cursor.current = page.nextCursor;
       hasNext.current = page.hasNextPage;
-      const next = page.activities.map((r) => fromProfileActivity(r, athleteRef.current));
+      const next = withoutRemoved(page.activities.map((r) => fromProfileActivity(r, athleteRef.current)));
+      socialStore.seed(next, readTick);
       setItems((prev) => {
         const seen = new Set(prev.map((p) => p.id));
         return [...prev, ...next.filter((n) => !seen.has(n.id))];
@@ -94,7 +101,15 @@ export default function ActivityHistoryScreen() {
           data={items}
           keyExtractor={(a) => a.id}
           renderItem={({ item }) => (
-            <FeedCard activity={item} currentUserId={isSelf ? currentUser.id : undefined} showAthlete={false} />
+            <FeedCard
+              activity={item}
+              currentUserId={isSelf ? currentUser.id : undefined}
+              showAthlete={false}
+              onDelete={(deletedId) => {
+                markActivityRemoved(deletedId);
+                setItems((prev) => prev.filter((a) => a.id !== deletedId));
+              }}
+            />
           )}
           onEndReached={loadMore}
           onEndReachedThreshold={0.6}

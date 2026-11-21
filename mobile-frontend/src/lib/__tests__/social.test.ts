@@ -39,6 +39,13 @@ describe('setKudos', () => {
     expect(socialStore.get('a3')).toEqual({ hasKudos: false, kudosCount: 1, commentsCount: 0 });
   });
 
+  it('does not change the count when the like state is still unknown', async () => {
+    socialStore.seed([{ id: 'a8', hasKudos: null, kudosCount: 4, commentsCount: 1 }]);
+    api.activities.giveKudos.mockResolvedValue({ hasKudos: true, kudosCount: 4 });
+    await setKudos('a8', true);
+    expect(socialStore.get('a8')).toMatchObject({ hasKudos: true, kudosCount: 4 });
+  });
+
   it('does not double count when the state already matches', async () => {
     socialStore.seed([{ id: 'a4', hasKudos: true, kudosCount: 2, commentsCount: 0 }]);
     api.activities.giveKudos.mockResolvedValue({ hasKudos: true, kudosCount: 2 });

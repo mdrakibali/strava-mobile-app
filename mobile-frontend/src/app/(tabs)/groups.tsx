@@ -129,7 +129,10 @@ export default function GroupsScreen() {
     update('events', e.id, { rsvpStatus: going ? null : 'GOING', attendeesCount: e.attendeesCount + (going ? -1 : 1) });
     try {
       const res = await api.events.rsvp(e.id, going ? 'DECLINED' : 'GOING');
-      update('events', e.id, { rsvpStatus: res.status });
+      update('events', e.id, {
+        rsvpStatus: res.status,
+        ...(typeof res.attendeesCount === 'number' ? { attendeesCount: res.attendeesCount } : {}),
+      });
     } catch (err: any) {
       update('events', e.id, { rsvpStatus: e.rsvpStatus, attendeesCount: e.attendeesCount });
       Alert.alert('Error', err?.message ?? 'Could not update RSVP');

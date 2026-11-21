@@ -102,7 +102,8 @@ export async function setKudos(activityId: string, give: boolean): Promise<Socia
   const epoch = (activityEpoch.get(activityId) ?? 0) + 1;
   activityEpoch.set(activityId, epoch);
   const before = socialStore.get(activityId) ?? { hasKudos: !give, kudosCount: 0, commentsCount: 0 };
-  const delta = before.hasKudos === give ? 0 : give ? 1 : -1;
+  const known = before.hasKudos === true || before.hasKudos === false;
+  const delta = known && before.hasKudos !== give ? (give ? 1 : -1) : 0;
   socialStore.patch(activityId, { hasKudos: give, kudosCount: Math.max(0, before.kudosCount + delta) });
   try {
     const res = give ? await api.activities.giveKudos(activityId) : await api.activities.removeKudos(activityId);

@@ -11,6 +11,7 @@ import {
   paceValue,
   speedValue,
 } from '../../lib/format';
+import { markActivityRemoved } from '../../lib/removedActivities';
 import { setKudos, useSocial } from '../../lib/social';
 import { shareActivity } from '../../lib/share';
 import { sportConfig } from '../../lib/sports';
@@ -74,6 +75,7 @@ export const FeedCard = memo(function FeedCard({
         onPress: async () => {
           try {
             await api.activities.remove(activity.id);
+            markActivityRemoved(activity.id);
             onDelete?.(activity.id);
           } catch (e: any) {
             Alert.alert('Could not delete', e?.message || 'Try again.');
