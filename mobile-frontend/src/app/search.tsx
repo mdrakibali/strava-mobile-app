@@ -128,6 +128,7 @@ export default function SearchScreen() {
                 label={item.isFollowing ? 'Following' : 'Follow'}
                 size="sm"
                 variant={item.isFollowing ? 'outline' : 'primary'}
+                icon={item.isFollowing ? 'checkmark' : 'person-add-outline'}
                 loading={item.pending}
                 onPress={() => onFollow(item)}
               />

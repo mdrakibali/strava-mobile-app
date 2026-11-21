@@ -32,7 +32,7 @@ export const RoutePreview: React.FC<RoutePreviewProps> = ({
         focus={route.length < 2 ? { center: route[0], zoom: 15 } : null}
         interactive={false}
         styleKey="liberty"
-        showUserLocation={false}
+        showUserLocation={true}
         padding={{ top: 18, bottom: 18, left: 18, right: 18 }}
       />
     </View>

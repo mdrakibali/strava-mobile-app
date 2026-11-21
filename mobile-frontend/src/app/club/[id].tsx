@@ -108,9 +108,9 @@ export default function ClubDetailScreen() {
           <Text className="text-xs text-gray-600 leading-5 mb-3">{club.description}</Text>
 
           <TouchableOpacity
-            className={`py-2.5 rounded-xl items-center border ${
+            className={`py-3 rounded-xl items-center border ${
               club.isMember
-                ? 'bg-gray-100 border-gray-200'
+                ? 'bg-white border-gray-300'
                 : 'bg-[#FC4C02] border-[#FC4C02]'
             }`}
             onPress={() => {
@@ -125,7 +125,7 @@ export default function ClubDetailScreen() {
             }}>
             <Text
               className={`text-sm font-bold ${
-                club.isMember ? 'text-gray-700' : 'text-white'
+                club.isMember ? 'text-gray-900' : 'text-white'
               }`}>
               {club.isMember ? 'Joined (Tap to Leave)' : 'Join Club'}
             </Text>

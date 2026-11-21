@@ -20,7 +20,7 @@ interface Row {
 /** Followers / Following of an athlete (GET /athletes/:id/followers|following), paginated. */
 export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind }) => {
   const params = useLocalSearchParams<{ id?: string }>();
-  const { currentUser } = useApp();
+  const { currentUser, updateCurrentUser } = useApp();
   const athleteId = params.id || currentUser.id;
   const router = useRouter();
   const [rows, setRows] = useState<Row[]>([]);
@@ -77,6 +77,11 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
     try {
       const res = await setFollowing(r.id, r.isFollowing, !r.isFollowing);
       setRows((prev) => prev.map((x) => (x.id === r.id ? { ...x, isFollowing: res.isFollowing } : x)));
+      if (currentUser.id) {
+        updateCurrentUser({
+          followingCount: Math.max(0, (currentUser.followingCount || 0) + (res.isFollowing ? 1 : -1)),
+        });
+      }
     } catch (e: any) {
       Alert.alert('Couldn’t update', e?.message ?? 'Please try again.');
     } finally {
@@ -121,7 +126,8 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
                 <Button
                   label={r.isFollowing ? 'Following' : 'Follow'}
                   size="sm"
-                  variant={r.isFollowing ? 'secondary' : 'primary'}
+                  variant={r.isFollowing ? 'outline' : 'primary'}
+                  icon={r.isFollowing ? 'checkmark' : 'person-add-outline'}
                   loading={busy === r.id}
                   onPress={() => toggle(r)}
                 />

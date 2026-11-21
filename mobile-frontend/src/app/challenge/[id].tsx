@@ -216,9 +216,9 @@ export default function ChallengeDetailScreen() {
         <TouchableOpacity
           onPress={handleToggleJoin}
           className={`w-full py-4 rounded-2xl items-center shadow-md ${
-            challenge.isJoined ? 'bg-gray-100' : 'bg-[#FC4C02]'
+            challenge.isJoined ? 'bg-white border border-gray-300' : 'bg-[#FC4C02]'
           }`}>
-          <Text className={`text-base font-black ${challenge.isJoined ? 'text-gray-800' : 'text-white'}`}>
+          <Text className={`text-base font-bold ${challenge.isJoined ? 'text-gray-900' : 'text-white'}`}>
             {challenge.isJoined ? 'Leave Challenge' : 'Join Challenge Now'}
           </Text>
         </TouchableOpacity>

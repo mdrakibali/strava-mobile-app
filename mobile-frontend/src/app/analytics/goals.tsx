@@ -6,11 +6,12 @@ import {
   Alert,
   ScrollView,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { GoalCard } from '../../components/analytics/GoalCard';
+import { NewGoalForm } from '../../components/analytics/NewGoalForm';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
 import { TrainingGoal } from '../../types';
@@ -32,7 +33,6 @@ export default function GoalsScreen() {
       setLoading(true);
       const res = await api.goals.list();
       if (res?.goals) {
-        // Calculate dynamic current progress for each goal from real activities
         const now = new Date();
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - now.getDay());
@@ -133,51 +133,16 @@ export default function GoalsScreen() {
         className="p-4"
         contentContainerStyle={{ paddingBottom: 110 }}>
         {isAdding && (
-          <View className="bg-white p-5 rounded-3xl border border-orange-200 shadow-sm mb-4">
-            <Text className="text-sm font-black text-gray-900 mb-3">Set New Fitness Target</Text>
-            <TextInput
-              value={newTitle}
-              onChangeText={setNewTitle}
-              placeholder="e.g. Weekly Long Run Mileage"
-              placeholderTextColor="#9CA3AF"
-              className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-900 mb-3"
-            />
-            <View className="flex-row items-center space-x-2 mb-4">
-              <TextInput
-                value={newTarget}
-                onChangeText={setNewTarget}
-                keyboardType="numeric"
-                className="w-24 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-sm font-bold text-gray-900 mr-2"
-              />
-              <Text className="text-xs font-bold text-gray-600">Kilometers / week</Text>
-            </View>
-
-            <View className="flex-row mb-4">
-              {(['WEEKLY', 'MONTHLY', 'ANNUAL'] as const).map((p) => (
-                <TouchableOpacity
-                  key={p}
-                  onPress={() => setNewPeriod(p)}
-                  className={`px-3 py-1.5 rounded-full mr-2 border ${
-                    newPeriod === p ? 'bg-[#FC4C02] border-[#FC4C02]' : 'bg-gray-100 border-gray-200'
-                  }`}>
-                  <Text className={`text-xs font-bold ${newPeriod === p ? 'text-white' : 'text-gray-700'}`}>
-                    {p}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <TouchableOpacity
-              disabled={saving}
-              onPress={handleAddGoal}
-              className="w-full py-3.5 bg-[#FC4C02] rounded-2xl items-center active:bg-[#E03A00]">
-              {saving ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text className="text-sm font-black text-white">Save Target</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          <NewGoalForm
+            title={newTitle}
+            onTitleChange={setNewTitle}
+            target={newTarget}
+            onTargetChange={setNewTarget}
+            period={newPeriod}
+            onPeriodChange={setNewPeriod}
+            saving={saving}
+            onSubmit={handleAddGoal}
+          />
         )}
 
         <Text className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider">
@@ -204,48 +169,9 @@ export default function GoalsScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          goals.map((goal) => {
-            const percent = Math.min(100, Math.round((goal.currentValue / goal.targetValue) * 100));
-
-            return (
-              <View
-                key={goal.id}
-                className="bg-white p-5 rounded-3xl border border-gray-100 shadow-xs mb-3">
-                <View className="flex-row justify-between items-center mb-1">
-                  <Text className="text-base font-black text-gray-900">{goal.title}</Text>
-                  <View className="flex-row items-center">
-                    <View className="bg-orange-50 px-2 py-0.5 rounded-md mr-2">
-                      <Text className="text-[10px] font-black text-[#FC4C02]">{goal.period}</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => handleDeleteGoal(goal.id)} className="p-1">
-                      <Ionicons name="trash-outline" size={16} color="#9CA3AF" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <Text className="text-xs font-medium text-gray-500 mb-3">
-                  {goal.currentValue} / {goal.targetValue} {goal.unit === 'm_elev' ? 'm climbed' : goal.unit}
-                </Text>
-
-                {/* Progress Bar */}
-                <View className="h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
-                  <View
-                    style={{ width: `${percent}%` }}
-                    className={`h-full rounded-full ${percent >= 100 ? 'bg-green-500' : 'bg-[#FC4C02]'}`}
-                  />
-                </View>
-
-                <View className="flex-row justify-between items-center">
-                  <Text className="text-[11px] font-semibold text-gray-400">
-                    {percent >= 100
-                      ? 'Target Achieved! 🏆'
-                      : `${(goal.targetValue - goal.currentValue).toFixed(1)} ${goal.unit} remaining`}
-                  </Text>
-                  <Text className="text-xs font-black text-gray-900">{percent}%</Text>
-                </View>
-              </View>
-            );
-          })
+          goals.map((goal) => (
+            <GoalCard key={goal.id} goal={goal} onDelete={handleDeleteGoal} />
+          ))
         )}
       </ScrollView>
     </SafeAreaView>

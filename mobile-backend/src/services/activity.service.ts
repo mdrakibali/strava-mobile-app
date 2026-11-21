@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { estimateCalories } from '../../../shared/tracking/calories';
 import { CursorPayload, encodeCursor } from '../lib/cursor';
+import { buildGpx } from '../lib/gpx';
 import { HttpError, notFound } from '../lib/http';
 import { canViewActivity } from '../lib/policy';
 import { LatLngPoint, maskPolylineWithPrivacyZones } from '../lib/privacy';
@@ -14,9 +15,6 @@ type LegacyCreate = z.infer<typeof legacyCreateSchema>;
 type Patch = z.infer<typeof activityPatchSchema>;
 
 const newId = (prefix: string) => `${prefix}_${crypto.randomUUID()}`;
-
-const escapeXml = (s: string) =>
-  s.replace(/[<>&'"]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[ch]!);
 
 export class ActivityService {
   constructor(
@@ -221,31 +219,7 @@ export class ActivityService {
   /** GPX export: owner only (the raw track reveals home/work), XML-escaped (PRIV-04). */
   async generateGpx(activityId: string, ownerId: string) {
     const { activity } = await this.loadOwned(activityId, ownerId);
-    const points = (activity.rawPolyline || []) as LatLngPoint[];
-    const trkpts = points
-      .map(
-        (p) =>
-          `      <trkpt lat="${Number(p.latitude)}" lon="${Number(p.longitude)}">` +
-          (p.altitude != null ? `<ele>${Number(p.altitude)}</ele>` : '') +
-          (p.timestamp ? `<time>${new Date(p.timestamp).toISOString()}</time>` : '') +
-          `</trkpt>`
-      )
-      .join('\n');
-    const title = escapeXml(activity.title);
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx creator="OpenStrava" version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
-  <metadata>
-    <name>${title}</name>
-    <time>${new Date(activity.startTime).toISOString()}</time>
-  </metadata>
-  <trk>
-    <name>${title}</name>
-    <type>${escapeXml(activity.sportType)}</type>
-    <trkseg>
-${trkpts}
-    </trkseg>
-  </trk>
-</gpx>`;
+    return buildGpx(activity.title, activity.sportType, activity.startTime, (activity.rawPolyline || []) as LatLngPoint[]);
   }
 }
 

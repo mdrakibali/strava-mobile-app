@@ -233,22 +233,11 @@ export const buildActivityRow = (o: {
     rawPolyline: track,
     maskedPolyline: maskPolylineWithPrivacyZones(track, o.zones),
     splits: s.splits.map((sp) => ({
-      splitNumber: sp.index,
-      distanceMeters: sp.distanceM,
-      distanceKm: Math.round(sp.distanceM) / 1000,
-      movingTimeSeconds: sp.movingTimeS,
-      elapsedTimeSeconds: sp.elapsedTimeS,
-      averageSpeedMps: sp.avgSpeedMps,
-      paceFormatted: pace(sp.movingTimeS, sp.distanceM),
-      elevationDeltaMeters: sp.elevDiffM,
+      splitNumber: sp.index, distanceMeters: sp.distanceM, distanceKm: Math.round(sp.distanceM) / 1000,
+      movingTimeSeconds: sp.movingTimeS, elapsedTimeSeconds: sp.elapsedTimeS,
+      averageSpeedMps: sp.avgSpeedMps, paceFormatted: pace(sp.movingTimeS, sp.distanceM), elevationDeltaMeters: sp.elevDiffM,
     })),
-    elevationProfile:
-      s.elevGainM == null
-        ? []
-        : downsample(
-            kept.filter((p) => p.alt != null).map((p) => Math.round(p.alt!)),
-            MAX_ELEVATION_SAMPLES
-          ),
+    elevationProfile: s.elevGainM == null ? [] : downsample(kept.filter((p) => p.alt != null).map((p) => Math.round(p.alt!)), MAX_ELEVATION_SAMPLES),
     photos: [],
   };
 };
