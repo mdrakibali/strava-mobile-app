@@ -14,6 +14,7 @@ import {
 } from '../types';
 import { FEATURES } from '../config/features';
 import { formatRelative } from '../lib/format';
+import { realtimeWs } from '../services/websocket';
 import { AppContextType } from './appContextTypes';
 
 export { AppContextType };
@@ -474,9 +475,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-    const interval = setInterval(refreshNotifications, 8000);
-    return () => clearInterval(interval);
+    if (!isAuthenticated) {
+      realtimeWs.disconnect();
+      return;
+    }
+    realtimeWs.init();
+    refreshNotifications();
+    const unsub = realtimeWs.addListener('notification', () => {
+      refreshNotifications();
+    });
+    return () => {
+      unsub();
+    };
   }, [isAuthenticated, refreshNotifications]);
 
   const markAllNotificationsAsRead = () => {

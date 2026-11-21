@@ -97,4 +97,5 @@ export const createApp = (dbProvider: DbProvider = hyperdriveProvider) => {
   return app;
 };
 
+export { ChatRoom } from './durable-objects/ChatRoom';
 export default createApp();

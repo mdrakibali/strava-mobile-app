@@ -9,6 +9,7 @@ export interface Env {
   ENVIRONMENT?: string;
   GOOGLE_CLIENT_ID?: string;
   HYPERDRIVE?: Hyperdrive;
+  CHAT_ROOM?: any;
 }
 
 export interface AuthContext {

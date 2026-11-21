@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
+import { realtimeWs } from '../../services/websocket';
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -31,20 +32,19 @@ export default function ChatScreen() {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const scrollViewRef = useRef<any>(null);
+  const typingTimerRef = useRef<any>(null);
 
   const effectiveId = id === 'ath_seed_ahmed' ? 'ath_seed_tanvir' : id;
 
   const fetchChatHistory = async () => {
     if (!effectiveId) return;
     try {
-      // 1. Fetch partner details
       const profileRes = await api.athletes.getProfile(effectiveId).catch(() => null);
       if (profileRes?.athlete) {
         setPartner(profileRes.athlete);
       }
-
-      // 2. Fetch real message thread
       const res = await api.messages.getThread(effectiveId);
       if (res?.messages) {
         setMessages(res.messages);
@@ -57,19 +57,36 @@ export default function ChatScreen() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchChatHistory();
-    // Poll every 4 seconds for new incoming messages while in chat
-    const interval = setInterval(() => {
-      if (effectiveId) {
-        api.messages.getThread(effectiveId).then((res) => {
-          if (res?.messages) {
-            setMessages(res.messages);
-          }
-        }).catch(() => null);
-      }
-    }, 4000);
 
-    return () => clearInterval(interval);
+    // Realtime WebSocket: instant message reception without polling
+    const unsubMsg = realtimeWs.addListener('new_message', (payload: any) => {
+      const dm = payload.directMessage;
+      if (!dm) return;
+      if (dm.senderId === effectiveId || dm.recipientId === effectiveId) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === dm.id)) return prev;
+          return [...prev, dm];
+        });
+        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+      }
+    });
+
+    // Realtime WebSocket: live typing indicator
+    const unsubTyping = realtimeWs.addListener('typing', (payload: any) => {
+      if (payload.senderId === effectiveId) {
+        setIsPartnerTyping(true);
+        if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = setTimeout(() => setIsPartnerTyping(false), 2500);
+      }
+    });
+
+    return () => {
+      unsubMsg();
+      unsubTyping();
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    };
   }, [effectiveId]);
 
   const handleSendMessage = async () => {
@@ -78,7 +95,6 @@ export default function ChatScreen() {
     setInputText('');
     setIsSending(true);
 
-    // Optimistic UI insert
     const tempId = `temp_${Date.now()}`;
     const optimisticMsg = {
       id: tempId,
@@ -104,6 +120,13 @@ export default function ChatScreen() {
     }
   };
 
+  const handleInputChange = (text: string) => {
+    setInputText(text);
+    if (text.trim() && effectiveId) {
+      realtimeWs.sendTyping(effectiveId);
+    }
+  };
+
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       {/* Chat Top Header */}
@@ -124,7 +147,9 @@ export default function ChatScreen() {
               <Text className="text-sm font-bold text-gray-900" numberOfLines={1}>
                 {partner.displayName}
               </Text>
-              <Text className="text-[10px] text-emerald-600 font-semibold">Athlete</Text>
+              <Text className="text-[10px] text-emerald-600 font-semibold">
+                {isPartnerTyping ? 'typing...' : 'Active Athlete'}
+              </Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -140,7 +165,6 @@ export default function ChatScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
-        {/* Messages Stream */}
         {isLoading ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <ActivityIndicator size="large" color="#FC4C02" />
@@ -201,11 +225,20 @@ export default function ChatScreen() {
           </ScrollView>
         )}
 
+        {/* Live typing pill */}
+        {isPartnerTyping && (
+          <View className="px-5 py-1">
+            <Text className="text-[11px] text-gray-500 italic">
+              {partner.displayName} is typing...
+            </Text>
+          </View>
+        )}
+
         {/* Sticky Bottom Input Bar */}
         <View className="flex-row items-center bg-white px-4 py-2.5 border-t border-gray-200 shadow-md">
           <TextInput
             value={inputText}
-            onChangeText={setInputText}
+            onChangeText={handleInputChange}
             placeholder="Type a message..."
             placeholderTextColor="#9CA3AF"
             className="flex-1 h-10 bg-gray-100 rounded-full px-4 text-xs text-gray-900 mr-2"

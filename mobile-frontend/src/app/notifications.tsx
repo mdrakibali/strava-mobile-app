@@ -8,6 +8,7 @@ import { useApp } from '../context/AppContext';
 import { AppBar, AppText, Avatar, Button, color, Divider, EmptyState, space } from '../design';
 import { toAthleteSummary } from '../lib/activityView';
 import { NotificationItem } from '../types';
+import { realtimeWs } from '../services/websocket';
 
 const TYPE_ICON: Record<string, { name: keyof typeof Ionicons.glyphMap; tint: string }> = {
   KUDOS: { name: 'thumbs-up', tint: '#FC4C02' },
@@ -34,10 +35,10 @@ export default function NotificationsScreen() {
   );
 
   useEffect(() => {
-    const timer = setInterval(() => {
+    const unsub = realtimeWs.addListener('notification', () => {
       refreshNotifications?.();
-    }, 4000);
-    return () => clearInterval(timer);
+    });
+    return () => unsub();
   }, [refreshNotifications]);
 
   const open = (item: NotificationItem) => {

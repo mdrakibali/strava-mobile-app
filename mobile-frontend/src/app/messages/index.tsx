@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { api } from "../../services/api";
+import { realtimeWs } from "../../services/websocket";
 
 export default function MessagesInboxScreen() {
   const router = useRouter();
@@ -37,8 +38,10 @@ export default function MessagesInboxScreen() {
 
   useEffect(() => {
     fetchConversations();
-    const interval = setInterval(fetchConversations, 3500);
-    return () => clearInterval(interval);
+    const unsub = realtimeWs.addListener("new_message", () => {
+      fetchConversations();
+    });
+    return () => unsub();
   }, []);
 
   useFocusEffect(

@@ -8,6 +8,16 @@ import { Env } from '../types';
 
 export const messagesRouter = new Hono<{ Bindings: Env }>();
 
+// GET /api/v1/messages/ws (WebSocket upgrade endpoint)
+messagesRouter.get('/ws', async (c) => {
+  if (!c.env.CHAT_ROOM) {
+    return c.json({ error: 'ChatRoom not configured' }, 503);
+  }
+  const id = c.env.CHAT_ROOM.idFromName('global_chat');
+  const stub = c.env.CHAT_ROOM.get(id);
+  return stub.fetch(c.req.raw);
+});
+
 // GET /api/v1/messages/conversations
 messagesRouter.get('/conversations', requireAuth, async (c) => {
   try {
@@ -195,6 +205,20 @@ messagesRouter.post('/send', requireAuth, async (c) => {
       });
     } catch (notifErr) {
       console.warn('Failed to create message notification:', notifErr);
+    }
+
+    if (c.env.CHAT_ROOM) {
+      try {
+        const roomId = c.env.CHAT_ROOM.idFromName('global_chat');
+        const stub = c.env.CHAT_ROOM.get(roomId);
+        await stub.fetch('http://internal/broadcast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'new_message', directMessage: newMsg }),
+        });
+      } catch (wsErr) {
+        console.warn('Realtime broadcast error:', wsErr);
+      }
     }
 
     return c.json({ message: 'Message sent successfully', directMessage: newMsg }, 201);
