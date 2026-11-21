@@ -98,7 +98,7 @@ export default function RecordScreen() {
     return (
       <RecordIndoorView
         status={status} time={time} sportLabel={cfg.label} calories={indoorCal}
-        heartRate={rec.heartRate} onBack={handleBack} onSettings={() => router.push('/settings/gps')}
+        heartRate={null} onBack={handleBack} onSettings={() => router.push('/settings/gps')}
         onStart={onStart} onPause={() => recordingEngine.pause()}
         onResume={() => recordingEngine.resume()} onFinish={onFinish}
       />

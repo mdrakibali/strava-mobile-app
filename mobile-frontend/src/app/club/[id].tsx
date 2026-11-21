@@ -1,15 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
 
@@ -99,9 +91,11 @@ export default function ClubDetailScreen() {
             />
             <View className="flex-1 pt-6">
               <Text className="text-lg font-bold text-gray-900">{club.name}</Text>
-              <Text className="text-xs text-gray-500">
-                {club.sportType} · {club.city} · {club.memberCount} Athletes
-              </Text>
+              <TouchableOpacity onPress={() => router.push({ pathname: '/club/members', params: { id: club.id } })}>
+                <Text className="text-xs text-[#FC4C02] font-semibold mt-0.5">
+                  {club.sportType} · {club.city} · {club.memberCount} Athletes →
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -229,6 +223,11 @@ export default function ClubDetailScreen() {
                 );
               })
             )}
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: '/club/members', params: { id: club.id } })}
+              className="mt-3 py-3 rounded-xl border border-gray-200 bg-white items-center active:bg-gray-50">
+              <Text className="text-xs font-bold text-gray-800">View all club members</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View className="p-4 gap-3 bg-white mt-2 border-y border-gray-200">

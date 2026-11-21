@@ -161,34 +161,39 @@ export default function HomeFeedScreen() {
       <TouchableOpacity
         onPress={() => syncWorker.kick(true)}
         activeOpacity={0.85}
-        className={`flex-row items-center px-4 py-2.5 border-b border-gray-200 ${
-          attention.length > 0 ? 'bg-red-50' : 'bg-white'
-        }`}>
-        <Ionicons
-          name={attention.length ? 'warning-outline' : 'cloud-upload-outline'}
-          size={18}
-          color={attention.length ? '#DC2626' : '#1F2937'}
-        />
+        className={`flex-row items-center px-4 py-2 border-b border-gray-200 ${attention.length ? 'bg-red-50' : 'bg-white'}`}>
+        <Ionicons name={attention.length ? 'warning-outline' : 'cloud-upload-outline'} size={18} color={attention.length ? '#DC2626' : '#1F2937'} />
         <View className="flex-1 ml-3">
-          <Text className="text-xs font-bold text-gray-900">
-            {pending.length === 1 ? `“${pending[0].title}” is waiting to upload` : `${pending.length} activities are waiting to upload`}
-          </Text>
-          <Text className="text-[11px] text-gray-500" numberOfLines={1}>
-            {attention.length ? attention[0].lastError ?? 'The server rejected the upload.' : 'Saved on this phone. It uploads automatically when you’re online.'}
-          </Text>
+          <Text className="text-xs font-bold text-gray-900">{pending.length === 1 ? `“${pending[0].title}” is waiting to upload` : `${pending.length} activities waiting to upload`}</Text>
+          <Text className="text-[11px] text-gray-500" numberOfLines={1}>{attention.length ? attention[0].lastError ?? 'Upload rejected.' : 'Saved locally. Uploads automatically when online.'}</Text>
         </View>
         <Text className="text-xs font-black text-[#FC4C02]">Retry</Text>
       </TouchableOpacity>
     ) : null;
 
+  const activeWorkoutBanner = active ? (
+    <TouchableOpacity
+      onPress={() => router.push('/record')}
+      activeOpacity={0.85}
+      className="mx-4 my-2 p-3 rounded-2xl bg-orange-50 border-2 border-[#FC4C02] flex-row items-center justify-between shadow-sm">
+      <View className="flex-row items-center flex-1">
+        <View className="w-8 h-8 rounded-full bg-[#FC4C02] items-center justify-center mr-2.5">
+          <Ionicons name="radio-button-on" size={16} color="#FFFFFF" />
+        </View>
+        <View className="flex-1">
+          <Text className="text-xs font-black text-gray-900">Workout in progress</Text>
+          <Text className="text-[11px] font-bold text-[#FC4C02]">{rec.sport} · {paused ? 'Paused' : 'Recording'} (tap to return)</Text>
+        </View>
+      </View>
+      <View className="bg-[#FC4C02] px-3 py-1 rounded-full">
+        <Text className="text-white text-xs font-black">Return</Text>
+      </View>
+    </TouchableOpacity>
+  ) : null;
+
   let body: React.ReactNode;
   if (status === 'loading') {
-    body = (
-      <View>
-        <FeedCardSkeleton />
-        <FeedCardSkeleton />
-      </View>
-    );
+    body = (<View><FeedCardSkeleton /><FeedCardSkeleton /></View>);
   } else if (status === 'error') {
     body = <ErrorState message="We couldn’t load your feed. Check your connection and try again." onRetry={retry} />;
   } else {
@@ -197,11 +202,7 @@ export default function HomeFeedScreen() {
         data={items}
         keyExtractor={(a) => a.id}
         renderItem={({ item }) => (
-          <FeedCard
-            activity={item}
-            currentUserId={currentUser.id}
-            onDelete={(id) => setItems((prev) => prev.filter((a) => a.id !== id))}
-          />
+          <FeedCard activity={item} currentUserId={currentUser.id} onDelete={(id) => setItems((prev) => prev.filter((a) => a.id !== id))} />
         )}
         onEndReached={onEndReached}
         onEndReachedThreshold={0.6}
@@ -219,12 +220,8 @@ export default function HomeFeedScreen() {
           />
         }
         ListFooterComponent={
-          loadingMore ? (
-            <ActivityIndicator className="m-6" color="#FC4C02" />
-          ) : loadMoreError ? (
-            <View className="p-4">
-              <ErrorState compact message="Couldn’t load more activities." onRetry={onEndReached} />
-            </View>
+          loadingMore ? <ActivityIndicator className="m-6" color="#FC4C02" /> : loadMoreError ? (
+            <View className="p-4"><ErrorState compact message="Couldn’t load more activities." onRetry={onEndReached} /></View>
           ) : undefined
         }
       />
@@ -234,6 +231,7 @@ export default function HomeFeedScreen() {
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-[#F7F7F8]">
       <HomeHeader unreadNotificationCount={unreadNotificationCount} />
+      {activeWorkoutBanner}
       {uploadsBanner}
       {body}
     </SafeAreaView>
