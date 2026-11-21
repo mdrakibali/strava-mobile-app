@@ -116,15 +116,23 @@ export default function SuggestedAthletesScreen() {
                     </View>
                   </TouchableOpacity>
 
-                  <TouchableOpacity
-                    onPress={() => toggleFollow(athlete.id)}
-                    className={`px-4 py-1.5 rounded-full ${
-                      isFollowing ? 'bg-gray-100' : 'bg-[#FC4C02]'
-                    }`}>
-                    <Text className={`text-xs font-bold ${isFollowing ? 'text-gray-700' : 'text-white'}`}>
-                      {isFollowing ? 'Following' : 'Follow +'}
-                    </Text>
-                  </TouchableOpacity>
+                  <View className="flex-row items-center">
+                    <TouchableOpacity
+                      onPress={() => router.push({ pathname: '/messages/[id]', params: { id: athlete.id } })}
+                      className="w-8 h-8 rounded-full bg-orange-50 items-center justify-center mr-2">
+                      <Ionicons name="chatbubble-outline" size={15} color="#FC4C02" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => toggleFollow(athlete.id)}
+                      className={`px-4 py-1.5 rounded-full ${
+                        isFollowing ? 'bg-gray-100' : 'bg-[#FC4C02]'
+                      }`}>
+                      <Text className={`text-xs font-bold ${isFollowing ? 'text-gray-700' : 'text-white'}`}>
+                        {isFollowing ? 'Following' : 'Follow +'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 {athlete.bio && (
