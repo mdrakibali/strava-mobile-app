@@ -34,3 +34,4 @@ export const HomeHeader: React.FC<Props> = ({ unreadNotificationCount }) => {
     </View>
   );
 };
+

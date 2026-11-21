@@ -64,3 +64,4 @@ export const computeTotals = (stats: AthleteStats | null, sportFilter: string) =
     );
   return { ytd: sum('yearToDate'), all: sum('allTime') };
 };
+

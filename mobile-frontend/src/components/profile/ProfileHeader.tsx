@@ -105,3 +105,4 @@ export const ProfileHeader: React.FC<Props> = ({
     </View>
   );
 };
+

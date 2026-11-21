@@ -55,3 +55,4 @@ export const ProfileActivitiesTab: React.FC<Props> = ({
     </View>
   );
 };
+

@@ -49,3 +49,4 @@ export const ActivityStatsGrid: React.FC<Props> = ({ activity }) => {
     </View>
   );
 };
+

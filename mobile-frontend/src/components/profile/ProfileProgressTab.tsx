@@ -96,3 +96,4 @@ export const ProfileProgressTab: React.FC<ProgressProps> = ({
     </View>
   );
 };
+

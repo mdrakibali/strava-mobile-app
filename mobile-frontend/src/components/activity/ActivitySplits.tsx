@@ -55,3 +55,4 @@ export const ActivitySplits: React.FC<Props> = ({ splits, elevationProfile, show
     </View>
   );
 };
+

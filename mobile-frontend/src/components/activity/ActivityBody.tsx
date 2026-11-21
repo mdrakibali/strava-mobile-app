@@ -150,3 +150,4 @@ export const DetailSkeleton: React.FC = () => (
     </View>
   </View>
 );
+
