@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, AppState, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapView } from '../components/map/MapView';
@@ -43,13 +43,16 @@ export default function RecordScreen() {
   const cfg = sportConfig(isIdle ? sport : rec.sport);
   const isIndoor = sport === 'Workout' || sport === 'Yoga';
 
+  const autoStartRan = useRef(false);
+
   useEffect(() => {
     if (!isIdle || requested) return;
     loadLastSport().then((s) => s && setSport(s));
   }, [isIdle, requested]);
 
   useEffect(() => {
-    if (params.autoStart === 'true' && isIdle) {
+    if (params.autoStart === 'true' && isIdle && !autoStartRan.current) {
+      autoStartRan.current = true;
       recordingEngine.start(sport).catch(() => {});
     }
   }, [params.autoStart, isIdle, sport]);

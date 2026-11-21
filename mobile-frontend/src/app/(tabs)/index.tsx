@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedCard, FeedCardSkeleton } from '../../components/activity/FeedCard';
 import { HomeHeader } from '../../components/home/HomeHeader';
@@ -13,6 +13,7 @@ import { socialStore } from '../../lib/social';
 import { formatClock } from '../../lib/format';
 import { api } from '../../services/api';
 import { syncWorker } from '../../tracking/sync';
+import { recordingEngine } from '../../tracking/engine';
 import { isRecordingActive, timerSeconds, useNow, usePendingUploads, useRecording } from '../../tracking/useRecording';
 
 type Status = 'loading' | 'ready' | 'error';
@@ -175,11 +176,8 @@ export default function HomeFeedScreen() {
     ) : null;
 
   const activeWorkoutBanner = active ? (
-    <TouchableOpacity
-      onPress={() => router.push('/record')}
-      activeOpacity={0.85}
-      className="mx-4 my-2 p-3 rounded-2xl bg-orange-50 border-2 border-[#FC4C02] flex-row items-center justify-between shadow-sm">
-      <View className="flex-row items-center flex-1">
+    <View className="mx-4 my-2 p-3 rounded-2xl bg-orange-50 border-2 border-[#FC4C02] flex-row items-center justify-between shadow-sm">
+      <TouchableOpacity onPress={() => router.push('/record')} activeOpacity={0.85} className="flex-row items-center flex-1 mr-2">
         <View className="w-8 h-8 rounded-full bg-[#FC4C02] items-center justify-center mr-2.5">
           <Ionicons name="radio-button-on" size={16} color="#FFFFFF" />
         </View>
@@ -187,11 +185,21 @@ export default function HomeFeedScreen() {
           <Text className="text-xs font-black text-gray-900">Workout in progress</Text>
           <Text className="text-[11px] font-bold text-[#FC4C02]">{rec.sport} · {paused ? 'Paused' : 'Recording'} (tap to return)</Text>
         </View>
+      </TouchableOpacity>
+      <View className="flex-row items-center">
+        <TouchableOpacity onPress={() => router.push('/record')} className="bg-[#FC4C02] px-3 py-1 rounded-full mr-1.5">
+          <Text className="text-white text-xs font-black">Return</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => Alert.alert('Discard?', 'End and delete this workout?', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Discard', style: 'destructive', onPress: () => recordingEngine.discard() },
+          ])}
+          className="p-1 rounded-full bg-orange-100 active:bg-orange-200">
+          <Ionicons name="close" size={16} color="#EA580C" />
+        </TouchableOpacity>
       </View>
-      <View className="bg-[#FC4C02] px-3 py-1 rounded-full">
-        <Text className="text-white text-xs font-black">Return</Text>
-      </View>
-    </TouchableOpacity>
+    </View>
   ) : null;
 
   let body: React.ReactNode;

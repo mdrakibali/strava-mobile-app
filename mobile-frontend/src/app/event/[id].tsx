@@ -4,17 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
-import { AppBar, AppText, Avatar, Button, color, EmptyState, ErrorState, LoadingState, radius, SectionTitle, space } from '../../design';
+import { AppBar, AppText, Avatar, Button, color, EmptyState, ErrorState, LoadingState, SectionTitle, space } from '../../design';
 import { kmValue } from '../../lib/format';
 import { sportConfig } from '../../lib/sports';
 import { api } from '../../services/api';
 
 type Rsvp = 'GOING' | 'MAYBE' | null;
 
-/**
- * Group event detail (GET /events/:id). Shows only what the server returns — no placeholder event,
- * no default RSVP, no invented pace or route. Your RSVP is read from the attendee list.
- */
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -64,15 +60,17 @@ export default function EventDetailScreen() {
 
   if (status !== 'ready' || !event) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
         <AppBar title="Event" />
-        {status === 'loading' ? (
-          <LoadingState />
-        ) : status === 'notFound' ? (
-          <EmptyState icon="calendar-outline" title="Event not found" primary={{ label: 'Go back', onPress: () => router.back() }} />
-        ) : (
-          <ErrorState message="We couldn’t load this event." onRetry={() => { setStatus('loading'); setReloadKey((k) => k + 1); }} />
-        )}
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          {status === 'loading' ? (
+            <LoadingState />
+          ) : status === 'notFound' ? (
+            <EmptyState icon="calendar-outline" title="Event not found" primary={{ label: 'Go back', onPress: () => router.back() }} />
+          ) : (
+            <ErrorState message="We couldn’t load this event." onRetry={() => { setStatus('loading'); setReloadKey((k) => k + 1); }} />
+          )}
+        </View>
       </SafeAreaView>
     );
   }
@@ -84,51 +82,56 @@ export default function EventDetailScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <AppBar title="Event" />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 64 }}>
-        <AppText variant="label" color="brandText" style={{ fontWeight: '700' }}>
-          {when.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} ·{' '}
-          {when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-        </AppText>
-        <AppText variant="title1" style={{ marginTop: space.xs }}>{event.title}</AppText>
-        <View className="flex-row items-center mt-2">
-          <Ionicons name={sport.icon} size={16} color={color.inkSecondary} />
-          <AppText variant="label" color="inkSecondary" style={{ marginLeft: space.xs, flex: 1 }}>
-            {sport.label}
-            {event.club?.name ? ` · ${event.club.name}` : ''}
-            {event.creator?.displayName ? ` · hosted by ${event.creator.displayName}` : ''}
+      <View style={{ flex: 1 }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 64, flexGrow: 1 }}
+          showsVerticalScrollIndicator={false}>
+          <AppText variant="label" color="brandText" style={{ fontWeight: '700' }}>
+            {when.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} ·{' '}
+            {when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
           </AppText>
-        </View>
+          <AppText variant="title1" style={{ marginTop: space.xs }}>{event.title}</AppText>
+          <View className="flex-row items-center mt-2">
+            <Ionicons name={sport.icon} size={16} color={color.inkSecondary} />
+            <AppText variant="label" color="inkSecondary" style={{ marginLeft: space.xs, flex: 1 }}>
+              {sport.label}
+              {event.club?.name ? ` · ${event.club.name}` : ''}
+              {event.creator?.displayName ? ` · hosted by ${event.creator.displayName}` : ''}
+            </AppText>
+          </View>
 
-        <View className="mt-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
-          <Info icon="location-outline" label="Meeting point" value={event.meetingPoint} />
-          {distance ? <Info icon="resize-outline" label="Distance" value={`${kmValue(distance)} km`} /> : null}
-          {event.paceDescription ? <Info icon="speedometer-outline" label="Pace / level" value={event.paceDescription} /> : null}
-          <Info icon="people-outline" label="Going" value={String(going.length)} />
-        </View>
+          <View className="mt-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
+            <Info icon="location-outline" label="Meeting point" value={event.meetingPoint} />
+            {distance ? <Info icon="resize-outline" label="Distance" value={`${kmValue(distance)} km`} /> : null}
+            {event.paceDescription ? <Info icon="speedometer-outline" label="Pace / level" value={event.paceDescription} /> : null}
+            <Info icon="people-outline" label="Going" value={String(going.length)} />
+          </View>
 
-        <View className="flex-row items-center mt-4">
-          <Button label={mine === 'GOING' ? 'Going ✓' : 'Going'} variant={mine === 'GOING' ? 'secondary' : 'primary'} loading={busy} style={{ flex: 1 }} onPress={() => setRsvp('GOING')} />
-          <Button label={mine === 'MAYBE' ? 'Maybe ✓' : 'Maybe'} variant="outline" disabled={busy} style={{ flex: 1, marginLeft: space.sm }} onPress={() => setRsvp('MAYBE')} />
-          {mine ? <Button label="Can’t go" variant="ghost" disabled={busy} style={{ marginLeft: space.sm }} onPress={() => setRsvp('DECLINED')} /> : null}
-        </View>
+          <View className="flex-row items-center mt-4">
+            <Button label={mine === 'GOING' ? 'Going ✓' : 'Going'} variant={mine === 'GOING' ? 'secondary' : 'primary'} loading={busy} style={{ flex: 1 }} onPress={() => setRsvp('GOING')} />
+            <Button label={mine === 'MAYBE' ? 'Maybe ✓' : 'Maybe'} variant="outline" disabled={busy} style={{ flex: 1, marginLeft: space.sm }} onPress={() => setRsvp('MAYBE')} />
+            {mine ? <Button label="Can’t go" variant="ghost" disabled={busy} style={{ marginLeft: space.sm }} onPress={() => setRsvp('DECLINED')} /> : null}
+          </View>
 
-        <SectionTitle title={`Attendees (${attendees.length})`} style={{ marginTop: space.xl }} />
-        {attendees.length === 0 ? (
-          <AppText variant="body" color="inkSecondary">No one has responded yet.</AppText>
-        ) : (
-          attendees.map((a) => (
-            <Pressable
-              key={a.athleteId}
-              onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: a.athleteId } })}
-              className="flex-row items-center py-2"
-              accessibilityRole="button">
-              <Avatar uri={a.avatarUrl} name={a.displayName} size={40} />
-              <AppText variant="bodyStrong" style={{ flex: 1, marginLeft: space.md }}>{a.displayName}</AppText>
-              <AppText variant="label" color="inkSecondary">{a.status === 'GOING' ? 'Going' : 'Maybe'}</AppText>
-            </Pressable>
-          ))
-        )}
-      </ScrollView>
+          <SectionTitle title={`Attendees (${attendees.length})`} style={{ marginTop: space.xl }} />
+          {attendees.length === 0 ? (
+            <AppText variant="body" color="inkSecondary">No one has responded yet.</AppText>
+          ) : (
+            attendees.map((a) => (
+              <Pressable
+                key={a.athleteId}
+                onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: a.athleteId } })}
+                className="flex-row items-center py-2"
+                accessibilityRole="button">
+                <Avatar uri={a.avatarUrl} name={a.displayName} size={40} />
+                <AppText variant="bodyStrong" style={{ flex: 1, marginLeft: space.md }}>{a.displayName}</AppText>
+                <AppText variant="label" color="inkSecondary">{a.status === 'GOING' ? 'Going' : 'Maybe'}</AppText>
+              </Pressable>
+            ))
+          )}
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }

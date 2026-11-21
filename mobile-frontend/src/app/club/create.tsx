@@ -2,12 +2,14 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, View } from 'react-native';
 import { FormScreen } from '../../components/forms/FormScreen';
+import { useApp } from '../../context/AppContext';
 import { Chip, ChipRow, SectionTitle, space, TextField } from '../../design';
 import { MVP_SPORTS } from '../../lib/sports';
 import { api } from '../../services/api';
 
 export default function CreateClubScreen() {
   const router = useRouter();
+  const { refreshFeed } = useApp();
   const [name, setName] = useState('');
   const [sportType, setSportType] = useState('Run');
   const [city, setCity] = useState('');
@@ -32,6 +34,7 @@ export default function CreateClubScreen() {
         description: description.trim() || undefined,
         isPrivate,
       });
+      await refreshFeed().catch(() => {});
       router.replace({ pathname: '/club/[id]', params: { id: res.club.id } });
     } catch (e: any) {
       setError(e?.message ?? 'Could not create the club.');

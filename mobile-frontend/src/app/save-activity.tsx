@@ -78,7 +78,7 @@ export default function SaveActivityScreen() {
 
   const onResume = async () => {
     await recordingEngine.resume();
-    router.back();
+    router.replace({ pathname: '/record', params: { sport } });
   };
 
   const onDiscard = () =>
@@ -90,7 +90,7 @@ export default function SaveActivityScreen() {
         onPress: async () => {
           await recordingEngine.discard();
           plannedRouteStore.set(null);
-          router.dismissAll();
+          router.replace('/(tabs)/workout');
         },
       },
     ]);
@@ -114,10 +114,14 @@ export default function SaveActivityScreen() {
     }
     plannedRouteStore.set(null);
     const { synced, activityId } = await syncWorker.waitFor(sessionId, 8000);
-    router.dismissAll();
-    if (synced && activityId) router.push({ pathname: '/activity/[id]', params: { id: activityId } });
-    else if (!synced)
-      Alert.alert('Saved on this phone', 'Your activity will upload automatically when the connection is back.');
+    if (synced && activityId) {
+      router.replace({ pathname: '/activity/[id]', params: { id: activityId } });
+    } else {
+      router.replace('/(tabs)/workout');
+      if (!synced) {
+        Alert.alert('Saved on this phone', 'Your activity will upload automatically when the connection is back.');
+      }
+    }
   };
 
   const s = summary;

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   RefreshControl,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GroupsTabContent } from '../../components/groups/GroupsTabContent';
+import { useApp } from '../../context/AppContext';
 import { MVP_SPORTS } from '../../lib/sports';
 import { api } from '../../services/api';
 
@@ -18,17 +19,29 @@ type Tab = 'challenges' | 'clubs' | 'events';
 
 export default function GroupsScreen() {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>('challenges');
+  const params = useLocalSearchParams<{ tab?: Tab }>();
+  const { refreshFeed } = useApp();
+  const [tab, setTab] = useState<Tab>(params.tab || 'challenges');
   const [sport, setSport] = useState<string>('All');
   const [data, setData] = useState<{ challenges: any[]; clubs: any[]; events: any[] } | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [refreshing, setRefreshing] = useState(false);
   const loadedAt = useRef(0);
 
+  useEffect(() => {
+    if (params.tab && (params.tab === 'challenges' || params.tab === 'clubs' || params.tab === 'events')) {
+      setTab(params.tab);
+    }
+  }, [params.tab]);
+
   const load = useCallback(async () => {
-    const [ch, cl, ev] = await Promise.all([api.challenges.list(), api.clubs.list(), api.events.list()]);
+    const [ch, cl, ev] = await Promise.all([
+      api.challenges.list().catch(() => ({ challenges: [] })),
+      api.clubs.list().catch(() => ({ clubs: [] })),
+      api.events.list().catch(() => ({ events: [] })),
+    ]);
     setData({
-      challenges: ch.challenges.map((c: any) => ({
+      challenges: (ch.challenges || []).map((c: any) => ({
         id: c.id,
         title: c.title,
         description: c.description ?? null,
@@ -39,17 +52,17 @@ export default function GroupsScreen() {
         isJoined: Boolean(c.isJoined),
         isCompleted: Boolean(c.isCompleted),
       })),
-      clubs: cl.clubs.map((c: any) => ({
+      clubs: (cl.clubs || []).map((c: any) => ({
         id: c.id,
         name: c.name,
         sportType: c.sportType,
         city: c.city ?? null,
         description: c.description ?? null,
         avatarUrl: c.avatarUrl ?? null,
-        memberCount: Number(c.memberCount) || 0,
+        memberCount: Number(c.memberCount ?? c.membersCount) || 0,
         isMember: Boolean(c.isMember),
       })),
-      events: ev.events,
+      events: ev.events || [],
     });
     loadedAt.current = Date.now();
   }, []);
@@ -70,7 +83,7 @@ export default function GroupsScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await load();
+      await Promise.all([load(), refreshFeed().catch(() => {})]);
       setStatus('ready');
     } catch {
       if (!data) setStatus('error');
@@ -118,7 +131,7 @@ export default function GroupsScreen() {
   };
 
   const bySport = <T extends { sportType: string }>(rows: T[]) =>
-    sport === 'All' ? rows : rows.filter((r) => r.sportType === sport);
+    sport === 'All' ? rows : rows.filter((r) => r.sportType?.toLowerCase() === sport.toLowerCase());
 
   const create = {
     challenges: '/challenge/create',
@@ -129,19 +142,13 @@ export default function GroupsScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F7F7F8' }}>
       {/* Top Header */}
-      <View className="px-5 pt-3 pb-2 bg-white flex-row items-center justify-between border-b border-gray-100">
+      <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }} className="px-5 pt-3 pb-2 flex-row items-center justify-between">
         <Text className="text-3xl font-black text-gray-900 tracking-tight">Groups</Text>
         <View className="flex-row items-center">
-          <TouchableOpacity
-            onPress={() => router.push('/search')}
-            accessibilityLabel="Search"
-            className="p-2">
+          <TouchableOpacity onPress={() => router.push('/search')} accessibilityLabel="Search" className="p-2">
             <Ionicons name="search-outline" size={24} color="#1F2937" />
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push(create[tab])}
-            accessibilityLabel="Create"
-            className="p-2 ml-1">
+          <TouchableOpacity onPress={() => router.push(create[tab])} accessibilityLabel="Create" className="p-2 ml-1">
             <Ionicons name="add" size={28} color="#1F2937" />
           </TouchableOpacity>
         </View>
@@ -150,11 +157,7 @@ export default function GroupsScreen() {
       {/* Tab Navigation */}
       <View className="flex-row bg-white border-b border-gray-200 px-4">
         {(['challenges', 'clubs', 'events'] as Tab[]).map((t) => (
-          <TouchableOpacity
-            key={t}
-            onPress={() => setTab(t)}
-            activeOpacity={0.8}
-            className="flex-1 py-3 items-center">
+          <TouchableOpacity key={t} onPress={() => setTab(t)} activeOpacity={0.8} className="flex-1 py-3 items-center">
             <Text className={`text-sm font-bold ${tab === t ? 'text-gray-900' : 'text-gray-400'}`}>
               {t === 'challenges' ? 'Challenges' : t === 'clubs' ? 'Clubs' : 'Events'}
             </Text>
@@ -166,18 +169,11 @@ export default function GroupsScreen() {
       {/* Horizontal Sport Filter Chips */}
       <View className="py-2.5 px-4 bg-white border-b border-gray-100">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
-          <TouchableOpacity
-            onPress={() => setSport('All')}
-            className={`px-4 py-1.5 rounded-full mr-2 ${sport === 'All' ? 'bg-[#FC4C02]' : 'bg-gray-100'}`}>
+          <TouchableOpacity onPress={() => setSport('All')} className={`px-4 py-1.5 rounded-full mr-2 ${sport === 'All' ? 'bg-[#FC4C02]' : 'bg-gray-100'}`}>
             <Text className={`text-xs font-bold ${sport === 'All' ? 'text-white' : 'text-gray-600'}`}>All</Text>
           </TouchableOpacity>
           {MVP_SPORTS.map((s) => (
-            <TouchableOpacity
-              key={s.id}
-              onPress={() => setSport(s.id)}
-              className={`flex-row items-center px-3.5 py-1.5 rounded-full mr-2 ${
-                sport === s.id ? 'bg-[#FC4C02]' : 'bg-gray-100'
-              }`}>
+            <TouchableOpacity key={s.id} onPress={() => setSport(s.id)} className={`flex-row items-center px-3.5 py-1.5 rounded-full mr-2 ${sport === s.id ? 'bg-[#FC4C02]' : 'bg-gray-100'}`}>
               <Ionicons name={s.icon} size={13} color={sport === s.id ? '#FFFFFF' : '#4B5563'} style={{ marginRight: 5 }} />
               <Text className={`text-xs font-bold ${sport === s.id ? 'text-white' : 'text-gray-700'}`}>{s.label}</Text>
             </TouchableOpacity>
@@ -186,22 +182,25 @@ export default function GroupsScreen() {
       </View>
 
       {/* Body List */}
-      <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />}>
-        <GroupsTabContent
-          tab={tab}
-          data={data}
-          status={status}
-          onRefresh={() => { setStatus('loading'); onRefresh(); }}
-          bySport={bySport}
-          create={create}
-          joinChallenge={joinChallenge}
-          joinClub={joinClub}
-          rsvp={rsvp}
-        />
-      </ScrollView>
+      <View style={{ flex: 1 }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 60, flexGrow: 1 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />}>
+          <GroupsTabContent
+            tab={tab}
+            data={data}
+            status={status}
+            onRefresh={() => { setStatus('loading'); onRefresh(); }}
+            bySport={bySport}
+            create={create}
+            joinChallenge={joinChallenge}
+            joinClub={joinClub}
+            rsvp={rsvp}
+          />
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }

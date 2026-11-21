@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, View } from 'react-native';
 import { FormScreen } from '../../components/forms/FormScreen';
+import { useApp } from '../../context/AppContext';
 import { Chip, ChipRow, SectionTitle, TextField } from '../../design';
 import { MVP_SPORTS } from '../../lib/sports';
 import { api } from '../../services/api';
@@ -15,6 +16,7 @@ const DURATIONS = [
 
 export default function CreateChallengeScreen() {
   const router = useRouter();
+  const { refreshFeed } = useApp();
   const [title, setTitle] = useState('');
   const [sportType, setSportType] = useState('Run');
   const [targetKm, setTargetKm] = useState('');
@@ -48,6 +50,7 @@ export default function CreateChallengeScreen() {
         startDate: start.toISOString(),
         endDate: new Date(start.getTime() + days * 86_400_000).toISOString(),
       });
+      await refreshFeed().catch(() => {});
       router.replace({ pathname: '/challenge/[id]', params: { id: res.challenge.id } });
     } catch (e: any) {
       setError(e?.message ?? 'Could not create the challenge.');

@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { saveLastSport } from '../../components/record/SportSheet';
 import { useApp } from '../../context/AppContext';
 import { formatDuration, kmValue } from '../../lib/format';
 import { api } from '../../services/api';
+import { recordingEngine } from '../../tracking/engine';
 import { isRecordingActive, useRecording } from '../../tracking/useRecording';
 import { SportType } from '../../types';
 
@@ -90,11 +91,11 @@ export default function WorkoutTab() {
           contentContainerStyle={{ padding: 16, paddingBottom: 120, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}>
           {active ? (
-            <TouchableOpacity
-              onPress={() => router.push('/record')}
-              activeOpacity={0.8}
-              className="mb-4 p-4 rounded-3xl bg-orange-50 border-2 border-[#FC4C02] flex-row items-center justify-between shadow-sm">
-              <View className="flex-row items-center flex-1">
+            <View className="mb-4 p-4 rounded-3xl bg-orange-50 border-2 border-[#FC4C02] flex-row items-center justify-between shadow-sm">
+              <TouchableOpacity
+                onPress={() => router.push('/record')}
+                activeOpacity={0.8}
+                className="flex-row items-center flex-1 mr-2">
                 <View className="w-10 h-10 rounded-full bg-[#FC4C02] items-center justify-center mr-3">
                   <Ionicons name="radio-button-on" size={20} color="#FFFFFF" />
                 </View>
@@ -102,11 +103,25 @@ export default function WorkoutTab() {
                   <Text className="text-base font-black text-gray-900">Workout in progress</Text>
                   <Text className="text-xs font-bold text-[#FC4C02] mt-0.5">{rec.sport} · Active (tap to return)</Text>
                 </View>
+              </TouchableOpacity>
+              <View className="flex-row items-center">
+                <TouchableOpacity
+                  onPress={() => router.push('/record')}
+                  className="bg-[#FC4C02] px-3.5 py-1.5 rounded-full mr-2">
+                  <Text className="text-white text-xs font-black">Return</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    Alert.alert('Discard Workout?', 'End and delete this workout?', [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Discard', style: 'destructive', onPress: () => recordingEngine.discard() },
+                    ]);
+                  }}
+                  className="p-1.5 rounded-full bg-orange-100 active:bg-orange-200">
+                  <Ionicons name="close" size={18} color="#EA580C" />
+                </TouchableOpacity>
               </View>
-              <View className="bg-[#FC4C02] px-3.5 py-1.5 rounded-full">
-                <Text className="text-white text-xs font-black">Return</Text>
-              </View>
-            </TouchableOpacity>
+            </View>
           ) : null}
 
           {/* Clean Sports Cards: Workout, Ride, Run, Walk */}

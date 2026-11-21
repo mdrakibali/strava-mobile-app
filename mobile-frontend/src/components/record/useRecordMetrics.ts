@@ -86,7 +86,7 @@ export function useRecordMetrics({
         await recordingEngine.pause();
       }
     } catch {}
-    router.push('/save-activity');
+    router.replace('/save-activity');
   };
 
   return {

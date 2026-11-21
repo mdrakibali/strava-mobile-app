@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { FormScreen } from '../../components/forms/FormScreen';
+import { useApp } from '../../context/AppContext';
 import { Chip, ChipRow, SectionTitle, TextField } from '../../design';
 import { MVP_SPORTS } from '../../lib/sports';
 import { api } from '../../services/api';
@@ -12,6 +13,7 @@ const label = (min: number) =>
 
 export default function CreateEventScreen() {
   const router = useRouter();
+  const { refreshFeed } = useApp();
   const [title, setTitle] = useState('');
   const [sportType, setSportType] = useState('Run');
   const [dayOffset, setDayOffset] = useState(1);
@@ -57,6 +59,7 @@ export default function CreateEventScreen() {
         paceDescription: pace.trim() || undefined,
         distanceMeters: km != null ? Math.round(km * 1000) : undefined,
       });
+      await refreshFeed().catch(() => {});
       router.replace({ pathname: '/event/[id]', params: { id: res.event.id } });
     } catch (e: any) {
       setError(e?.message ?? 'Could not create the event.');
