@@ -286,9 +286,9 @@ export const MapView: React.FC<MapViewProps> = ({
               type="circle"
               paint={{
                 'circle-radius': 16,
-                'circle-color': 'rgba(16, 185, 129, 0.22)',
+                'circle-color': 'rgba(37, 99, 235, 0.20)',
                 'circle-stroke-width': 1.5,
-                'circle-stroke-color': '#10B981',
+                'circle-stroke-color': '#2563EB',
               }}
             />
             <Layer
@@ -298,15 +298,15 @@ export const MapView: React.FC<MapViewProps> = ({
                 'circle-radius': 9.5,
                 'circle-color': '#FFFFFF',
                 'circle-stroke-width': 2.5,
-                'circle-stroke-color': '#E5E7EB',
+                'circle-stroke-color': '#DBEAFE',
               }}
             />
             <Layer
-              id="user-location-green-core"
+              id="user-location-blue-core"
               type="circle"
               paint={{
                 'circle-radius': 6,
-                'circle-color': '#10B981',
+                'circle-color': '#0070F3',
               }}
             />
           </GeoJSONSource>

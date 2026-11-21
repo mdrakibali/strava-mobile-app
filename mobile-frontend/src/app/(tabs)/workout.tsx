@@ -55,12 +55,6 @@ export default function WorkoutTab() {
 
   useFocusEffect(
     useCallback(() => {
-      if (active) router.replace('/record');
-    }, [active, router])
-  );
-
-  useFocusEffect(
-    useCallback(() => {
       let cancelled = false;
       api.athletes.stats(currentUser.id).then(
         (s) => {
@@ -107,6 +101,26 @@ export default function WorkoutTab() {
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}>
+        {active ? (
+          <TouchableOpacity
+            onPress={() => router.push('/record')}
+            activeOpacity={0.8}
+            className="mb-4 p-4 rounded-3xl bg-orange-50 border-2 border-[#FC4C02] flex-row items-center justify-between shadow-sm">
+            <View className="flex-row items-center flex-1">
+              <View className="w-10 h-10 rounded-full bg-[#FC4C02] items-center justify-center mr-3">
+                <Ionicons name="radio-button-on" size={20} color="#FFFFFF" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-black text-gray-900">Workout in progress</Text>
+                <Text className="text-xs font-bold text-[#FC4C02] mt-0.5">{rec.sport} · Active (tap to return)</Text>
+              </View>
+            </View>
+            <View className="bg-[#FC4C02] px-3.5 py-1.5 rounded-full">
+              <Text className="text-white text-xs font-black">Return</Text>
+            </View>
+          </TouchableOpacity>
+        ) : null}
+
         {/* Only 4 Clean Sports Cards: Workout, Ride, Run, Walk */}
         {WORKOUT_SPORTS.map((s) => {
           const t = totals?.[s.id];

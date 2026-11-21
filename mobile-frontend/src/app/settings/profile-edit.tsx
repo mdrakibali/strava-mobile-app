@@ -45,10 +45,10 @@ export default function ProfileEditScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1 }} className="flex-1 bg-white">
       <AppBar title="Edit profile" leading="close" />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
           <TextField label="Name" value={displayName} onChangeText={setDisplayName} maxLength={100} autoCapitalize="words" />
           <View className="h-4" />
           <TextField label="City" value={city} onChangeText={setCity} maxLength={100} placeholder="e.g. Dhaka" />

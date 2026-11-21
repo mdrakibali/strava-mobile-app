@@ -66,9 +66,9 @@ export function SaveActivityForm({
       </View>
 
       {/* Route Map Preview */}
-      {route.length > 1 ? (
+      {route.length > 0 ? (
         <View className="mb-4">
-          <RoutePreview route={route} height={150} rounded />
+          <RoutePreview route={route} height={160} rounded />
         </View>
       ) : null}
 

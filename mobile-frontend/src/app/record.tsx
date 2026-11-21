@@ -92,12 +92,20 @@ export default function RecordScreen() {
 
   const planned = usePlannedRoute();
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
+  };
+
   if (isIndoor) {
     return (
       <RecordIndoorView
         status={status}
         time={time}
-        onBack={() => router.back()}
+        onBack={handleBack}
         onSettings={() => router.push('/settings/gps')}
         onStart={onStart}
         onPause={() => recordingEngine.pause()}
@@ -160,7 +168,7 @@ export default function RecordScreen() {
         isIdle={isIdle}
         following={following}
         pitch={pitch}
-        onBack={() => router.back()}
+        onBack={handleBack}
         onOpenHeatmap={() => router.push('/(tabs)/maps?source=routes')}
         onOpenSettings={() => router.push('/settings/gps')}
         onOpenLayers={() => setStyleModalVisible(true)}

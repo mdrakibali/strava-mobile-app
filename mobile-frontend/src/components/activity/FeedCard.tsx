@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { memo, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
-import { Avatar, Skeleton } from '../../design';
+import { Avatar } from '../../design';
 import { ActivityView, avgSpeedOf } from '../../lib/activityView';
 import {
   formatActivityDate,
@@ -14,6 +14,7 @@ import {
 import { setKudos, useSocial } from '../../lib/social';
 import { shareActivity } from '../../lib/share';
 import { sportConfig } from '../../lib/sports';
+import { api } from '../../services/api';
 import { RoutePreview } from '../map/RoutePreview';
 
 export const VISIBILITY_LABEL = {
@@ -49,9 +50,12 @@ export const FeedCard = memo(function FeedCard({
   const openKudos = () => router.push({ pathname: '/activity/kudos/[id]', params: { id: activity.id } });
   const openComments = () => router.push({ pathname: '/activity/[id]', params: { id: activity.id, focus: 'comments' } });
 
-  // Own activity: the kudos button shows who gave kudos (you can't kudos yourself).
+  // Own activity: show alert that only others can give kudos.
   const onKudos = async () => {
-    if (isOwn) return openKudos();
+    if (isOwn) {
+      Alert.alert('Your Activity', 'Other athletes will give kudos to your activity!');
+      return;
+    }
     if (pending) return;
     setPending(true);
     try {
@@ -62,6 +66,37 @@ export const FeedCard = memo(function FeedCard({
       setPending(false);
     }
   };
+
+  const confirmDelete = () =>
+    Alert.alert('Delete Activity?', 'This cannot be undone and will remove it permanently.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.activities.remove(activity.id);
+            router.replace('/(tabs)');
+          } catch (e: any) {
+            Alert.alert('Could not delete', e?.message || 'Try again.');
+          }
+        },
+      },
+    ]);
+
+  const onOptions = () =>
+    isOwn
+      ? Alert.alert(activity.title, 'Activity options', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Edit Activity', onPress: () => router.push({ pathname: '/activity/[id]', params: { id: activity.id, edit: 'true' } }) },
+          { text: 'Delete Activity', style: 'destructive', onPress: confirmDelete },
+          { text: 'Share', onPress: () => shareActivity(activity) },
+        ])
+      : Alert.alert(activity.title, 'Activity options', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Share', onPress: () => shareActivity(activity) },
+          { text: 'Report', style: 'destructive', onPress: () => router.push({ pathname: '/settings/report', params: { targetType: 'activity', targetId: activity.id } }) },
+        ]);
 
   const speedOrPace =
     sport.primaryMetric === 'speed'
@@ -98,7 +133,7 @@ export const FeedCard = memo(function FeedCard({
           </Pressable>
           <Pressable
             hitSlop={12}
-            onPress={() => shareActivity(activity)}
+            onPress={onOptions}
             accessibilityRole="button"
             accessibilityLabel="Activity options"
             className="p-1">
@@ -210,23 +245,4 @@ export const FeedCard = memo(function FeedCard({
   );
 });
 
-export const FeedCardSkeleton: React.FC = () => (
-  <View className="bg-white border-y border-gray-100 mb-2 pb-4" accessibilityLabel="Loading activity">
-    <View className="flex-row items-center px-4 pt-4">
-      <Skeleton className="w-10 h-10 rounded-full" />
-      <View className="flex-1 ml-3">
-        <Skeleton className="w-[45%] h-3.5" />
-        <Skeleton className="w-[65%] h-3 mt-2" />
-      </View>
-    </View>
-    <View className="px-4">
-      <Skeleton className="w-[60%] h-5 mt-4" />
-      <View className="flex-row mt-3 gap-4">
-        <Skeleton className="w-16 h-8.5" />
-        <Skeleton className="w-16 h-8.5" />
-        <Skeleton className="w-16 h-8.5" />
-      </View>
-    </View>
-    <Skeleton className="h-44 rounded-none mt-3" />
-  </View>
-);
+export { FeedCardSkeleton } from './FeedCardSkeleton';

@@ -117,11 +117,8 @@ export function RouteCardCarousel({
 
                   {/* Sport & Distance line */}
                   <View className="flex-row items-center">
-                    <Ionicons name={sport.icon} size={13} color="#FC4C02" />
-                    <View className="bg-[#0070F3] px-1.5 py-0.5 rounded ml-1 mr-1.5">
-                      <AppText className="text-white text-[9px] font-black uppercase">Moderate</AppText>
-                    </View>
-                    <AppText className="text-gray-600 text-xs font-semibold" numberOfLines={1}>
+                    <Ionicons name={sport.icon} size={14} color="#FC4C02" />
+                    <AppText className="text-gray-600 text-xs font-semibold ml-1.5" numberOfLines={1}>
                       {kmValue(item.distanceMeters)} km · {item.elevationGainMeters} m · {item.estTimeText || '1h 2m'}
                     </AppText>
                   </View>
