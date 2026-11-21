@@ -73,7 +73,11 @@ export default function WorkoutTab() {
       <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }} className="px-5 pt-3 pb-3 flex-row items-center justify-between">
         <Text className="text-3xl font-black text-gray-900 tracking-tight">Workout</Text>
         <TouchableOpacity
-          onPress={() => router.push({ pathname: '/history/[athleteId]', params: { athleteId: currentUser.id } })}
+          onPress={() => {
+            if (currentUser?.id) {
+              router.push({ pathname: '/history/[athleteId]', params: { athleteId: currentUser.id } });
+            }
+          }}
           accessibilityLabel="Activity History"
           className="p-2.5 rounded-full bg-gray-100 active:bg-gray-200">
           <Ionicons name="time-outline" size={22} color="#374151" />
