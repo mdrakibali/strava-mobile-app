@@ -28,11 +28,9 @@ export const RoutePreview: React.FC<RoutePreviewProps> = ({
       <MapView
         mode="route"
         route={route.length > 1 ? route : []}
-        userPosition={route[0]}
         focus={route.length < 2 ? { center: route[0], zoom: 15 } : null}
         interactive={false}
-        styleKey="liberty"
-        showUserLocation={true}
+        showUserLocation={false}
         padding={{ top: 18, bottom: 18, left: 18, right: 18 }}
       />
     </View>

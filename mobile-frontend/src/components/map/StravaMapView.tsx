@@ -7,11 +7,10 @@
 import React from 'react';
 import { View } from 'react-native';
 import { MapView } from './MapView';
-import { MapMarkerItem, MapStyleKey, StravaMapViewProps } from './mapTypes';
+import { MapMarkerItem, MapStyleKey, StravaMapViewProps, toMapStyleKey } from './mapTypes';
 
 export type { HeatmapTypeOption, MapMarkerItem, MapStyleKey, MapTypeOption, TerrainTypeOption } from './mapTypes';
 
-const toStyle = (k?: string): MapStyleKey => (k === 'positron' ? 'positron' : k === 'bright' ? 'bright' : 'liberty');
 
 export const StravaMapView: React.FC<StravaMapViewProps> = ({
   styleKey,
@@ -44,7 +43,7 @@ export const StravaMapView: React.FC<StravaMapViewProps> = ({
         onMapPress={onMapPress}
         focus={routeCoordinates.length === 0 && centerCoordinate ? { center: centerCoordinate, zoom: zoomLevel ?? 14 } : null}
         frameKey={`${routeCoordinates.length}:${centerCoordinate?.join(',') ?? ''}`}
-        styleKey={toStyle(styleKey)}>
+        styleKey={toMapStyleKey(styleKey)}>
         {children}
       </MapView>
     </View>

@@ -1,20 +1,39 @@
 /**
- * OpenFreeMap vector styles (OpenStreetMap data, OpenMapTiles schema). Public instance: no API key,
- * no registration, no request limits stated (https://openfreemap.org/quick_start/).
- *  - liberty:  full colour (parks, water, POIs, paths) → interactive maps (detail, Maps tab, recorder)
- *  - positron: light grey → small route previews, where the orange route must dominate
- *  - bright:   OSM-Bright look, kept as an option
- * Attribution required: OpenFreeMap · © OpenMapTiles · Data from OpenStreetMap.
+ * Basemap style configuration — the single place to change the app's map look.
+ * One active style per map instance; screens only pass a `MapStyleKey`.
+ *
+ *  - positron: OpenFreeMap light, minimal (DEFAULT). Flat buildings, soft roads, no extrusions.
+ *  - bright:   OpenFreeMap OSM-Bright look (more colour, alternative).
+ *  - voyager:  CARTO Voyager GL (alternative). CARTO's free basemap terms are non-commercial;
+ *              a commercial release needs a CARTO licence, so it is never the default.
+ *
+ * OpenFreeMap: no API key, no request limit stated, free for commercial use, best-effort (no SLA).
+ * Attribution required: OpenFreeMap · © OpenMapTiles · Data from OpenStreetMap
+ * (https://openfreemap.org/tos/). Voyager requires "© CARTO © OpenStreetMap contributors".
+ * "liberty" (3D buildings, busy POIs) was removed on purpose.
  */
 export const MAP_STYLES = {
-  liberty: 'https://tiles.openfreemap.org/styles/liberty',
   positron: 'https://tiles.openfreemap.org/styles/positron',
   bright: 'https://tiles.openfreemap.org/styles/bright',
-};
-
-export const MAP_ATTRIBUTION = '© OpenFreeMap · © OpenMapTiles · © OpenStreetMap contributors';
+  voyager: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+} as const;
 
 export type MapStyleKey = keyof typeof MAP_STYLES;
+
+export const DEFAULT_MAP_STYLE: MapStyleKey = 'positron';
+
+/** Options for the existing "Map style" sheets (record + maps tab). */
+export const MAP_STYLE_OPTIONS: { id: MapStyleKey; title: string; description: string; icon: 'sunny-outline' | 'contrast-outline' | 'map-outline' }[] = [
+  { id: 'positron', title: 'Light', description: 'Clean minimal map so your route stands out', icon: 'sunny-outline' },
+  { id: 'bright', title: 'Bright', description: 'More colour for streets and parks', icon: 'contrast-outline' },
+  { id: 'voyager', title: 'Voyager', description: 'Soft colour street map (CARTO)', icon: 'map-outline' },
+];
+
+/** Persisted/legacy values (e.g. old 'liberty') fall back to the default. */
+export const toMapStyleKey = (k?: string | null): MapStyleKey =>
+  k && Object.prototype.hasOwnProperty.call(MAP_STYLES, k) ? (k as MapStyleKey) : DEFAULT_MAP_STYLE;
+
+export const MAP_ATTRIBUTION = '© OpenFreeMap · © OpenMapTiles · © OpenStreetMap contributors';
 
 export type MapTypeOption = 'standard' | 'satellite' | 'hybrid' | 'winter';
 export type HeatmapTypeOption = 'none' | 'global_run' | 'weekly' | 'night' | 'personal';

@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapView } from '../../components/map/MapView';
-import { MapStyleKey } from '../../components/map/mapTypes';
+import { DEFAULT_MAP_STYLE, MAP_STYLE_OPTIONS, MapStyleKey } from '../../components/map/mapTypes';
 import { MapFilterChips } from '../../components/maps/MapFilterChips';
 import { MapFloatingControls } from '../../components/maps/MapFloatingControls';
 import { MapSearchBar } from '../../components/maps/MapSearchBar';
@@ -36,12 +36,13 @@ export default function MapsScreen() {
   const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
 
   const [me, setMe] = useState<LngLat | null>(null);
+  // Bumped by the recenter button so the camera re-frames even when the position is unchanged.
+  const [recenterNonce, setRecenterNonce] = useState(0);
   const listRef = useRef<FlatList<MapItem>>(null);
   const pinned = useRef(Boolean(params.routeId));
 
-  const [mapMode, setMapMode] = useState<'liberty' | 'positron' | 'bright'>('liberty');
+  const [mapMode, setMapMode] = useState<MapStyleKey>(DEFAULT_MAP_STYLE);
   const [styleModalVisible, setStyleModalVisible] = useState(false);
-  const [pitch, setPitch] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -147,10 +148,9 @@ export default function MapsScreen() {
                 ? { center: current.anchor, zoom: 15 }
                 : null
         }
-        frameKey={mainRoute.length > 1 && current ? `route:${current.id}` : me ? `me:${me[0].toFixed(3)},${me[1].toFixed(3)}` : 'none'}
+        frameKey={mainRoute.length > 1 && current ? `route:${current.id}` : me ? `me:${me[0].toFixed(3)},${me[1].toFixed(3)}:${recenterNonce}` : 'none'}
         padding={{ top: insets.top + 120, bottom: 250 }}
-        styleKey={mapMode as MapStyleKey}
-        pitch={pitch}
+        styleKey={mapMode}
       />
 
       {current ? (
@@ -183,10 +183,8 @@ export default function MapsScreen() {
 
       <MapFloatingControls
         topOffset={insets.top + 120}
-        pitch={pitch}
-        onTogglePitch={() => setPitch((p) => (p === 0 ? 55 : 0))}
         onOpenLayers={() => setStyleModalVisible(true)}
-        onRecenter={() => me && setMe([...me])}
+        onRecenter={() => me && setRecenterNonce((n) => n + 1)}
         onCreateRoute={() => router.push('/routes/builder')}
       />
 
@@ -209,13 +207,7 @@ export default function MapsScreen() {
       />
 
       <BottomSheet visible={styleModalVisible} onClose={() => setStyleModalVisible(false)} title="Map style">
-        {(
-          [
-            ['liberty', 'Standard', 'Full color roads, parks, and waterways', 'map-outline'],
-            ['positron', 'Light', 'Muted map so routes stand out', 'sunny-outline'],
-            ['bright', 'Bright', 'High-contrast street map', 'contrast-outline'],
-          ] as const
-        ).map(([id, title, desc, icon]) => (
+        {MAP_STYLE_OPTIONS.map(({ id, title, description: desc, icon }) => (
           <OptionRow
             key={id}
             title={title}

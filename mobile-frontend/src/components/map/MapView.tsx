@@ -9,12 +9,12 @@
  * Never invents a position: with no route and no known user position the camera shows the world.
  */
 import Constants, { ExecutionEnvironment } from 'expo-constants';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleProp, View, ViewStyle } from 'react-native';
 import { AppText } from '../../design/components/AppText';
 import { color } from '../../design/tokens';
 import { LngLat } from '../../lib/activityView';
-import { MAP_STYLES, MapStyleKey } from './mapTypes';
+import { DEFAULT_MAP_STYLE, MAP_STYLES, MapStyleKey, toMapStyleKey } from './mapTypes';
 
 type MapLibreModule = typeof import('@maplibre/maplibre-react-native');
 
@@ -36,8 +36,8 @@ if (!isExpoGo) {
 export const isNativeMapAvailable = Boolean(ML?.Map);
 export const nativeMapModule = ML;
 
-export const styleUrl = (key: MapStyleKey = 'liberty') =>
-  (key === 'liberty' && process.env.EXPO_PUBLIC_MAP_STYLE_URL) || MAP_STYLES[key];
+export const styleUrl = (key: MapStyleKey = DEFAULT_MAP_STYLE) =>
+  (toMapStyleKey(key) === DEFAULT_MAP_STYLE && process.env.EXPO_PUBLIC_MAP_STYLE_URL) || MAP_STYLES[toMapStyleKey(key)];
 
 export interface MapMarker {
   id: string;
@@ -72,8 +72,6 @@ export interface MapViewProps {
   /** Centre + zoom when there is no route to frame (e.g. a selected place). */
   focus?: { center: LngLat; zoom: number } | null;
   styleKey?: MapStyleKey;
-  /** Camera tilt in degrees (0 = 2D). With the Liberty style, >0 shows real 3D buildings. */
-  pitch?: number;
   /** A PLANNED route drawn as a dashed blue reference line — never mixed with the recorded route. */
   plannedRoute?: LngLat[];
 }
@@ -119,17 +117,10 @@ export const MapView: React.FC<MapViewProps> = ({
   onMarkerPress,
   onMapPress,
   focus,
-  styleKey = 'liberty',
-  pitch = 0,
+  styleKey = DEFAULT_MAP_STYLE,
   plannedRoute,
 }) => {
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
-  const cameraRef = useRef<any>(null);
-  // Tilt in place (keeps the current centre and zoom; switching styles keeps them too because the
-  // Map instance is not remounted).
-  useEffect(() => {
-    cameraRef.current?.easeTo?.({ pitch, duration: 600 });
-  }, [pitch]);
 
   const plannedData = useMemo<GeoJSON.FeatureCollection>(
     () => ({
@@ -164,25 +155,9 @@ export const MapView: React.FC<MapViewProps> = ({
     [otherRoutes]
   );
 
+  // The native puck (<UserLocation/>) is the ONLY current-location marker. No custom dot, no
+  // accuracy circle, no heading cone.
   const nativeUserLocation = mode === 'live' || showUserLocation;
-  const userDotData = useMemo<GeoJSON.FeatureCollection | null>(() => {
-    // The native puck is the only current-location marker. A second dot tracks a different
-    // GPS subscription and draws another blue circle on top of it.
-    if (nativeUserLocation || !userPosition) return null;
-    return {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'Point',
-            coordinates: userPosition,
-          },
-        },
-      ],
-    };
-  }, [nativeUserLocation, userPosition]);
 
   const endpoints = useMemo<GeoJSON.FeatureCollection>(() => {
     const features: GeoJSON.Feature[] = [];
@@ -241,12 +216,12 @@ export const MapView: React.FC<MapViewProps> = ({
   // real position. Never a hard-coded city.
   let cameraElement: React.ReactNode;
   if (mode === 'route' && route.length > 0) {
-    cameraElement = <Camera ref={cameraRef} key={frameKey ?? 'route'} initialViewState={{ bounds: boundsOf(route), padding: cameraPadding }} />;
+    cameraElement = <Camera key={frameKey ?? 'route'} initialViewState={{ bounds: boundsOf(route), padding: cameraPadding }} />;
   } else if (mode === 'live') {
     const centre = userPosition || route[route.length - 1];
     cameraElement = (
       <Camera
-        ref={cameraRef}
+       
         key={centre ? 'live' : 'live-unknown'}
         initialViewState={centre ? { center: centre, zoom: 16 } : { zoom: 1 }}
         trackUserLocation={following ? 'default' : undefined}
@@ -256,11 +231,11 @@ export const MapView: React.FC<MapViewProps> = ({
       />
     );
   } else if (focus) {
-    cameraElement = <Camera ref={cameraRef} key={frameKey ?? 'focus'} initialViewState={{ center: focus.center, zoom: focus.zoom }} />;
+    cameraElement = <Camera key={frameKey ?? 'focus'} initialViewState={{ center: focus.center, zoom: focus.zoom }} />;
   } else if (userPosition) {
-    cameraElement = <Camera ref={cameraRef} key={frameKey ?? 'user'} initialViewState={{ center: userPosition, zoom: 13 }} />;
+    cameraElement = <Camera key={frameKey ?? 'user'} initialViewState={{ center: userPosition, zoom: 13 }} />;
   } else {
-    cameraElement = <Camera ref={cameraRef} key="world" initialViewState={{ zoom: 1 }} />;
+    cameraElement = <Camera key="world" initialViewState={{ zoom: 1 }} />;
   }
 
   return (
@@ -277,43 +252,11 @@ export const MapView: React.FC<MapViewProps> = ({
         touchZoom={interactive}
         doubleTapZoom={interactive}
         touchRotate={false}
-        touchPitch={pitch > 0}
+        touchPitch={false}
         onDidFinishLoadingMap={() => setLoadState('ready')}
         onDidFailLoadingMap={() => setLoadState('error')}
         onPress={onMapPress ? (e) => onMapPress(e.nativeEvent.lngLat as LngLat) : undefined}>
         {cameraElement}
-        {userDotData ? (
-          <GeoJSONSource id="user-location-badge" data={userDotData}>
-            <Layer
-              id="user-location-radar"
-              type="circle"
-              paint={{
-                'circle-radius': 16,
-                'circle-color': 'rgba(37, 99, 235, 0.20)',
-                'circle-stroke-width': 1.5,
-                'circle-stroke-color': '#2563EB',
-              }}
-            />
-            <Layer
-              id="user-location-white-ring"
-              type="circle"
-              paint={{
-                'circle-radius': 9.5,
-                'circle-color': '#FFFFFF',
-                'circle-stroke-width': 2.5,
-                'circle-stroke-color': '#DBEAFE',
-              }}
-            />
-            <Layer
-              id="user-location-blue-core"
-              type="circle"
-              paint={{
-                'circle-radius': 6,
-                'circle-color': '#0070F3',
-              }}
-            />
-          </GeoJSONSource>
-        ) : null}
         {nativeUserLocation ? <UserLocation animated accuracy={false} heading={false} /> : null}
         {otherRoutes && otherRoutes.length ? (
           <GeoJSONSource id="other-routes" data={othersData}>
@@ -346,7 +289,7 @@ export const MapView: React.FC<MapViewProps> = ({
             id="route-casing"
             type="line"
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-            paint={{ 'line-color': '#FFFFFF', 'line-width': 9 }}
+            paint={{ 'line-color': '#FFFFFF', 'line-width': 8 }}
           />
           <Layer
             id="route-line"

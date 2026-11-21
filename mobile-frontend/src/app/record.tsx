@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, AppState, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapView } from '../components/map/MapView';
-import { MapStyleKey } from '../components/map/mapTypes';
+import { DEFAULT_MAP_STYLE, MAP_STYLE_OPTIONS, MapStyleKey } from '../components/map/mapTypes';
 import { RecordBottomControls } from '../components/record/RecordBottomControls';
 import { RecordHeaderControls } from '../components/record/RecordHeaderControls';
 import { RecordIndoorView } from '../components/record/RecordIndoorView';
@@ -36,9 +36,8 @@ export default function RecordScreen() {
   const [statsView, setStatsView] = useState(false);
   const [following, setFollowing] = useState(true);
   const [starting, setStarting] = useState(false);
-  const [pitch, setPitch] = useState(0);
   const [styleModalVisible, setStyleModalVisible] = useState(false);
-  const [mapMode, setMapMode] = useState<'liberty' | 'positron' | 'bright'>('liberty');
+  const [mapMode, setMapMode] = useState<MapStyleKey>(DEFAULT_MAP_STYLE);
 
   const cfg = sportConfig(isIdle ? sport : rec.sport);
   const isIndoor = sport === 'Workout' || sport === 'Yoga';
@@ -135,8 +134,7 @@ export default function RecordScreen() {
         onFollowingChange={setFollowing}
         padding={{ bottom: 310 }}
         plannedRoute={planned?.geometry}
-        styleKey={mapMode as MapStyleKey}
-        pitch={pitch}
+        styleKey={mapMode}
         showUserLocation
       />
 
@@ -144,12 +142,10 @@ export default function RecordScreen() {
         topInset={insets.top}
         isIdle={isIdle}
         following={following}
-        pitch={pitch}
         onBack={handleBack}
         onOpenHeatmap={() => router.push('/(tabs)/maps?source=routes')}
         onOpenSettings={() => router.push('/settings/gps')}
         onOpenLayers={() => setStyleModalVisible(true)}
-        onTogglePitch={() => setPitch((p) => (p === 0 ? 55 : 0))}
         onRecenter={() => setFollowing(true)}
       />
 
@@ -200,13 +196,7 @@ export default function RecordScreen() {
       />
 
       <BottomSheet visible={styleModalVisible} onClose={() => setStyleModalVisible(false)} title="Map style">
-        {(
-          [
-            ['liberty', 'Standard', 'Full color roads, parks, and waterways', 'map-outline'],
-            ['positron', 'Light', 'Muted map so routes stand out', 'sunny-outline'],
-            ['bright', 'Bright', 'High-contrast street map', 'contrast-outline'],
-          ] as const
-        ).map(([id, title, desc, icon]) => (
+        {MAP_STYLE_OPTIONS.map(({ id, title, description: desc, icon }) => (
           <OptionRow
             key={id}
             title={title}

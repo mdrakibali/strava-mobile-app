@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { DEFAULT_MAP_STYLE } from '../../components/map/mapTypes';
 import { MapStyleKey, StravaMapView } from '../../components/map/StravaMapView';
 import { useApp } from '../../context/AppContext';
 import { toRoute } from '../../lib/activityView';
@@ -12,7 +13,7 @@ export default function PersonalHeatmapScreen() {
   const router = useRouter();
   const { currentUser } = useApp();
   const [selectedSport, setSelectedSport] = useState<'All' | 'Run' | 'Ride'>('All');
-  const [mapStyle, setMapStyle] = useState<MapStyleKey>('liberty');
+  const [mapStyle, setMapStyle] = useState<MapStyleKey>(DEFAULT_MAP_STYLE);
   const [userActivities, setUserActivities] = useState<any[]>([]);
 
   useEffect(() => {
@@ -73,7 +74,7 @@ export default function PersonalHeatmapScreen() {
 
         {/* Style Selector */}
         <View className="flex-row bg-stone-800 rounded-full p-0.5">
-          {(['liberty', 'positron'] as const).map((style) => (
+          {(['positron', 'bright', 'voyager'] as const).map((style) => (
             <TouchableOpacity
               key={style}
               onPress={() => setMapStyle(style)}
