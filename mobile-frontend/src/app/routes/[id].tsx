@@ -111,7 +111,7 @@ export default function RouteDetailScreen() {
   const centerCoord: [number, number] | undefined = coords[0];
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       {/* Top Header */}
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-100">
         <TouchableOpacity onPress={() => router.back()} className="p-1">

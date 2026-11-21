@@ -83,7 +83,7 @@ export default function SearchScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <View className="flex-row items-center px-2 py-2 border-b border-gray-100">
         <IconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => router.back()} />
         <View className="flex-1 flex-row items-center h-11 ml-1 pl-3 rounded-full bg-gray-100">

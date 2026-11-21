@@ -232,7 +232,7 @@ export default function HomeFeedScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-[#F7F7F8]">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F7F7F8' }}>
       <HomeHeader unreadNotificationCount={unreadNotificationCount} />
       {activeWorkoutBanner}
       {uploadsBanner}

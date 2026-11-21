@@ -47,7 +47,7 @@ export default function SettingsScreen() {
     ]);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       <AppBar title="Settings" />
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <View className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex-row items-center p-4">

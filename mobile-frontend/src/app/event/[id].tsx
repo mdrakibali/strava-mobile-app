@@ -82,7 +82,7 @@ export default function EventDetailScreen() {
   const distance = event.distanceMeters != null ? Number(event.distanceMeters) : null;
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-white">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <AppBar title="Event" />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 64 }}>
         <AppText variant="label" color="brandText" style={{ fontWeight: '700' }}>

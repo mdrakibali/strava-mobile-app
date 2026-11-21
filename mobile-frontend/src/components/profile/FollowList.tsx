@@ -108,7 +108,7 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
 
   const title = kind === 'followers' ? 'Followers' : 'Following';
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-white">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <AppBar title={title} />
       {status === 'loading' ? (
         <LoadingState />

@@ -22,7 +22,7 @@ export default function ReportScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white justify-between p-6">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }} className="justify-between p-6">
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="flex-row items-center justify-between mb-4">
           <TouchableOpacity onPress={() => router.back()}>

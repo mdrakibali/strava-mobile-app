@@ -78,7 +78,7 @@ export default function EditActivityScreen() {
   const cfg = sportConfig(sport);
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-white">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <AppBar title="Edit Activity" />
       {loaded === 'loading' ? (
         <LoadingState />
@@ -86,33 +86,39 @@ export default function EditActivityScreen() {
         <ErrorState message="This activity can’t be edited." />
       ) : (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
-            <TextField value={title} onChangeText={setTitle} placeholder="Title" accessibilityLabel="Activity title" maxLength={100} />
-            <View style={{ height: space.md }} />
-            <TextField
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Description"
-              accessibilityLabel="Description"
-              multiline
-              maxLength={2000}
-            />
-            <View style={{ height: space.md }} />
-            <SelectField value={cfg.label} icon={cfg.icon} onPress={() => setSportSheet(true)} accessibilityLabel="Sport" />
-            <SectionTitle title="Who can view" style={{ marginTop: space.xxl }} />
-            <SelectField
-              value={VISIBILITY_LABEL[visibility].label}
-              icon={VISIBILITY_LABEL[visibility].icon}
-              onPress={() => setVisibilitySheet(true)}
-              accessibilityLabel="Who can view"
-            />
-            {error ? (
-              <View style={{ marginTop: space.lg }}>
-                <ErrorState compact message={error} />
-              </View>
-            ) : null}
-          </ScrollView>
-          <View style={{ paddingBottom: insets.bottom + 12 }} className="px-4 pt-3 border-t border-gray-100 bg-white">
+          <View style={{ flex: 1 }}>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ padding: 16, paddingBottom: 32, flexGrow: 1 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}>
+              <TextField value={title} onChangeText={setTitle} placeholder="Title" accessibilityLabel="Activity title" maxLength={100} />
+              <View style={{ height: space.md }} />
+              <TextField
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Description"
+                accessibilityLabel="Description"
+                multiline
+                maxLength={2000}
+              />
+              <View style={{ height: space.md }} />
+              <SelectField value={cfg.label} icon={cfg.icon} onPress={() => setSportSheet(true)} accessibilityLabel="Sport" />
+              <SectionTitle title="Who can view" style={{ marginTop: space.xxl }} />
+              <SelectField
+                value={VISIBILITY_LABEL[visibility].label}
+                icon={VISIBILITY_LABEL[visibility].icon}
+                onPress={() => setVisibilitySheet(true)}
+                accessibilityLabel="Who can view"
+              />
+              {error ? (
+                <View style={{ marginTop: space.lg }}>
+                  <ErrorState compact message={error} />
+                </View>
+              ) : null}
+            </ScrollView>
+          </View>
+          <View style={{ paddingBottom: Math.max(insets.bottom, 16), backgroundColor: '#FFFFFF' }} className="px-4 pt-3 border-t border-gray-100">
             <Button label="Save changes" size="lg" fullWidth loading={saving} disabled={!title.trim()} onPress={onSave} />
           </View>
         </KeyboardAvoidingView>

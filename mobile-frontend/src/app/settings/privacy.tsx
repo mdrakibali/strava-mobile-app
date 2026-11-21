@@ -95,7 +95,7 @@ export default function PrivacyZonesScreen() {
     ]);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       <AppBar title="Privacy zones" />
       {status === 'loading' ? (
         <LoadingState />

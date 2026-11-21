@@ -53,7 +53,7 @@ export default function KudosListScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-white">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <AppBar title={status === 'ready' ? `Kudos (${count})` : 'Kudos'} />
       {status === 'loading' ? (
         <LoadingState />

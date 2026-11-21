@@ -74,7 +74,7 @@ export default function ActivityHistoryScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-[#F7F7F8]">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F7F7F8' }}>
       <AppBar title="Activities" />
       {status === 'loading' ? (
         <View>

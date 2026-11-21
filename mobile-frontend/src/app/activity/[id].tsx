@@ -78,7 +78,7 @@ export default function ActivityDetailScreen() {
 
   if (state.status !== 'ready') {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
         <AppBar title={state.status === 'loading' ? '' : 'Activity'} />
         {state.status === 'loading' ? (
           <DetailSkeleton />

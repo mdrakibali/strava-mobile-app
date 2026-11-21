@@ -127,7 +127,7 @@ export default function GroupsScreen() {
   } as const;
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-[#F7F7F8]">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F7F7F8' }}>
       {/* Top Header */}
       <View className="px-5 pt-3 pb-2 bg-white flex-row items-center justify-between border-b border-gray-100">
         <Text className="text-3xl font-black text-gray-900 tracking-tight">Groups</Text>

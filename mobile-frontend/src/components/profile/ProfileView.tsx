@@ -136,7 +136,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
 
   if (status !== 'ready' || !data || !progress) {
     return (
-      <SafeAreaView edges={['top']} className="flex-1 bg-white">
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
         {header}
         {status === 'loading' ? (
           <View className="p-4">
@@ -164,7 +164,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
   );
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-gray-50">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       {header}
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />}

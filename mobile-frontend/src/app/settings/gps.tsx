@@ -46,7 +46,7 @@ export default function RecordingSettingsScreen() {
     Linking.sendIntent('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS').catch(() => Linking.openSettings());
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-gray-50">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       <AppBar title="Recording & GPS" />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 64 }}>
         <StatusRow

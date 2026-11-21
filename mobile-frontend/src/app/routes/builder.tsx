@@ -68,7 +68,7 @@ export default function RouteBuilderScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-white">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <AppBar title="Create Route" />
       <View style={{ flex: 1 }}>
         <MapView
