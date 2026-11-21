@@ -5,6 +5,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Text,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,7 +23,7 @@ export const FormScreen: React.FC<{
   const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-white">
+    <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }} className="flex-1 bg-white">
       <AppBar title={title} />
 
       <KeyboardAvoidingView
@@ -54,9 +55,9 @@ export const FormScreen: React.FC<{
             {submitting ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <AppText className="text-white text-base font-black">
+              <Text style={{ color: '#FFFFFF' }} className="text-base font-black">
                 {submitLabel}
-              </AppText>
+              </Text>
             )}
           </Pressable>
         </View>

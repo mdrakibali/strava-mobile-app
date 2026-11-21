@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { AppText } from '../../design';
 import { SportConfig } from '../../lib/sports';
 import { LifecycleStatus } from '../../tracking/shared';
@@ -60,7 +60,7 @@ export function RecordBottomControls({
           accessibilityLabel="Resume recording"
           className="flex-1 h-14 rounded-full bg-[#FC4C02] flex-row items-center justify-center shadow-lg active:bg-[#E03A00]">
           <Ionicons name="play" size={24} color="#FFFFFF" />
-          <AppText className="text-white text-base font-black ml-2">Resume</AppText>
+          <Text style={{ color: '#FFFFFF' }} className="text-base font-black ml-2">Resume</Text>
         </Pressable>
         <Pressable
           onPress={onFinish}
@@ -68,7 +68,7 @@ export function RecordBottomControls({
           accessibilityLabel="Finish recording"
           className="flex-1 h-14 rounded-full bg-black flex-row items-center justify-center shadow-lg active:bg-gray-900">
           <Ionicons name="square" size={18} color="#FFFFFF" />
-          <AppText className="text-white text-base font-black ml-2">Finish</AppText>
+          <Text style={{ color: '#FFFFFF' }} className="text-base font-black ml-2">Finish</Text>
         </Pressable>
       </View>
     );
@@ -83,7 +83,7 @@ export function RecordBottomControls({
         accessibilityLabel="Pause recording"
         className="h-14 rounded-full bg-[#FC4C02] flex-row items-center justify-center shadow-lg active:bg-[#E03A00]">
         <Ionicons name="pause" size={24} color="#FFFFFF" />
-        <AppText className="text-white text-base font-black ml-2">Pause</AppText>
+        <Text style={{ color: '#FFFFFF' }} className="text-base font-black ml-2">Pause</Text>
       </Pressable>
     </View>
   );

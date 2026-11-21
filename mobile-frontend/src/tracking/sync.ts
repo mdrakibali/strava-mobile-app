@@ -177,10 +177,11 @@ class SyncWorker {
       throw new ApiError('This recording is incomplete and can’t be uploaded.', 422, 'incomplete');
     }
     const startTime = new Date(s.startedAt).toISOString();
+    const wireSport = (save.sportType === 'Workout' || save.sportType === 'Yoga') ? 'Run' : save.sportType;
 
     if (!s.uploadStarted) {
       try {
-        const res = await api.uploads.start({ clientActivityId: s.id, sportType: save.sportType, startTime });
+        const res = await api.uploads.start({ clientActivityId: s.id, sportType: wireSport, startTime });
         await batchesRepo.reset(s.id);
         await batchesRepo.ack(s.id, res.upload.receivedSeqs);
         if (res.upload.status === 'COMPLETED') {
@@ -217,7 +218,7 @@ class SyncWorker {
       const res = await api.uploads.complete(s.id, {
         title: save.title,
         description: save.description || undefined,
-        sportType: save.sportType,
+        sportType: wireSport,
         visibility: save.visibility,
         startTime,
         finishedAt: new Date(s.finishedAt).toISOString(),
@@ -236,14 +237,15 @@ class SyncWorker {
   /** Transitional path for a backend without /activities/uploads (still idempotent once deployed). */
   private async legacyUpload(s: SessionRow) {
     const save = s.save!;
+    const wireSport = (save.sportType === 'Workout' || save.sportType === 'Yoga') ? 'Run' : save.sportType;
     const points = await pointsRepo.range(s.id);
-    const sum = summarizeTrack({ sport: save.sportType, points, startedAt: s.startedAt!, finishedAt: s.finishedAt, pauses: s.pauses });
-    const kept = acceptedPoints(save.sportType, points);
+    const sum = summarizeTrack({ sport: wireSport, points, startedAt: s.startedAt!, finishedAt: s.finishedAt, pauses: s.pauses });
+    const kept = acceptedPoints(wireSport, points);
     const res = await api.activities.create({
       clientActivityId: s.id,
       title: save.title,
       description: save.description || undefined,
-      sportType: save.sportType,
+      sportType: wireSport,
       visibility: save.visibility,
       startTime: new Date(s.startedAt!).toISOString(),
       distanceMeters: sum.distanceM,

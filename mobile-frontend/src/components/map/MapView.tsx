@@ -164,6 +164,23 @@ export const MapView: React.FC<MapViewProps> = ({
     [otherRoutes]
   );
 
+  const userDotData = useMemo<GeoJSON.FeatureCollection | null>(() => {
+    if (!userPosition) return null;
+    return {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'Point',
+            coordinates: userPosition,
+          },
+        },
+      ],
+    };
+  }, [userPosition]);
+
   const endpoints = useMemo<GeoJSON.FeatureCollection>(() => {
     const features: GeoJSON.Feature[] = [];
     if (route.length > 0) {
@@ -257,6 +274,38 @@ export const MapView: React.FC<MapViewProps> = ({
         onDidFailLoadingMap={() => setLoadState('error')}
         onPress={onMapPress ? (e) => onMapPress(e.nativeEvent.lngLat as LngLat) : undefined}>
         {cameraElement}
+        {userDotData ? (
+          <GeoJSONSource id="user-location-badge" data={userDotData}>
+            <Layer
+              id="user-location-radar"
+              type="circle"
+              paint={{
+                'circle-radius': 16,
+                'circle-color': 'rgba(16, 185, 129, 0.22)',
+                'circle-stroke-width': 1.5,
+                'circle-stroke-color': '#10B981',
+              }}
+            />
+            <Layer
+              id="user-location-white-ring"
+              type="circle"
+              paint={{
+                'circle-radius': 9.5,
+                'circle-color': '#FFFFFF',
+                'circle-stroke-width': 2.5,
+                'circle-stroke-color': '#E5E7EB',
+              }}
+            />
+            <Layer
+              id="user-location-green-core"
+              type="circle"
+              paint={{
+                'circle-radius': 6,
+                'circle-color': '#10B981',
+              }}
+            />
+          </GeoJSONSource>
+        ) : null}
         {mode === 'live' || showUserLocation ? <UserLocation animated accuracy={false} heading={true} /> : null}
         {otherRoutes && otherRoutes.length ? (
           <GeoJSONSource id="other-routes" data={othersData}>

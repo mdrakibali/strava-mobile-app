@@ -129,7 +129,7 @@ export default function SaveActivityScreen() {
       : { label: 'Avg pace', value: paceValue(distanceM, movingS), unit: '/km' };
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-white">
+    <SafeAreaView edges={['top']} style={{ flex: 1 }} className="flex-1 bg-white">
       {/* Top Header */}
       <View className="h-14 flex-row items-center px-4 border-b border-gray-100 justify-between">
         <Pressable
@@ -142,8 +142,8 @@ export default function SaveActivityScreen() {
         <View className="w-16" />
       </View>
 
-      <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 64 }} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 64 }} keyboardShouldPersistTaps="handled">
           <SaveActivityForm
             distanceM={distanceM}
             movingS={movingS}
