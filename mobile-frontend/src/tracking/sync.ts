@@ -4,6 +4,7 @@ import { ApiError, api, getAuthToken } from '../services/api';
 import { batchesRepo, pointsRepo, SessionRow, sessionsRepo } from './db';
 import {
   acceptedPoints,
+  routePoints,
   estimateCalories,
   retryDelayMs,
   sealedBatchCount,
@@ -241,6 +242,7 @@ class SyncWorker {
     const points = await pointsRepo.range(s.id);
     const sum = summarizeTrack({ sport: wireSport, points, startedAt: s.startedAt!, finishedAt: s.finishedAt, pauses: s.pauses });
     const kept = acceptedPoints(wireSport, points);
+    const drawn = routePoints(wireSport, points);
     const res = await api.activities.create({
       clientActivityId: s.id,
       title: save.title,
@@ -254,7 +256,7 @@ class SyncWorker {
       elevationGainMeters: sum.elevGainM ?? 0,
       maxSpeedMps: sum.maxSpeedMps ?? undefined,
       calories: estimateCalories(save.sportType, sum.distanceM, sum.movingTimeS) ?? undefined,
-      rawPolyline: kept.map((p) => ({ latitude: p.lat, longitude: p.lng, altitude: p.alt, timestamp: p.t, speed: p.speed })),
+      rawPolyline: (drawn.length > 0 ? drawn : kept).map((p) => ({ latitude: p.lat, longitude: p.lng, altitude: p.alt, timestamp: p.t, speed: p.speed })),
       splits: sum.splits.map((sp) => ({
         splitNumber: sp.index,
         distanceKm: Math.round(sp.distanceM) / 1000,

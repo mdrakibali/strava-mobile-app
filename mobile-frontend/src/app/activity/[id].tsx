@@ -15,6 +15,7 @@ import { useApp } from '../../context/AppContext';
 import { AppBar, EmptyState, ErrorState, IconButton } from '../../design';
 import { ActivityView, fromDetailResponse } from '../../lib/activityView';
 import { socialStore } from '../../lib/social';
+import { useKeyboardInset } from '../../lib/useKeyboardInset';
 import { api } from '../../services/api';
 
 type State =
@@ -29,22 +30,41 @@ export default function ActivityDetailScreen() {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const { currentUser } = useApp();
+  const keyboard = useKeyboardInset();
+  const scrollRef = useRef<ScrollView>(null);
   const [fetched, setState] = useState<State>({ status: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
+    const readTick = socialStore.beginRead();
     api.activities.get(id).then(
       (res) => {
         if (cancelled) return;
         if (!res?.activity) setState({ status: 'notFound' });
         else {
           const activity = fromDetailResponse(res);
-          socialStore.seed([
-            { id: activity.id, hasKudos: activity.hasKudos, kudosCount: activity.kudosCount, commentsCount: activity.commentsCount },
-          ]);
-          setState({ status: 'ready', activity, isOwner: Boolean(res.isOwner) });
+          socialStore.seed(
+            [{ id: activity.id, hasKudos: activity.hasKudos, kudosCount: activity.kudosCount, commentsCount: activity.commentsCount }],
+            readTick
+          );
+          setState((prev) => {
+            if (prev.status === 'ready' && socialStore.isStaleRead(activity.id, readTick)) {
+              return {
+                status: 'ready',
+                isOwner: Boolean(res.isOwner),
+                activity: {
+                  ...activity,
+                  hasKudos: prev.activity.hasKudos,
+                  kudosCount: prev.activity.kudosCount,
+                  commentsCount: prev.activity.commentsCount,
+                  comments: prev.activity.comments,
+                },
+              };
+            }
+            return { status: 'ready', activity, isOwner: Boolean(res.isOwner) };
+          });
         }
       },
       (e: any) => {
@@ -119,8 +139,13 @@ export default function ActivityDetailScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: insets.bottom + 80 }} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={insets.top}>
+        <ScrollView
+          ref={scrollRef}
+          style={{ flex: 1 }}
+          automaticallyAdjustKeyboardInsets
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: insets.bottom + 32 + keyboard }}>
           {hasMap ? (
             <View style={{ height: mapHeight }}>
               <MapView mode="route" route={activity.route} padding={{ top: insets.top, bottom: 24 }} />
@@ -135,6 +160,9 @@ export default function ActivityDetailScreen() {
               currentUserId={currentUser.id}
               currentUserName={currentUser.displayName}
               currentUserAvatar={currentUser.avatarUrl}
+              onComposerFocus={() => {
+                setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+              }}
             />
           </View>
         </ScrollView>

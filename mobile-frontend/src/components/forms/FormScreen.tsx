@@ -31,6 +31,7 @@ export const FormScreen: React.FC<{
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           style={{ flex: 1 }}
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled">
           {children}

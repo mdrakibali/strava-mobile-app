@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
+import { useKeyboardInset } from '../../lib/useKeyboardInset';
 import { api } from '../../services/api';
 import { realtimeWs } from '../../services/websocket';
 
@@ -23,50 +24,66 @@ export default function ChatScreen() {
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const scrollViewRef = useRef<any>(null);
   const typingTimerRef = useRef<any>(null);
+  const chatIdRef = useRef(chatId);
+  const partnerIdRef = useRef(partner.id);
+  const keyboard = useKeyboardInset();
   const effectiveId = id === 'ath_seed_ahmed' ? 'ath_seed_tanvir' : id;
 
-  const fetchChatHistory = async () => {
-    if (!effectiveId) return;
-    try {
-      const res = await api.messages.getThread(effectiveId);
-      if (res?.messages) setMessages(res.messages);
-      if (res?.partner) setPartner(res.partner);
-      if (res?.chatId) setChatId(res.chatId);
-      if (!res?.partner) {
-        const profileRes = await api.athletes.getProfile(effectiveId).catch(() => null);
-        if (profileRes?.athlete) setPartner(profileRes.athlete);
-      }
-    } catch (err) {
-      console.warn('Failed to load chat history:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  useEffect(() => {
+    chatIdRef.current = chatId;
+    partnerIdRef.current = partner.id;
+  }, [chatId, partner.id]);
 
   useEffect(() => {
-    fetchChatHistory();
+    if (!effectiveId) return;
+    let cancelled = false;
+    api.messages
+      .getThread(effectiveId)
+      .then((res) => {
+        if (cancelled) return;
+        if (res?.messages) setMessages(res.messages);
+        if (res?.partner) setPartner(res.partner);
+        if (res?.chatId) setChatId(res.chatId);
+      })
+      .catch(() => {
+        if (!cancelled) setMessages([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveId]);
+
+  useEffect(() => {
     const unsubMsg = realtimeWs.addListener('new_message', (payload: any) => {
       const dm = payload.directMessage;
       if (!dm) return;
-      const isRelevant = dm.chatId === chatId || dm.senderId === partner.id || dm.recipientId === partner.id
-        || dm.senderId === effectiveId || dm.recipientId === effectiveId;
-      if (isRelevant) {
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === dm.id)) return prev;
-          const tempIdx = prev.findIndex((m) => m.id.startsWith('temp_') && m.text === dm.text && m.senderId === dm.senderId);
-          if (tempIdx !== -1) {
-            const next = [...prev];
-            next[tempIdx] = dm;
-            return next;
-          }
-          return [...prev, dm];
-        });
-        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
-      }
+      const partnerId = partnerIdRef.current;
+      const currentChat = chatIdRef.current;
+      const isRelevant =
+        dm.chatId === currentChat ||
+        dm.senderId === partnerId ||
+        dm.recipientId === partnerId ||
+        dm.senderId === effectiveId ||
+        dm.recipientId === effectiveId;
+      if (!isRelevant) return;
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === dm.id)) return prev;
+        const tempIdx = prev.findIndex((m) => m.id.startsWith('temp_') && m.text === dm.text && m.senderId === dm.senderId);
+        if (tempIdx !== -1) {
+          const next = [...prev];
+          next[tempIdx] = dm;
+          return next;
+        }
+        return [...prev, dm];
+      });
+      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
     });
 
     const unsubTyping = realtimeWs.addListener('typing', (payload: any) => {
-      if (payload.senderId === partner.id || payload.senderId === effectiveId) {
+      if (payload.senderId === partnerIdRef.current || payload.senderId === effectiveId) {
         setIsPartnerTyping(true);
         if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
         typingTimerRef.current = setTimeout(() => setIsPartnerTyping(false), 2500);
@@ -78,7 +95,7 @@ export default function ChatScreen() {
       unsubTyping();
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     };
-  }, [effectiveId, chatId, partner.id]);
+  }, [effectiveId]);
 
   const handleSendMessage = async () => {
     if (!inputText.trim() || !effectiveId || isSending) return;
@@ -106,8 +123,9 @@ export default function ChatScreen() {
           return prev.map((m) => (m.id === tempId ? res.directMessage : m));
         });
       }
-    } catch (err: any) {
-      console.warn('Send message error:', err);
+    } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setInputText(textToSend);
     } finally {
       setIsSending(false);
     }
@@ -133,7 +151,7 @@ export default function ChatScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={8}>
         {isLoading ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <ActivityIndicator size="large" color="#FC4C02" />
@@ -170,7 +188,7 @@ export default function ChatScreen() {
           </View>
         )}
 
-        <View className="flex-row items-center bg-white px-4 py-2.5 border-t border-gray-200">
+        <View style={{ paddingBottom: keyboard }} className="flex-row items-center bg-white px-4 py-2.5 border-t border-gray-200">
           <TextInput
             value={inputText}
             onChangeText={(val) => {

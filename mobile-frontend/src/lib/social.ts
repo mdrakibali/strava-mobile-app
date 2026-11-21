@@ -3,8 +3,11 @@ import { api } from '../services/api';
 
 /**
  * Social state shared across screens (feed card ⇄ detail ⇄ kudos list) so a kudos given on the
- * detail screen is visible on the feed without a stale copy. Server responses always win: every
- * fetch of an activity calls `socialStore.seed`, which replaces local values.
+ * detail screen is visible on the feed without a stale copy.
+ *
+ * A fetch that started before a like, unlike, or comment change must not paint the old counts
+ * back on top of that change. `beginRead` marks when the fetch started; `noteMutation` marks
+ * when the server confirmed the change.
  */
 export interface SocialState {
   hasKudos: boolean | null;
@@ -14,6 +17,13 @@ export interface SocialState {
 
 const state = new Map<string, SocialState>();
 const followState = new Map<string, boolean>();
+/** Bumped on every follow/unfollow so an in-flight profile fetch cannot overwrite a newer tap. */
+const followEpoch = new Map<string, number>();
+/** Bumped on every kudos/comment change so an older response cannot overwrite a newer tap. */
+const activityEpoch = new Map<string, number>();
+/** Monotonic clock. A read token smaller than an activity's mutation tick is stale. */
+let clock = 0;
+const mutationTick = new Map<string, number>();
 const listeners = new Set<() => void>();
 let version = 0;
 const emit = () => {
@@ -22,10 +32,36 @@ const emit = () => {
 };
 
 export const socialStore = {
-  /** Server data for these activities (feed page, detail, history). Overrides local state. */
-  seed(items: { id: string; hasKudos: boolean | null; kudosCount: number; commentsCount: number }[]) {
-    for (const i of items) state.set(i.id, { hasKudos: i.hasKudos, kudosCount: i.kudosCount, commentsCount: i.commentsCount });
-    emit();
+  /** Call immediately before a feed, detail, or profile request. Pass the token to `seed`. */
+  beginRead() {
+    return clock;
+  },
+  /** Call after a kudos or comment mutation is confirmed by the server. */
+  noteMutation(activityId: string) {
+    mutationTick.set(activityId, ++clock);
+  },
+  /** True when this activity changed after `readTick` was taken. */
+  isStaleRead(activityId: string, readTick: number) {
+    return readTick < (mutationTick.get(activityId) ?? 0);
+  },
+  /**
+   * Server data for these activities. When `readTick` is set, activities that changed after
+   * that read started keep the newer counts.
+   */
+  seed(
+    items: { id: string; hasKudos: boolean | null; kudosCount: number; commentsCount: number }[],
+    readTick?: number
+  ) {
+    let changed = false;
+    for (const i of items) {
+      if (readTick != null && readTick < (mutationTick.get(i.id) ?? 0)) continue;
+      const next = { hasKudos: i.hasKudos, kudosCount: i.kudosCount, commentsCount: i.commentsCount };
+      const cur = state.get(i.id);
+      if (cur && cur.hasKudos === next.hasKudos && cur.kudosCount === next.kudosCount && cur.commentsCount === next.commentsCount) continue;
+      state.set(i.id, next);
+      changed = true;
+    }
+    if (changed) emit();
   },
   get: (id: string) => state.get(id),
   patch(id: string, p: Partial<SocialState>) {
@@ -63,28 +99,80 @@ export const useFollow = (athleteId: string, initialFollowing: boolean): boolean
  * The endpoints are idempotent (PUT/DELETE), so a double tap or retry can't flip the state.
  */
 export async function setKudos(activityId: string, give: boolean): Promise<SocialState> {
+  const epoch = (activityEpoch.get(activityId) ?? 0) + 1;
+  activityEpoch.set(activityId, epoch);
   const before = socialStore.get(activityId) ?? { hasKudos: !give, kudosCount: 0, commentsCount: 0 };
   const delta = before.hasKudos === give ? 0 : give ? 1 : -1;
   socialStore.patch(activityId, { hasKudos: give, kudosCount: Math.max(0, before.kudosCount + delta) });
   try {
     const res = give ? await api.activities.giveKudos(activityId) : await api.activities.removeKudos(activityId);
-    socialStore.patch(activityId, { hasKudos: res.hasKudos, kudosCount: res.kudosCount });
+    if (activityEpoch.get(activityId) !== epoch) return socialStore.get(activityId)!;
+    const kudosCount = Math.max(0, Number(res.kudosCount) || 0);
+    socialStore.patch(activityId, { hasKudos: Boolean(res.hasKudos), kudosCount });
+    socialStore.noteMutation(activityId);
   } catch (e) {
-    socialStore.patch(activityId, before);
+    if (activityEpoch.get(activityId) === epoch) socialStore.patch(activityId, before);
     throw e;
   }
   return socialStore.get(activityId)!;
 }
 
+/**
+ * Change the comment count by exactly one, then replace it with the server's count.
+ * An older in-flight add/delete cannot overwrite a newer one, and a feed fetch that started
+ * before this change cannot put the old count back.
+ */
+export async function changeCommentsCount(
+  activityId: string,
+  delta: number,
+  request: () => Promise<number | null | undefined>
+): Promise<number> {
+  const epoch = (activityEpoch.get(activityId) ?? 0) + 1;
+  activityEpoch.set(activityId, epoch);
+  const before = socialStore.get(activityId) ?? { hasKudos: null, kudosCount: 0, commentsCount: 0 };
+  const optimistic = Math.max(0, before.commentsCount + delta);
+  socialStore.patch(activityId, { commentsCount: optimistic });
+  try {
+    const server = await request();
+    if (activityEpoch.get(activityId) !== epoch) return socialStore.get(activityId)?.commentsCount ?? optimistic;
+    const parsed = Number(server);
+    const count = Number.isFinite(parsed) ? Math.max(0, parsed) : optimistic;
+    socialStore.patch(activityId, { commentsCount: count });
+    socialStore.noteMutation(activityId);
+    return count;
+  } catch (e) {
+    if (activityEpoch.get(activityId) === epoch) socialStore.patch(activityId, before);
+    throw e;
+  }
+}
+
+export function captureFollowEpochs() {
+  return new Map(followEpoch);
+}
+
+/**
+ * Apply a server follow flag from a fetch that started at `snapshot`.
+ * A tap that happened while the request was in flight keeps its own result.
+ */
+export function commitServerFollow(athleteId: string, isFollowing: boolean, snapshot: Map<string, number>) {
+  const before = snapshot.get(athleteId) ?? 0;
+  const now = followEpoch.get(athleteId) ?? 0;
+  if (before !== now) return socialStore.getFollow(athleteId) ?? isFollowing;
+  socialStore.setFollow(athleteId, isFollowing);
+  return isFollowing;
+}
+
 /** Follow/unfollow (idempotent PUT/DELETE); returns the server's resulting state. */
 export async function setFollowing(athleteId: string, currentlyFollowing: boolean, wantFollowing: boolean) {
+  followEpoch.set(athleteId, (followEpoch.get(athleteId) ?? 0) + 1);
+  const epoch = followEpoch.get(athleteId)!;
   socialStore.setFollow(athleteId, wantFollowing);
   try {
     const res = wantFollowing ? await api.athletes.follow(athleteId) : await api.athletes.unfollow(athleteId);
-    socialStore.setFollow(athleteId, Boolean(res.isFollowing));
+    if (followEpoch.get(athleteId) === epoch) socialStore.setFollow(athleteId, Boolean(res.isFollowing));
     return { isFollowing: Boolean(res.isFollowing), followersCount: res.followersCount, followingCount: res.followingCount };
   } catch (e) {
-    socialStore.setFollow(athleteId, currentlyFollowing);
+    if (followEpoch.get(athleteId) === epoch) socialStore.setFollow(athleteId, currentlyFollowing);
     throw e;
   }
 }

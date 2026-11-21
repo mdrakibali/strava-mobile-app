@@ -3,6 +3,7 @@
  * Replaces four ad-hoc mappers that invented defaults (technical audit MET-03, FE-03).
  * Rule: missing data stays null — screens render "–" or hide the section.
  */
+import { haversineM } from '../tracking/shared';
 import { ActivityVisibility, SportType } from '../types';
 
 export type LngLat = [number, number];
@@ -94,6 +95,22 @@ export const toRoute = (points: unknown): LngLat[] => {
   return out;
 };
 
+/**
+ * Drop vertices that are just GPS wander around the previous kept point.
+ * A recording made while standing still collapses to a single point, so the map draws no line.
+ * Real movement is kept at about 12 m resolution.
+ */
+export const displayRoute = (points: LngLat[], minStepM = 12): LngLat[] => {
+  if (points.length < 2) return points;
+  const kept: LngLat[] = [points[0]];
+  for (let i = 1; i < points.length; i++) {
+    const prev = kept[kept.length - 1];
+    const d = haversineM(prev[1], prev[0], points[i][1], points[i][0]);
+    if (d >= minStepM) kept.push(points[i]);
+  }
+  return kept.length > 1 ? kept : [points[0]];
+};
+
 const toSplits = (splits: unknown): SplitView[] => {
   if (!Array.isArray(splits)) return [];
   return (splits as any[]).map((s, i) => ({
@@ -133,7 +150,7 @@ const base = (row: any, athlete: AthleteSummary): ActivityView => ({
 /** GET /feed item. */
 export const fromFeedItem = (item: any): ActivityView => ({
   ...base(item, toAthleteSummary(item.athlete)),
-  route: toRoute(item.polyline),
+  route: displayRoute(toRoute(item.polyline)),
   kudosCount: num(item.kudosCount) ?? 0,
   // Current servers report the viewer's kudos state; very old ones didn't send the field.
   hasKudos: typeof item.hasKudos === 'boolean' ? item.hasKudos : null,
@@ -145,7 +162,7 @@ export const fromDetailResponse = (res: any): ActivityView => {
   const row = res.activity;
   return {
     ...base(row, toAthleteSummary(res.athlete)),
-    route: toRoute(row.rawPolyline?.length ? row.rawPolyline : row.maskedPolyline),
+    route: displayRoute(toRoute(row.rawPolyline?.length ? row.rawPolyline : row.maskedPolyline)),
     kudosCount: num(res.kudosCount) ?? 0,
     hasKudos: Boolean(res.hasKudos),
     commentsCount: num(res.commentsCount) ?? (Array.isArray(res.comments) ? res.comments.length : 0),
@@ -167,7 +184,7 @@ export const fromDetailResponse = (res: any): ActivityView => {
  */
 export const fromProfileActivity = (row: any, athlete: AthleteSummary): ActivityView => ({
   ...base(row, athlete),
-  route: toRoute(row.polyline?.length ? row.polyline : row.maskedPolyline?.length ? row.maskedPolyline : row.rawPolyline),
+  route: displayRoute(toRoute(row.polyline?.length ? row.polyline : row.maskedPolyline?.length ? row.maskedPolyline : row.rawPolyline)),
   kudosCount: num(row.kudosCount) ?? 0,
   hasKudos: typeof row.hasKudos === 'boolean' ? row.hasKudos : Boolean(row.hasKudos),
   commentsCount: num(row.commentsCount) ?? 0,

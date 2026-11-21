@@ -12,7 +12,7 @@ import {
   Skeleton,
 } from '../../design';
 import { ActivityView, AthleteSummary, fromProfileActivity, toAthleteSummary } from '../../lib/activityView';
-import { setFollowing, socialStore } from '../../lib/social';
+import { captureFollowEpochs, commitServerFollow, setFollowing, socialStore, useFollow } from '../../lib/social';
 import { shareAthlete } from '../../lib/share';
 import { MVP_SPORTS } from '../../lib/sports';
 import { api, AthleteStats } from '../../services/api';
@@ -39,8 +39,11 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
   const [tab, setTab] = useState<'progress' | 'activities'>('progress');
   const [sportFilter, setSportFilter] = useState<string>('All');
   const [followPending, setFollowPending] = useState(false);
+  const displayedFollowing = useFollow(athleteId, data?.isFollowing ?? false);
 
   const load = useCallback(async () => {
+    const snapshot = captureFollowEpochs();
+    const readTick = socialStore.beginRead();
     try {
       const [res, stats] = await Promise.all([
         api.athletes.getProfile(athleteId),
@@ -48,9 +51,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
       ]);
       const athlete = { ...toAthleteSummary(res.athlete), bio: res.athlete?.bio ?? null };
       const all = (res.recentActivities || []).map((row: any) => fromProfileActivity(row, athlete));
-      const cachedFollow = socialStore.getFollow(athleteId);
-      const isFollowing = cachedFollow !== undefined ? cachedFollow : Boolean(res.athlete?.isFollowing);
-      socialStore.setFollow(athleteId, isFollowing);
+      const isFollowing = commitServerFollow(athleteId, Boolean(res.athlete?.isFollowing), snapshot);
       setData({
         athlete,
         followersCount: Number(res.athlete?.followersCount) || 0,
@@ -59,7 +60,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
         activities: isSelf ? all : all.filter((a: ActivityView) => a.visibility !== 'ONLY_ME'),
         stats,
       });
-      socialStore.seed(all);
+      socialStore.seed(all, readTick);
       setStatus('ready');
     } catch (e: any) {
       setStatus(/not found/i.test(String(e?.message)) ? 'notFound' : 'error');
@@ -81,19 +82,18 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
   const onToggleFollow = async () => {
     if (!data || followPending) return;
     setFollowPending(true);
-    const want = !data.isFollowing;
+    const wasFollowing = displayedFollowing;
+    const want = !wasFollowing;
     try {
-      const res = await setFollowing(athleteId, data.isFollowing, want);
+      const res = await setFollowing(athleteId, wasFollowing, want);
       setData({
         ...data,
         isFollowing: res.isFollowing,
-        followersCount: res.followersCount ?? data.followersCount + (res.isFollowing ? 1 : -1),
+        followersCount: typeof res.followersCount === 'number' ? res.followersCount : data.followersCount + (res.isFollowing ? 1 : -1),
         stats: data.stats,
       });
-      if (currentUser?.id) {
-        updateCurrentUser({
-          followingCount: Math.max(0, (currentUser.followingCount || 0) + (res.isFollowing ? 1 : -1)),
-        });
+      if (currentUser?.id && typeof res.followingCount === 'number') {
+        updateCurrentUser({ followingCount: res.followingCount });
       }
     } catch {
       // unchanged
@@ -175,7 +175,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
           stats={data.stats}
           followersCount={data.followersCount}
           followingCount={data.followingCount}
-          isFollowing={socialStore.getFollow(athleteId) ?? data.isFollowing}
+          isFollowing={displayedFollowing}
           isSelf={isSelf}
           followPending={followPending}
           onToggleFollow={onToggleFollow}

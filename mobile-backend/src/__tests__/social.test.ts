@@ -40,13 +40,13 @@ describe('follow / unfollow', () => {
   it('is idempotent, updates counts and notifies once', async () => {
     const f1 = await call('PUT', '/athletes/ath_a/follow', { token: b });
     const f2 = await call('PUT', '/athletes/ath_a/follow', { token: b });
-    expect(f1.body).toMatchObject({ isFollowing: true, followersCount: 1 });
-    expect(f2.body).toMatchObject({ isFollowing: true, followersCount: 1 });
+    expect(f1.body).toMatchObject({ isFollowing: true, followersCount: 1, followingCount: 1 });
+    expect(f2.body).toMatchObject({ isFollowing: true, followersCount: 1, followingCount: 1 });
     const notes = await call('GET', '/notifications', { token: a });
     expect(notes.body.notifications.filter((n: any) => n.actionType === 'FOLLOW')).toHaveLength(1);
     const u1 = await call('DELETE', '/athletes/ath_a/follow', { token: b });
     const u2 = await call('DELETE', '/athletes/ath_a/follow', { token: b });
-    expect(u1.body).toMatchObject({ isFollowing: false, followersCount: 0 });
+    expect(u1.body).toMatchObject({ isFollowing: false, followersCount: 0, followingCount: 0 });
     expect(u2.status).toBe(200);
     expect((await call('PUT', '/athletes/ath_b/follow', { token: b })).status).toBe(422);
     expect((await call('PUT', '/athletes/nobody/follow', { token: b })).status).toBe(404);

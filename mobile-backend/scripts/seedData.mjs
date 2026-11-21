@@ -170,6 +170,28 @@ export const activities = [
     ],
     elevationProfile: [6, 7, 8, 9, 8, 7, 6],
   },
+  {
+    id: 'act_seed_dhanmondi_walk',
+    athleteId: 'ath_seed_anika',
+    title: 'Evening walk around Dhanmondi Lake',
+    description: 'Easy walk with a couple of friends after work.',
+    sportType: 'Walk',
+    visibility: 'PUBLIC',
+    distanceMeters: 3200.0,
+    movingTimeSeconds: 2400,
+    elapsedTimeSeconds: 2500,
+    elevationGainMeters: 4,
+    averageSpeedMps: 1.33,
+    maxSpeedMps: 1.8,
+    calories: 160,
+    polyline: dhanmondiRoute,
+    splits: [
+      { splitNumber: 1, paceFormatted: '12:30', elevationDeltaMeters: 1 },
+      { splitNumber: 2, paceFormatted: '12:20', elevationDeltaMeters: 1 },
+      { splitNumber: 3, paceFormatted: '12:40', elevationDeltaMeters: 2 },
+    ],
+    elevationProfile: [6, 6, 7, 7, 6, 6],
+  },
 ];
 
 export const kudos = [

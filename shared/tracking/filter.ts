@@ -13,6 +13,8 @@ export interface FilterResult {
    * credited between the previous point and this one.
    */
   gapBefore?: boolean;
+  /** Set by TrackAccumulator when this fix advanced the distance anchor (real movement). */
+  moved?: boolean;
 }
 
 /**

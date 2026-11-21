@@ -212,7 +212,7 @@ export class ActivityService {
         message: `${actorUsername} commented: "${content.slice(0, 50)}"`,
       });
     }
-    return comment;
+    return { comment, commentsCount: await this.activityRepo.getCommentsCount(activityId) };
   }
 
   /** GPX export: owner only (the raw track reveals home/work), XML-escaped (PRIV-04). */

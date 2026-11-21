@@ -33,6 +33,8 @@ export class TrackAccumulator {
   // distance anchor (only advances once the athlete clearly moved — the jitter gate)
   private anchor: RawPoint | null = null;
   private anchorMovingMs = 0;
+  /** Consecutive fixes that left the accuracy circle at a plausible speed. One sample is not enough. */
+  private departStreak = 0;
   // cumulative-distance samples for the smoothed speed (current run of track only)
   private window: { t: number; d: number }[] = [];
   private windowSpeed: number | null = null;
@@ -70,28 +72,36 @@ export class TrackAccumulator {
       this.anchorMovingMs = this.movingMs;
       this.window = [{ t: p.t, d: this.distanceM }];
       this.windowSpeed = null;
+      this.departStreak = 0;
       return r;
     }
 
     // ---- distance (jitter-gated) ----
+    // Phone GPS wanders by several metres while the athlete is standing still, and the reported
+    // Doppler speed is often a walking pace during that wander. A 1 m gate turns that noise into
+    // a route. Distance and the drawn line advance only after two fixes in a row have left the
+    // accuracy circle at a speed this sport can actually do.
     const anchor = this.anchor!;
     const d = haversineM(anchor.lat, anchor.lng, p.lat, p.lng);
-    const maxAcc = Math.max(anchor.acc ?? 0, p.acc ?? 0);
-    let gate: number;
-    if (p.speed != null && p.speed >= 0) {
-      // Doppler speed is available (almost all Android fixes): trust it to tell moving from resting.
-      if (p.speed >= this.cfg.minMovingSpeedMps) gate = 1;
-      else if (p.speed < this.cfg.minMovingSpeedMps / 2) gate = Infinity; // stationary: hold the anchor
-      else gate = Math.max(ENGINE.minStepM, 0.5 * maxAcc);
-    } else {
-      // Position-only: the athlete must clearly leave the accuracy circle before distance counts.
-      gate = Math.max(ENGINE.minStepM, maxAcc);
-    }
+    const accRadius = Math.max(anchor.acc ?? 0, p.acc ?? 0);
+    const dtSec = Math.max(0.001, (p.t - anchor.t) / 1000);
+    const implied = d / dtSec;
+    const doppler = p.speed != null && p.speed >= 0 ? p.speed : null;
+    const gate = Math.max(ENGINE.minStepM, accRadius > 0 ? accRadius : 4);
+    const inBand = implied >= this.cfg.minMovingSpeedMps && implied <= this.cfg.maxSpeedMps;
+    const dopplerAgrees =
+      doppler == null || (doppler >= this.cfg.minMovingSpeedMps * 0.5 && doppler <= this.cfg.maxSpeedMps);
+    const leaving = d >= gate && inBand && dopplerAgrees;
+    if (leaving) this.departStreak++;
+    else if (d < gate * 0.5) this.departStreak = 0;
+
     let advanced = false;
     const distBefore = this.distanceM;
-    if (d >= gate) {
+    if (leaving && this.departStreak >= 2) {
       this.distanceM += d;
       advanced = true;
+      const stepDt = p.t - anchor.t;
+      if (stepDt > 0 && stepDt <= ENGINE.maxMovingGapMs) this.movingMs += stepDt;
     }
 
     // ---- smoothed speed over the window ----
@@ -100,11 +110,6 @@ export class TrackAccumulator {
     const w0 = this.window[0];
     const span = p.t - w0.t;
     this.windowSpeed = span >= 3000 ? (this.distanceM - w0.d) / (span / 1000) : null;
-
-    // ---- moving time ----
-    const dt = p.t - prev.t;
-    const v = p.speed != null && p.speed >= 0 ? p.speed : (this.windowSpeed ?? 0);
-    if (dt <= ENGINE.maxMovingGapMs && v >= this.cfg.minMovingSpeedMps) this.movingMs += dt;
 
     // ---- max speed (smoothed, so one noisy fix can't set it) ----
     if (this.windowSpeed != null && span >= 5000) {
@@ -123,8 +128,36 @@ export class TrackAccumulator {
       }
       this.anchor = p;
       this.anchorMovingMs = this.movingMs;
+      this.departStreak = 0;
     }
-    return r;
+    return advanced ? { ...r, moved: true } : r;
+  }
+
+  /**
+   * Commit a real tail step that had not yet been confirmed by a second fix.
+   * Called when a recording is summarized so the last few metres are not dropped.
+   * A stationary wander stays inside the accuracy circle and is not committed.
+   */
+  flush() {
+    const anchor = this.anchor;
+    const p = this.lastAccepted;
+    if (!anchor || !p || p === anchor || p.t <= anchor.t) return;
+    const d = haversineM(anchor.lat, anchor.lng, p.lat, p.lng);
+    const accRadius = Math.max(anchor.acc ?? 0, p.acc ?? 0);
+    const dtSec = (p.t - anchor.t) / 1000;
+    if (dtSec < 1) return;
+    const implied = d / dtSec;
+    const doppler = p.speed != null && p.speed >= 0 ? p.speed : null;
+    const gate = Math.max(ENGINE.minStepM, accRadius > 0 ? accRadius : 4);
+    const dopplerAgrees =
+      doppler == null || (doppler >= this.cfg.minMovingSpeedMps * 0.5 && doppler <= this.cfg.maxSpeedMps);
+    if (d < gate || implied < this.cfg.minMovingSpeedMps || implied > this.cfg.maxSpeedMps || !dopplerAgrees) return;
+    const stepDt = p.t - anchor.t;
+    this.distanceM += d;
+    if (stepDt <= ENGINE.maxMovingGapMs) this.movingMs += stepDt;
+    this.anchor = p;
+    this.anchorMovingMs = this.movingMs;
+    this.departStreak = 0;
   }
 
   private pushSplit(atDistance: number, movingMs: number, t: number, distanceM: number) {
@@ -200,11 +233,14 @@ export class TrackAccumulator {
   currentSpeedMps(now: number): number {
     const p = this.lastAccepted;
     if (!p || now - p.t > 5000) return 0;
-    if (p.speed != null && p.speed >= 0) return p.speed < this.cfg.minMovingSpeedMps / 2 ? 0 : p.speed;
+    const windowMoving = this.windowSpeed != null && this.windowSpeed >= this.cfg.minMovingSpeedMps * 0.5;
+    if (!windowMoving) return 0;
+    if (p.speed != null && p.speed >= this.cfg.minMovingSpeedMps) return p.speed;
     return this.windowSpeed ?? 0;
   }
 
   summary(session: { startedAt: number; finishedAt: number | null; pauses: PauseInterval[]; now?: number }): TrackSummary {
+    this.flush();
     const end = session.finishedAt ?? session.now ?? Date.now();
     const elapsedMs = Math.max(0, end - session.startedAt);
     const pausedMs = totalPausedMs(session.pauses, end);
@@ -268,6 +304,23 @@ export const summarizeTrack = (input: TrackInput): TrackSummary => {
 export const acceptedPoints = (sport: string, points: RawPoint[]): RawPoint[] => {
   const f = new PointFilter(trackingConfig(sport));
   return points.filter((p) => f.push(p).accepted);
+};
+
+/**
+ * Points that represent real movement: the start of each segment, plus each fix that advanced
+ * the distance anchor. Stationary GPS wander is not included, so the polyline does not scribble.
+ */
+export const routePoints = (sport: string, points: RawPoint[]): RawPoint[] => {
+  const acc = new TrackAccumulator(sport);
+  const out: RawPoint[] = [];
+  for (const p of points) {
+    const r = acc.add(p);
+    if (r.accepted && (r.gapBefore || r.moved)) out.push(p);
+  }
+  const before = acc.distanceM;
+  acc.flush();
+  if (acc.distanceM > before && acc.lastAccepted && out[out.length - 1] !== acc.lastAccepted) out.push(acc.lastAccepted);
+  return out;
 };
 
 /** Pace (s/km) from a speed, or null when the athlete is effectively stationary. */

@@ -47,6 +47,33 @@ describe('challenges', () => {
     expect(join.status).toBe(200);
     expect((await call('GET', `/challenges/${id}`, { token: b })).status).toBe(200);
   });
+
+  it('adds real activity distance for the matching sport and ignores other sports', async () => {
+    const now = Date.now();
+    const created = await call('POST', '/challenges', {
+      token: a,
+      body: {
+        title: '10 km',
+        targetMeters: 10000,
+        sportType: 'Run',
+        startDate: new Date(now - 86400000).toISOString(),
+        endDate: new Date(now + 86400000).toISOString(),
+      },
+    });
+    const id = created.body.challenge.id;
+    const activity = {
+      title: 'Easy',
+      distanceMeters: 4000,
+      movingTimeSeconds: 1200,
+      startTime: new Date().toISOString(),
+    };
+    expect((await call('POST', '/activities', { token: a, body: { ...activity, sportType: 'Run' } })).status).toBe(201);
+    expect((await call('POST', '/activities', { token: a, body: { ...activity, title: 'Ride', sportType: 'Ride', distanceMeters: 9000 } })).status).toBe(201);
+    const detail = await call('GET', `/challenges/${id}`, { token: a });
+    const me = detail.body.leaderboard.find((p: any) => p.athleteId === 'ath_a');
+    expect(Number(me.currentMeters)).toBe(4000);
+    expect(me.isCompleted).toBe(false);
+  });
 });
 
 describe('events', () => {

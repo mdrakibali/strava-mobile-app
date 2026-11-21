@@ -16,7 +16,7 @@ export class FeedRepository {
   constructor(private db: AppDatabase) {}
 
   async getTimeline(options: FeedQueryOptions) {
-    const limit = Math.min(50, Math.max(1, options.limit || 15));
+    const limit = Math.min(500, Math.max(1, options.limit || 500));
     const cursor = options.cursor;
 
     const conditions: SQL[] = [eq(activities.excludeFromFeed, false), options.where];

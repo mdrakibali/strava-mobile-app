@@ -19,7 +19,8 @@ export const ActivityBody: React.FC<{
   currentUserId: string;
   currentUserName: string;
   currentUserAvatar?: string;
-}> = ({ activity, isOwner, currentUserId, currentUserName, currentUserAvatar }) => {
+  onComposerFocus?: () => void;
+}> = ({ activity, isOwner, currentUserId, currentUserName, currentUserAvatar, onComposerFocus }) => {
   const router = useRouter();
   const sport = sportConfig(activity.sportType);
   const social = useSocial(activity.id, {
@@ -125,6 +126,7 @@ export const ActivityBody: React.FC<{
         currentUserId={currentUserId}
         currentUserName={currentUserName}
         currentUserAvatar={currentUserAvatar}
+        onComposerFocus={onComposerFocus}
       />
     </View>
   );

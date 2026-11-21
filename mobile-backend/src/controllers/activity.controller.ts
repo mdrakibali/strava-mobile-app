@@ -11,6 +11,7 @@ import {
   uploadStartSchema,
 } from '../lib/validation';
 import { ActivityRepository } from '../repositories/activity.repository';
+import { syncChallengeProgress } from '../repositories/challenge.repository';
 import { AthleteRepository } from '../repositories/athlete.repository';
 import { NotificationRepository } from '../repositories/notification.repository';
 import { PrivacyZoneRepository } from '../repositories/privacy-zone.repository';
@@ -50,7 +51,9 @@ export class ActivityController {
   // POST /activities — legacy single-request upload (201 created, 200 already existed)
   async create(c: C) {
     const body = await parseBody(c, legacyCreateSchema);
-    const { created, activity } = await this.service(c).createLegacy(c.get('user').athleteId, body);
+    const athleteId = c.get('user').athleteId;
+    const { created, activity } = await this.service(c).createLegacy(athleteId, body);
+    if (created) await syncChallengeProgress(getDb(c), athleteId);
     return c.json({ message: created ? 'Activity uploaded' : 'Activity already uploaded', activity }, created ? 201 : 200);
   }
 
@@ -62,12 +65,17 @@ export class ActivityController {
   // PATCH /activities/:id
   async update(c: C) {
     const patch = await parseBody(c, activityPatchSchema);
-    return c.json(await this.service(c).update(this.param(c, 'id'), c.get('user').athleteId, patch));
+    const athleteId = c.get('user').athleteId;
+    const detail = await this.service(c).update(this.param(c, 'id'), athleteId, patch);
+    await syncChallengeProgress(getDb(c), athleteId);
+    return c.json(detail);
   }
 
   // DELETE /activities/:id
   async remove(c: C) {
-    await this.service(c).delete(this.param(c, 'id'), c.get('user').athleteId);
+    const athleteId = c.get('user').athleteId;
+    await this.service(c).delete(this.param(c, 'id'), athleteId);
+    await syncChallengeProgress(getDb(c), athleteId);
     return c.body(null, 204);
   }
 
@@ -118,14 +126,14 @@ export class ActivityController {
   async addComment(c: C) {
     const user = c.get('user');
     const body = await parseBody(c, commentSchema);
-    const comment = await this.service(c).addComment(
+    const result = await this.service(c).addComment(
       this.param(c, 'id'),
       user.athleteId,
       user.username,
       body.content,
       body.parentCommentId
     );
-    return c.json({ message: 'Comment posted', comment }, 201);
+    return c.json({ message: 'Comment posted', comment: result.comment, commentsCount: result.commentsCount }, 201);
   }
 
   // GET /activities/:id/export (owner only)
@@ -161,7 +169,9 @@ export class ActivityController {
   // POST /activities/uploads/:cid/complete (201 created, 200 already completed)
   async completeUpload(c: C) {
     const body = await parseBody(c, uploadCompleteSchema);
-    const result = await this.uploads(c).complete(c.get('user').athleteId, this.param(c, 'cid'), body);
+    const athleteId = c.get('user').athleteId;
+    const result = await this.uploads(c).complete(athleteId, this.param(c, 'cid'), body);
+    if (result.created) await syncChallengeProgress(getDb(c), athleteId);
     const { clientActivityId: _cid, rawPolyline: _raw, ...activity } = result.activity ?? ({} as any);
     return c.json(
       { created: result.created, deleted: result.deleted, activity: result.activity ? activity : null },

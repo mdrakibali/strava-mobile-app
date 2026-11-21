@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,7 +11,7 @@ import {
 import { Avatar, Button, Divider, ErrorState, IconButton, SectionTitle, TextField } from '../../design';
 import { CommentView, toAthleteSummary } from '../../lib/activityView';
 import { formatRelative } from '../../lib/format';
-import { socialStore } from '../../lib/social';
+import { changeCommentsCount, useSocial } from '../../lib/social';
 import { api } from '../../services/api';
 
 interface Props {
@@ -22,6 +22,7 @@ interface Props {
   currentUserName: string;
   currentUserAvatar?: string;
   onCommentsCountChange?: (count: number) => void;
+  onComposerFocus?: () => void;
 }
 
 export const ActivityComments: React.FC<Props> = ({
@@ -32,13 +33,19 @@ export const ActivityComments: React.FC<Props> = ({
   currentUserName,
   currentUserAvatar,
   onCommentsCountChange,
+  onComposerFocus,
 }) => {
+  const social = useSocial(activityId, { hasKudos: null, kudosCount: 0, commentsCount: initialComments.length });
   const [comments, setComments] = useState<CommentView[]>(initialComments);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [draft, setDraft] = useState('');
   const [posting, setPosting] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setComments(initialComments);
+  }, [activityId, initialComments]);
 
   const onCommentMenu = (c: CommentView) => {
     const mine = c.author.id === currentUserId;
@@ -55,13 +62,16 @@ export const ActivityComments: React.FC<Props> = ({
               text: 'Delete',
               style: 'destructive',
               onPress: async () => {
+                const removed = c;
+                setComments((prev) => prev.filter((x) => x.id !== removed.id));
                 try {
-                  const res = await api.activities.deleteComment(activityId, c.id);
-                  setComments((prev) => prev.filter((x) => x.id !== c.id));
-                  const newCount = res.commentsCount ?? Math.max(0, comments.length - 1);
-                  socialStore.patch(activityId, { commentsCount: newCount });
+                  const newCount = await changeCommentsCount(activityId, -1, async () => {
+                    const res = await api.activities.deleteComment(activityId, removed.id);
+                    return res?.commentsCount;
+                  });
                   onCommentsCountChange?.(newCount);
                 } catch (e: any) {
+                  setComments((prev) => (prev.some((x) => x.id === removed.id) ? prev : [...prev, removed].sort((a, b) => a.createdAt.localeCompare(b.createdAt))));
                   Alert.alert('Couldn’t delete', e?.message ?? 'Please try again.');
                 }
               },
@@ -98,19 +108,22 @@ export const ActivityComments: React.FC<Props> = ({
     setPosting(true);
     setCommentError(null);
     try {
-      const res = await api.activities.addComment(activityId, content);
-      const c = res?.comment;
-      const newComment: CommentView = {
-        id: String(c?.id ?? `local_${Date.now()}`),
-        content,
-        createdAt: c?.createdAt ?? new Date().toISOString(),
-        updatedAt: null,
-        author: toAthleteSummary({ id: currentUserId, displayName: currentUserName, avatarUrl: currentUserAvatar }),
-      };
-      setComments((prev) => [...prev, newComment]);
+      let created: CommentView | null = null;
+      const newCount = await changeCommentsCount(activityId, 1, async () => {
+        const res = await api.activities.addComment(activityId, content);
+        const c = res?.comment;
+        created = {
+          id: String(c?.id ?? `local_${Date.now()}`),
+          content,
+          createdAt: c?.createdAt ?? new Date().toISOString(),
+          updatedAt: null,
+          author: toAthleteSummary({ id: currentUserId, displayName: currentUserName, avatarUrl: currentUserAvatar }),
+        };
+        const serverCount = Number(res?.commentsCount);
+        return Number.isFinite(serverCount) ? serverCount : null;
+      });
+      if (created) setComments((prev) => (prev.some((x) => x.id === created!.id) ? prev : [...prev, created!]));
       setDraft('');
-      const newCount = comments.length + 1;
-      socialStore.patch(activityId, { commentsCount: newCount });
       onCommentsCountChange?.(newCount);
     } catch (e: any) {
       setCommentError(e?.message || 'Couldn’t post your comment. Try again.');
@@ -123,7 +136,7 @@ export const ActivityComments: React.FC<Props> = ({
 
   return (
     <View className="mt-6 pt-6 border-t border-gray-100">
-      <SectionTitle title={comments.length > 0 ? `Comments (${comments.length})` : 'Comments'} />
+      <SectionTitle title={social.commentsCount > 0 ? `Comments (${social.commentsCount})` : 'Comments'} />
       {comments.length === 0 ? (
         <Text className="text-sm text-gray-500 py-2">No comments yet. Be the first to cheer them on!</Text>
       ) : (
@@ -186,6 +199,7 @@ export const ActivityComments: React.FC<Props> = ({
           onChangeText={setDraft}
           placeholder="Add a comment..."
           placeholderTextColor="#9CA3AF"
+          onFocus={onComposerFocus}
           multiline
           maxLength={1000}
           className="flex-1 ml-3 py-2 text-sm text-gray-900"

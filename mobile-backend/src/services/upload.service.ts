@@ -2,7 +2,7 @@ import { and, asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { MAX_BATCHES, missingSeqs } from '../../../shared/tracking/batching';
 import { estimateCalories } from '../../../shared/tracking/calories';
-import { acceptedPoints, summarizeTrack } from '../../../shared/tracking/metrics';
+import { acceptedPoints, routePoints, summarizeTrack } from '../../../shared/tracking/metrics';
 import { fromWire, RawPoint, TrackSummary, WirePoint } from '../../../shared/tracking/types';
 import { activities, activityUploadBatches, activityUploads, athletes, privacyZones } from '../db/schema';
 import { AppDatabase } from '../lib/db';
@@ -211,7 +211,8 @@ export const buildActivityRow = (o: {
 }): typeof activities.$inferInsert => {
   const { summary: s, input } = o;
   const kept = acceptedPoints(input.sportType, o.raw);
-  const track = kept.map((p) => ({ latitude: p.lat, longitude: p.lng, altitude: p.alt, timestamp: p.t, speed: p.speed }));
+  const drawn = routePoints(input.sportType, o.raw);
+  const track = (drawn.length > 0 ? drawn : kept).map((p) => ({ latitude: p.lat, longitude: p.lng, altitude: p.alt, timestamp: p.t, speed: p.speed }));
   return {
     id: crypto.randomUUID(),
     athleteId: o.athleteId,

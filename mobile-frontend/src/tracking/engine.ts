@@ -156,7 +156,10 @@ class RecordingEngine {
       const acc = new TrackAccumulator(s.sport);
       const points = await pointsRepo.range(s.id);
       const route: LngLat[] = [];
-      for (const p of points) if (acc.add(p).accepted) route.push([p.lng, p.lat]);
+      for (const p of points) {
+        const r = acc.add(p);
+        if (r.accepted && (r.gapBefore || r.moved)) route.push([p.lng, p.lat]);
+      }
       this.acc = acc;
       let lifecycle: LifecycleState = {
         status: s.status,
@@ -206,7 +209,8 @@ class RecordingEngine {
       const stored = await pointsRepo.append(id, sorted.map(toPoint));
       let route = this.snap.route;
       for (const p of stored) {
-        if (this.acc.add(p).accepted) {
+        const r = this.acc.add(p);
+        if (r.accepted && (r.gapBefore || r.moved)) {
           if (route === this.snap.route) route = [...route];
           route.push([p.lng, p.lat]);
         }
@@ -302,7 +306,8 @@ class RecordingEngine {
       await Location.startLocationUpdatesAsync(LOCATION_TASK, {
         accuracy: Location.Accuracy.BestForNavigation,
         timeInterval: 1000,
-        distanceInterval: 0,
+        // Ignore sub-5 m hand jitter at the provider. The accumulator still rejects larger wander.
+        distanceInterval: 5,
         activityType: Location.ActivityType.Fitness,
         pausesUpdatesAutomatically: false,
         showsBackgroundLocationIndicator: true,

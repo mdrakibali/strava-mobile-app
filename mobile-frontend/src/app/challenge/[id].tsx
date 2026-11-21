@@ -18,8 +18,9 @@ import { api } from '../../services/api';
 export default function ChallengeDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { challenges, toggleJoinChallenge, currentUser } = useApp();
+  const { challenges, currentUser } = useApp();
   const [isLoading, setIsLoading] = useState(false);
+  const [joining, setJoining] = useState(false);
   const [serverChallenge, setServerChallenge] = useState<any>(null);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
@@ -80,14 +81,31 @@ export default function ChallengeDetailScreen() {
   const currentKm = (challenge.currentMeters || 0) / 1000;
   const progressPercent = Math.min(100, Math.round((currentKm / targetKm) * 100));
 
-  const handleToggleJoin = () => {
-    toggleJoinChallenge(challenge.id);
-    if (serverChallenge) {
+  const handleToggleJoin = async () => {
+    if (joining) return;
+    const before = {
+      isJoined: Boolean(challenge.isJoined),
+      participantsCount: Number(challenge.participantsCount) || 0,
+    };
+    const want = !before.isJoined;
+    setJoining(true);
+    setServerChallenge((prev: any) => ({
+      ...(prev || challenge),
+      isJoined: want,
+      participantsCount: Math.max(0, before.participantsCount + (want ? 1 : -1)),
+    }));
+    try {
+      const res = await api.challenges.join(challenge.id);
       setServerChallenge((prev: any) => ({
-        ...prev,
-        isJoined: !prev.isJoined,
-        participantsCount: prev.isJoined ? prev.participantsCount - 1 : prev.participantsCount + 1,
+        ...(prev || challenge),
+        isJoined: Boolean(res.isJoined),
+        participantsCount: typeof res.participantsCount === 'number' ? res.participantsCount : prev?.participantsCount,
       }));
+    } catch (e: any) {
+      setServerChallenge((prev: any) => ({ ...(prev || challenge), ...before }));
+      Alert.alert('Couldn’t update challenge', e?.message ?? 'Please try again.');
+    } finally {
+      setJoining(false);
     }
   };
 
@@ -217,6 +235,7 @@ export default function ChallengeDetailScreen() {
       <View style={{ backgroundColor: '#FFFFFF', padding: 16, borderTopWidth: 1, borderTopColor: '#E5E7EB' }}>
         <TouchableOpacity
           onPress={handleToggleJoin}
+          disabled={joining}
           activeOpacity={0.85}
           style={{
             width: '100%',

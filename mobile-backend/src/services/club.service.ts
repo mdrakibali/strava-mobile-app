@@ -103,10 +103,10 @@ export class ClubService {
         throw new Error('Club owner cannot leave club. Transfer ownership or delete club.');
       }
       await this.clubRepo.removeMember(clubId, athleteId);
-      return { isMember: false };
+      return { isMember: false, membersCount: await this.clubRepo.getMemberCount(clubId) };
     } else {
       await this.clubRepo.addMember(clubId, athleteId, 'MEMBER');
-      return { isMember: true };
+      return { isMember: true, membersCount: await this.clubRepo.getMemberCount(clubId) };
     }
   }
 }

@@ -52,12 +52,13 @@ export default function HomeFeedScreen() {
 
   /** Fetches page 1 without touching state; callers apply the result. */
   const fetchFirstPage = useCallback(async () => {
-    let res = await api.feed.getFeed('following', undefined, 100);
+    const readTick = socialStore.beginRead();
+    let res = await api.feed.getFeed('following', undefined, 500);
     if (!res?.feed?.length) {
-      res = await api.feed.getFeed('all', undefined, 100);
+      res = await api.feed.getFeed('all', undefined, 500);
     }
     const items = (res?.feed || []).map(fromFeedItem).filter(visibleToMe);
-    socialStore.seed(items); // server counts replace any local/optimistic values
+    socialStore.seed(items, readTick);
     return {
       items,
       cursor: res.nextCursor,
@@ -116,13 +117,14 @@ export default function HomeFeedScreen() {
     setLoadingMore(true);
     setLoadMoreError(false);
     const gen = generation.current;
+    const readTick = socialStore.beginRead();
     try {
       const res = await api.feed.getFeed('following', cursorRef.current);
       if (gen !== generation.current) return; // a refresh replaced the list meanwhile
       cursorRef.current = res.nextCursor;
       hasNextRef.current = res.hasNextPage;
       const next = res.feed.map(fromFeedItem).filter(visibleToMe);
-      socialStore.seed(next);
+      socialStore.seed(next, readTick);
       setItems((prev) => {
         const seen = new Set(prev.map((p) => p.id));
         return [...prev, ...next.filter((n) => !seen.has(n.id))];

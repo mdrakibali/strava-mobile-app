@@ -1,3 +1,5 @@
 # Copy to .dev.vars (git-ignored) for `wrangler dev`. Never commit real values.
+# Do not wrap the URL in quotes. A quoted value is not an absolute URL, and
+# Postgres then connects to the fallback host "base" (getaddrinfo ENOTFOUND base).
 DATABASE_URL=postgres://user:password@host/db
 JWT_SECRET=generate-64-random-bytes

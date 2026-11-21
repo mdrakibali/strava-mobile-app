@@ -181,7 +181,7 @@ export const api = {
 
   // 2. Timeline Feed (Cursor-based)
   feed: {
-    getFeed: (tab: 'all' | 'following' | 'clubs' = 'all', cursor?: string, limit = 100) => {
+    getFeed: (tab: 'all' | 'following' | 'clubs' = 'all', cursor?: string, limit = 500) => {
       const params = new URLSearchParams({ tab, limit: String(limit) });
       if (cursor) params.set('cursor', cursor);
       return request<{
@@ -283,7 +283,7 @@ export const api = {
     create: (data: { name: string; sportType: string; city?: string; country?: string; description?: string; isPrivate?: boolean }) =>
       request<{ club: any }>('/clubs', { method: 'POST', body: JSON.stringify(data) }),
     join: (id: string) =>
-      request<{ isMember: boolean; message: string }>(`/clubs/${id}/join`, {
+      request<{ isMember: boolean; membersCount?: number; message: string }>(`/clubs/${id}/join`, {
         method: 'POST',
       }),
   },
@@ -295,7 +295,7 @@ export const api = {
     create: (data: { title: string; sportType: string; targetMeters: number; description?: string; startDate: string; endDate: string }) =>
       request<{ challenge: any }>('/challenges', { method: 'POST', body: JSON.stringify(data) }),
     join: (id: string) =>
-      request<{ isJoined: boolean; message: string }>(`/challenges/${id}/join`, {
+      request<{ isJoined: boolean; participantsCount?: number; message: string }>(`/challenges/${id}/join`, {
         method: 'POST',
       }),
   },
@@ -406,6 +406,12 @@ export const api = {
   messages: {
     getConversations: () =>
       request<{ conversations: any[] }>('/messages/conversations'),
+    /** Opens the existing direct conversation or creates one. Safe to call repeatedly. */
+    open: (targetUserId: string) =>
+      request<{ conversation: { id: string; participant: any }; created: boolean }>('/messages/conversations', {
+        method: 'POST',
+        body: JSON.stringify({ targetUserId }),
+      }),
     getThread: (idOrParticipantId: string) =>
       request<{ messages: any[]; chatId?: string; partner?: any }>(`/messages/${idOrParticipantId}`),
     send: (

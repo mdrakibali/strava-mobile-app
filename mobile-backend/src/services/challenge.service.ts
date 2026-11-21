@@ -70,10 +70,10 @@ export class ChallengeService {
 
     if (participation) {
       await this.challengeRepo.leave(challengeId, athleteId);
-      return { isJoined: false };
+      return { isJoined: false, participantsCount: await this.challengeRepo.getParticipantCount(challengeId) };
     } else {
       await this.challengeRepo.join(challengeId, athleteId);
-      return { isJoined: true };
+      return { isJoined: true, participantsCount: await this.challengeRepo.getParticipantCount(challengeId) };
     }
   }
 

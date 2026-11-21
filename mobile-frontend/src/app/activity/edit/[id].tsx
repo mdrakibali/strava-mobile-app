@@ -89,6 +89,7 @@ export default function EditActivityScreen() {
           <View style={{ flex: 1 }}>
             <ScrollView
               style={{ flex: 1 }}
+              automaticallyAdjustKeyboardInsets
               contentContainerStyle={{ padding: 16, paddingBottom: 32, flexGrow: 1 }}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}>

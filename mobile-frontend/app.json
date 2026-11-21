@@ -26,6 +26,7 @@
         "android.permission.POST_NOTIFICATIONS"
       ],
       "package": "com.anonymous.mobilefrontend",
+      "softwareKeyboardLayoutMode": "resize",
       "gradleProperties": {
         "org.gradle.jvmargs": "-Xmx4096m -XX:MaxMetaspaceSize=1024m",
         "systemProp.org.gradle.internal.http.connectionTimeout": "180000",

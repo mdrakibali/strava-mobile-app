@@ -65,13 +65,22 @@ export class SocialService {
         message: `${viewerUsername || 'An athlete'} started following you`,
       });
     }
-    return { isFollowing: true, ...(await this.counts(targetId)) };
+    return { isFollowing: true, ...(await this.relationshipCounts(viewerId, targetId)) };
   }
 
   async unfollow(viewerId: string, targetId: string) {
     await this.requireAthlete(targetId);
     await this.db.delete(follows).where(and(eq(follows.followerId, viewerId), eq(follows.followingId, targetId)));
-    return { isFollowing: false, ...(await this.counts(targetId)) };
+    return { isFollowing: false, ...(await this.relationshipCounts(viewerId, targetId)) };
+  }
+
+  /**
+   * followersCount is the person who was followed. followingCount is the viewer, so the
+   * signed-in athlete's "following" number stays correct on every screen.
+   */
+  private async relationshipCounts(viewerId: string, targetId: string) {
+    const [target, viewer] = await Promise.all([this.counts(targetId), this.counts(viewerId)]);
+    return { followersCount: target.followersCount, followingCount: viewer.followingCount };
   }
 
   /**

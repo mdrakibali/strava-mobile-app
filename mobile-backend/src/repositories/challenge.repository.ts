@@ -1,6 +1,50 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
-import { athletes, challengeParticipants, challenges } from '../db/schema';
+import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
+import { activities, athletes, challengeParticipants, challenges } from '../db/schema';
 import { AppDatabase } from '../lib/db';
+
+/**
+ * Recompute every challenge this athlete has joined from their real activities in the
+ * challenge window. Sport must match. Private activities still count for the owner.
+ */
+export async function syncChallengeProgress(db: AppDatabase, athleteId: string) {
+  const joined = await db
+    .select({
+      challengeId: challengeParticipants.challengeId,
+      sportType: challenges.sportType,
+      targetMeters: challenges.targetMeters,
+      startDate: challenges.startDate,
+      endDate: challenges.endDate,
+      completedAt: challengeParticipants.completedAt,
+    })
+    .from(challengeParticipants)
+    .innerJoin(challenges, eq(challengeParticipants.challengeId, challenges.id))
+    .where(eq(challengeParticipants.athleteId, athleteId));
+
+  for (const ch of joined) {
+    const [sum] = await db
+      .select({ meters: sql<number>`coalesce(sum(${activities.distanceMeters}), 0)` })
+      .from(activities)
+      .where(
+        and(
+          eq(activities.athleteId, athleteId),
+          sql`lower(${activities.sportType}) = lower(${ch.sportType})`,
+          gte(activities.startTime, ch.startDate),
+          lte(activities.startTime, ch.endDate)
+        )
+      );
+    const meters = Number(sum?.meters ?? 0);
+    const target = Number(ch.targetMeters);
+    const done = target > 0 && meters >= target;
+    await db
+      .update(challengeParticipants)
+      .set({
+        currentMeters: meters.toFixed(2),
+        isCompleted: done,
+        completedAt: done ? ch.completedAt ?? new Date() : null,
+      })
+      .where(and(eq(challengeParticipants.challengeId, ch.challengeId), eq(challengeParticipants.athleteId, athleteId)));
+  }
+}
 
 export class ChallengeRepository {
   constructor(private db: AppDatabase) {}
@@ -80,6 +124,7 @@ export class ChallengeRepository {
         isCompleted: false,
       })
       .onConflictDoNothing();
+    await syncChallengeProgress(this.db, athleteId);
   }
 
   async leave(challengeId: string, athleteId: string) {

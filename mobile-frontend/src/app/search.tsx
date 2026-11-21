@@ -15,10 +15,24 @@ import {
   space,
 } from '../design';
 import { AthleteSummary, toAthleteSummary } from '../lib/activityView';
-import { setFollowing, socialStore } from '../lib/social';
+import { captureFollowEpochs, commitServerFollow, setFollowing, useFollow } from '../lib/social';
 import { api } from '../services/api';
 
 type Row = AthleteSummary & { isFollowing: boolean; pending?: boolean };
+
+const SearchFollowButton: React.FC<{ row: Row; onFollow: (row: Row) => void }> = ({ row, onFollow }) => {
+  const isFollowing = useFollow(row.id, row.isFollowing);
+  return (
+    <Button
+      label={isFollowing ? 'Following' : 'Follow'}
+      size="sm"
+      variant={isFollowing ? 'outline' : 'primary'}
+      icon={isFollowing ? 'checkmark' : 'person-add-outline'}
+      loading={row.pending}
+      onPress={() => onFollow({ ...row, isFollowing })}
+    />
+  );
+};
 
 /**
  * Find athletes (reference: ScreensDesign 374842). One follow request per tap, UI follows the
@@ -34,6 +48,7 @@ export default function SearchScreen() {
 
   const runSearch = async (q: string) => {
     const myId = ++requestId.current;
+    const snapshot = captureFollowEpochs();
     setStatus('loading');
     try {
       const res = await api.athletes.search(q.trim());
@@ -41,13 +56,10 @@ export default function SearchScreen() {
       setRows(
         (res.athletes || [])
           .filter((a: any) => a.id !== currentUser.id)
-          .map((a: any) => {
-            const cached = socialStore.getFollow(a.id);
-            return {
-              ...toAthleteSummary(a),
-              isFollowing: cached !== undefined ? cached : Boolean(a.isFollowing),
-            };
-          })
+          .map((a: any) => ({
+            ...toAthleteSummary(a),
+            isFollowing: commitServerFollow(a.id, Boolean(a.isFollowing), snapshot),
+          }))
       );
       setStatus('ready');
     } catch {
@@ -72,10 +84,8 @@ export default function SearchScreen() {
     try {
       const res = await setFollowing(row.id, row.isFollowing, !row.isFollowing);
       setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, isFollowing: res.isFollowing, pending: false } : r)));
-      if (currentUser?.id) {
-        updateCurrentUser({
-          followingCount: res.followingCount ?? Math.max(0, (currentUser.followingCount || 0) + (res.isFollowing ? 1 : -1)),
-        });
+      if (currentUser?.id && typeof res.followingCount === 'number') {
+        updateCurrentUser({ followingCount: res.followingCount });
       }
     } catch {
       setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, pending: false } : r)));
@@ -135,14 +145,7 @@ export default function SearchScreen() {
                   ) : null}
                 </View>
               </Pressable>
-              <Button
-                label={item.isFollowing ? 'Following' : 'Follow'}
-                size="sm"
-                variant={item.isFollowing ? 'outline' : 'primary'}
-                icon={item.isFollowing ? 'checkmark' : 'person-add-outline'}
-                loading={item.pending}
-                onPress={() => onFollow(item)}
-              />
+              <SearchFollowButton row={item} onFollow={onFollow} />
             </View>
           )}
         />

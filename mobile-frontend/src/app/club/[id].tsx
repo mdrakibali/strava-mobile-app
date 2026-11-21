@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
@@ -9,9 +9,10 @@ import { api } from '../../services/api';
 export default function ClubDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { clubs, toggleJoinClub, currentUser } = useApp();
+  const { clubs, currentUser } = useApp();
   const [activeSubTab, setActiveSubTab] = useState<'LEADERBOARD' | 'ABOUT'>('LEADERBOARD');
   const [isLoading, setIsLoading] = useState(false);
+  const [joining, setJoining] = useState(false);
   const [serverClub, setServerClub] = useState<any>(null);
   const [weeklyLeaderboard, setWeeklyLeaderboard] = useState<any[]>([]);
 
@@ -101,17 +102,32 @@ export default function ClubDetailScreen() {
             <Text className="text-xs text-gray-600 leading-5 mb-3">{club.description}</Text>
 
             <TouchableOpacity
+              disabled={joining}
               className={`py-3 rounded-xl items-center border ${
                 club.isMember ? 'bg-white border-gray-300' : 'bg-[#FC4C02] border-[#FC4C02]'
               }`}
-              onPress={() => {
-                toggleJoinClub(club.id);
-                if (serverClub) {
+              onPress={async () => {
+                if (joining) return;
+                const before = { isMember: Boolean(club.isMember), memberCount: Number(club.memberCount) || 0 };
+                const want = !before.isMember;
+                setJoining(true);
+                setServerClub((prev: any) => ({
+                  ...(prev || club),
+                  isMember: want,
+                  memberCount: Math.max(0, before.memberCount + (want ? 1 : -1)),
+                }));
+                try {
+                  const res = await api.clubs.join(club.id);
                   setServerClub((prev: any) => ({
-                    ...prev,
-                    isMember: !prev.isMember,
-                    memberCount: prev.isMember ? prev.memberCount - 1 : prev.memberCount + 1,
+                    ...(prev || club),
+                    isMember: Boolean(res.isMember),
+                    memberCount: typeof res.membersCount === 'number' ? res.membersCount : prev?.memberCount,
                   }));
+                } catch (e: any) {
+                  setServerClub((prev: any) => ({ ...(prev || club), ...before }));
+                  Alert.alert('Couldn’t update membership', e?.message ?? 'Please try again.');
+                } finally {
+                  setJoining(false);
                 }
               }}>
               <Text className={`text-sm font-bold ${club.isMember ? 'text-gray-900' : 'text-white'}`}>
