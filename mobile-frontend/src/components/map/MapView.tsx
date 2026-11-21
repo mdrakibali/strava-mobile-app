@@ -49,6 +49,11 @@ export interface MapViewProps {
   /** `route`: frame the whole route. `live`: follow the user while recording. */
   mode: 'route' | 'live';
   route?: LngLat[];
+  /**
+   * Live mode: continuous runs of recorded movement. Drawn as separate lines so nothing is drawn
+   * across a pause or a GPS jump. When omitted, `route` is drawn as one line.
+   */
+  routeSegments?: LngLat[][];
   /** Last known user position — used to centre before the first route point exists. */
   userPosition?: LngLat | null;
   following?: boolean;
@@ -103,6 +108,7 @@ const boundsOf = (pts: LngLat[]): [number, number, number, number] => {
 export const MapView: React.FC<MapViewProps> = ({
   mode,
   route = [],
+  routeSegments,
   userPosition,
   following = mode === 'live',
   onFollowingChange,
@@ -134,16 +140,15 @@ export const MapView: React.FC<MapViewProps> = ({
   );
   const [attempt, setAttempt] = useState(0);
 
-  const lineData = useMemo<GeoJSON.FeatureCollection>(
-    () => ({
+  const lineData = useMemo<GeoJSON.FeatureCollection>(() => {
+    const runs = routeSegments ?? [route];
+    return {
       type: 'FeatureCollection',
-      features:
-        route.length > 1
-          ? [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: route } }]
-          : [],
-    }),
-    [route]
-  );
+      features: runs
+        .filter((run) => run.length > 1)
+        .map((coordinates) => ({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates } })),
+    };
+  }, [route, routeSegments]);
 
   const othersData = useMemo<GeoJSON.FeatureCollection>(
     () => ({

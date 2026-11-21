@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatBox } from '../../components/common/StatBox';
 import { useApp } from '../../context/AppContext';
+import { shareChallenge } from '../../lib/share';
 import { api } from '../../services/api';
 
 export default function ChallengeDetailScreen() {
@@ -53,6 +54,7 @@ export default function ChallengeDetailScreen() {
               currentMeters: res.challenge.userProgress ? res.challenge.userProgress.currentMeters : 0,
               isCompleted: res.challenge.userProgress ? res.challenge.userProgress.isCompleted : false,
               daysRemaining: Number(res.challenge.daysRemaining) || 0,
+              creatorId: res.challenge.creatorId ?? null,
             });
           }
           if (res.leaderboard) {
@@ -139,7 +141,7 @@ export default function ChallengeDetailScreen() {
         <Text className="text-base font-black text-gray-900 flex-1 text-center mx-2" numberOfLines={1}>
           {challenge.title}
         </Text>
-        <TouchableOpacity onPress={() => Alert.alert('Share Challenge', 'Challenge link copied!')} className="p-1">
+        <TouchableOpacity onPress={() => shareChallenge(challenge.id, challenge.title).catch(() => {})} className="p-1">
           <Ionicons name="share-social-outline" size={22} color="#111827" />
         </TouchableOpacity>
       </View>

@@ -4,6 +4,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
+import { shareClub } from '../../lib/share';
 import { api } from '../../services/api';
 
 export default function ClubDetailScreen() {
@@ -99,7 +100,7 @@ export default function ClubDetailScreen() {
         <Text className="text-sm font-bold text-gray-900" numberOfLines={1}>
           {club.name}
         </Text>
-        <TouchableOpacity className="p-1">
+        <TouchableOpacity onPress={() => shareClub(club.id, club.name).catch(() => {})} className="p-1">
           <Ionicons name="share-social-outline" size={22} color="#111827" />
         </TouchableOpacity>
       </View>

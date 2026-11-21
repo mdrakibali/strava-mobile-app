@@ -3,7 +3,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   Text,
@@ -12,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { shareClub } from '../../lib/share';
 import { api } from '../../services/api';
 
 export default function ClubMembersScreen() {
@@ -20,26 +20,25 @@ export default function ClubMembersScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [members, setMembers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [clubName, setClubName] = useState('this club');
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     const fetchMembers = async () => {
       setIsLoading(true);
+      setLoadError(null);
       try {
-        if (id) {
-          const res = await api.clubs.get(id);
-          if (isMounted && res?.members) {
-            setMembers(res.members);
-            return;
-          }
+        // Only this club's real members. No fallback list: showing other athletes here would
+        // present non-members as members.
+        const res = await api.clubs.get(id!);
+        if (isMounted) {
+          setMembers(res?.members ?? []);
+          if (res?.club?.name) setClubName(res.club.name);
         }
-        // Fallback to community athletes
-        const athRes = await api.athletes.search('');
-        if (isMounted && athRes?.athletes) {
-          setMembers(athRes.athletes);
-        }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('Failed to load club members:', err);
+        if (isMounted) setLoadError(err?.message ?? 'Could not load the members.');
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -64,7 +63,7 @@ export default function ClubMembersScreen() {
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
         <Text className="text-base font-black text-gray-900">Club Roster ({members.length})</Text>
-        <TouchableOpacity onPress={() => Alert.alert('Invite', 'Invite link copied to clipboard!')} className="p-1">
+        <TouchableOpacity onPress={() => id && shareClub(id, clubName).catch(() => {})} className="p-1">
           <Ionicons name="person-add-outline" size={20} color="#FC4C02" />
         </TouchableOpacity>
       </View>
@@ -87,6 +86,11 @@ export default function ClubMembersScreen() {
             <ActivityIndicator size="small" color="#FC4C02" />
             <Text className="text-xs text-gray-400 mt-2">Loading roster...</Text>
           </View>
+        ) : loadError ? (
+          <View className="bg-white p-8 rounded-2xl border border-gray-200 items-center justify-center mt-4">
+            <Text className="text-sm font-bold text-gray-800">Couldn’t load the roster</Text>
+            <Text className="text-xs text-gray-500 mt-1 text-center">{loadError}</Text>
+          </View>
         ) : filtered.length === 0 ? (
           <View className="bg-white p-8 rounded-2xl border border-gray-200 items-center justify-center mt-4">
             <Ionicons name="people-outline" size={32} color="#D1D5DB" />
@@ -106,10 +110,10 @@ export default function ClubMembersScreen() {
                 <View className="flex-1">
                   <View className="flex-row items-center">
                     <Text className="text-sm font-bold text-gray-900 mr-2">{member.displayName}</Text>
-                    {(member.role === 'ADMIN' || member.role === 'CREATOR' || index === 0) && (
+                    {(member.role === 'ADMIN' || member.role === 'OWNER') && (
                       <View className="bg-orange-100 px-2 py-0.5 rounded-full">
                         <Text className="text-[10px] font-black text-[#FC4C02]">
-                          {member.role || 'Member'}
+                          {member.role === 'OWNER' ? 'Owner' : 'Admin'}
                         </Text>
                       </View>
                     )}

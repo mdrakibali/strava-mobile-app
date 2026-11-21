@@ -18,6 +18,7 @@ import { SportSheet } from '../components/record/SportSheet';
 import { BottomSheet, EmptyState, ErrorState, OptionRow } from '../design';
 import { defaultActivityTitle, paceValue, speedValue } from '../lib/format';
 import { plannedRouteStore } from '../lib/plannedRoute';
+import { noMovementReason } from '../lib/saveGuard';
 import { sportConfig } from '../lib/sports';
 import { recordingEngine } from '../tracking/engine';
 import { TrackSummary } from '../tracking/shared';
@@ -127,6 +128,8 @@ export default function SaveActivityScreen() {
   const s = summary;
   const distanceM = s?.distanceM ?? rec.distanceM;
   const movingS = s?.movingTimeS ?? rec.movingTimeS;
+  // Only judge once the summary has loaded, so a brief empty state can't flash the warning.
+  const blocked = s ? noMovementReason(sport, distanceM, movingS) : null;
   const second =
     cfg.primaryMetric === 'speed'
       ? { label: 'Avg speed', value: speedValue(movingS > 0 ? distanceM / movingS : null), unit: 'km/h' }
@@ -168,6 +171,11 @@ export default function SaveActivityScreen() {
             saving={saving}
             onDiscard={onDiscard}
           />
+          {blocked ? (
+            <View className="mt-4">
+              <ErrorState compact message={blocked} />
+            </View>
+          ) : null}
           {error ? (
             <View className="mt-4">
               <ErrorState compact message={error} />
@@ -179,10 +187,10 @@ export default function SaveActivityScreen() {
         <View style={{ paddingBottom: Math.max(insets.bottom, 12) + 12 }} className="px-4 pt-3 bg-white border-t border-gray-100 shadow-md">
           <Pressable
             onPress={onSave}
-            disabled={saving || !title.trim()}
+            disabled={saving || !title.trim() || Boolean(blocked)}
             accessibilityRole="button"
             accessibilityLabel="Save Activity"
-            className="h-14 rounded-full bg-[#FC4C02] flex-row items-center justify-center shadow-lg active:bg-[#E03A00]">
+            className={`h-14 rounded-full flex-row items-center justify-center shadow-lg ${blocked ? 'bg-gray-300' : 'bg-[#FC4C02] active:bg-[#E03A00]'}`}>
             {saving ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (

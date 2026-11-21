@@ -1,4 +1,5 @@
 import { FilterResult, PointFilter } from './filter';
+import { routeSegments } from './route';
 import { haversineM } from './geo';
 import { ENGINE, TrackingConfig, trackingConfig } from './sports';
 import { PauseInterval, RawPoint, Split, TrackSummary } from './types';
@@ -366,20 +367,12 @@ export const acceptedPoints = (sport: string, points: RawPoint[]): RawPoint[] =>
 };
 
 /**
- * Points that represent real movement: the start of each segment, plus each fix that advanced
- * the distance anchor. Stationary GPS wander is not included, so the polyline does not scribble.
+ * Points that represent real movement, flattened (see RouteSegments in ./route.ts for the
+ * segment-aware version the live map uses). Stationary GPS wander and runs that never moved are
+ * not included, so the polyline neither scribbles nor draws a line for a 0 km recording.
  */
-export const routePoints = (sport: string, points: RawPoint[]): RawPoint[] => {
-  const acc = new TrackAccumulator(sport);
-  const out: RawPoint[] = [];
-  for (const p of points) {
-    const r = acc.add(p);
-    if (r.accepted && (r.gapBefore || r.moved)) out.push(p);
-  }
-  const tail = acc.tailPoint();
-  if (tail && out[out.length - 1] !== tail) out.push(tail);
-  return out;
-};
+export const routePoints = (sport: string, points: RawPoint[]): RawPoint[] =>
+  routeSegments(sport, points).flat();
 
 /** Doppler must agree with the distance actually travelled. A phone can report a walking speed while the fix barely moves. */
 const dopplerMatches = (cfg: TrackingConfig, doppler: number | null, measuredMps: number) =>

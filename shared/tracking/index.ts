@@ -6,3 +6,4 @@ export * from './metrics';
 export * from './lifecycle';
 export * from './calories';
 export * from './batching';
+export * from './route';

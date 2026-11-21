@@ -129,6 +129,7 @@ export default function RecordScreen() {
       <MapView
         mode="live"
         route={route}
+        routeSegments={rec.routeSegments}
         userPosition={userPosition}
         following={following}
         onFollowingChange={setFollowing}

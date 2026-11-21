@@ -7,6 +7,7 @@ import {
   LifecycleEvent,
   LifecycleState,
   RawPoint,
+  RouteSegments,
   TrackAccumulator,
   TrackSummary,
   transition,
@@ -24,6 +25,8 @@ import {
 export const LOCATION_TASK = 'open-strava-recording-location';
 
 export type LngLat = [number, number];
+
+const toLngLatRuns = (b: RouteSegments): LngLat[][] => b.drawn().map((run) => run.map((p) => [p.lng, p.lat] as LngLat));
 
 export interface Fix {
   lat: number;
@@ -46,8 +49,13 @@ export interface RecordingSnapshot {
   /** Speed at the last accepted fix (Doppler when available); see liveSpeed() for staleness. */
   speedAtLastFixMps: number;
   lastAcceptedAt: number | null;
-  /** Accepted route, [lng, lat] — what the map draws. New array identity on every change. */
+  /** Accepted route, [lng, lat], flattened. New array identity on every change. */
   route: LngLat[];
+  /**
+   * What the map draws: continuous runs of real movement, never joined across a pause or a GPS
+   * jump, and a run that never moved is absent (see shared/tracking/route.ts).
+   */
+  routeSegments: LngLat[][];
   /** Last raw fix of any quality (incl. while paused / preparing) — GPS status + map position. */
   lastFix: Fix | null;
   permission: PermissionState;
@@ -66,6 +74,7 @@ const EMPTY: RecordingSnapshot = {
   speedAtLastFixMps: 0,
   lastAcceptedAt: null,
   route: [],
+  routeSegments: [],
   lastFix: null,
   permission: 'unknown',
   error: null,
@@ -88,6 +97,7 @@ class RecordingEngine {
   private snap: RecordingSnapshot = EMPTY;
   private listeners = new Set<() => void>();
   private acc: TrackAccumulator | null = null;
+  private routeBuilder = new RouteSegments();
   private athleteId: string | null = null;
   private loading: Promise<void> | null = null;
   private queue: Promise<unknown> = Promise.resolve();
@@ -155,12 +165,11 @@ class RecordingEngine {
       }
       const acc = new TrackAccumulator(s.sport);
       const points = await pointsRepo.range(s.id);
-      const route: LngLat[] = [];
-      for (const p of points) {
-        const r = acc.add(p);
-        if (r.accepted && (r.gapBefore || r.moved)) route.push([p.lng, p.lat]);
-      }
+      const builder = new RouteSegments();
+      for (const p of points) builder.add(p, acc.add(p));
+      const routeSegments = toLngLatRuns(builder);
       this.acc = acc;
+      this.routeBuilder = builder;
       let lifecycle: LifecycleState = {
         status: s.status,
         startedAt: s.startedAt,
@@ -181,7 +190,8 @@ class RecordingEngine {
         sessionId: s.id,
         sport: s.sport,
         lifecycle,
-        route,
+        route: routeSegments.flat(),
+        routeSegments,
       };
       this.listeners.forEach((l) => l());
     });
@@ -207,15 +217,16 @@ class RecordingEngine {
         return;
       }
       const stored = await pointsRepo.append(id, sorted.map(toPoint));
-      let route = this.snap.route;
+      let changed = false;
       for (const p of stored) {
-        const r = this.acc.add(p);
-        if (r.accepted && (r.gapBefore || r.moved)) {
-          if (route === this.snap.route) route = [...route];
-          route.push([p.lng, p.lat]);
-        }
+        if (this.routeBuilder.add(p, this.acc.add(p))) changed = true;
       }
-      this.set({ ...this.metrics(), route, lastFix });
+      if (changed) {
+        const routeSegments = toLngLatRuns(this.routeBuilder);
+        this.set({ ...this.metrics(), route: routeSegments.flat(), routeSegments, lastFix });
+      } else {
+        this.set({ ...this.metrics(), lastFix });
+      }
     });
   }
 
@@ -287,14 +298,15 @@ class RecordingEngine {
       await sessionsRepo.create({ id, athleteId: this.athleteId, sport });
       await sessionsRepo.saveLifecycle(id, lifecycle, 'start');
       this.acc = new TrackAccumulator(sport);
-      this.snap = { ...this.snap, ...this.metrics(), sessionId: id, sport, lifecycle, route: [], error: null };
+      this.routeBuilder = new RouteSegments();
+      this.snap = { ...this.snap, ...this.metrics(), sessionId: id, sport, lifecycle, route: [], routeSegments: [], error: null };
       this.listeners.forEach((l) => l());
       try {
         await this.startUpdates(sport);
       } catch (e: any) {
         await sessionsRepo.remove(id);
         this.acc = null;
-        this.set({ ...this.metrics(), sessionId: null, lifecycle: INITIAL_LIFECYCLE, route: [], error: e?.message ?? 'Could not start GPS' });
+        this.set({ ...this.metrics(), sessionId: null, lifecycle: INITIAL_LIFECYCLE, route: [], routeSegments: [], error: e?.message ?? 'Could not start GPS' });
         throw e;
       }
     });
@@ -405,7 +417,8 @@ class RecordingEngine {
 
   private reset() {
     this.acc = null;
-    this.set({ ...this.metrics(), sessionId: null, lifecycle: INITIAL_LIFECYCLE, route: [], error: null });
+    this.routeBuilder = new RouteSegments();
+    this.set({ ...this.metrics(), sessionId: null, lifecycle: INITIAL_LIFECYCLE, route: [], routeSegments: [], error: null });
   }
 }
 

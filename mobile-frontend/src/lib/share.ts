@@ -16,3 +16,12 @@ export const shareActivity = async (a: Pick<ActivityView, 'id' | 'title' | 'spor
 
 export const shareAthlete = async (id: string, name: string) =>
   Share.share({ message: `${name} on Kinetix\n${athleteLink(id)}`, title: name });
+
+export const clubLink = (id: string) => `mobilefrontend://club/${id}`;
+export const challengeLink = (id: string) => `mobilefrontend://challenge/${id}`;
+
+export const shareClub = async (id: string, name: string) =>
+  Share.share({ message: `Join ${name} on Kinetix\n${clubLink(id)}`, title: name });
+
+export const shareChallenge = async (id: string, title: string) =>
+  Share.share({ message: `${title} — join this challenge on Kinetix\n${challengeLink(id)}`, title });
