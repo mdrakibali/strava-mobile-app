@@ -1,6 +1,8 @@
 import { neon } from '@neondatabase/serverless';
 
-const DB_URL = 'postgresql://neondb_owner:npg_chTDF35Axdla@ep-nameless-meadow-biyayy82-pooler.c-5.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+const DB_URL =
+  process.env.DATABASE_URL ||
+  'postgresql://neondb_owner:npg_chTDF35Axdla@ep-nameless-meadow-biyayy82-pooler.c-5.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
 const sql = neon(DB_URL);
 
 // Standard password hasher matching backend auth.ts
@@ -14,13 +16,61 @@ const hashPassword = async (password) => {
 };
 
 async function main() {
-  console.log('--- Starting Database Seeding ---');
+  console.log('--- 🧹 Wiping Old Database Records ---');
+
+  // Truncate all dependent tables cleanly
+  try {
+    await sql`
+      TRUNCATE TABLE
+        activity_upload_batches,
+        activity_uploads,
+        kudos,
+        comments,
+        segment_efforts,
+        segments,
+        activities,
+        club_members,
+        clubs,
+        challenge_participants,
+        challenges,
+        event_rsvps,
+        group_events,
+        saved_routes,
+        routes,
+        training_goals,
+        beacon_sessions,
+        direct_messages,
+        notifications,
+        privacy_zones,
+        gear,
+        follows,
+        athletes
+      CASCADE;
+    `;
+    console.log('✅ All old database tables truncated successfully.');
+  } catch (truncErr) {
+    console.warn('Truncate warning (some tables might not exist yet):', truncErr.message);
+  }
+
+  console.log('--- 🌱 Seeding Default Data ---');
 
   const defaultPassword = 'Password123!';
   const passwordHash = await hashPassword(defaultPassword);
 
+  const currentAthleteId = 'ath_7bd5ea92-670e-4cb2-97c8-c81505dfab9d';
+
   // 1. Seed Athletes
   const athletesToSeed = [
+    {
+      id: currentAthleteId,
+      username: 'rakib',
+      email: 'rakib2020.tkg@gmail.com',
+      displayName: 'Md Rakib',
+      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200',
+      city: 'Dhaka',
+      country: 'Bangladesh',
+      bio: 'Fitness enthusiast & software engineer. Training everyday for endurance! 🏃‍♂️⚡',
+    },
     {
       id: 'ath_seed_tanvir',
       username: 'tanvir_runner',
@@ -39,7 +89,7 @@ async function main() {
       avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
       city: 'Dhaka',
       country: 'Bangladesh',
-      bio: 'Endurance cyclist & weekend trail hiker. Exploring every scenic corner of BD.',
+      bio: 'Endurance cyclist & weekend trail hiker. Exploring every scenic corner of BD. 🚴‍♀️',
     },
     {
       id: 'ath_seed_farhan',
@@ -66,29 +116,23 @@ async function main() {
   for (const a of athletesToSeed) {
     await sql`
       INSERT INTO athletes (id, username, email, password_hash, display_name, avatar_url, city, country, bio, created_at, updated_at)
-      VALUES (${a.id}, ${a.username}, ${a.email}, ${passwordHash}, ${a.displayName}, ${a.avatarUrl}, ${a.city}, ${a.country}, ${a.bio}, NOW(), NOW())
-      ON CONFLICT (id) DO UPDATE SET
-        display_name = EXCLUDED.display_name,
-        avatar_url = EXCLUDED.avatar_url,
-        city = EXCLUDED.city,
-        country = EXCLUDED.country,
-        bio = EXCLUDED.bio,
-        password_hash = EXCLUDED.password_hash;
+      VALUES (${a.id}, ${a.username}, ${a.email}, ${passwordHash}, ${a.displayName}, ${a.avatarUrl}, ${a.city}, ${a.country}, ${a.bio}, NOW(), NOW());
     `;
     console.log(`Seeded Athlete: ${a.displayName} (${a.email})`);
   }
 
-  // Current logged in user (Rakib)
-  const currentAthleteId = 'ath_7bd5ea92-670e-4cb2-97c8-c81505dfab9d';
-
-  // 2. Mutual Follows
+  // 2. Follow Relationships
   const followPairs = [
     [currentAthleteId, 'ath_seed_tanvir'],
     ['ath_seed_tanvir', currentAthleteId],
     [currentAthleteId, 'ath_seed_sultana'],
     ['ath_seed_sultana', currentAthleteId],
-    ['ath_seed_farhan', currentAthleteId],
+    [currentAthleteId, 'ath_seed_anika'],
     ['ath_seed_anika', currentAthleteId],
+    [currentAthleteId, 'ath_seed_farhan'],
+    ['ath_seed_farhan', currentAthleteId],
+    ['ath_seed_tanvir', 'ath_seed_sultana'],
+    ['ath_seed_sultana', 'ath_seed_tanvir'],
   ];
 
   for (const [f1, f2] of followPairs) {
@@ -98,51 +142,61 @@ async function main() {
       ON CONFLICT DO NOTHING;
     `;
   }
-  console.log('Seeded Follow relationships');
+  console.log('Seeded Mutual Follows');
 
-  // 3. Seed Activities with realistic Dhaka Polylines
+  // 3. Realistic Polylines
   const hatirjheelRoute = [
-    [90.410, 23.772],
-    [90.412, 23.775],
-    [90.416, 23.777],
-    [90.421, 23.778],
-    [90.426, 23.776],
-    [90.428, 23.773],
-    [90.425, 23.770],
-    [90.419, 23.769],
-    [90.413, 23.770],
-    [90.410, 23.772],
+    [90.410, 23.772], [90.412, 23.775], [90.416, 23.777], [90.421, 23.778],
+    [90.426, 23.776], [90.428, 23.773], [90.425, 23.770], [90.419, 23.769],
+    [90.413, 23.770], [90.410, 23.772]
   ];
 
   const purbachalRoute = [
-    [90.420, 23.818],
-    [90.435, 23.819],
-    [90.455, 23.821],
-    [90.480, 23.823],
-    [90.510, 23.825],
-    [90.535, 23.827],
-    [90.510, 23.825],
-    [90.480, 23.823],
-    [90.455, 23.821],
-    [90.420, 23.818],
+    [90.420, 23.818], [90.435, 23.819], [90.455, 23.821], [90.480, 23.823],
+    [90.510, 23.825], [90.535, 23.827], [90.510, 23.825], [90.480, 23.823],
+    [90.455, 23.821], [90.420, 23.818]
+  ];
+
+  const gulshanRoute = [
+    [90.415, 23.790], [90.418, 23.793], [90.420, 23.795], [90.423, 23.792],
+    [90.421, 23.788], [90.417, 23.787], [90.415, 23.790]
   ];
 
   const dhanmondiRoute = [
-    [90.375, 23.746],
-    [90.377, 23.749],
-    [90.380, 23.752],
-    [90.381, 23.755],
-    [90.377, 23.756],
-    [90.373, 23.753],
-    [90.371, 23.749],
-    [90.375, 23.746],
+    [90.375, 23.746], [90.377, 23.749], [90.380, 23.752], [90.381, 23.755],
+    [90.377, 23.756], [90.373, 23.753], [90.371, 23.749], [90.375, 23.746]
   ];
 
+  // 4. Seed Activities
   const activitiesToSeed = [
+    {
+      id: 'act_seed_rakib_tempo_run',
+      athleteId: currentAthleteId,
+      title: 'Morning Gulshan Lake Tempo Run 🏃‍♂️',
+      description: 'Felt great! Crisp morning air, controlled heart rate and pushed the final km pace.',
+      sportType: 'Run',
+      visibility: 'PUBLIC',
+      distanceMeters: 5200.0,
+      movingTimeSeconds: 1680,
+      elapsedTimeSeconds: 1740,
+      elevationGainMeters: 15,
+      averageSpeedMps: 3.10,
+      maxSpeedMps: 4.15,
+      calories: 360,
+      polyline: gulshanRoute,
+      splits: [
+        { splitNumber: 1, paceFormatted: '5:30', elevationDeltaMeters: 2 },
+        { splitNumber: 2, paceFormatted: '5:24', elevationDeltaMeters: 3 },
+        { splitNumber: 3, paceFormatted: '5:20', elevationDeltaMeters: 2 },
+        { splitNumber: 4, paceFormatted: '5:15', elevationDeltaMeters: 4 },
+        { splitNumber: 5, paceFormatted: '5:08', elevationDeltaMeters: 4 },
+      ],
+      elevationProfile: [8, 9, 11, 14, 15, 12, 10, 8],
+    },
     {
       id: 'act_seed_hatirjheel_run',
       athleteId: 'ath_seed_tanvir',
-      title: 'Sunrise Loop around Hatirjheel',
+      title: 'Sunrise Loop around Hatirjheel 🌅',
       description: 'Cool breeze, empty bridges and a smooth negative split. Ready for marathon season!',
       sportType: 'Run',
       visibility: 'PUBLIC',
@@ -221,62 +275,64 @@ async function main() {
       )
       VALUES (
         ${act.id}, ${act.athleteId}, ${act.title}, ${act.description}, ${act.sportType},
-        ${act.visibility}, NOW() - INTERVAL '3 hours', ${act.distanceMeters}, ${act.movingTimeSeconds},
+        ${act.visibility}, NOW() - INTERVAL '2 hours', ${act.distanceMeters}, ${act.movingTimeSeconds},
         ${act.elapsedTimeSeconds}, ${act.elevationGainMeters}, ${act.averageSpeedMps}, ${act.maxSpeedMps},
         ${act.calories}, ${JSON.stringify(act.polyline)}, ${JSON.stringify(act.polyline)},
         ${JSON.stringify(act.splits)}, ${JSON.stringify(act.elevationProfile)}, NOW(), NOW()
-      )
-      ON CONFLICT (id) DO UPDATE SET
-        title = EXCLUDED.title,
-        description = EXCLUDED.description,
-        distance_meters = EXCLUDED.distance_meters,
-        raw_polyline = EXCLUDED.raw_polyline,
-        masked_polyline = EXCLUDED.masked_polyline;
+      );
     `;
     console.log(`Seeded Activity: ${act.title}`);
   }
 
-  // 4. Seed Kudos
+  // 5. Seed Kudos
   const kudosToSeed = [
-    { id: 'kd_seed_1', activityId: 'act_seed_hatirjheel_run', athleteId: currentAthleteId },
-    { id: 'kd_seed_2', activityId: 'act_seed_hatirjheel_run', athleteId: 'ath_seed_sultana' },
-    { id: 'kd_seed_3', activityId: 'act_seed_purbachal_ride', athleteId: currentAthleteId },
-    { id: 'kd_seed_4', activityId: 'act_seed_purbachal_ride', athleteId: 'ath_seed_tanvir' },
+    { id: 'kd_seed_1', activityId: 'act_seed_rakib_tempo_run', athleteId: 'ath_seed_tanvir' },
+    { id: 'kd_seed_2', activityId: 'act_seed_rakib_tempo_run', athleteId: 'ath_seed_sultana' },
+    { id: 'kd_seed_3', activityId: 'act_seed_hatirjheel_run', athleteId: currentAthleteId },
+    { id: 'kd_seed_4', activityId: 'act_seed_hatirjheel_run', athleteId: 'ath_seed_sultana' },
+    { id: 'kd_seed_5', activityId: 'act_seed_purbachal_ride', athleteId: currentAthleteId },
+    { id: 'kd_seed_6', activityId: 'act_seed_purbachal_ride', athleteId: 'ath_seed_tanvir' },
   ];
 
   for (const k of kudosToSeed) {
     await sql`
       INSERT INTO kudos (id, activity_id, athlete_id, created_at)
-      VALUES (${k.id}, ${k.activityId}, ${k.athleteId}, NOW())
-      ON CONFLICT DO NOTHING;
+      VALUES (${k.id}, ${k.activityId}, ${k.athleteId}, NOW());
     `;
   }
+  console.log('Seeded Kudos');
 
-  // 5. Seed Comments
+  // 6. Seed Comments
   const commentsToSeed = [
     {
       id: 'cmt_seed_1',
-      activityId: 'act_seed_hatirjheel_run',
-      athleteId: 'ath_seed_sultana',
-      content: 'Solid pace Tanvir! Hatirjheel in the morning is unbeatable.',
+      activityId: 'act_seed_rakib_tempo_run',
+      athleteId: 'ath_seed_tanvir',
+      content: 'Solid morning pace Rakib! Let us hit Hatirjheel together this Friday.',
     },
     {
       id: 'cmt_seed_2',
-      activityId: 'act_seed_purbachal_ride',
-      athleteId: 'ath_seed_tanvir',
-      content: 'Massive average speed Nusrat! That expressway surface is so fast.',
+      activityId: 'act_seed_rakib_tempo_run',
+      athleteId: 'ath_seed_sultana',
+      content: 'Great negative split! Strong finish 💪',
+    },
+    {
+      id: 'cmt_seed_3',
+      activityId: 'act_seed_hatirjheel_run',
+      athleteId: currentAthleteId,
+      content: 'Beast pace brother! See you on the weekend.',
     },
   ];
 
   for (const c of commentsToSeed) {
     await sql`
       INSERT INTO comments (id, activity_id, athlete_id, content, created_at)
-      VALUES (${c.id}, ${c.activityId}, ${c.athleteId}, ${c.content}, NOW())
-      ON CONFLICT DO NOTHING;
+      VALUES (${c.id}, ${c.activityId}, ${c.athleteId}, ${c.content}, NOW());
     `;
   }
+  console.log('Seeded Comments');
 
-  // 6. Seed Clubs
+  // 7. Seed Clubs
   const clubsToSeed = [
     {
       id: 'clb_seed_dhaka_runners',
@@ -316,34 +372,25 @@ async function main() {
   for (const clb of clubsToSeed) {
     await sql`
       INSERT INTO clubs (id, name, sport_type, city, country, description, avatar_url, banner_url, creator_id, created_at)
-      VALUES (${clb.id}, ${clb.name}, ${clb.sportType}, ${clb.city}, ${clb.country}, ${clb.description}, ${clb.avatarUrl}, ${clb.bannerUrl}, ${clb.creatorId}, NOW())
-      ON CONFLICT (id) DO UPDATE SET
-        name = EXCLUDED.name,
-        description = EXCLUDED.description,
-        city = EXCLUDED.city;
+      VALUES (${clb.id}, ${clb.name}, ${clb.sportType}, ${clb.city}, ${clb.country}, ${clb.description}, ${clb.avatarUrl}, ${clb.bannerUrl}, ${clb.creatorId}, NOW());
     `;
-    // Add creator as owner
     await sql`
       INSERT INTO club_members (club_id, athlete_id, role, joined_at)
-      VALUES (${clb.id}, ${clb.creatorId}, 'OWNER', NOW())
-      ON CONFLICT DO NOTHING;
+      VALUES (${clb.id}, ${clb.creatorId}, 'OWNER', NOW());
     `;
-    // Add current user as member to one club
-    if (clb.id === 'clb_seed_dhaka_runners') {
-      await sql`
-        INSERT INTO club_members (club_id, athlete_id, role, joined_at)
-        VALUES (${clb.id}, ${currentAthleteId}, 'MEMBER', NOW())
-        ON CONFLICT DO NOTHING;
-      `;
-    }
+    // Add current user as member
+    await sql`
+      INSERT INTO club_members (club_id, athlete_id, role, joined_at)
+      VALUES (${clb.id}, ${currentAthleteId}, 'MEMBER', NOW());
+    `;
     console.log(`Seeded Club: ${clb.name}`);
   }
 
-  // 7. Seed Challenges
+  // 8. Seed Challenges
   const challengesToSeed = [
     {
       id: 'chl_seed_may_50k',
-      title: 'May 50K Running Challenge',
+      title: 'November 50K Running Challenge',
       description: 'Log 50 kilometers of running this month to earn the exclusive digital Finisher Badge.',
       sportType: 'Run',
       targetMeters: 50000.0,
@@ -379,16 +426,16 @@ async function main() {
   for (const ch of challengesToSeed) {
     await sql`
       INSERT INTO challenges (id, title, description, sport_type, target_meters, badge_url, start_date, end_date, creator_id, created_at)
-      VALUES (${ch.id}, ${ch.title}, ${ch.description}, ${ch.sportType}, ${ch.targetMeters}, ${ch.badgeUrl}, ${ch.startDate}, ${ch.endDate}, ${ch.creatorId}, NOW())
-      ON CONFLICT (id) DO UPDATE SET
-        title = EXCLUDED.title,
-        description = EXCLUDED.description,
-        target_meters = EXCLUDED.target_meters;
+      VALUES (${ch.id}, ${ch.title}, ${ch.description}, ${ch.sportType}, ${ch.targetMeters}, ${ch.badgeUrl}, ${ch.startDate}, ${ch.endDate}, ${ch.creatorId}, NOW());
+    `;
+    await sql`
+      INSERT INTO challenge_participants (challenge_id, athlete_id, current_meters, is_completed, joined_at)
+      VALUES (${ch.id}, ${currentAthleteId}, 5200.0, false, NOW());
     `;
     console.log(`Seeded Challenge: ${ch.title}`);
   }
 
-  // 8. Seed Group Events
+  // 9. Seed Group Events
   const eventsToSeed = [
     {
       id: 'evt_seed_hatirjheel_sunrise',
@@ -428,15 +475,49 @@ async function main() {
   for (const ev of eventsToSeed) {
     await sql`
       INSERT INTO group_events (id, title, sport_type, club_id, creator_id, meeting_point, pace_description, distance_meters, event_date, created_at)
-      VALUES (${ev.id}, ${ev.title}, ${ev.sportType}, ${ev.clubId}, ${ev.creatorId}, ${ev.meetingPoint}, ${ev.paceDescription}, ${ev.distanceMeters}, ${ev.eventDate}, NOW())
-      ON CONFLICT (id) DO UPDATE SET
-        title = EXCLUDED.title,
-        meeting_point = EXCLUDED.meeting_point;
+      VALUES (${ev.id}, ${ev.title}, ${ev.sportType}, ${ev.clubId}, ${ev.creatorId}, ${ev.meetingPoint}, ${ev.paceDescription}, ${ev.distanceMeters}, ${ev.eventDate}, NOW());
+    `;
+    await sql`
+      INSERT INTO event_rsvps (event_id, athlete_id, status, created_at)
+      VALUES (${ev.id}, ${currentAthleteId}, 'GOING', NOW());
     `;
     console.log(`Seeded Event: ${ev.title}`);
   }
 
-  // 9. Seed Notifications for current user (Rakib)
+  // 10. Seed Direct Messages (so inbox is active)
+  const dmsToSeed = [
+    {
+      id: 'dm_seed_1',
+      senderId: 'ath_seed_tanvir',
+      recipientId: currentAthleteId,
+      text: 'Hey Rakib! Great tempo run this morning. Are you joining Friday’s 10K?',
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+    },
+    {
+      id: 'dm_seed_2',
+      senderId: currentAthleteId,
+      recipientId: 'ath_seed_tanvir',
+      text: 'Thanks Tanvir! Yes, already RSVPed for Hatirjheel.',
+      createdAt: new Date(Date.now() - 3000000).toISOString(),
+    },
+    {
+      id: 'dm_seed_3',
+      senderId: 'ath_seed_sultana',
+      recipientId: currentAthleteId,
+      text: 'Hey! Planning a 300-ft expressway recovery ride tomorrow morning if you want to join.',
+      createdAt: new Date(Date.now() - 1800000).toISOString(),
+    },
+  ];
+
+  for (const dm of dmsToSeed) {
+    await sql`
+      INSERT INTO direct_messages (id, sender_id, recipient_id, text, is_read, created_at)
+      VALUES (${dm.id}, ${dm.senderId}, ${dm.recipientId}, ${dm.text}, false, ${dm.createdAt});
+    `;
+  }
+  console.log('Seeded Direct Messages');
+
+  // 11. Seed Notifications for Rakib
   const notifsToSeed = [
     {
       id: 'ntf_seed_1',
@@ -467,17 +548,15 @@ async function main() {
   for (const n of notifsToSeed) {
     await sql`
       INSERT INTO notifications (id, recipient_id, actor_id, action_type, message, is_read, created_at)
-      VALUES (${n.id}, ${n.recipientId}, ${n.actorId}, ${n.actionType}, ${n.message}, false, ${n.createdAt})
-      ON CONFLICT (id) DO NOTHING;
+      VALUES (${n.id}, ${n.recipientId}, ${n.actorId}, ${n.actionType}, ${n.message}, false, ${n.createdAt});
     `;
   }
-  console.log('Seeded Notifications for user');
+  console.log('Seeded Notifications');
 
-  console.log('--- Database Seeding Completed Successfully! ---');
+  console.log('🎉 --- Fresh Database Seeding Completed Successfully! ---');
 }
 
 main().catch((err) => {
-  console.error('Seeding failed:', err);
+  console.error('❌ Seeding failed:', err);
   process.exit(1);
 });
-

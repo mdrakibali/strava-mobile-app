@@ -11,6 +11,7 @@
     "db:studio": "drizzle-kit studio",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "seed": "node scripts/seed.mjs",
     "dev:local": "vite-node scripts/dev-local.ts"
   },
   "dependencies": {
