@@ -182,12 +182,11 @@ export class ActivityService {
     return { commentsCount: await this.activityRepo.getCommentsCount(activityId) };
   }
 
-  /** Kudos are idempotent; no self-kudos. */
+  /** Kudos are idempotent; self-kudos allowed. */
   async giveKudos(activityId: string, actorId: string, actorUsername: string) {
     const { activity } = await this.loadVisible(activityId, actorId);
-    if (activity.athleteId === actorId) throw new HttpError(422, 'self_kudos', 'You can’t give kudos to your own activity');
     const created = await this.activityRepo.addKudos(activityId, actorId);
-    if (created) {
+    if (created && activity.athleteId !== actorId) {
       await this.notifRepo.create({
         id: newId('notif'),
         recipientId: activity.athleteId,

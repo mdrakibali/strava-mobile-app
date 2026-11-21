@@ -103,9 +103,9 @@ export default function ChatScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       {/* Chat Top Header */}
-      <View className="flex-row items-center justify-between px-4 py-2.5 bg-white border-b border-gray-200">
+      <View className="flex-row items-center justify-between px-4 py-2.5 bg-white border-b border-gray-200 shadow-xs">
         <View className="flex-row items-center flex-1 mr-2">
           <TouchableOpacity onPress={() => router.back()} className="p-1 mr-1">
             <Ionicons name="arrow-back" size={24} color="#111827" />
@@ -135,20 +135,26 @@ export default function ChatScreen() {
       </View>
 
       <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
         {/* Messages Stream */}
         {isLoading ? (
-          <View className="flex-1 items-center justify-center">
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <ActivityIndicator size="large" color="#FC4C02" />
           </View>
         ) : (
           <ScrollView
             ref={scrollViewRef}
             showsVerticalScrollIndicator={false}
-            className="flex-1"
+            style={{ flex: 1 }}
+            keyboardShouldPersistTaps="handled"
             onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-            contentContainerClassName="p-4 pb-6 space-y-3">
+            contentContainerStyle={{
+              padding: 16,
+              flexGrow: 1,
+              justifyContent: messages.length === 0 ? 'center' : 'flex-start',
+            }}>
             {messages.length > 0 ? (
               messages.map((m) => {
                 const isMe = m.senderId === currentUser.id;
@@ -159,7 +165,7 @@ export default function ChatScreen() {
                 return (
                   <View
                     key={m.id}
-                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 mb-2 ${
+                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 mb-2.5 shadow-xs ${
                       isMe
                         ? 'self-end bg-[#FC4C02] rounded-br-xs'
                         : 'self-start bg-white border border-gray-200 rounded-bl-xs'
@@ -180,18 +186,21 @@ export default function ChatScreen() {
                 );
               })
             ) : (
-              <View className="items-center justify-center py-24">
-                <Ionicons name="chatbubble-ellipses-outline" size={40} color="#D1D5DB" />
-                <Text className="text-xs font-bold text-gray-400 mt-2">
+              <View className="items-center justify-center py-16">
+                <Ionicons name="chatbubble-ellipses-outline" size={44} color="#D1D5DB" />
+                <Text className="text-sm font-bold text-gray-700 mt-2">
                   Say hi to {partner.displayName}!
+                </Text>
+                <Text className="text-xs text-gray-400 text-center mt-1">
+                  Start the conversation with encouragement or ask about routes.
                 </Text>
               </View>
             )}
           </ScrollView>
         )}
 
-        {/* Input Bar */}
-        <View className="flex-row items-center bg-white px-4 py-2.5 border-t border-gray-200">
+        {/* Sticky Bottom Input Bar */}
+        <View className="flex-row items-center bg-white px-4 py-2.5 border-t border-gray-200 shadow-md">
           <TextInput
             value={inputText}
             onChangeText={setInputText}
@@ -202,7 +211,8 @@ export default function ChatScreen() {
           <TouchableOpacity
             onPress={handleSendMessage}
             disabled={!inputText.trim() || isSending}
-            className={`w-9 h-9 rounded-full bg-[#FC4C02] items-center justify-center ${
+            activeOpacity={0.8}
+            className={`w-10 h-10 rounded-full bg-[#FC4C02] items-center justify-center shadow-sm ${
               !inputText.trim() || isSending ? 'opacity-40' : ''
             }`}>
             <Ionicons name="send" size={16} color="#FFFFFF" />

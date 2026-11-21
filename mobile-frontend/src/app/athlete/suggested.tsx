@@ -25,10 +25,12 @@ export default function SuggestedAthletesScreen() {
     try {
       const res = await api.athletes.search('');
       if (res?.athletes) {
-        const mapped = res.athletes.map((a: any) => {
-          const cached = socialStore.getFollow(a.id);
-          return { ...a, isFollowing: cached !== undefined ? cached : Boolean(a.isFollowing) };
-        });
+        const mapped = res.athletes
+          .filter((a: any) => a.id !== currentUser?.id)
+          .map((a: any) => {
+            const cached = socialStore.getFollow(a.id);
+            return { ...a, isFollowing: cached !== undefined ? cached : Boolean(a.isFollowing) };
+          });
         setSuggested(mapped);
       }
     } catch (err) {

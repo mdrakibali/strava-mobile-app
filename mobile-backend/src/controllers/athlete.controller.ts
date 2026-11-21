@@ -26,10 +26,12 @@ export class AthleteController {
       const followedIds = currentUser ? await repo.getFollowedIds(currentUser.athleteId) : [];
       const followedSet = new Set(followedIds);
 
-      const formatted = list.map((a) => ({
-        ...toPublicAthlete(a),
-        isFollowing: followedSet.has(a.id),
-      }));
+      const formatted = list
+        .filter((a) => !currentUser || a.id !== currentUser.athleteId)
+        .map((a) => ({
+          ...toPublicAthlete(a),
+          isFollowing: followedSet.has(a.id),
+        }));
 
       return c.json({ athletes: formatted, count: formatted.length });
     } catch (err: any) {
@@ -126,11 +128,13 @@ export class AthleteController {
       }
 
       const followersCount = await repo.getFollowersCount(targetId);
+      const followingCount = await repo.getFollowingCount(currentUser.athleteId);
 
       return c.json({
         message: !isFollowing ? 'Followed athlete' : 'Unfollowed athlete',
         isFollowing: !isFollowing,
         followersCount,
+        followingCount,
       });
     } catch (err: any) {
       return c.json({ error: err.message }, 400);

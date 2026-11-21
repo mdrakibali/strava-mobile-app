@@ -53,12 +53,7 @@ export const FeedCard = memo(function FeedCard({
   const openKudos = () => router.push({ pathname: '/activity/kudos/[id]', params: { id: activity.id } });
   const openComments = () => router.push({ pathname: '/activity/[id]', params: { id: activity.id, focus: 'comments' } });
 
-  // Own activity: show alert that only others can give kudos.
   const onKudos = async () => {
-    if (isOwn) {
-      Alert.alert('Your Activity', 'Other athletes will give kudos to your activity!');
-      return;
-    }
     if (pending) return;
     setPending(true);
     try {
@@ -218,7 +213,7 @@ export const FeedCard = memo(function FeedCard({
           onPress={onKudos}
           disabled={pending}
           accessibilityRole="button"
-          accessibilityLabel={isOwn ? 'See who gave kudos' : social.hasKudos ? 'Remove kudos' : 'Give kudos'}
+          accessibilityLabel={social.hasKudos ? 'Remove kudos' : 'Give kudos'}
           accessibilityState={{ selected: social.hasKudos === true, busy: pending }}
           className="flex-1 flex-row items-center justify-center min-h-[48px] active:bg-gray-50">
           <Ionicons

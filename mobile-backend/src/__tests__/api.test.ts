@@ -257,12 +257,12 @@ describe('activity management', () => {
     expect(await db.select().from(schema.activities)).toHaveLength(0);
   });
 
-  it('kudos are give-only, idempotent and not self-given', async () => {
+  it('kudos are give-only, idempotent and self-given allowed', async () => {
     const { id } = await upload();
     await call('POST', `/activities/${id}/kudos`, { token: follower });
     const again = await call('POST', `/activities/${id}/kudos`, { token: follower });
     expect(again.body).toEqual({ hasKudos: true, kudosCount: 1 });
-    expect((await call('POST', `/activities/${id}/kudos`, { token: owner })).status).toBe(422);
+    expect((await call('POST', `/activities/${id}/kudos`, { token: owner })).body).toEqual({ hasKudos: true, kudosCount: 2 });
   });
 
   it('paginates history without skipping or repeating equal start times', async () => {
