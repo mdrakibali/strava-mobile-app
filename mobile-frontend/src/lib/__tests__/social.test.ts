@@ -1,8 +1,8 @@
-import { setFollowing, setKudos, socialStore } from '../social';
+import { changeCommentsCount, setFollowing, setKudos, socialStore } from '../social';
 
 jest.mock('../../services/api', () => ({
   api: {
-    activities: { giveKudos: jest.fn(), removeKudos: jest.fn() },
+    activities: { giveKudos: jest.fn(), removeKudos: jest.fn(), addComment: jest.fn(), deleteComment: jest.fn() },
     athletes: { follow: jest.fn(), unfollow: jest.fn() },
   },
 }));
@@ -50,6 +50,44 @@ describe('setKudos', () => {
     socialStore.patch('a5', { hasKudos: true, kudosCount: 99 });
     socialStore.seed([{ id: 'a5', hasKudos: false, kudosCount: 3, commentsCount: 2 }]);
     expect(socialStore.get('a5')).toEqual({ hasKudos: false, kudosCount: 3, commentsCount: 2 });
+  });
+
+  it('does not let a fetch that started earlier overwrite a confirmed unlike', async () => {
+    socialStore.seed([{ id: 'a6', hasKudos: true, kudosCount: 4, commentsCount: 2 }]);
+    const readTick = socialStore.beginRead();
+    api.activities.removeKudos.mockResolvedValue({ hasKudos: false, kudosCount: 3 });
+    await setKudos('a6', false);
+    socialStore.seed([{ id: 'a6', hasKudos: true, kudosCount: 4, commentsCount: 2 }], readTick);
+    expect(socialStore.get('a6')).toEqual({ hasKudos: false, kudosCount: 3, commentsCount: 2 });
+  });
+
+  it('keeps the latest kudos when an older request finishes last', async () => {
+    socialStore.seed([{ id: 'a7', hasKudos: false, kudosCount: 1, commentsCount: 0 }]);
+    let finishLike!: (v: any) => void;
+    api.activities.giveKudos.mockReturnValue(new Promise((r) => (finishLike = r)));
+    const like = setKudos('a7', true);
+    api.activities.removeKudos.mockResolvedValue({ hasKudos: false, kudosCount: 1 });
+    await setKudos('a7', false);
+    finishLike({ hasKudos: true, kudosCount: 2 });
+    await like;
+    expect(socialStore.get('a7')).toMatchObject({ hasKudos: false, kudosCount: 1 });
+  });
+});
+
+describe('changeCommentsCount', () => {
+  it('decreases by the server count and ignores a stale refetch', async () => {
+    socialStore.seed([{ id: 'c1', hasKudos: false, kudosCount: 0, commentsCount: 3 }]);
+    const readTick = socialStore.beginRead();
+    const count = await changeCommentsCount('c1', -1, async () => 2);
+    socialStore.seed([{ id: 'c1', hasKudos: false, kudosCount: 0, commentsCount: 3 }], readTick);
+    expect(count).toBe(2);
+    expect(socialStore.get('c1')!.commentsCount).toBe(2);
+  });
+
+  it('rolls the count back when the delete fails', async () => {
+    socialStore.seed([{ id: 'c2', hasKudos: false, kudosCount: 0, commentsCount: 2 }]);
+    await expect(changeCommentsCount('c2', -1, async () => Promise.reject(new Error('nope')))).rejects.toThrow('nope');
+    expect(socialStore.get('c2')!.commentsCount).toBe(2);
   });
 });
 

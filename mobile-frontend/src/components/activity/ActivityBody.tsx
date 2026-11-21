@@ -120,6 +120,7 @@ export const ActivityBody: React.FC<{
       </View>
 
       <ActivityComments
+        key={`${activity.id}:${activity.comments.map((c) => c.id).join(',')}`}
         activityId={activity.id}
         initialComments={activity.comments}
         isOwner={isOwner}

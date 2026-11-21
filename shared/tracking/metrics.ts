@@ -33,8 +33,13 @@ export class TrackAccumulator {
   // distance anchor (only advances once the athlete clearly moved — the jitter gate)
   private anchor: RawPoint | null = null;
   private anchorMovingMs = 0;
-  /** Consecutive fixes that left the accuracy circle at a plausible speed. One sample is not enough. */
+  /** Consecutive fixes that left the accuracy circle at a plausible speed, still getting farther, on a stable heading. */
   private departStreak = 0;
+  private departDist = 0;
+  private departBearing: number | null = null;
+  /** Consecutive short steps on a stable heading. Used for moving time, not for drawing the route. */
+  private hopStreak = 0;
+  private hopBearing: number | null = null;
   // cumulative-distance samples for the smoothed speed (current run of track only)
   private window: { t: number; d: number }[] = [];
   private windowSpeed: number | null = null;
@@ -67,20 +72,24 @@ export class TrackAccumulator {
     this.lastAccepted = p;
     if (!this.splitStart) this.splitStart = { d: 0, movingMs: 0, t: p.t, alt: this.smoothedAlt };
 
+    if (prev && r.gapBefore) this.commitTail(prev);
     if (r.gapBefore || !prev) {
       this.anchor = p;
       this.anchorMovingMs = this.movingMs;
       this.window = [{ t: p.t, d: this.distanceM }];
       this.windowSpeed = null;
       this.departStreak = 0;
+      this.departDist = 0;
+      this.departBearing = null;
+      this.hopStreak = 0;
+      this.hopBearing = null;
       return r;
     }
 
     // ---- distance (jitter-gated) ----
     // Phone GPS wanders by several metres while the athlete is standing still, and the reported
-    // Doppler speed is often a walking pace during that wander. A 1 m gate turns that noise into
-    // a route. Distance and the drawn line advance only after two fixes in a row have left the
-    // accuracy circle at a speed this sport can actually do.
+    // speed is often a walking pace during that wander. Distance advances only when the athlete
+    // keeps getting farther from the anchor, on a stable heading, outside the accuracy circle.
     const anchor = this.anchor!;
     const d = haversineM(anchor.lat, anchor.lng, p.lat, p.lng);
     const accRadius = Math.max(anchor.acc ?? 0, p.acc ?? 0);
@@ -92,16 +101,41 @@ export class TrackAccumulator {
     const dopplerAgrees =
       doppler == null || (doppler >= this.cfg.minMovingSpeedMps * 0.5 && doppler <= this.cfg.maxSpeedMps);
     const leaving = d >= gate && inBand && dopplerAgrees;
-    if (leaving) this.departStreak++;
-    else if (d < gate * 0.5) this.departStreak = 0;
+    const bearing = bearingDeg(anchor.lat, anchor.lng, p.lat, p.lng);
+    const turn = this.departBearing == null ? 0 : turnDeg(this.departBearing, bearing);
+    const progressing = leaving && d >= this.departDist + 0.8 && turn <= 40;
+    if (progressing) {
+      this.departStreak++;
+      this.departDist = d;
+      this.departBearing = bearing;
+    } else if (!leaving || d + 1 < this.departDist) {
+      this.departStreak = 0;
+      this.departDist = d;
+      this.departBearing = leaving ? bearing : null;
+    }
 
     let advanced = false;
     const distBefore = this.distanceM;
-    if (leaving && this.departStreak >= 2) {
+    if (progressing && this.departStreak >= 3) {
       this.distanceM += d;
       advanced = true;
-      const stepDt = p.t - anchor.t;
-      if (stepDt > 0 && stepDt <= ENGINE.maxMovingGapMs) this.movingMs += stepDt;
+    }
+
+    // Moving time follows each short step, not the Doppler reading on its own. Three steps on
+    // the same heading are a walk or ride; a wandering phone does not hold a heading.
+    const hop = haversineM(prev.lat, prev.lng, p.lat, p.lng);
+    const hopDt = p.t - prev.t;
+    const hopSpeed = hopDt > 0 ? hop / (hopDt / 1000) : 0;
+    const hopBand = hopSpeed >= this.cfg.minMovingSpeedMps && hopSpeed <= this.cfg.maxSpeedMps;
+    const hopBearing = bearingDeg(prev.lat, prev.lng, p.lat, p.lng);
+    const hopTurn = this.hopBearing == null ? 0 : turnDeg(this.hopBearing, hopBearing);
+    if (hopBand && hopDt > 0 && hopDt <= ENGINE.maxMovingGapMs && hopTurn <= 35 && dopplerAgrees) {
+      this.hopStreak++;
+      this.hopBearing = hopBearing;
+      if (this.hopStreak >= 2) this.movingMs += hopDt;
+    } else {
+      this.hopStreak = 0;
+      this.hopBearing = null;
     }
 
     // ---- smoothed speed over the window ----
@@ -111,9 +145,17 @@ export class TrackAccumulator {
     const span = p.t - w0.t;
     this.windowSpeed = span >= 3000 ? (this.distanceM - w0.d) / (span / 1000) : null;
 
-    // ---- max speed (smoothed, so one noisy fix can't set it) ----
-    if (this.windowSpeed != null && span >= 5000) {
-      this.maxSpeedMps = Math.max(this.maxSpeedMps, Math.min(this.windowSpeed, this.cfg.maxSpeedMps));
+    if (advanced) {
+      const stepSpeed = Math.min(implied, this.cfg.maxSpeedMps);
+      this.maxSpeedMps = Math.max(this.maxSpeedMps, stepSpeed);
+    } else if (
+      doppler != null &&
+      this.windowSpeed != null &&
+      this.windowSpeed >= this.cfg.minMovingSpeedMps * 0.5 &&
+      doppler >= this.cfg.minMovingSpeedMps &&
+      doppler <= this.cfg.maxSpeedMps
+    ) {
+      this.maxSpeedMps = Math.max(this.maxSpeedMps, doppler);
     }
 
     // ---- splits (interpolated boundary crossings) ----
@@ -129,35 +171,49 @@ export class TrackAccumulator {
       this.anchor = p;
       this.anchorMovingMs = this.movingMs;
       this.departStreak = 0;
+      this.departDist = 0;
+      this.departBearing = null;
     }
     return advanced ? { ...r, moved: true } : r;
   }
 
-  /**
-   * Commit a real tail step that had not yet been confirmed by a second fix.
-   * Called when a recording is summarized so the last few metres are not dropped.
-   * A stationary wander stays inside the accuracy circle and is not committed.
-   */
-  flush() {
+  /** Distance still sitting between the anchor and the latest fix, when that step is real movement. */
+  private pendingChord(to: RawPoint | null): { d: number; from: RawPoint; to: RawPoint } | null {
     const anchor = this.anchor;
-    const p = this.lastAccepted;
-    if (!anchor || !p || p === anchor || p.t <= anchor.t) return;
-    const d = haversineM(anchor.lat, anchor.lng, p.lat, p.lng);
-    const accRadius = Math.max(anchor.acc ?? 0, p.acc ?? 0);
-    const dtSec = (p.t - anchor.t) / 1000;
-    if (dtSec < 1) return;
+    if (!anchor || !to || to === anchor || to.t <= anchor.t) return null;
+    const d = haversineM(anchor.lat, anchor.lng, to.lat, to.lng);
+    const accRadius = Math.max(anchor.acc ?? 0, to.acc ?? 0);
+    const dtSec = (to.t - anchor.t) / 1000;
+    if (dtSec < 1 || dtSec > ENGINE.maxMovingGapMs / 1000) return null;
     const implied = d / dtSec;
-    const doppler = p.speed != null && p.speed >= 0 ? p.speed : null;
+    const doppler = to.speed != null && to.speed >= 0 ? to.speed : null;
     const gate = Math.max(ENGINE.minStepM, accRadius > 0 ? accRadius : 4);
     const dopplerAgrees =
       doppler == null || (doppler >= this.cfg.minMovingSpeedMps * 0.5 && doppler <= this.cfg.maxSpeedMps);
-    if (d < gate || implied < this.cfg.minMovingSpeedMps || implied > this.cfg.maxSpeedMps || !dopplerAgrees) return;
-    const stepDt = p.t - anchor.t;
-    this.distanceM += d;
-    if (stepDt <= ENGINE.maxMovingGapMs) this.movingMs += stepDt;
-    this.anchor = p;
+    if (d < gate || implied < this.cfg.minMovingSpeedMps || implied > this.cfg.maxSpeedMps || !dopplerAgrees) return null;
+    if (this.hopStreak < 2 && this.departStreak < 1) return null;
+    return { d, from: anchor, to };
+  }
+
+  /** Fold a segment's last real step into the totals. Does not run during a live summary. */
+  private commitTail(to: RawPoint) {
+    const chord = this.pendingChord(to);
+    if (!chord) return;
+    const distBefore = this.distanceM;
+    this.distanceM += chord.d;
+    const step = this.distanceM - distBefore;
+    while (this.distanceM >= (this.splits.length + 1) * SPLIT_M) {
+      const boundary = (this.splits.length + 1) * SPLIT_M;
+      const f = step > 0 ? (boundary - distBefore) / step : 1;
+      const tCross = chord.from.t + f * (chord.to.t - chord.from.t);
+      const movingCross = this.anchorMovingMs + f * (this.movingMs - this.anchorMovingMs);
+      this.pushSplit(boundary, movingCross, tCross, SPLIT_M);
+    }
+    this.anchor = chord.to;
     this.anchorMovingMs = this.movingMs;
     this.departStreak = 0;
+    this.departDist = 0;
+    this.departBearing = null;
   }
 
   private pushSplit(atDistance: number, movingMs: number, t: number, distanceM: number) {
@@ -239,14 +295,20 @@ export class TrackAccumulator {
     return this.windowSpeed ?? 0;
   }
 
+  /** Latest fix when it continues real movement but has not yet been confirmed onto the route. */
+  tailPoint(): RawPoint | null {
+    return this.pendingChord(this.lastAccepted)?.to ?? null;
+  }
+
   summary(session: { startedAt: number; finishedAt: number | null; pauses: PauseInterval[]; now?: number }): TrackSummary {
-    this.flush();
+    const tail = this.pendingChord(this.lastAccepted);
+    const distanceWithTail = this.distanceM + (tail?.d ?? 0);
     const end = session.finishedAt ?? session.now ?? Date.now();
     const elapsedMs = Math.max(0, end - session.startedAt);
     const pausedMs = totalPausedMs(session.pauses, end);
     const splits = [...this.splits];
     const s = this.splitStart;
-    const remaining = s ? this.distanceM - s.d : 0;
+    const remaining = s ? distanceWithTail - s.d : 0;
     if (s && this.lastAccepted && remaining >= MIN_PARTIAL_SPLIT_M) {
       const movingTimeS = Math.round((this.movingMs - s.movingMs) / 1000);
       splits.push({
@@ -262,7 +324,7 @@ export class TrackAccumulator {
       });
     }
     const movingTimeS = Math.round(this.movingMs / 1000);
-    const distanceM = Math.round(this.distanceM * 10) / 10;
+    const distanceM = Math.round(distanceWithTail * 10) / 10;
     const reliable = this.elevationReliable();
     return {
       distanceM,
@@ -317,10 +379,23 @@ export const routePoints = (sport: string, points: RawPoint[]): RawPoint[] => {
     const r = acc.add(p);
     if (r.accepted && (r.gapBefore || r.moved)) out.push(p);
   }
-  const before = acc.distanceM;
-  acc.flush();
-  if (acc.distanceM > before && acc.lastAccepted && out[out.length - 1] !== acc.lastAccepted) out.push(acc.lastAccepted);
+  const tail = acc.tailPoint();
+  if (tail && out[out.length - 1] !== tail) out.push(tail);
   return out;
+};
+
+const bearingDeg = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const λ = ((lng2 - lng1) * Math.PI) / 180;
+  const y = Math.sin(λ) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(λ);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+};
+
+const turnDeg = (a: number, b: number) => {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
 };
 
 /** Pace (s/km) from a speed, or null when the athlete is effectively stationary. */

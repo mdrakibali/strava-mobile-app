@@ -31,7 +31,7 @@ export default function ActivityDetailScreen() {
   const { height } = useWindowDimensions();
   const { currentUser } = useApp();
   const keyboard = useKeyboardInset();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<{ scrollToEnd: (options?: { animated?: boolean }) => void } | null>(null);
   const [fetched, setState] = useState<State>({ status: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -141,7 +141,9 @@ export default function ActivityDetailScreen() {
     <View className="flex-1 bg-white">
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={insets.top}>
         <ScrollView
-          ref={scrollRef}
+          ref={(node) => {
+            scrollRef.current = node;
+          }}
           style={{ flex: 1 }}
           automaticallyAdjustKeyboardInsets
           keyboardShouldPersistTaps="handled"

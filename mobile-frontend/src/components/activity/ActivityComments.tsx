@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -42,10 +42,6 @@ export const ActivityComments: React.FC<Props> = ({
   const [draft, setDraft] = useState('');
   const [posting, setPosting] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setComments(initialComments);
-  }, [activityId, initialComments]);
 
   const onCommentMenu = (c: CommentView) => {
     const mine = c.author.id === currentUserId;

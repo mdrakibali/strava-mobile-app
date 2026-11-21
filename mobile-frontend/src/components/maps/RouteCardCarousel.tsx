@@ -119,7 +119,8 @@ export function RouteCardCarousel({
                   <View className="flex-row items-center">
                     <Ionicons name={sport.icon} size={14} color="#FC4C02" />
                     <AppText className="text-gray-600 text-xs font-semibold ml-1.5" numberOfLines={1}>
-                      {kmValue(item.distanceMeters)} km · {item.elevationGainMeters} m · {item.estTimeText || '1h 2m'}
+                      {kmValue(item.distanceMeters)} km · {item.elevationGainMeters} m
+                      {item.estTimeText ? ` · ${item.estTimeText}` : ''}
                     </AppText>
                   </View>
 
@@ -128,7 +129,13 @@ export function RouteCardCarousel({
                     <View className="flex-row items-center">
                       <Ionicons name="locate-outline" size={13} color="#6B7280" />
                       <AppText className="text-gray-500 text-[11px] font-medium ml-1">
-                        From your location
+                        {item.distanceFromMeM == null
+                          ? 'Turn on location to measure distance'
+                          : item.distanceFromMeM < 1500
+                            ? 'Starts near you'
+                            : item.distanceFromMeM < 10000
+                              ? `${(item.distanceFromMeM / 1000).toFixed(1)} km from you`
+                              : `${Math.round(item.distanceFromMeM / 1000)} km from you`}
                       </AppText>
                     </View>
                     <View className="flex-row items-center">
@@ -139,9 +146,9 @@ export function RouteCardCarousel({
 
                   {/* Made for you badge */}
                   <View className="flex-row items-center">
-                    <Ionicons name="flame" size={13} color="#FC4C02" />
-                    <AppText className="text-[#FC4C02] text-[11px] font-bold ml-1">
-                      Made for you
+                    <Ionicons name="location-outline" size={13} color="#6B7280" />
+                    <AppText className="text-gray-500 text-[11px] font-medium ml-1" numberOfLines={1}>
+                      {item.locationName || item.sportType}
                     </AppText>
                   </View>
                 </View>

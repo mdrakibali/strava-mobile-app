@@ -16,6 +16,7 @@ import {
   retryDelayMs,
   sealedBatchCount,
   summarizeTrack,
+  routePoints,
   TrackAccumulator,
   TRACKING_CONFIG,
   transition,
@@ -125,6 +126,23 @@ describe('distance, speed, pace, moving time', () => {
     const s = summarizeTrack({ sport: 'Run', points: pts, startedAt: T0, finishedAt: T0 + 300_000, pauses: [] });
     expect(s.distanceM).toBeLessThanOrEqual(20);
     expect(s.movingTimeS).toBeLessThanOrEqual(10);
+  });
+
+  it('does not turn stationary phone jitter with a false walking speed into a route', () => {
+    const pts = stationary({ seconds: 180, jitterM: 12, acc: 12, seed: 11 }).map((p) => ({ ...p, speed: 1.2 }));
+    const s = summarizeTrack({ sport: 'Walk', points: pts, startedAt: T0, finishedAt: T0 + 180_000, pauses: [] });
+    const line = routePoints('Walk', pts);
+    expect(s.distanceM).toBeLessThanOrEqual(25);
+    expect(s.movingTimeS).toBeLessThanOrEqual(15);
+    expect(line.length).toBeLessThanOrEqual(3);
+  });
+
+  it('still follows a real walk when fixes also carry a little position noise', () => {
+    const pts = line({ seconds: 180, speedMps: 1.4, acc: 8, jitterM: 1.5, seed: 4 });
+    const s = summarizeTrack({ sport: 'Walk', points: pts, startedAt: T0, finishedAt: T0 + 180_000, pauses: [] });
+    expect(s.distanceM / 252).toBeGreaterThan(0.85);
+    expect(s.distanceM / 252).toBeLessThan(1.15);
+    expect(routePoints('Walk', pts).length).toBeGreaterThan(8);
   });
 
   it('suppresses drift even without Doppler speed', () => {

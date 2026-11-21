@@ -26,7 +26,7 @@ export const CURATED_DHAKA_ROUTES: CuratedRoute[] = [
   {
     id: 'curated-dhaka-1',
     name: 'Pragati Sarani-আলহাজ্জ আবদুর রহমান সড়ক',
-    subtitle: 'Moderate • 7.3 km • 10.6 m • 1h 2m • From your location • Made for you',
+    subtitle: 'Moderate • 7.3 km • 10.6 m • 1h 2m',
     sportType: 'Run',
     distanceMeters: 7300,
     elevationGainMeters: 11,
@@ -71,7 +71,7 @@ export const CURATED_DHAKA_ROUTES: CuratedRoute[] = [
   {
     id: 'curated-dhaka-2',
     name: 'প্রগতি সরণী-Afroza Begum Road-কুড়িল',
-    subtitle: 'Moderate • 7.2 km • 8.4 m • 1h 4m • From your location • Made for you',
+    subtitle: 'Moderate • 7.2 km • 8.4 m • 1h 4m',
     sportType: 'Run',
     distanceMeters: 7200,
     elevationGainMeters: 8,
@@ -111,7 +111,7 @@ export const CURATED_DHAKA_ROUTES: CuratedRoute[] = [
   {
     id: 'curated-dhaka-3',
     name: 'হাতিরঝিল লেক ওয়াটারফ্রন্ট এক্সপ্রেস লুপ',
-    subtitle: 'Moderate • 8.5 km • 12 m • 50m • From your location • Made for you',
+    subtitle: 'Moderate • 8.5 km • 12 m • 50m',
     sportType: 'Run',
     distanceMeters: 8500,
     elevationGainMeters: 12,
@@ -153,7 +153,7 @@ export const CURATED_DHAKA_ROUTES: CuratedRoute[] = [
   {
     id: 'curated-dhaka-4',
     name: '৩০০ ফিট এক্সপ্রেসওয়ে হাই স্পিড করিডোর (300ft Expressway)',
-    subtitle: 'Moderate • 16.5 km • 15 m • 45m • From your location • Made for you',
+    subtitle: 'Moderate • 16.5 km • 15 m • 45m',
     sportType: 'Ride',
     distanceMeters: 16500,
     elevationGainMeters: 15,
