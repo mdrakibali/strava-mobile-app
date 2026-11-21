@@ -99,6 +99,7 @@ export default function WorkoutTab() {
       </View>
 
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}>
         {active ? (

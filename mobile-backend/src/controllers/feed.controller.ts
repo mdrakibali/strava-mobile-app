@@ -34,6 +34,7 @@ export class FeedController {
         currentUserId: user?.athleteId,
       });
 
+      c.header('Cache-Control', 'no-store, no-cache, must-revalidate');
       return c.json(result);
     } catch (err: any) {
       console.error('Feed controller error:', err);

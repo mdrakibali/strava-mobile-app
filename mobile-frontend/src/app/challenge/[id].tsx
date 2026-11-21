@@ -106,7 +106,7 @@ export default function ChallengeDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-28">
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerClassName="pb-28">
         {/* Badge & Title */}
         <View className="bg-white p-6 items-center border-b border-gray-200">
           <Image

@@ -129,7 +129,7 @@ export default function RouteDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
         {/* Full Interactive Map View */}
         <View className="h-72 w-full bg-stone-100 relative">
           <StravaMapView

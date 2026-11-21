@@ -86,7 +86,7 @@ export const FeedCard = memo(function FeedCard({
     isOwn
       ? Alert.alert(activity.title, 'Activity options', [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Edit Activity', onPress: () => router.push({ pathname: '/activity/[id]', params: { id: activity.id, edit: 'true' } }) },
+          { text: 'Edit Activity', onPress: () => router.push({ pathname: '/activity/edit/[id]', params: { id: activity.id } }) },
           { text: 'Delete Activity', style: 'destructive', onPress: confirmDelete },
           { text: 'Share', onPress: () => shareActivity(activity) },
         ])

@@ -86,7 +86,7 @@ export default function EditActivityScreen() {
         <ErrorState message="This activity can’t be edited." />
       ) : (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
             <TextField value={title} onChangeText={setTitle} placeholder="Title" accessibilityLabel="Activity title" maxLength={100} />
             <View style={{ height: space.md }} />
             <TextField

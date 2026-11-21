@@ -1,26 +1,36 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MapStyleKey, StravaMapView } from '../../components/map/StravaMapView';
 import { useApp } from '../../context/AppContext';
+import { toRoute } from '../../lib/activityView';
+import { api } from '../../services/api';
 
 export default function PersonalHeatmapScreen() {
   const router = useRouter();
-  const { activities } = useApp();
+  const { currentUser } = useApp();
   const [selectedSport, setSelectedSport] = useState<'All' | 'Run' | 'Ride'>('All');
   const [mapStyle, setMapStyle] = useState<MapStyleKey>('liberty');
+  const [userActivities, setUserActivities] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!currentUser.id) return;
+    api.athletes.listActivities(currentUser.id, null, 100).then((res) => {
+      if (res?.activities) setUserActivities(res.activities);
+    }).catch(() => null);
+  }, [currentUser.id]);
 
   // Filter user activities by sport and aggregate all polyline coordinates
-  const filteredActivities = activities.filter((act) => {
+  const filteredActivities = userActivities.filter((act) => {
     if (selectedSport === 'All') return true;
     return act.sportType === selectedSport;
   });
 
   const heatmapCoords: [number, number][] = filteredActivities.flatMap((act) => {
-    if (!act.routePoints || !Array.isArray(act.routePoints)) return [];
-    return act.routePoints.map((p: any) => [p.longitude, p.latitude] as [number, number]);
+    const raw = act.polyline?.length ? act.polyline : act.maskedPolyline;
+    return toRoute(raw);
   });
 
   // No invented default: with no recorded points the map simply shows the empty state below.

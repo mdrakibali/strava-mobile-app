@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React from 'react';
-import { FlatList, Pressable, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FEATURES } from '../config/features';
 import { useApp } from '../context/AppContext';
@@ -18,7 +18,27 @@ const TYPE_ICON: Record<string, { name: keyof typeof Ionicons.glyphMap; tint: st
 /** Notifications (reference: ScreensDesign 374860). */
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { notifications, markNotificationAsRead, markAllNotificationsAsRead, unreadNotificationCount } = useApp();
+  const { notifications, markNotificationAsRead, markAllNotificationsAsRead, unreadNotificationCount, refreshNotifications } = useApp();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refreshNotifications?.();
+    setRefreshing(false);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshNotifications?.();
+    }, [refreshNotifications])
+  );
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      refreshNotifications?.();
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [refreshNotifications]);
 
   const open = (item: NotificationItem) => {
     markNotificationAsRead(item.id);
@@ -44,6 +64,7 @@ export default function NotificationsScreen() {
       <FlatList
         data={notifications}
         keyExtractor={(n) => n.id}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FC4C02" />}
         ItemSeparatorComponent={() => <Divider inset={space.gutter + 48 + space.md} />}
         contentContainerStyle={notifications.length === 0 ? { flexGrow: 1 } : undefined}
         ListEmptyComponent={

@@ -169,6 +169,7 @@ export const fromProfileActivity = (row: any, athlete: AthleteSummary): Activity
   ...base(row, athlete),
   route: toRoute(row.polyline?.length ? row.polyline : row.maskedPolyline?.length ? row.maskedPolyline : row.rawPolyline),
   kudosCount: num(row.kudosCount) ?? 0,
+  hasKudos: typeof row.hasKudos === 'boolean' ? row.hasKudos : Boolean(row.hasKudos),
   commentsCount: num(row.commentsCount) ?? 0,
 });
 

@@ -29,6 +29,7 @@ export interface AppContextType {
   toggleRsvp: (eventId: string, status: 'GOING' | 'MAYBE' | 'DECLINED') => void;
   markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: () => void;
+  refreshNotifications: () => Promise<void>;
   toggleFollowAthlete: (athleteId: string) => void;
   refreshFeed: () => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;

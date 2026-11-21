@@ -51,8 +51,11 @@ export default function HomeFeedScreen() {
 
   /** Fetches page 1 without touching state; callers apply the result. */
   const fetchFirstPage = useCallback(async () => {
-    const res = await api.feed.getFeed('following', undefined, 100);
-    const items = res.feed.map(fromFeedItem).filter(visibleToMe);
+    let res = await api.feed.getFeed('following', undefined, 100);
+    if (!res?.feed?.length) {
+      res = await api.feed.getFeed('all', undefined, 100);
+    }
+    const items = (res?.feed || []).map(fromFeedItem).filter(visibleToMe);
     socialStore.seed(items); // server counts replace any local/optimistic values
     return {
       items,

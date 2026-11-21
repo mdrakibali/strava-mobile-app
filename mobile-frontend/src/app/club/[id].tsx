@@ -80,7 +80,7 @@ export default function ClubDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
         {/* Banner & Club Meta */}
         <Image source={{ uri: club.bannerUrl }} className="w-full h-32 bg-gray-100" />
         <View className="bg-white p-4 border-b border-gray-200">

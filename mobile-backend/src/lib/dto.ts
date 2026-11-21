@@ -38,6 +38,7 @@ export const toActivityListItem = (r: {
   maskedPolyline: unknown;
   kudosCount: number | string;
   commentsCount: number | string;
+  hasKudos?: boolean;
 }) => ({
   id: r.id,
   title: r.title,
@@ -53,6 +54,7 @@ export const toActivityListItem = (r: {
   maxSpeedMps: r.maxSpeedMps != null ? Number(r.maxSpeedMps) : null,
   calories: r.calories,
   polyline: r.maskedPolyline ?? [],
-  kudosCount: Number(r.kudosCount),
-  commentsCount: Number(r.commentsCount),
+  kudosCount: Number(r.kudosCount || 0),
+  commentsCount: Number(r.commentsCount || 0),
+  hasKudos: Boolean(r.hasKudos),
 });

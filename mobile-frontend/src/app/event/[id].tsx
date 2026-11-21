@@ -84,7 +84,7 @@ export default function EventDetailScreen() {
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-white">
       <AppBar title="Event" />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 64 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 64 }}>
         <AppText variant="label" color="brandText" style={{ fontWeight: '700' }}>
           {when.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} ·{' '}
           {when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}

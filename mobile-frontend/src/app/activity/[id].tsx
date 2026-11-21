@@ -120,7 +120,7 @@ export default function ActivityDetailScreen() {
   return (
     <View className="flex-1 bg-white">
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 80 }} keyboardShouldPersistTaps="handled">
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: insets.bottom + 80 }} keyboardShouldPersistTaps="handled">
           {hasMap ? (
             <View style={{ height: mapHeight }}>
               <MapView mode="route" route={activity.route} padding={{ top: insets.top, bottom: 24 }} />

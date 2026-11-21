@@ -37,6 +37,8 @@ export default function MessagesInboxScreen() {
 
   useEffect(() => {
     fetchConversations();
+    const interval = setInterval(fetchConversations, 3500);
+    return () => clearInterval(interval);
   }, []);
 
   useFocusEffect(

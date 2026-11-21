@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { recordingEngine } from '../tracking/engine';
 import { syncWorker } from '../tracking/sync';
 import { api, setAuthToken } from '../services/api';
@@ -445,6 +445,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     api.notifications.markRead(notificationId).catch(console.warn);
   };
 
+  const refreshNotifications = useCallback(async () => {
+    try {
+      const notifRes = await api.notifications.list().catch(() => null);
+      if (notifRes?.notifications) {
+        setNotifications(
+          notifRes.notifications.map((n: any) => ({
+            id: n.id,
+            actionType: (n.actionType?.toUpperCase() || 'KUDOS') as any,
+            actor: {
+              id: n.actor?.id || 'ath_unknown',
+              displayName: n.actor?.displayName || 'Athlete',
+              username: n.actor?.username || 'athlete',
+              avatarUrl: n.actor?.avatarUrl || '',
+              city: '',
+              country: '',
+              followersCount: 0,
+              followingCount: 0,
+            },
+            message: n.message,
+            targetActivityId: n.targetActivityId,
+            timeAgo: formatRelative(n.createdAt),
+            isRead: n.isRead,
+          }))
+        );
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const interval = setInterval(refreshNotifications, 8000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, refreshNotifications]);
+
   const markAllNotificationsAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     api.notifications.markAllRead().catch(console.warn);
@@ -474,6 +508,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleRsvp,
         markNotificationAsRead,
         markAllNotificationsAsRead,
+        refreshNotifications,
         refreshFeed,
         loginWithEmail,
         registerWithEmail,

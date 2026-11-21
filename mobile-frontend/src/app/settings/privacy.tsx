@@ -107,7 +107,7 @@ export default function PrivacyZonesScreen() {
           }}
         />
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
           <AppText variant="body" color="inkSecondary">
             Parts of your route inside a privacy zone are hidden from other athletes on activities you upload
             from now on.

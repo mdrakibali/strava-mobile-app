@@ -89,8 +89,11 @@ export class ActivityRepository {
         maxSpeedMps: activities.maxSpeedMps,
         calories: activities.calories,
         maskedPolyline: activities.maskedPolyline,
-        kudosCount: sql<number>`(select count(*) from ${kudos} where ${kudos.activityId} = ${activities.id})`,
-        commentsCount: sql<number>`(select count(*) from ${comments} where ${comments.activityId} = ${activities.id})`,
+        kudosCount: sql<number>`(select count(*) from ${kudos} where ${kudos.activityId} = ${activities.id})`.as('kudosCount'),
+        commentsCount: sql<number>`(select count(*) from ${comments} where ${comments.activityId} = ${activities.id})`.as('commentsCount'),
+        hasKudos: viewerId
+          ? sql<boolean>`exists (select 1 from ${kudos} where ${kudos.activityId} = ${activities.id} and ${kudos.athleteId} = ${viewerId})`.as('hasKudos')
+          : sql<boolean>`false`.as('hasKudos'),
       })
       .from(activities)
       .where(and(...conditions))
