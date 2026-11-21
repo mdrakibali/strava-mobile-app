@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedCard, FeedCardSkeleton } from '../../components/activity/FeedCard';
+import { HomeHeader } from '../../components/home/HomeHeader';
 import { EmptyState, ErrorState } from '../../design';
 import { useApp } from '../../context/AppContext';
 import { APP_NAME } from '../../config/app';
@@ -129,12 +130,21 @@ export default function HomeFeedScreen() {
     }
   };
 
-  // Fresh data whenever Home is shown again (after saving, following someone, commenting…),
-  // without a loading flash. Throttled so quick tab switches don't hammer the API.
+  // Fresh data whenever Home is shown again (after saving, following someone, commenting, deleting…),
+  // without a loading flash.
   useFocusEffect(
     useCallback(() => {
-      if (lastLoadedAt.current && Date.now() - lastLoadedAt.current > 10_000) setReloadKey((k) => k + 1);
-    }, [])
+      fetchFirstPage()
+        .then((page) => {
+          generation.current++;
+          lastLoadedAt.current = Date.now();
+          cursorRef.current = page.cursor;
+          hasNextRef.current = page.hasNext;
+          setItems(page.items);
+          setStatus('ready');
+        })
+        .catch(() => {});
+    }, [fetchFirstPage])
   );
 
   // An activity just finished uploading → show it.
@@ -144,29 +154,6 @@ export default function HomeFeedScreen() {
     if (pendingCount < prevPending.current) setReloadKey((k) => k + 1);
     prevPending.current = pendingCount;
   }, [pendingCount]);
-
-  const header = (
-    <View className="px-5 pt-3 pb-2 bg-white border-b border-gray-100 flex-row items-center justify-between">
-      <Text className="text-2xl font-black text-black tracking-tight">{APP_NAME}</Text>
-      <View className="flex-row items-center space-x-2">
-        <TouchableOpacity onPress={() => router.push('/record')} className="p-2">
-          <Ionicons name="add" size={26} color="#1F2937" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push('/messages')} className="p-2">
-          <Ionicons name="chatbubbles-outline" size={22} color="#1F2937" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push('/search')} className="p-2">
-          <Ionicons name="search-outline" size={22} color="#1F2937" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push('/notifications')} className="p-2 relative">
-          <Ionicons name="notifications-outline" size={22} color="#1F2937" />
-          {unreadNotificationCount > 0 ? (
-            <View className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FC4C02] rounded-full" />
-          ) : null}
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
 
   // Saved on the phone but not yet confirmed by the server (local-first; never silently dropped).
   const uploadsBanner =
@@ -209,7 +196,13 @@ export default function HomeFeedScreen() {
       <FlatList
         data={items}
         keyExtractor={(a) => a.id}
-        renderItem={({ item }) => <FeedCard activity={item} currentUserId={currentUser.id} />}
+        renderItem={({ item }) => (
+          <FeedCard
+            activity={item}
+            currentUserId={currentUser.id}
+            onDelete={(id) => setItems((prev) => prev.filter((a) => a.id !== id))}
+          />
+        )}
         onEndReached={onEndReached}
         onEndReachedThreshold={0.6}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />}
@@ -240,7 +233,7 @@ export default function HomeFeedScreen() {
 
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-[#F7F7F8]">
-      {header}
+      <HomeHeader unreadNotificationCount={unreadNotificationCount} />
       {uploadsBanner}
       {body}
     </SafeAreaView>

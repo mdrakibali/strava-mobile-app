@@ -28,6 +28,8 @@ interface FeedCardProps {
   currentUserId?: string;
   /** Hide the athlete row (e.g. on a profile where every item is the same athlete). */
   showAthlete?: boolean;
+  /** Optional callback fired immediately when activity is deleted. */
+  onDelete?: (id: string) => void;
 }
 
 /** Feed card (reference: ScreensDesign 374837). Title → 3 stats → route → social. */
@@ -35,6 +37,7 @@ export const FeedCard = memo(function FeedCard({
   activity,
   currentUserId,
   showAthlete = true,
+  onDelete,
 }: FeedCardProps) {
   const router = useRouter();
   const sport = sportConfig(activity.sportType);
@@ -76,7 +79,7 @@ export const FeedCard = memo(function FeedCard({
         onPress: async () => {
           try {
             await api.activities.remove(activity.id);
-            router.replace('/(tabs)');
+            onDelete?.(activity.id);
           } catch (e: any) {
             Alert.alert('Could not delete', e?.message || 'Try again.');
           }

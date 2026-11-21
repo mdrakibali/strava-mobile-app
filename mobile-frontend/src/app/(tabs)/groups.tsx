@@ -56,7 +56,6 @@ export default function GroupsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (loadedAt.current && Date.now() - loadedAt.current < 10_000) return;
       let cancelled = false;
       load().then(
         () => !cancelled && setStatus('ready'),
