@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import { athletes, clubs, eventRsvps, groupEvents } from '../db/schema';
 import { z } from 'zod';
 import { getDb } from '../lib/db';
-import { parseBody } from '../lib/http';
+import { HttpError, notFound, parseBody } from '../lib/http';
 import { optionalAuth, requireAuth } from '../middleware/auth';
 import { Env } from '../types';
 
@@ -40,12 +40,13 @@ eventsRouter.get('/', optionalAuth, async (c) => {
       .leftJoin(athletes, eq(groupEvents.creatorId, athletes.id))
       .orderBy(desc(groupEvents.eventDate));
 
-    // Get RSVP counts for all events
-    const allRsvps = await db.select().from(eventRsvps).where(eq(eventRsvps.status, 'GOING'));
-    const rsvpCountMap = new Map<string, number>();
-    for (const r of allRsvps) {
-      rsvpCountMap.set(r.eventId, (rsvpCountMap.get(r.eventId) || 0) + 1);
-    }
+    // GOING counts per event, aggregated in the database.
+    const goingRows = await db
+      .select({ eventId: eventRsvps.eventId, n: sql<number>`count(*)::int` })
+      .from(eventRsvps)
+      .where(eq(eventRsvps.status, 'GOING'))
+      .groupBy(eventRsvps.eventId);
+    const rsvpCountMap = new Map(goingRows.map((r) => [r.eventId, Number(r.n)]));
 
     // The viewer's own RSVP per event (was always null before).
     const viewer = c.get('user')?.athleteId;
@@ -57,7 +58,7 @@ eventsRouter.get('/', optionalAuth, async (c) => {
       return {
         id: e.id,
         title: e.title,
-        clubName: e.club?.name || 'Community Club',
+        clubName: e.club?.name ?? null,
         sportType: e.sportType,
         dateFormatted: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
         timeFormatted: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
@@ -66,7 +67,7 @@ eventsRouter.get('/', optionalAuth, async (c) => {
         eventDate: e.eventDate,
         attendeesCount: rsvpCountMap.get(e.id) || 0,
         rsvpStatus: myStatus.get(e.id) ?? null,
-        paceDescription: e.paceDescription || 'All paces welcome',
+        paceDescription: e.paceDescription ?? null,
       };
     });
 
@@ -137,50 +138,43 @@ eventsRouter.get('/:id', optionalAuth, async (c) => {
   }
 });
 
-// POST /api/v1/events/:id/rsvp
+// POST /api/v1/events/:id/rsvp   body: { status: 'GOING' | 'MAYBE' | 'DECLINED' }
+// DECLINED removes the RSVP. The call is idempotent: repeating it never changes the count again.
+const rsvpSchema = z.object({ status: z.enum(['GOING', 'MAYBE', 'DECLINED']).default('GOING') });
+
 eventsRouter.post('/:id/rsvp', requireAuth, async (c) => {
-  try {
-    const user = c.get('user');
-    const eventId = c.req.param('id');
-    if (!eventId) {
-      return c.json({ error: 'Event ID is required' }, 400);
-    }
-    const { status = 'GOING' } = await c.req.json().catch(() => ({}));
+  const user = c.get('user');
+  const eventId = c.req.param('id') ?? '';
+  const { status } = await parseBody(c, rsvpSchema);
+  const db = getDb(c);
 
-    const db = getDb(c);
+  const [event] = await db.select({ id: groupEvents.id }).from(groupEvents).where(eq(groupEvents.id, eventId)).limit(1);
+  if (!event) throw notFound('Event');
 
-    const goingCount = async () => {
-      const [res] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(eventRsvps)
-        .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.status, 'GOING')));
-      return Number(res?.count || 0);
-    };
+  const goingCount = async () => {
+    const [res] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(eventRsvps)
+      .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.status, 'GOING')));
+    return Number(res?.count || 0);
+  };
 
-    if (status === 'DECLINED') {
-      await db
-        .delete(eventRsvps)
-        .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.athleteId, user.athleteId)));
-      return c.json({ message: 'RSVP removed', status: null, attendeesCount: await goingCount() });
-    }
-
-    await db
-      .insert(eventRsvps)
-      .values({
-        eventId,
-        athleteId: user.athleteId,
-        status,
-      })
-      .onConflictDoUpdate({
-        target: [eventRsvps.eventId, eventRsvps.athleteId],
-        set: { status },
-      });
-    return c.json({ message: 'RSVP recorded', status, attendeesCount: await goingCount() });
-  } catch (err: any) {
-    console.error('RSVP error:', err);
-    return c.json({ error: err.message || 'Failed to record RSVP' }, 500);
+  if (status === 'DECLINED') {
+    await db.delete(eventRsvps).where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.athleteId, user.athleteId)));
+    return c.json({ message: 'RSVP removed', status: null, attendeesCount: await goingCount() });
   }
+
+  await db
+    .insert(eventRsvps)
+    .values({ eventId, athleteId: user.athleteId, status })
+    .onConflictDoUpdate({ target: [eventRsvps.eventId, eventRsvps.athleteId], set: { status } });
+  return c.json({ message: 'RSVP recorded', status, attendeesCount: await goingCount() });
 });
+
+const assertClubExists = async (db: ReturnType<typeof getDb>, clubId: string) => {
+  const [club] = await db.select({ id: clubs.id }).from(clubs).where(eq(clubs.id, clubId)).limit(1);
+  if (!club) throw new HttpError(400, 'validation_failed', 'That club does not exist');
+};
 
 const createEventSchema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -197,6 +191,7 @@ eventsRouter.post('/', requireAuth, async (c) => {
   const body = await parseBody(c, createEventSchema);
   const db = getDb(c);
   const user = c.get('user');
+  if (body.clubId) await assertClubExists(db, body.clubId);
   const id = `evt_${crypto.randomUUID()}`;
   const [event] = await db
     .insert(groupEvents)
@@ -214,4 +209,52 @@ eventsRouter.post('/', requireAuth, async (c) => {
     .returning();
   await db.insert(eventRsvps).values({ eventId: id, athleteId: user.athleteId, status: 'GOING' }).onConflictDoNothing();
   return c.json({ message: 'Event created', event }, 201);
+});
+
+const updateEventSchema = z
+  .object({
+    title: z.string().trim().min(1).max(120),
+    sportType: z.string().trim().min(1).max(50),
+    eventDate: z.string().datetime({ offset: true }),
+    meetingPoint: z.string().trim().min(1).max(200),
+    paceDescription: z.string().trim().max(200).nullable(),
+    distanceMeters: z.number().finite().min(0).max(1_000_000).nullable(),
+  })
+  .partial();
+
+const loadOwnedEvent = async (db: ReturnType<typeof getDb>, eventId: string, athleteId: string) => {
+  const [event] = await db.select().from(groupEvents).where(eq(groupEvents.id, eventId)).limit(1);
+  if (!event) throw notFound('Event');
+  if (event.creatorId !== athleteId) throw new HttpError(403, 'forbidden', 'Only the event creator can change this event');
+  return event;
+};
+
+// PATCH /events/:id — creator only
+eventsRouter.patch('/:id', requireAuth, async (c) => {
+  const body = await parseBody(c, updateEventSchema);
+  const db = getDb(c);
+  const eventId = c.req.param('id') ?? '';
+  await loadOwnedEvent(db, eventId, c.get('user').athleteId);
+
+  const values: Partial<typeof groupEvents.$inferInsert> = {};
+  if (body.title !== undefined) values.title = body.title;
+  if (body.sportType !== undefined) values.sportType = body.sportType;
+  if (body.eventDate !== undefined) values.eventDate = new Date(body.eventDate);
+  if (body.meetingPoint !== undefined) values.meetingPoint = body.meetingPoint;
+  if (body.paceDescription !== undefined) values.paceDescription = body.paceDescription;
+  if (body.distanceMeters !== undefined) values.distanceMeters = body.distanceMeters === null ? null : body.distanceMeters.toFixed(2);
+
+  const [event] = Object.keys(values).length
+    ? await db.update(groupEvents).set(values).where(eq(groupEvents.id, eventId)).returning()
+    : await db.select().from(groupEvents).where(eq(groupEvents.id, eventId));
+  return c.json({ message: 'Event updated', event });
+});
+
+// DELETE /events/:id — creator only; RSVPs go with it (ON DELETE CASCADE)
+eventsRouter.delete('/:id', requireAuth, async (c) => {
+  const db = getDb(c);
+  const eventId = c.req.param('id') ?? '';
+  await loadOwnedEvent(db, eventId, c.get('user').athleteId);
+  await db.delete(groupEvents).where(eq(groupEvents.id, eventId));
+  return c.json({ message: 'Event deleted' });
 });

@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { Avatar } from '../../design';
-import { kmValue } from '../../lib/format';
+import { formatEventWhen, kmValue } from '../../lib/format';
 import { sportConfig } from '../../lib/sports';
 
 export function GroupsTabContent({
@@ -134,9 +134,9 @@ export function GroupsTabContent({
     <>
       {list.map((e: any) => (
         <Pressable key={e.id} onPress={() => router.push(`/event/${e.id}`)} className="bg-white rounded-2xl p-4 mb-3 border border-gray-200 shadow-sm">
-          <Text className="text-xs font-bold text-[#FC4C02]">{e.dateFormatted} · {e.timeFormatted}</Text>
+          <Text className="text-xs font-bold text-[#FC4C02]">{formatEventWhen(e.eventDate)}</Text>
           <Text className="text-base font-black text-gray-900 mt-1">{e.title}</Text>
-          <Text className="text-xs text-gray-500 mt-0.5">{e.clubName} · {sportConfig(e.sportType).label}{e.distanceMeters ? ` · ${kmValue(e.distanceMeters)} km` : ''}</Text>
+          <Text className="text-xs text-gray-500 mt-0.5">{e.clubName ? `${e.clubName} · ` : ''}{sportConfig(e.sportType).label}{e.distanceMeters ? ` · ${kmValue(e.distanceMeters)} km` : ''}</Text>
           <View className="flex-row items-center mt-2 pt-2 border-t border-gray-100">
             <Ionicons name="location-outline" size={14} color="#6B7280" />
             <Text className="text-xs text-gray-600 ml-1 flex-1" numberOfLines={1}>{e.meetingPoint}</Text>

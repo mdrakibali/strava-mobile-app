@@ -5,23 +5,16 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StravaMapView } from '../../components/map/StravaMapView';
-import { useApp } from '../../context/AppContext';
+import { etaMinutes, OFF_ROUTE_METERS, routeProgress } from '../../lib/routeProgress';
 import { api } from '../../services/api';
 
 export default function RouteNavigationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ routeId?: string }>();
-  const { activities } = useApp();
-  
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
-  const [distanceRemainingMeters, setDistanceRemainingMeters] = useState(5000);
-  const [distanceToTurnMeters, setDistanceToTurnMeters] = useState(120);
   const [currentSpeedKmh, setCurrentSpeedKmh] = useState(0);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [serverRoute, setServerRoute] = useState<any>(null);
-
-  // Pick route from activities or server
-  const activityRoute = activities.find((a) => a.id === params.routeId);
 
   useEffect(() => {
     if (params.routeId) {
@@ -31,9 +24,9 @@ export default function RouteNavigationScreen() {
     }
   }, [params.routeId]);
 
-  const routeName = serverRoute?.name || activityRoute?.title || 'Selected Route';
-  const routeDistance = serverRoute?.distanceMeters || activityRoute?.distanceMeters || 5000;
-  const activePoints = serverRoute?.polylinePoints || activityRoute?.routePoints || [];
+  const routeName = serverRoute?.name || 'Selected route';
+  const routeDistance = Number(serverRoute?.distanceMeters) || 0;
+  const activePoints = serverRoute?.polylinePoints || [];
   const routeCoords = activePoints.map((p: any) =>
     Array.isArray(p) ? p : ([p.longitude, p.latitude] as [number, number])
   );
@@ -66,16 +59,9 @@ export default function RouteNavigationScreen() {
       }
     })();
 
-    // Simulated progress countdown if stationary or testing
-    const interval = setInterval(() => {
-      setDistanceToTurnMeters((prev) => (prev > 10 ? prev - 5 : 250));
-      setDistanceRemainingMeters((prev) => Math.max(0, prev - 5));
-    }, 1000);
-
     return () => {
       isMounted = false;
       if (sub) sub.remove();
-      clearInterval(interval);
     };
   }, []);
 
@@ -100,8 +86,13 @@ export default function RouteNavigationScreen() {
     );
   };
 
-  const distKm = (distanceRemainingMeters / 1000).toFixed(1);
-  const estMins = Math.round((distanceRemainingMeters / 1000) * 4.8);
+  // Everything below comes from the real GPS fix and the route line. No fix means no numbers.
+  const progress = routeProgress(routeCoords, userLocation);
+  const distKm = progress ? (progress.remainingMeters / 1000).toFixed(1) : '--';
+  const eta = progress ? etaMinutes(progress.remainingMeters, currentSpeedKmh / 3.6) : null;
+  const estMins = eta == null ? '--' : String(eta);
+  const gpsLabel = !progress ? 'Waiting for GPS' : progress.onRoute ? 'On route' : `Off route (>${OFF_ROUTE_METERS} m)`;
+  const gpsColor = !progress ? 'text-gray-400' : progress.onRoute ? 'text-emerald-400' : 'text-amber-400';
 
   return (
     <View style={{ flex: 1 }} className="bg-stone-950 relative">
@@ -126,9 +117,9 @@ export default function RouteNavigationScreen() {
                 </TouchableOpacity>
 
                 <View className="flex-1">
-                  <Text className="text-xl font-black text-white">In {distanceToTurnMeters}m</Text>
+                  <Text className="text-xl font-black text-white" numberOfLines={1}>{routeName}</Text>
                   <Text className="text-xs font-semibold text-gray-300" numberOfLines={1}>
-                    Turn Right onto {routeName}
+                    {progress ? `${distKm} km to the finish` : 'Waiting for GPS'}
                   </Text>
                 </View>
               </View>
@@ -146,10 +137,10 @@ export default function RouteNavigationScreen() {
 
             <View className="flex-row items-center pt-2.5 border-t border-stone-800 justify-between">
               <View className="flex-row items-center">
-                <View className="w-2 h-2 rounded-full bg-emerald-400 mr-1.5" />
-                <Text className="text-[11px] font-bold text-emerald-400">GPS On Course</Text>
+                <View className={`w-2 h-2 rounded-full mr-1.5 ${!progress ? 'bg-gray-500' : progress.onRoute ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                <Text className={`text-[11px] font-bold ${gpsColor}`}>{gpsLabel}</Text>
               </View>
-              <Text className="text-[11px] font-bold text-gray-400">Target: {(routeDistance / 1000).toFixed(1)} km</Text>
+              <Text className="text-[11px] font-bold text-gray-400">{routeDistance > 0 ? `Route: ${(routeDistance / 1000).toFixed(1)} km` : ''}</Text>
             </View>
           </View>
         </SafeAreaView>

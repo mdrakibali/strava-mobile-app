@@ -85,6 +85,23 @@ export class ChallengeRepository {
     return created;
   }
 
+  async update(id: string, values: Partial<typeof challenges.$inferInsert>) {
+    const [updated] = await this.db.update(challenges).set(values).where(eq(challenges.id, id)).returning();
+    return updated;
+  }
+
+  async delete(id: string) {
+    await this.db.delete(challenges).where(eq(challenges.id, id));
+  }
+
+  async resyncParticipants(challengeId: string) {
+    const rows = await this.db
+      .select({ athleteId: challengeParticipants.athleteId })
+      .from(challengeParticipants)
+      .where(eq(challengeParticipants.challengeId, challengeId));
+    for (const r of rows) await syncChallengeProgress(this.db, r.athleteId);
+  }
+
   async getParticipantCount(challengeId: string): Promise<number> {
     const [res] = await this.db
       .select({ count: sql<number>`count(*)` })

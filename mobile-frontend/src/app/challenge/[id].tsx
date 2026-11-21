@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,21 +18,25 @@ import { api } from '../../services/api';
 export default function ChallengeDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { challenges, currentUser } = useApp();
+  const { currentUser } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [joining, setJoining] = useState(false);
   const [serverChallenge, setServerChallenge] = useState<any>(null);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
-  const localChallenge = challenges.find((c) => c.id === id) || challenges[0];
-  const challenge = serverChallenge || localChallenge;
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadNonce, setReloadNonce] = useState(0);
+  // The server copy is the only source: never fall back to some other challenge from a list.
+  const challenge = serverChallenge;
 
-  useEffect(() => {
+  useFocusEffect(
+    useCallback(() => {
     let isMounted = true;
     if (!id) return;
 
     const fetchChallenge = async () => {
       setIsLoading(true);
+      setLoadError(null);
       try {
         const res = await api.challenges.get(id);
         if (isMounted && res) {
@@ -48,15 +52,16 @@ export default function ChallengeDetailScreen() {
               isJoined: Boolean(res.challenge.isJoined),
               currentMeters: res.challenge.userProgress ? res.challenge.userProgress.currentMeters : 0,
               isCompleted: res.challenge.userProgress ? res.challenge.userProgress.isCompleted : false,
-              daysRemaining: res.challenge.daysRemaining || 10,
+              daysRemaining: Number(res.challenge.daysRemaining) || 0,
             });
           }
           if (res.leaderboard) {
             setLeaderboard(res.leaderboard);
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('Failed to load challenge detail from API:', err);
+        if (isMounted) setLoadError(err?.message ?? 'Could not load this challenge.');
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -66,20 +71,35 @@ export default function ChallengeDetailScreen() {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+    // reloadNonce only re-triggers the fetch (Retry button)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, reloadNonce])
+  );
 
   if (!challenge) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color="#FC4C02" />
-        <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 8 }}>Loading challenge...</Text>
+        {loadError ? (
+          <>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#111827' }}>Couldn’t load this challenge</Text>
+            <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>{loadError}</Text>
+            <TouchableOpacity onPress={() => setReloadNonce((n) => n + 1)} className="mt-3 px-5 py-2.5">
+              <Text style={{ color: '#FC4C02', fontWeight: '700' }}>Retry</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <ActivityIndicator size="large" color="#FC4C02" />
+            <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 8 }}>Loading challenge...</Text>
+          </>
+        )}
       </SafeAreaView>
     );
   }
 
-  const targetKm = (challenge.targetMeters || 50000) / 1000;
-  const currentKm = (challenge.currentMeters || 0) / 1000;
-  const progressPercent = Math.min(100, Math.round((currentKm / targetKm) * 100));
+  const targetKm = (Number(challenge.targetMeters) || 0) / 1000;
+  const currentKm = (Number(challenge.currentMeters) || 0) / 1000;
+  const progressPercent = targetKm > 0 ? Math.min(100, Math.round((currentKm / targetKm) * 100)) : 0;
 
   const handleToggleJoin = async () => {
     if (joining) return;
@@ -95,7 +115,7 @@ export default function ChallengeDetailScreen() {
       participantsCount: Math.max(0, before.participantsCount + (want ? 1 : -1)),
     }));
     try {
-      const res = await api.challenges.join(challenge.id);
+      const res = await api.challenges.join(challenge.id, want);
       setServerChallenge((prev: any) => ({
         ...(prev || challenge),
         isJoined: Boolean(res.isJoined),

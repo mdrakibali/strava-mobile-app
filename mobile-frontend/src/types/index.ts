@@ -147,7 +147,7 @@ export interface Challenge {
 export interface GroupEvent {
   id: string;
   title: string;
-  clubName: string;
+  clubName: string | null;
   sportType: SportType;
   dateFormatted: string;
   timeFormatted: string;
@@ -155,7 +155,7 @@ export interface GroupEvent {
   distanceMeters: number;
   attendeesCount: number;
   rsvpStatus: 'GOING' | 'MAYBE' | 'DECLINED' | null;
-  paceDescription: string;
+  paceDescription: string | null;
 }
 
 export interface NotificationItem {

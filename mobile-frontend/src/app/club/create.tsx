@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { FormScreen } from '../../components/forms/FormScreen';
 import { useApp } from '../../context/AppContext';
@@ -9,6 +9,7 @@ import { api } from '../../services/api';
 
 export default function CreateClubScreen() {
   const router = useRouter();
+  const { editId } = useLocalSearchParams<{ editId?: string }>();
   const { refreshFeed } = useApp();
   const [name, setName] = useState('');
   const [sportType, setSportType] = useState('Run');
@@ -17,6 +18,26 @@ export default function CreateClubScreen() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Edit mode: prefill from the server copy, never from a list.
+  useEffect(() => {
+    if (!editId) return;
+    let cancelled = false;
+    api.clubs.get(editId).then(
+      (res) => {
+        if (cancelled || !res?.club) return;
+        setName(res.club.name ?? '');
+        setSportType(res.club.sportType ?? 'Run');
+        setCity(res.club.city ?? '');
+        setDescription(res.club.description ?? '');
+        setIsPrivate(Boolean(res.club.isPrivate));
+      },
+      (e: any) => !cancelled && setError(e?.message ?? 'Could not load the club.')
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [editId]);
 
   const submit = async () => {
     if (!name.trim() || name.trim().length < 2) {
@@ -27,6 +48,17 @@ export default function CreateClubScreen() {
     setSaving(true);
     setError(null);
     try {
+      if (editId) {
+        await api.clubs.update(editId, {
+          name: name.trim(),
+          sportType,
+          city: city.trim() || null,
+          description: description.trim() || null,
+          isPrivate,
+        });
+        router.back();
+        return;
+      }
       const res = await api.clubs.create({
         name: name.trim(),
         sportType,
@@ -44,8 +76,8 @@ export default function CreateClubScreen() {
 
   return (
     <FormScreen
-      title="Create Club"
-      submitLabel="Create Club"
+      title={editId ? 'Edit Club' : 'Create Club'}
+      submitLabel={editId ? 'Save changes' : 'Create Club'}
       canSubmit={name.trim().length > 1}
       submitting={saving}
       error={error}

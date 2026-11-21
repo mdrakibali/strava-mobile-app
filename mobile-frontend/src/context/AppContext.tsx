@@ -1,19 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { recordingEngine } from '../tracking/engine';
 import { syncWorker } from '../tracking/sync';
-import { api, setAuthToken } from '../services/api';
-import {
-  Activity,
-  Athlete,
-  Challenge,
-  Club,
-  GroupEvent,
-  NotificationItem,
-  Segment,
-} from '../types';
-import { FEATURES } from '../config/features';
+import { api, setAuthToken, setUnauthorizedHandler } from '../services/api';
+import { Athlete, NotificationItem } from '../types';
 import { formatRelative } from '../lib/format';
+import { resetSessionOverlays } from '../lib/sessionReset';
 import { realtimeWs } from '../services/websocket';
 import { AppContextType } from './appContextTypes';
 
@@ -39,11 +31,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentUser, setCurrentUser] = useState<Athlete>(INITIAL_ATHLETE);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [clubs, setClubs] = useState<Club[]>([]);
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [events, setEvents] = useState<GroupEvent[]>([]);
-  const [segments, setSegments] = useState<Segment[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isSyncing, setIsSyncing] = useState<boolean>(true);
 
@@ -68,107 +55,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (id) recordingEngine.load(true).catch((e) => console.warn('recording recovery failed', e));
   }, [isAuthenticated, currentUser.id, currentUser.displayName, currentUser.username, currentUser.avatarUrl, currentUser.city]);
 
-  // Helper: map backend club format
-  const mapBackendClub = (item: any): Club => ({
-    id: item.id,
-    name: item.name,
-    sportType: item.sportType,
-    city: item.city || '',
-    description: item.description || '',
-    avatarUrl: item.avatarUrl,
-    bannerUrl: item.bannerUrl,
-    memberCount: Number(item.memberCount ?? item.membersCount) || 0,
-    isMember: Boolean(item.isMember),
-    // Not provided by the list endpoint — 0, never an invented number.
-    weeklyDistanceMeters: Number(item.weeklyDistanceMeters) || 0,
-    weeklyActivitiesCount: Number(item.weeklyActivitiesCount) || 0,
-  });
-
-  // Helper: map backend challenge format
-  const mapBackendChallenge = (item: any): Challenge => ({
-    id: item.id,
-    title: item.title,
-    description: item.description || '',
-    sportType: item.sportType,
-    targetMeters: item.targetMeters,
-    badgeUrl: item.badgeUrl,
-    participantsCount: item.participantsCount || 0,
-    isJoined: Boolean(item.isJoined),
-    currentMeters: item.currentMeters || 0,
-    isCompleted: Boolean(item.isCompleted),
-    daysRemaining: Number(item.daysRemaining) || 0,
-  });
-
-  // Load data from Neon PostgreSQL via Cloudflare Workers
+  // The home feed, profile, activity, club, challenge and event screens load their own data
+  // (paginated, with error states). App-wide state is only the session and notifications.
   const loadFeedData = async () => {
     setIsSyncing(true);
     try {
-      // The home feed, profile and activity screens load their own data (paginated, with
-      // error states). Here we only load app-wide data: notifications, plus out-of-scope
-      // modules when their feature flag is on (ADR-15).
-      if (FEATURES.groups) {
-        const clubsRes = await api.clubs.list().catch(() => null);
-        if (clubsRes?.clubs) {
-          setClubs(clubsRes.clubs.map(mapBackendClub));
-        }
-        const chRes = await api.challenges.list().catch(() => null);
-        if (chRes?.challenges) {
-          setChallenges(chRes.challenges.map(mapBackendChallenge));
-        }
-      }
-
-      // 4. Fetch REAL notifications from Database
-      const notifRes = await api.notifications.list().catch(() => null);
-      if (notifRes?.notifications) {
-        setNotifications(
-          notifRes.notifications.map((n: any) => ({
-            id: n.id,
-            actionType: (n.actionType?.toUpperCase() || 'KUDOS') as any,
-            actor: {
-              id: n.actor?.id || 'ath_unknown',
-              displayName: n.actor?.displayName || 'Athlete',
-              username: n.actor?.username || 'athlete',
-              avatarUrl: n.actor?.avatarUrl || '',
-              city: '',
-              country: '',
-              followersCount: 0,
-              followingCount: 0,
-            },
-            message: n.message,
-            targetActivityId: n.targetActivityId,
-            timeAgo: formatRelative(n.createdAt),
-            isRead: n.isRead,
-          }))
-        );
-      }
-
-      if (!FEATURES.groups && !FEATURES.explore) return;
-
-      const eventsRes = await api.events.list().catch(() => null);
-      if (eventsRes?.events && eventsRes.events.length > 0) {
-        setEvents(eventsRes.events);
-      }
-
-      const segRes = await api.segments.list().catch(() => null);
-      if (segRes?.segments && segRes.segments.length > 0) {
-        setSegments(
-          segRes.segments.map((s: any) => ({
-            id: s.id,
-            name: s.name,
-            sportType: s.sportType,
-            distanceMeters: Number(s.distanceMeters || 1000),
-            averageGradePercent: Number(s.averageGradePercent || 1.0),
-            elevationGainMeters: s.elevationGainMeters || 10,
-            polylinePoints: s.polylinePoints || [],
-            komAthleteName: 'Community Leader',
-            komTimeFormatted: '3:20',
-            userPrTimeFormatted: undefined,
-            rank: 1,
-          }))
-        );
-      }
-    } catch (err) {
-      console.warn('Backend sync failed:', err);
+      await refreshNotifications();
     } finally {
       setIsSyncing(false);
     }
@@ -208,33 +100,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await loadFeedData();
   };
 
+  /** Single place where a session starts. Clears the previous account's local state first. */
+  const startSession = async (res: { token?: string; athlete?: any } | undefined) => {
+    if (!res?.token || !res?.athlete) return;
+    const athleteProfile: Athlete = {
+      id: res.athlete.id,
+      displayName: res.athlete.displayName,
+      username: res.athlete.username,
+      avatarUrl: res.athlete.avatarUrl,
+      city: res.athlete.city || '',
+      country: res.athlete.country || '',
+      bio: res.athlete.bio || '',
+      followersCount: res.athlete.followersCount || 0,
+      followingCount: res.athlete.followingCount || 0,
+      isFollowing: false,
+    };
+
+    resetSessionOverlays();
+    setNotifications([]);
+    await AsyncStorage.setItem('@open_strava_token', res.token);
+    await AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(athleteProfile));
+
+    setAuthToken(res.token);
+    setCurrentUser(athleteProfile);
+    setIsAuthenticated(true);
+    realtimeWs.init(res.token);
+    await loadFeedData();
+  };
+
   const loginWithEmail = async (email: string, password: string) => {
     setIsSyncing(true);
     try {
-      const res = await api.auth.login(email, password);
-      if (res?.token && res?.athlete) {
-        const athleteProfile: Athlete = {
-          id: res.athlete.id,
-          displayName: res.athlete.displayName,
-          username: res.athlete.username,
-          avatarUrl: res.athlete.avatarUrl,
-          city: res.athlete.city || '',
-          country: res.athlete.country || '',
-          bio: res.athlete.bio || '',
-          followersCount: res.athlete.followersCount || 0,
-          followingCount: res.athlete.followingCount || 0,
-          isFollowing: false,
-        };
-
-        await AsyncStorage.setItem('@open_strava_token', res.token);
-        await AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(athleteProfile));
-
-        setAuthToken(res.token);
-        setCurrentUser(athleteProfile);
-        setIsAuthenticated(true);
-        realtimeWs.init(res.token);
-        await loadFeedData();
-      }
+      await startSession(await api.auth.login(email, password));
     } finally {
       setIsSyncing(false);
     }
@@ -243,30 +140,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const registerWithEmail = async (data: { email: string; password: string; displayName: string; username?: string }) => {
     setIsSyncing(true);
     try {
-      const res = await api.auth.register(data);
-      if (res?.token && res?.athlete) {
-        const athleteProfile: Athlete = {
-          id: res.athlete.id,
-          displayName: res.athlete.displayName,
-          username: res.athlete.username,
-          avatarUrl: res.athlete.avatarUrl,
-          city: res.athlete.city || '',
-          country: res.athlete.country || '',
-          bio: res.athlete.bio || '',
-          followersCount: res.athlete.followersCount || 0,
-          followingCount: res.athlete.followingCount || 0,
-          isFollowing: false,
-        };
-
-        await AsyncStorage.setItem('@open_strava_token', res.token);
-        await AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(athleteProfile));
-
-        setAuthToken(res.token);
-        setCurrentUser(athleteProfile);
-        setIsAuthenticated(true);
-        realtimeWs.init(res.token);
-        await loadFeedData();
-      }
+      await startSession(await api.auth.register(data));
     } finally {
       setIsSyncing(false);
     }
@@ -275,30 +149,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const loginWithGoogle = async (idToken: string) => {
     setIsSyncing(true);
     try {
-      const res = await api.auth.googleLogin(idToken);
-      if (res?.token && res?.athlete) {
-        const athleteProfile: Athlete = {
-          id: res.athlete.id,
-          displayName: res.athlete.displayName,
-          username: res.athlete.username,
-          avatarUrl: res.athlete.avatarUrl,
-          city: res.athlete.city || '',
-          country: res.athlete.country || '',
-          bio: res.athlete.bio || '',
-          followersCount: res.athlete.followersCount || 0,
-          followingCount: res.athlete.followingCount || 0,
-          isFollowing: false,
-        };
-
-        await AsyncStorage.setItem('@open_strava_token', res.token);
-        await AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(athleteProfile));
-
-        setAuthToken(res.token);
-        setCurrentUser(athleteProfile);
-        setIsAuthenticated(true);
-        realtimeWs.init(res.token);
-        await loadFeedData();
-      }
+      await startSession(await api.auth.googleLogin(idToken));
     } finally {
       setIsSyncing(false);
     }
@@ -319,14 +170,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       await AsyncStorage.multiRemove(['@open_strava_token', '@open_strava_athlete']);
       setAuthToken(null);
+      realtimeWs.disconnect();
+      resetSessionOverlays();
       setCurrentUser(INITIAL_ATHLETE);
       setIsAuthenticated(false);
-      setActivities([]);
       setNotifications([]);
     } catch (err) {
       console.warn('Logout error:', err);
     }
   };
+
+  // An expired or revoked token must end the session instead of leaving every request failing.
+  const logoutRef = useRef(logout);
+  useEffect(() => {
+    logoutRef.current = logout;
+  });
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      logoutRef.current().catch(() => {});
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   /** Apply server-confirmed profile changes locally and to the persisted session profile. */
   const updateCurrentUser = async (patch: Partial<Athlete>) => {
@@ -334,123 +198,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const next = { ...prev, ...patch };
       AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(next)).catch(() => {});
       return next;
-    });
-  };
-
-  const toggleKudos = (activityId: string) => {
-    // 1. Optimistic UI update
-    setActivities((prev) =>
-      prev.map((act) => {
-        if (act.id === activityId) {
-          const nextHasKudos = !act.hasKudos;
-          return {
-            ...act,
-            hasKudos: nextHasKudos,
-            kudosCount: nextHasKudos ? act.kudosCount + 1 : Math.max(0, act.kudosCount - 1),
-          };
-        }
-        return act;
-      })
-    );
-
-    // 2. Fire background API request to live worker
-    api.activities.toggleKudos(activityId).catch((err) => {
-      console.warn('Kudos toggle sync error:', err);
-    });
-  };
-
-  const addComment = (activityId: string, content: string) => {
-    if (!content.trim()) return;
-
-    // 1. Optimistic UI update
-    setActivities((prev) =>
-      prev.map((act) => {
-        if (act.id === activityId) {
-          const newComment = {
-            id: `c_${Date.now()}`,
-            activityId,
-            athlete: currentUser,
-            content,
-            createdAt: 'Just now',
-          };
-          return {
-            ...act,
-            commentsCount: act.commentsCount + 1,
-            comments: [...(act.comments || []), newComment],
-          };
-        }
-        return act;
-      })
-    );
-
-    // 2. Fire background API request
-    api.activities.addComment(activityId, content.trim()).catch((err) => {
-      console.warn('Comment post sync error:', err);
-    });
-  };
-
-  const toggleJoinClub = (clubId: string) => {
-    // 1. Optimistic UI update
-    setClubs((prev) =>
-      prev.map((c) =>
-        c.id === clubId
-          ? {
-              ...c,
-              isMember: !c.isMember,
-              memberCount: c.isMember ? c.memberCount - 1 : c.memberCount + 1,
-            }
-          : c
-      )
-    );
-
-    // 2. Fire background API request
-    api.clubs.join(clubId).catch((err) => {
-      console.warn('Club join sync error:', err);
-    });
-  };
-
-  const toggleJoinChallenge = (challengeId: string) => {
-    // 1. Optimistic UI update
-    setChallenges((prev) =>
-      prev.map((ch) =>
-        ch.id === challengeId ? { ...ch, isJoined: !ch.isJoined } : ch
-      )
-    );
-
-    // 2. Fire background API request
-    api.challenges.join(challengeId).catch((err) => {
-      console.warn('Challenge join sync error:', err);
-    });
-  };
-
-  const toggleRsvp = (eventId: string, status: 'GOING' | 'MAYBE' | 'DECLINED') => {
-    setEvents((prev) =>
-      prev.map((ev) =>
-        ev.id === eventId
-          ? {
-              ...ev,
-              rsvpStatus: status,
-              attendeesCount: status === 'GOING' ? ev.attendeesCount + 1 : ev.attendeesCount,
-            }
-          : ev
-      )
-    );
-  };
-
-  const toggleFollowAthlete = (athleteId: string) => {
-    setActivities((prev) =>
-      prev.map((act) => {
-        if (act.athlete.id === athleteId) {
-          return {
-            ...act,
-            athlete: { ...act.athlete, isFollowing: !act.athlete.isFollowing },
-          };
-        }
-        return act;
-      })
-    );
-    api.athletes.toggleFollow(athleteId).catch((err) => {
-      console.warn('Follow sync error:', err);
     });
   };
 
@@ -517,20 +264,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentUser,
         isAuthenticated,
         isAuthLoading,
-        activities,
-        clubs,
-        challenges,
-        events,
-        segments,
         notifications,
         unreadNotificationCount,
         isSyncing,
-        toggleKudos,
-        addComment,
-        toggleFollowAthlete,
-        toggleJoinClub,
-        toggleJoinChallenge,
-        toggleRsvp,
         markNotificationAsRead,
         markAllNotificationsAsRead,
         refreshNotifications,

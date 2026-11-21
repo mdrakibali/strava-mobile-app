@@ -10,6 +10,7 @@ class RealtimeWebSocketService {
   private pingInterval: any = null;
   private isConnecting = false;
   private shouldStayConnected = false;
+  private connectedToken: string | null = null;
 
   public async init(token?: string) {
     if (token) {
@@ -21,12 +22,17 @@ class RealtimeWebSocketService {
     }
     if (!this.token) return;
 
+    // A socket opened with another account's token must not survive a token change.
+    if (this.ws && this.connectedToken && this.connectedToken !== this.token) this.disconnect();
+
     this.shouldStayConnected = true;
     this.connect();
   }
 
   public disconnect() {
     this.shouldStayConnected = false;
+    this.connectedToken = null;
+    this.isConnecting = false;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     if (this.pingInterval) clearInterval(this.pingInterval);
     if (this.ws) {
@@ -44,6 +50,7 @@ class RealtimeWebSocketService {
     if (this.isConnecting || !this.token) return;
 
     this.isConnecting = true;
+    this.connectedToken = this.token;
     const baseApi = process.env.EXPO_PUBLIC_API_URL || 'https://open-strava-backend.rakib2020-tkg.workers.dev/api/v1';
     const wsUrl = baseApi.replace(/^http/, 'ws') + `/messages/ws?token=${encodeURIComponent(this.token)}`;
 

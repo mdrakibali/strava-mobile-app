@@ -4,7 +4,7 @@ import { athletes, chats, directMessages } from '../db/schema';
 import { verifyToken } from '../lib/auth';
 import { getDb, AppDatabase } from '../lib/db';
 import { NotificationRepository } from '../repositories/notification.repository';
-import { requireAuth } from '../middleware/auth';
+import { jwtSecret, requireAuth } from '../middleware/auth';
 import { Env } from '../types';
 
 export const messagesRouter = new Hono<{ Bindings: Env }>();
@@ -80,21 +80,18 @@ function conversationJson(chat: typeof chats.$inferSelect, partner: Partner, unr
 }
 
 // GET /api/v1/messages/ws (WebSocket upgrade endpoint)
+// Authenticated only. The DO routes events by athlete id, so the id it sees must come from a
+// verified token: a client-supplied `athleteId` query parameter is stripped, never forwarded.
 messagesRouter.get('/ws', async (c) => {
-  if (!c.env.CHAT_ROOM) return c.json({ error: 'ChatRoom not configured' }, 503);
   const token = c.req.query('token');
-  let athleteId = '';
-  if (token && c.env.JWT_SECRET) {
-    try {
-      const user = await verifyToken(token, c.env.JWT_SECRET);
-      if (user?.athleteId) athleteId = user.athleteId;
-    } catch {
-      /* anonymous socket; broadcasts still require a verified athlete id */
-    }
-  }
+  const user = token ? await verifyToken(token, jwtSecret(c.env)) : null;
+  if (!user?.athleteId) return c.json({ error: 'Unauthorized: Missing or invalid token', code: 'unauthorized' }, 401);
+  if (!c.env.CHAT_ROOM) return c.json({ error: 'ChatRoom not configured' }, 503);
+
   const id = c.env.CHAT_ROOM.idFromName('global_chat');
   const targetUrl = new URL(c.req.url);
-  if (athleteId) targetUrl.searchParams.set('athleteId', athleteId);
+  targetUrl.searchParams.delete('token');
+  targetUrl.searchParams.set('athleteId', user.athleteId);
   return c.env.CHAT_ROOM.get(id).fetch(new Request(targetUrl.toString(), c.req.raw));
 });
 
@@ -268,10 +265,6 @@ messagesRouter.post('/send', requireAuth, async (c) => {
     const now = new Date();
     const activeChatId = opened.chat.id;
     const trimmed = text.trim();
-    await db
-      .update(chats)
-      .set({ lastMessage: trimmed, lastMessageAt: now, updatedAt: now })
-      .where(eq(chats.id, activeChatId));
 
     const newMsg = {
       id: `dm_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -282,7 +275,9 @@ messagesRouter.post('/send', requireAuth, async (c) => {
       isRead: false,
       createdAt: now,
     };
+    // Store the message first: if this fails, the conversation preview must not already claim it.
     await db.insert(directMessages).values(newMsg);
+    await db.update(chats).set({ lastMessage: trimmed, lastMessageAt: now, updatedAt: now }).where(eq(chats.id, activeChatId));
 
     try {
       const notifRepo = new NotificationRepository(db);
@@ -304,6 +299,12 @@ messagesRouter.post('/send', requireAuth, async (c) => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ type: 'new_message', directMessage: newMsg, chatId: activeChatId }),
+        });
+        // Lets the recipient's notification badge update without a manual refresh.
+        await stub.fetch('http://internal/broadcast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'notification', recipientId: opened.partner.id }),
         });
       } catch {
         /* durable object is production-only; the message is already stored */

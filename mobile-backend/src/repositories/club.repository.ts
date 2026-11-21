@@ -57,6 +57,15 @@ export class ClubRepository {
     return club;
   }
 
+  async update(id: string, values: Partial<typeof clubs.$inferInsert>) {
+    const [club] = await this.db.update(clubs).set(values).where(eq(clubs.id, id)).returning();
+    return club;
+  }
+
+  async delete(id: string) {
+    await this.db.delete(clubs).where(eq(clubs.id, id));
+  }
+
   async getMemberCount(clubId: string): Promise<number> {
     const [res] = await this.db
       .select({ count: sql<number>`count(*)` })
@@ -135,6 +144,8 @@ export class ClubRepository {
       .where(
         and(
           inArray(activities.athleteId, memberIds),
+          // A club board is visible to non-owners, so private activities must not count.
+          eq(activities.visibility, 'PUBLIC'),
           sql`${activities.startTime} >= ${sinceDate.toISOString()}`
         )
       )

@@ -98,6 +98,15 @@ export const setAuthToken = (token: string | null) => {
 export const getAuthToken = () => authToken;
 
 /**
+ * Called when the server rejects the CURRENT session token (expired or revoked). Wrong-password
+ * logins don't trigger it: no token is attached to those requests.
+ */
+let unauthorizedHandler: (() => void) | null = null;
+export const setUnauthorizedHandler = (fn: (() => void) | null) => {
+  unauthorizedHandler = fn;
+};
+
+/**
  * Typed API failure. status 0 = network failure or timeout (no HTTP response).
  * `retryable` tells the sync worker whether trying again later can succeed.
  */
@@ -124,8 +133,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     ...(options.headers as Record<string, string>),
   };
 
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
+  const sentToken = authToken;
+  if (sentToken) {
+    headers['Authorization'] = `Bearer ${sentToken}`;
   }
 
   const controller = new AbortController();
@@ -151,6 +161,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     if (res.status === 404 && body?.error === 'Endpoint Not Found') {
       throw new ApiError('This feature needs the latest server version, which is not deployed yet.', 404, 'endpoint_missing');
     }
+    // Only react if the token that failed is still the active one (a late 401 from a previous
+    // account must not sign the new one out).
+    if (res.status === 401 && sentToken && sentToken === authToken) unauthorizedHandler?.();
     throw new ApiError(body?.error || `HTTP ${res.status}`, res.status, body?.code ?? null, body?.details ?? null);
   }
 
@@ -282,10 +295,15 @@ export const api = {
     get: (id: string) => request<any>(`/clubs/${id}`),
     create: (data: { name: string; sportType: string; city?: string; country?: string; description?: string; isPrivate?: boolean }) =>
       request<{ club: any }>('/clubs', { method: 'POST', body: JSON.stringify(data) }),
-    join: (id: string) =>
+    /** Pass the wanted state: the call is then idempotent (a retry can't flip it back). */
+    join: (id: string, join?: boolean) =>
       request<{ isMember: boolean; membersCount?: number; message: string }>(`/clubs/${id}/join`, {
         method: 'POST',
+        body: JSON.stringify(join === undefined ? {} : { join }),
       }),
+    update: (id: string, data: { name?: string; sportType?: string; city?: string | null; description?: string | null; isPrivate?: boolean }) =>
+      request<{ club: any }>(`/clubs/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    remove: (id: string) => request<{ message: string }>(`/clubs/${id}`, { method: 'DELETE' }),
   },
 
   // 5. Challenges
@@ -294,10 +312,14 @@ export const api = {
     get: (id: string) => request<any>(`/challenges/${id}`),
     create: (data: { title: string; sportType: string; targetMeters: number; description?: string; startDate: string; endDate: string }) =>
       request<{ challenge: any }>('/challenges', { method: 'POST', body: JSON.stringify(data) }),
-    join: (id: string) =>
+    join: (id: string, join?: boolean) =>
       request<{ isJoined: boolean; participantsCount?: number; message: string }>(`/challenges/${id}/join`, {
         method: 'POST',
+        body: JSON.stringify(join === undefined ? {} : { join }),
       }),
+    update: (id: string, data: { title?: string; sportType?: string; targetMeters?: number; description?: string | null; startDate?: string; endDate?: string }) =>
+      request<{ challenge: any }>(`/challenges/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    remove: (id: string) => request<{ message: string }>(`/challenges/${id}`, { method: 'DELETE' }),
   },
 
   // 6. Live Beacon Safety Tracking
@@ -490,6 +512,9 @@ export const api = {
     get: (id: string) => request<{ event: any; attendees: any[] }>(`/events/${id}`),
     create: (data: { title: string; sportType: string; eventDate: string; meetingPoint: string; paceDescription?: string; distanceMeters?: number; clubId?: string }) =>
       request<{ event: any }>('/events', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: { title?: string; sportType?: string; eventDate?: string; meetingPoint?: string; paceDescription?: string | null; distanceMeters?: number | null }) =>
+      request<{ event: any }>(`/events/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    remove: (id: string) => request<{ message: string }>(`/events/${id}`, { method: 'DELETE' }),
     rsvp: (id: string, status: 'GOING' | 'MAYBE' | 'DECLINED') =>
       request<{ message: string; status: string | null; attendeesCount?: number }>(`/events/${id}/rsvp`, {
         method: 'POST',

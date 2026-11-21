@@ -1,4 +1,4 @@
-import { ApiError, api } from '../api';
+import { ApiError, api, setAuthToken, setUnauthorizedHandler } from '../api';
 
 const respond = (status: number, body: unknown) =>
   jest.fn().mockResolvedValue(new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }));
@@ -32,5 +32,41 @@ describe('API client error handling', () => {
     global.fetch = f as any;
     await api.feed.getFeed('following');
     expect(f.mock.calls[0][1]).toMatchObject({ cache: 'no-store' });
+  });
+
+  describe('expired session', () => {
+    afterEach(() => {
+      setAuthToken(null);
+      setUnauthorizedHandler(null);
+    });
+
+    it('signs out when the current token is rejected', async () => {
+      const handler = jest.fn();
+      setUnauthorizedHandler(handler);
+      setAuthToken('tok');
+      global.fetch = respond(401, { error: 'Unauthorized: Token expired or invalid', code: 'unauthorized' }) as any;
+      await expect(api.notifications.list()).rejects.toMatchObject({ status: 401 });
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not sign out on a failed login (no token attached)', async () => {
+      const handler = jest.fn();
+      setUnauthorizedHandler(handler);
+      global.fetch = respond(401, { error: 'Invalid credentials' }) as any;
+      await expect(api.auth.login('a@b.c', 'bad')).rejects.toMatchObject({ status: 401 });
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('ignores a late 401 that belongs to a previous account\'s token', async () => {
+      const handler = jest.fn();
+      setUnauthorizedHandler(handler);
+      setAuthToken('old');
+      global.fetch = jest.fn().mockImplementation(async () => {
+        setAuthToken('new'); // user switched account while the request was in flight
+        return new Response(JSON.stringify({ error: 'expired' }), { status: 401 });
+      }) as any;
+      await expect(api.notifications.list()).rejects.toMatchObject({ status: 401 });
+      expect(handler).not.toHaveBeenCalled();
+    });
   });
 });

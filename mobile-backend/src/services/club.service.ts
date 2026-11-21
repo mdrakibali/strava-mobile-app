@@ -1,4 +1,14 @@
+import { HttpError, notFound } from '../lib/http';
 import { ClubRepository } from '../repositories/club.repository';
+
+export interface ClubInput {
+  name: string;
+  sportType?: string;
+  city?: string | null;
+  country?: string | null;
+  description?: string | null;
+  isPrivate?: boolean;
+}
 
 export class ClubService {
   constructor(private clubRepo: ClubRepository) {}
@@ -73,40 +83,68 @@ export class ClubService {
     };
   }
 
-  async createClub(creatorId: string, data: { name: string; sportType?: string; city?: string; country?: string; description?: string; isPrivate?: boolean }) {
-    const clubId = `clb_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  async createClub(creatorId: string, data: ClubInput) {
+    const clubId = `clb_${crypto.randomUUID()}`;
+    // Nothing is invented: an empty city/country stays empty, and there is no stock photo.
     const club = await this.clubRepo.create({
       id: clubId,
       name: data.name.trim(),
       sportType: data.sportType || 'Run',
-      city: data.city || 'Dhaka',
-      country: data.country || 'Bangladesh',
-      description: data.description || null,
+      city: data.city?.trim() || null,
+      country: data.country?.trim() || null,
+      description: data.description?.trim() || null,
       isPrivate: Boolean(data.isPrivate),
       creatorId,
-      avatarUrl: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=400',
-      bannerUrl: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=1200',
     });
 
     await this.clubRepo.addMember(clubId, creatorId, 'OWNER');
     return club;
   }
 
-  async toggleMembership(clubId: string, athleteId: string) {
+  async updateClub(clubId: string, athleteId: string, patch: Partial<ClubInput>) {
     const club = await this.clubRepo.findById(clubId);
-    if (!club) throw new Error('Club not found');
+    if (!club) throw notFound('Club');
+    const membership = await this.clubRepo.getMembership(clubId, athleteId);
+    if (!membership || (membership.role !== 'OWNER' && membership.role !== 'ADMIN')) {
+      throw new HttpError(403, 'forbidden', 'Only a club owner or admin can edit this club');
+    }
+    const values: Record<string, unknown> = {};
+    if (patch.name !== undefined) values.name = patch.name.trim();
+    if (patch.sportType !== undefined) values.sportType = patch.sportType;
+    if (patch.city !== undefined) values.city = patch.city?.trim() || null;
+    if (patch.country !== undefined) values.country = patch.country?.trim() || null;
+    if (patch.description !== undefined) values.description = patch.description?.trim() || null;
+    if (patch.isPrivate !== undefined) values.isPrivate = patch.isPrivate;
+    return Object.keys(values).length ? this.clubRepo.update(clubId, values) : club;
+  }
+
+  async deleteClub(clubId: string, athleteId: string) {
+    const club = await this.clubRepo.findById(clubId);
+    if (!club) throw notFound('Club');
+    const membership = await this.clubRepo.getMembership(clubId, athleteId);
+    if (membership?.role !== 'OWNER') throw new HttpError(403, 'forbidden', 'Only the club owner can delete this club');
+    await this.clubRepo.delete(clubId);
+  }
+
+  /**
+   * `join` makes the call idempotent (retries and double taps cannot flip the state back).
+   * When it is omitted the call toggles, which older app builds rely on.
+   */
+  async setMembership(clubId: string, athleteId: string, join?: boolean) {
+    const club = await this.clubRepo.findById(clubId);
+    if (!club) throw notFound('Club');
 
     const membership = await this.clubRepo.getMembership(clubId, athleteId);
+    const wantJoin = join ?? !membership;
 
-    if (membership) {
+    if (!wantJoin && membership) {
       if (membership.role === 'OWNER') {
-        throw new Error('Club owner cannot leave club. Transfer ownership or delete club.');
+        throw new HttpError(409, 'owner_cannot_leave', 'The club owner cannot leave. Delete the club instead.');
       }
       await this.clubRepo.removeMember(clubId, athleteId);
-      return { isMember: false, membersCount: await this.clubRepo.getMemberCount(clubId) };
-    } else {
+    } else if (wantJoin && !membership) {
       await this.clubRepo.addMember(clubId, athleteId, 'MEMBER');
-      return { isMember: true, membersCount: await this.clubRepo.getMemberCount(clubId) };
     }
+    return { isMember: wantJoin, membersCount: await this.clubRepo.getMemberCount(clubId) };
   }
 }

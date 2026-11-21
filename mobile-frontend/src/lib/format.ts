@@ -106,3 +106,15 @@ export const defaultActivityTitle = (sportLabel: string, start: Date = new Date(
   const part = h >= 5 && h < 12 ? 'Morning' : h >= 12 && h < 17 ? 'Afternoon' : h >= 17 && h < 21 ? 'Evening' : 'Night';
   return `${part} ${sportLabel}`;
 };
+
+/**
+ * "Sat, Nov 21 · 6:00 AM" in the viewer's own time zone. The server stores an instant; formatting
+ * it there would show every user the server's (UTC) clock.
+ */
+export const formatEventWhen = (iso: string | null | undefined, locale?: string) => {
+  const d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d.getTime())) return DASH;
+  const day = d.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
+  const time = d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+  return `${day} · ${time}`;
+};

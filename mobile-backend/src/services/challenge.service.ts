@@ -1,4 +1,14 @@
+import { HttpError, notFound } from '../lib/http';
 import { ChallengeRepository } from '../repositories/challenge.repository';
+
+export interface ChallengeInput {
+  title: string;
+  description?: string | null;
+  sportType?: string;
+  targetMeters: number;
+  startDate?: string;
+  endDate?: string;
+}
 
 export class ChallengeService {
   constructor(private challengeRepo: ChallengeRepository) {}
@@ -62,38 +72,66 @@ export class ChallengeService {
     };
   }
 
-  async toggleJoin(challengeId: string, athleteId: string) {
+  /** `join` makes the call idempotent; when omitted it toggles (older app builds). */
+  async setJoin(challengeId: string, athleteId: string, join?: boolean) {
     const ch = await this.challengeRepo.findById(challengeId);
-    if (!ch) throw new Error('Challenge not found');
+    if (!ch) throw notFound('Challenge');
 
     const participation = await this.challengeRepo.getParticipation(challengeId, athleteId);
+    const wantJoin = join ?? !participation;
 
-    if (participation) {
-      await this.challengeRepo.leave(challengeId, athleteId);
-      return { isJoined: false, participantsCount: await this.challengeRepo.getParticipantCount(challengeId) };
-    } else {
-      await this.challengeRepo.join(challengeId, athleteId);
-      return { isJoined: true, participantsCount: await this.challengeRepo.getParticipantCount(challengeId) };
-    }
+    if (wantJoin && !participation) await this.challengeRepo.join(challengeId, athleteId);
+    else if (!wantJoin && participation) await this.challengeRepo.leave(challengeId, athleteId);
+
+    return { isJoined: wantJoin, participantsCount: await this.challengeRepo.getParticipantCount(challengeId) };
   }
 
-  async createChallenge(creatorId: string, data: { title: string; description?: string; sportType?: string; targetMeters: number; startDate?: string; endDate?: string; badgeUrl?: string }) {
-    const id = `ch_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  async createChallenge(creatorId: string, data: ChallengeInput) {
+    const start = data.startDate ? new Date(data.startDate) : new Date();
+    const end = data.endDate ? new Date(data.endDate) : new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
+    if (end <= start) throw new HttpError(400, 'validation_failed', 'The end date must be after the start date');
+
     const created = await this.challengeRepo.create({
-      id,
+      id: `ch_${crypto.randomUUID()}`,
       title: data.title.trim(),
-      description: data.description || null,
+      description: data.description?.trim() || null,
       sportType: data.sportType || 'Run',
       targetMeters: String(data.targetMeters),
-      badgeUrl: data.badgeUrl || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=300',
-      startDate: data.startDate ? new Date(data.startDate) : new Date(),
-      endDate: data.endDate
-        ? new Date(data.endDate)
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      startDate: start,
+      endDate: end,
       creatorId,
     });
 
-    await this.challengeRepo.join(id, creatorId);
+    await this.challengeRepo.join(created.id, creatorId);
     return created;
+  }
+
+  async updateChallenge(id: string, athleteId: string, patch: Partial<ChallengeInput>) {
+    const ch = await this.challengeRepo.findById(id);
+    if (!ch) throw notFound('Challenge');
+    if (ch.creatorId !== athleteId) throw new HttpError(403, 'forbidden', 'Only the challenge creator can edit it');
+
+    const values: Record<string, unknown> = {};
+    if (patch.title !== undefined) values.title = patch.title.trim();
+    if (patch.description !== undefined) values.description = patch.description?.trim() || null;
+    if (patch.sportType !== undefined) values.sportType = patch.sportType;
+    if (patch.targetMeters !== undefined) values.targetMeters = String(patch.targetMeters);
+    if (patch.startDate !== undefined) values.startDate = new Date(patch.startDate);
+    if (patch.endDate !== undefined) values.endDate = new Date(patch.endDate);
+    const start = (values.startDate as Date) ?? ch.startDate;
+    const end = (values.endDate as Date) ?? ch.endDate;
+    if (end <= start) throw new HttpError(400, 'validation_failed', 'The end date must be after the start date');
+
+    const updated = Object.keys(values).length ? await this.challengeRepo.update(id, values) : ch;
+    // Sport, window or target changed: every participant's progress must be recomputed.
+    await this.challengeRepo.resyncParticipants(id);
+    return updated;
+  }
+
+  async deleteChallenge(id: string, athleteId: string) {
+    const ch = await this.challengeRepo.findById(id);
+    if (!ch) throw notFound('Challenge');
+    if (ch.creatorId !== athleteId) throw new HttpError(403, 'forbidden', 'Only the challenge creator can delete it');
+    await this.challengeRepo.delete(id);
   }
 }

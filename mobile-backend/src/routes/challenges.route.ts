@@ -11,3 +11,5 @@ challengesRouter.get('/:id', optionalAuth, (c) => controller.getDetail(c));
 challengesRouter.post('/', requireAuth, (c) => controller.create(c));
 challengesRouter.post('/:id/join', requireAuth, (c) => controller.toggleJoin(c));
 
+challengesRouter.patch('/:id', requireAuth, (c) => controller.update(c));
+challengesRouter.delete('/:id', requireAuth, (c) => controller.remove(c));

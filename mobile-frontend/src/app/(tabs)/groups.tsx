@@ -98,7 +98,7 @@ export default function GroupsScreen() {
   const joinChallenge = async (c: any) => {
     update('challenges', c.id, { isJoined: !c.isJoined });
     try {
-      const res = await api.challenges.join(c.id);
+      const res = await api.challenges.join(c.id, !c.isJoined);
       update('challenges', c.id, {
         isJoined: Boolean(res.isJoined),
         ...(typeof res.participantsCount === 'number' ? { participantsCount: res.participantsCount } : {}),
@@ -113,7 +113,7 @@ export default function GroupsScreen() {
     const want = !c.isMember;
     update('clubs', c.id, { isMember: want, memberCount: c.memberCount + (want ? 1 : -1) });
     try {
-      const res = await api.clubs.join(c.id);
+      const res = await api.clubs.join(c.id, want);
       update('clubs', c.id, {
         isMember: Boolean(res.isMember),
         ...(typeof res.membersCount === 'number' ? { memberCount: res.membersCount } : {}),

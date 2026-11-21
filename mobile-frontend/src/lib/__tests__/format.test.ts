@@ -6,6 +6,7 @@ import {
   formatClock,
   formatDistance,
   formatDuration,
+  formatEventWhen,
   formatPace,
   formatSpeed,
   kmValue,
@@ -80,5 +81,18 @@ describe('dates and titles', () => {
     expect(defaultActivityTitle('Walk', new Date(2026, 0, 1, 19))).toBe('Evening Walk');
     expect(defaultActivityTitle('Hike', new Date(2026, 0, 1, 23))).toBe('Night Hike');
     expect(defaultActivityTitle('Hike', new Date(2026, 0, 1, 3))).toBe('Night Hike');
+  });
+});
+
+describe('formatEventWhen', () => {
+  it('shows the instant in the viewer\'s own zone, not the server\'s', () => {
+    const iso = '2026-11-21T00:30:00.000Z';
+    const d = new Date(iso);
+    const expectedTime = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    expect(formatEventWhen(iso, 'en-US')).toContain(expectedTime);
+  });
+  it('returns the no-data dash for missing or invalid dates', () => {
+    expect(formatEventWhen(null)).toBe(DASH);
+    expect(formatEventWhen('nope')).toBe(DASH);
   });
 });

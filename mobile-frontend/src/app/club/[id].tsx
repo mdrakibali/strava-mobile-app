@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
@@ -9,22 +9,26 @@ import { api } from '../../services/api';
 export default function ClubDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { clubs, currentUser } = useApp();
+  const { currentUser } = useApp();
   const [activeSubTab, setActiveSubTab] = useState<'LEADERBOARD' | 'ABOUT'>('LEADERBOARD');
   const [isLoading, setIsLoading] = useState(false);
   const [joining, setJoining] = useState(false);
   const [serverClub, setServerClub] = useState<any>(null);
   const [weeklyLeaderboard, setWeeklyLeaderboard] = useState<any[]>([]);
 
-  const localClub = clubs.find((c) => c.id === id) || clubs[0];
-  const club = serverClub || localClub;
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadNonce, setReloadNonce] = useState(0);
+  // The server copy is the only source: never fall back to some other club from a list.
+  const club = serverClub;
 
-  useEffect(() => {
+  useFocusEffect(
+    useCallback(() => {
     let isMounted = true;
     if (!id) return;
 
     const fetchClubDetail = async () => {
       setIsLoading(true);
+      setLoadError(null);
       try {
         const res = await api.clubs.get(id);
         if (isMounted && res) {
@@ -39,14 +43,17 @@ export default function ClubDetailScreen() {
               bannerUrl: res.club.bannerUrl,
               memberCount: res.club.membersCount ?? res.club.memberCount ?? 0,
               isMember: Boolean(res.club.isMember),
+              userRole: res.club.userRole ?? null,
+              isPrivate: Boolean(res.club.isPrivate),
             });
           }
           if (res.weeklyLeaderboard) {
             setWeeklyLeaderboard(res.weeklyLeaderboard);
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('Failed to fetch club detail from API:', err);
+        if (isMounted) setLoadError(err?.message ?? 'Could not load this club.');
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -56,13 +63,28 @@ export default function ClubDetailScreen() {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+    // reloadNonce only re-triggers the fetch (Retry button)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, reloadNonce])
+  );
 
   if (!club) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color="#FC4C02" />
-        <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 8 }}>Loading club details...</Text>
+        {loadError ? (
+          <>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#111827' }}>Couldn’t load this club</Text>
+            <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>{loadError}</Text>
+            <TouchableOpacity onPress={() => setReloadNonce((n) => n + 1)} className="mt-3 px-5 py-2.5">
+              <Text style={{ color: '#FC4C02', fontWeight: '700' }}>Retry</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <ActivityIndicator size="large" color="#FC4C02" />
+            <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 8 }}>Loading club details...</Text>
+          </>
+        )}
       </SafeAreaView>
     );
   }
@@ -101,6 +123,36 @@ export default function ClubDetailScreen() {
 
             <Text className="text-xs text-gray-600 leading-5 mb-3">{club.description}</Text>
 
+            {club.userRole === 'OWNER' ? (
+              <View className="flex-row">
+                <TouchableOpacity
+                  className="flex-1 py-3 rounded-xl items-center border border-gray-300 bg-white mr-2"
+                  onPress={() => router.push({ pathname: '/club/create', params: { editId: club.id } })}>
+                  <Text className="text-sm font-bold text-gray-900">Edit club</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className="flex-1 py-3 rounded-xl items-center border border-red-300 bg-white"
+                  onPress={() =>
+                    Alert.alert('Delete this club?', 'Members will lose access. This cannot be undone.', [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Delete',
+                        style: 'destructive',
+                        onPress: async () => {
+                          try {
+                            await api.clubs.remove(club.id);
+                            router.replace('/(tabs)/groups');
+                          } catch (e: any) {
+                            Alert.alert('Couldn’t delete the club', e?.message ?? 'Please try again.');
+                          }
+                        },
+                      },
+                    ])
+                  }>
+                  <Text className="text-sm font-bold text-red-600">Delete club</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
             <TouchableOpacity
               disabled={joining}
               className={`py-3 rounded-xl items-center border ${
@@ -117,7 +169,7 @@ export default function ClubDetailScreen() {
                   memberCount: Math.max(0, before.memberCount + (want ? 1 : -1)),
                 }));
                 try {
-                  const res = await api.clubs.join(club.id);
+                  const res = await api.clubs.join(club.id, want);
                   setServerClub((prev: any) => ({
                     ...(prev || club),
                     isMember: Boolean(res.isMember),
@@ -134,6 +186,7 @@ export default function ClubDetailScreen() {
                 {club.isMember ? 'Joined (Tap to Leave)' : 'Join Club'}
               </Text>
             </TouchableOpacity>
+            )}
           </View>
 
           {/* Sub-Tabs Switcher */}

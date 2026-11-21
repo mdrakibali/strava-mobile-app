@@ -24,14 +24,9 @@ export class ChatRoom {
       const [client, server] = Object.values(pair);
       (server as any).accept();
 
-      let athleteId = url.searchParams.get('athleteId') || undefined;
-      const token = url.searchParams.get('token');
-      if (!athleteId && token && this.env.JWT_SECRET) {
-        try {
-          const user = await verifyToken(token, this.env.JWT_SECRET);
-          if (user?.athleteId) athleteId = user.athleteId;
-        } catch {}
-      }
+      // Set by the Worker route from a verified JWT. Sessions without it receive nothing
+      // until they send a valid `auth` message.
+      const athleteId = url.searchParams.get('athleteId') || undefined;
 
       const meta: SessionMeta = { athleteId };
       this.sessions.set(server, meta);
@@ -77,11 +72,8 @@ export class ChatRoom {
           const { recipientId, senderId } = body.directMessage;
           delivered += this.broadcastToAthlete(recipientId, body);
           delivered += this.broadcastToAthlete(senderId, body);
-          // Broadcast to sessions without assigned athleteId to ensure delivery
-          delivered += this.broadcastToUnassigned(body);
         } else if (body.type === 'notification' && body.recipientId) {
           delivered += this.broadcastToAthlete(body.recipientId, body);
-          delivered += this.broadcastToUnassigned(body);
         }
 
         return new Response(JSON.stringify({ ok: true, delivered }), {
@@ -100,22 +92,6 @@ export class ChatRoom {
     const msg = JSON.stringify(payload);
     for (const [ws, meta] of this.sessions.entries()) {
       if (meta.athleteId === athleteId) {
-        try {
-          ws.send(msg);
-          count++;
-        } catch {
-          this.sessions.delete(ws);
-        }
-      }
-    }
-    return count;
-  }
-
-  private broadcastToUnassigned(payload: any): number {
-    let count = 0;
-    const msg = JSON.stringify(payload);
-    for (const [ws, meta] of this.sessions.entries()) {
-      if (!meta.athleteId) {
         try {
           ws.send(msg);
           count++;

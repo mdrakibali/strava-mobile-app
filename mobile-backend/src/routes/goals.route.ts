@@ -1,123 +1,110 @@
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
-import { athletes, trainingGoals } from '../db/schema';
+import { z } from 'zod';
+import { activities, trainingGoals } from '../db/schema';
 import { getDb } from '../lib/db';
-import { optionalAuth } from '../middleware/auth';
+import { requireAuth } from '../middleware/auth';
 import { Env } from '../types';
 
 export const goalsRouter = new Hono<{ Bindings: Env }>();
 
+// Goals are private to their owner. There is deliberately no "first athlete" fallback: an
+// unauthenticated request must never read or write anyone's goals.
+goalsRouter.use('*', requireAuth);
+
+const PERIODS = ['WEEKLY', 'MONTHLY', 'ANNUAL'] as const;
+type Period = (typeof PERIODS)[number];
+
+const createSchema = z.object({
+  title: z.string().trim().min(1).max(100),
+  targetValue: z.coerce.number().finite().positive().max(1_000_000),
+  unit: z.enum(['km']).default('km'),
+  period: z.enum(PERIODS).default('WEEKLY'),
+  sportType: z.enum(['Run', 'Walk', 'Hike', 'Ride']).default('Run'),
+});
+
+/** Start of the current period in UTC (weeks start on Monday). */
+export const periodStart = (period: Period, now = new Date()): Date => {
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth();
+  if (period === 'ANNUAL') return new Date(Date.UTC(y, 0, 1));
+  if (period === 'MONTHLY') return new Date(Date.UTC(y, m, 1));
+  const midnight = Date.UTC(y, m, now.getUTCDate());
+  const sinceMonday = (now.getUTCDay() + 6) % 7;
+  return new Date(midnight - sinceMonday * 86_400_000);
+};
+
+type GoalRow = typeof trainingGoals.$inferSelect;
+
+/** Real progress: km of the athlete's own saved activities of the goal's sport inside the period. */
+const progressKm = async (db: ReturnType<typeof getDb>, athleteId: string, goal: GoalRow) => {
+  const [row] = await db
+    .select({ meters: sql<string>`coalesce(sum(${activities.distanceMeters}), 0)` })
+    .from(activities)
+    .where(
+      and(
+        eq(activities.athleteId, athleteId),
+        eq(activities.sportType, goal.sportType),
+        gte(activities.startTime, periodStart(goal.period as Period))
+      )
+    );
+  return Math.round((Number(row?.meters ?? 0) / 1000) * 10) / 10;
+};
+
+const toDto = (g: GoalRow, currentValue: number) => ({
+  id: g.id,
+  title: g.title,
+  sportType: g.sportType,
+  targetValue: parseFloat(g.targetValue) || 0,
+  currentValue,
+  unit: g.unit,
+  period: g.period,
+});
+
 // GET /api/v1/goals
-goalsRouter.get('/', optionalAuth, async (c) => {
-  try {
-    const user = c.get('user' as any);
-    const db = getDb(c);
-
-    let athleteId = user?.id;
-    if (!athleteId) {
-      const [firstAthlete] = await db.select({ id: athletes.id }).from(athletes).limit(1);
-      athleteId = firstAthlete?.id;
-    }
-
-    if (!athleteId) {
-      return c.json({ goals: [] });
-    }
-
-    const userGoals = await db
-      .select()
-      .from(trainingGoals)
-      .where(eq(trainingGoals.athleteId, athleteId))
-      .orderBy(desc(trainingGoals.createdAt));
-
-    return c.json({
-      goals: userGoals.map((g) => ({
-        id: g.id,
-        title: g.title,
-        sportType: g.sportType,
-        targetValue: parseFloat(g.targetValue) || 0,
-        currentValue: 0,
-        unit: g.unit,
-        period: g.period,
-      })),
-    });
-  } catch (err: any) {
-    console.error('Goals fetch error:', err);
-    return c.json({ error: err.message || 'Failed to fetch goals' }, 500);
-  }
+goalsRouter.get('/', async (c) => {
+  const user = c.get('user' as any) as { athleteId: string };
+  const db = getDb(c);
+  const rows = await db
+    .select()
+    .from(trainingGoals)
+    .where(eq(trainingGoals.athleteId, user.athleteId))
+    .orderBy(desc(trainingGoals.createdAt));
+  const goals = await Promise.all(rows.map(async (g) => toDto(g, await progressKm(db, user.athleteId, g))));
+  return c.json({ goals });
 });
 
 // POST /api/v1/goals
-goalsRouter.post('/', optionalAuth, async (c) => {
-  try {
-    const user = c.get('user' as any);
-    const body = await c.req.json();
-    const db = getDb(c);
+goalsRouter.post('/', async (c) => {
+  const user = c.get('user' as any) as { athleteId: string };
+  const parsed = createSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: 'Invalid goal', code: 'validation_error' }, 400);
+  const { title, targetValue, unit, period, sportType } = parsed.data;
+  const db = getDb(c);
 
-    let athleteId = user?.id;
-    if (!athleteId) {
-      const [firstAthlete] = await db.select({ id: athletes.id }).from(athletes).limit(1);
-      athleteId = firstAthlete?.id;
-    }
-
-    if (!athleteId) {
-      return c.json({ error: 'Athlete account required' }, 401);
-    }
-
-    const { title, targetValue, unit = 'km', period = 'WEEKLY', sportType = 'Run' } = body;
-
-    if (!title || targetValue === undefined) {
-      return c.json({ error: 'Title and targetValue are required' }, 400);
-    }
-
-    const goalId = `goal_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-
-    const [newGoal] = await db
-      .insert(trainingGoals)
-      .values({
-        id: goalId,
-        athleteId,
-        title,
-        targetValue: String(targetValue),
-        unit,
-        period,
-        sportType,
-      })
-      .returning();
-
-    return c.json(
-      {
-        goal: {
-          id: newGoal.id,
-          title: newGoal.title,
-          sportType: newGoal.sportType,
-          targetValue: parseFloat(newGoal.targetValue) || 0,
-          currentValue: 0,
-          unit: newGoal.unit,
-          period: newGoal.period,
-        },
-      },
-      201
-    );
-  } catch (err: any) {
-    console.error('Goal create error:', err);
-    return c.json({ error: err.message || 'Failed to create goal' }, 500);
-  }
+  const [goal] = await db
+    .insert(trainingGoals)
+    .values({
+      id: `goal_${crypto.randomUUID()}`,
+      athleteId: user.athleteId,
+      title,
+      targetValue: String(targetValue),
+      unit,
+      period,
+      sportType,
+    })
+    .returning();
+  return c.json({ goal: toDto(goal, await progressKm(db, user.athleteId, goal)) }, 201);
 });
 
-// DELETE /api/v1/goals/:id
-goalsRouter.delete('/:id', optionalAuth, async (c) => {
-  try {
-    const id = c.req.param('id');
-    if (!id) {
-      return c.json({ error: 'Goal ID is required' }, 400);
-    }
-    const db = getDb(c);
-
-    await db.delete(trainingGoals).where(eq(trainingGoals.id, id));
-
-    return c.json({ success: true, message: 'Goal deleted' });
-  } catch (err: any) {
-    console.error('Goal delete error:', err);
-    return c.json({ error: err.message || 'Failed to delete goal' }, 500);
-  }
+// DELETE /api/v1/goals/:id — owner only
+goalsRouter.delete('/:id', async (c) => {
+  const user = c.get('user' as any) as { athleteId: string };
+  const db = getDb(c);
+  const deleted = await db
+    .delete(trainingGoals)
+    .where(and(eq(trainingGoals.id, c.req.param('id')), eq(trainingGoals.athleteId, user.athleteId)))
+    .returning({ id: trainingGoals.id });
+  if (deleted.length === 0) return c.json({ error: 'Goal not found', code: 'not_found' }, 404);
+  return c.json({ success: true, message: 'Goal deleted' });
 });

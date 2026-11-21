@@ -12,13 +12,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GoalCard } from '../../components/analytics/GoalCard';
 import { NewGoalForm } from '../../components/analytics/NewGoalForm';
-import { useApp } from '../../context/AppContext';
 import { api } from '../../services/api';
 import { TrainingGoal } from '../../types';
 
 export default function GoalsScreen() {
   const router = useRouter();
-  const { activities } = useApp();
   const [goals, setGoals] = useState<TrainingGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -27,40 +25,12 @@ export default function GoalsScreen() {
   const [newPeriod, setNewPeriod] = useState<'WEEKLY' | 'MONTHLY' | 'ANNUAL'>('WEEKLY');
   const [saving, setSaving] = useState(false);
 
-  // Load goals from API
+  // Progress (currentValue) is computed by the server from the athlete's saved activities.
   const fetchGoals = async () => {
     try {
       setLoading(true);
       const res = await api.goals.list();
-      if (res?.goals) {
-        const now = new Date();
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
-        startOfWeek.setHours(0, 0, 0, 0);
-
-        const computedGoals = res.goals.map((g: any) => {
-          let currentVal = 0;
-          if (g.period === 'WEEKLY') {
-            const thisWeekActivities = activities.filter(
-              (a) => new Date(a.startTime).getTime() >= startOfWeek.getTime()
-            );
-            currentVal = thisWeekActivities.reduce(
-              (acc, a) => acc + a.distanceMeters / 1000,
-              0
-            );
-          } else {
-            currentVal = activities.reduce(
-              (acc, a) => acc + a.distanceMeters / 1000,
-              0
-            );
-          }
-          return {
-            ...g,
-            currentValue: Math.round(currentVal * 10) / 10,
-          };
-        });
-        setGoals(computedGoals);
-      }
+      if (res?.goals) setGoals(res.goals as TrainingGoal[]);
     } catch (err) {
       console.warn('Failed to load goals:', err);
     } finally {
@@ -70,7 +40,7 @@ export default function GoalsScreen() {
 
   useEffect(() => {
     fetchGoals();
-  }, [activities]);
+  }, []);
 
   const handleAddGoal = async () => {
     if (!newTitle.trim()) {
