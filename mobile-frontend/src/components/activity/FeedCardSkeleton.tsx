@@ -22,3 +22,4 @@ export const FeedCardSkeleton: React.FC = () => (
     <Skeleton className="h-44 rounded-none mt-3" />
   </View>
 );
+
