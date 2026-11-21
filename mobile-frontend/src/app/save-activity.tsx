@@ -1,7 +1,8 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -9,90 +10,46 @@ import {
   ScrollView,
   Text,
   View,
-} from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import { VISIBILITY_LABEL } from "../components/activity/FeedCard";
-import { RoutePreview } from "../components/map/RoutePreview";
-import { SportSheet } from "../components/record/SportSheet";
-import {
-  BottomSheet,
-  Button,
-  EmptyState,
-  ErrorState,
-  MetricRow,
-  MetricTile,
-  OptionRow,
-  SectionTitle,
-  SelectField,
-  TextField,
-} from "../design";
-import {
-  defaultActivityTitle,
-  formatDuration,
-  formatElevation,
-  kmValue,
-  paceValue,
-  speedValue,
-} from "../lib/format";
-import { plannedRouteStore } from "../lib/plannedRoute";
-import { sportConfig } from "../lib/sports";
-import { recordingEngine } from "../tracking/engine";
-import { TrackSummary } from "../tracking/shared";
-import { syncWorker } from "../tracking/sync";
-import { useRecording } from "../tracking/useRecording";
-import { ActivityVisibility, SportType } from "../types";
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SaveActivityForm } from '../components/activity/SaveActivityForm';
+import { VISIBILITY_LABEL } from '../components/activity/FeedCard';
+import { SportSheet } from '../components/record/SportSheet';
+import { BottomSheet, EmptyState, ErrorState, OptionRow } from '../design';
+import { defaultActivityTitle, paceValue, speedValue } from '../lib/format';
+import { plannedRouteStore } from '../lib/plannedRoute';
+import { sportConfig } from '../lib/sports';
+import { recordingEngine } from '../tracking/engine';
+import { TrackSummary } from '../tracking/shared';
+import { syncWorker } from '../tracking/sync';
+import { useRecording } from '../tracking/useRecording';
+import { ActivityVisibility, SportType } from '../types';
 
-const VISIBILITY_OPTIONS: {
-  id: ActivityVisibility;
-  title: string;
-  description: string;
-}[] = [
-  {
-    id: "PUBLIC",
-    title: "Everyone",
-    description: "Anyone can view this activity.",
-  },
-  {
-    id: "FOLLOWERS_ONLY",
-    title: "Followers",
-    description: "Only people who follow you can view this activity.",
-  },
-  {
-    id: "ONLY_ME",
-    title: "Only you",
-    description: "Private. Only you can view this activity.",
-  },
+const VISIBILITY_OPTIONS: { id: ActivityVisibility; title: string; description: string }[] = [
+  { id: 'PUBLIC', title: 'Everyone', description: 'Anyone on Strava can see this activity.' },
+  { id: 'FOLLOWERS_ONLY', title: 'Followers', description: 'Only people who follow you can view this activity.' },
+  { id: 'ONLY_ME', title: 'Only you', description: 'Private. Only you can view this activity.' },
 ];
 
-/**
- * Save Activity (reference: ScreensDesign 374734 / 374750 / 374747; research §3).
- * Only fields the backend actually stores are shown (UI/UX audit: no fake controls).
- */
 export default function SaveActivityScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const rec = useRecording();
   const active =
-    rec.lifecycle.status === "recording" || rec.lifecycle.status === "paused";
+    rec.lifecycle.status === 'recording' ||
+    rec.lifecycle.status === 'paused' ||
+    Boolean(rec.sessionId);
 
-  const [startDate] = useState(
-    () => new Date(rec.lifecycle.startedAt ?? Date.now()),
-  );
-  const [sport, setSport] = useState<SportType>(rec.sport as SportType);
-  const [title, setTitle] = useState(() =>
-    defaultActivityTitle(sportConfig(rec.sport).label, startDate),
-  );
+  const [startDate] = useState(() => new Date(rec.lifecycle.startedAt ?? Date.now()));
+  const [sport, setSport] = useState<SportType>((rec.sport as SportType) || 'Run');
+  const [title, setTitle] = useState(() => defaultActivityTitle(sportConfig(rec.sport).label, startDate));
   const [titleEdited, setTitleEdited] = useState(false);
-  const [description, setDescription] = useState("");
-  const [visibility, setVisibility] = useState<ActivityVisibility>("PUBLIC");
+  const [description, setDescription] = useState('');
+  const [visibility, setVisibility] = useState<ActivityVisibility>('PUBLIC');
   const [sportSheet, setSportSheet] = useState(false);
   const [visibilitySheet, setVisibilitySheet] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Summary exactly as the activity will be stored: same shared math the server re-runs.
   const [summary, setSummary] = useState<TrackSummary | null>(null);
 
   useEffect(() => {
@@ -113,7 +70,7 @@ export default function SaveActivityScreen() {
           icon="checkmark-done-outline"
           title="Nothing to save"
           body="There is no recorded activity waiting to be saved."
-          primary={{ label: "Close", onPress: () => router.back() }}
+          primary={{ label: 'Close', onPress: () => router.back() }}
         />
       </SafeAreaView>
     );
@@ -125,28 +82,19 @@ export default function SaveActivityScreen() {
   };
 
   const onDiscard = () =>
-    Alert.alert(
-      "Discard activity?",
-      "This recording will be deleted. This can’t be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Discard",
-          style: "destructive",
-          onPress: async () => {
-            await recordingEngine.discard();
-            plannedRouteStore.set(null);
-            router.dismissAll();
-          },
+    Alert.alert('Discard activity?', 'This recording will be deleted. This can’t be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Discard',
+        style: 'destructive',
+        onPress: async () => {
+          await recordingEngine.discard();
+          plannedRouteStore.set(null);
+          router.dismissAll();
         },
-      ],
-    );
+      },
+    ]);
 
-  /**
-   * Local-first save: the activity is committed to the phone's database first (it can't be lost
-   * from here on), then uploaded. We wait briefly so a good connection lands on the new activity;
-   * otherwise the upload continues in the background and Home shows it as pending.
-   */
   const onSave = async () => {
     if (saving) return;
     setSaving(true);
@@ -160,236 +108,88 @@ export default function SaveActivityScreen() {
         visibility,
       });
     } catch (e: any) {
-      setError(e?.message ?? "Could not save the activity.");
+      setError(e?.message ?? 'Could not save the activity.');
       setSaving(false);
       return;
     }
-    plannedRouteStore.set(null); // the saved activity is the recorded track only
+    plannedRouteStore.set(null);
     const { synced, activityId } = await syncWorker.waitFor(sessionId, 8000);
     router.dismissAll();
-    if (synced && activityId)
-      router.push({ pathname: "/activity/[id]", params: { id: activityId } });
+    if (synced && activityId) router.push({ pathname: '/activity/[id]', params: { id: activityId } });
     else if (!synced)
-      Alert.alert(
-        "Saved on this phone",
-        "Your activity will upload automatically when the connection is back.",
-      );
+      Alert.alert('Saved on this phone', 'Your activity will upload automatically when the connection is back.');
   };
 
   const s = summary;
   const distanceM = s?.distanceM ?? rec.distanceM;
   const movingS = s?.movingTimeS ?? rec.movingTimeS;
   const second =
-    cfg.primaryMetric === "speed"
-      ? {
-          label: "Avg speed",
-          value: speedValue(movingS > 0 ? distanceM / movingS : null),
-          unit: "km/h",
-        }
-      : {
-          label: "Avg pace",
-          value: paceValue(distanceM, movingS),
-          unit: "/km",
-        };
+    cfg.primaryMetric === 'speed'
+      ? { label: 'Avg speed', value: speedValue(movingS > 0 ? distanceM / movingS : null), unit: 'km/h' }
+      : { label: 'Avg pace', value: paceValue(distanceM, movingS), unit: '/km' };
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-white">
+    <SafeAreaView edges={['top']} className="flex-1 bg-white">
+      {/* Top Header */}
       <View className="h-14 flex-row items-center px-4 border-b border-gray-100 justify-between">
-        <Button
-          label="Resume"
-          variant="outline"
-          size="sm"
+        <Pressable
           onPress={onResume}
           disabled={saving}
-        />
-        <Text className="text-lg font-bold text-gray-900 text-center flex-1">
-          Save Activity
-        </Text>
-        <View className="w-20" />
+          className="px-3.5 py-1.5 rounded-full border border-gray-200 active:bg-gray-50">
+          <Text className="text-gray-900 font-bold text-xs">Resume</Text>
+        </Pressable>
+        <Text className="text-lg font-black text-gray-900 text-center flex-1">Save Activity</Text>
+        <View className="w-16" />
       </View>
 
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={{ padding: 16, paddingBottom: 64 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View className="p-4 bg-gray-50 rounded-2xl mb-4">
-            <MetricRow>
-              <MetricTile
-                label="Distance"
-                value={kmValue(distanceM)}
-                unit="km"
-              />
-              <MetricTile label="Moving time" value={formatDuration(movingS)} />
-              <MetricTile
-                label={second.label}
-                value={second.value}
-                unit={second.value === "–" ? undefined : second.unit}
-              />
-              <MetricTile
-                label="Elev gain"
-                value={formatElevation(s ? s.elevGainM : rec.elevGainM)}
-              />
-            </MetricRow>
-          </View>
-          {route.length > 1 ? (
-            <View className="mb-4">
-              <RoutePreview route={route} height={150} rounded />
-            </View>
-          ) : null}
-
-          <TextField
-            value={title}
-            onChangeText={(t) => {
+      <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 64 }} keyboardShouldPersistTaps="handled">
+          <SaveActivityForm
+            distanceM={distanceM}
+            movingS={movingS}
+            elevGainM={s ? s.elevGainM : rec.elevGainM}
+            second={second}
+            route={route}
+            title={title}
+            onTitleChange={(t) => {
               setTitle(t);
               setTitleEdited(true);
             }}
-            placeholder="Title your activity"
-            accessibilityLabel="Activity title"
-            maxLength={100}
-            returnKeyType="next"
+            description={description}
+            onDescriptionChange={setDescription}
+            sportConfig={cfg}
+            onOpenSportSheet={() => setSportSheet(true)}
+            visibility={visibility}
+            onOpenVisibilitySheet={() => setVisibilitySheet(true)}
+            saving={saving}
+            onDiscard={onDiscard}
           />
-          <View className="h-4" />
-          <TextField
-            value={description}
-            onChangeText={setDescription}
-            placeholder="How did it go? Share more about your activity."
-            accessibilityLabel="Description"
-            multiline
-            maxLength={2000}
-          />
-          <View className="h-4" />
-          <SelectField
-            value={cfg.label}
-            icon={cfg.icon}
-            onPress={() => setSportSheet(true)}
-            accessibilityLabel="Sport"
-          />
-
-          {/* Add Photos/Videos Dashed Box (Strava Style) */}
-          <Pressable
-            onPress={() =>
-              Alert.alert(
-                "Photos & Videos",
-                "Photo and video upload feature will be available in the next cloud storage update.",
-              )
-            }
-            className="mt-4 border-2 border-dashed border-[#FC4C02] rounded-2xl py-6 items-center justify-center bg-[#FFF9F6]"
-          >
-            <Ionicons name="image-outline" size={32} color="#FC4C02" />
-            <Text className="text-sm font-bold text-[#FC4C02] mt-1">
-              Add Photos/Videos
-            </Text>
-          </Pressable>
-
-          {/* Details Section */}
-          <SectionTitle title="Details" className="mt-6" />
-          <Pressable
-            onPress={() =>
-              Alert.alert(
-                "Activity Tag",
-                "Select a tag (Workout, Race, Long Run).",
-              )
-            }
-            className="flex-row items-center justify-between bg-gray-50 rounded-xl px-4 py-3.5 border border-gray-100"
-          >
-            <View className="flex-row items-center">
-              <Ionicons
-                name="pricetag-outline"
-                size={18}
-                color="#6B7280"
-              />
-              <Text className="text-sm font-medium text-gray-800 ml-2">
-                Activity Tag
-              </Text>
-            </View>
-            <Ionicons
-              name="chevron-down"
-              size={16}
-              color="#6B7280"
-            />
-          </Pressable>
-
-          <Pressable
-            onPress={() =>
-              Alert.alert(
-                "Perceived Exertion",
-                "Rate how hard the activity felt (1-10).",
-              )
-            }
-            className="flex-row items-center justify-between bg-gray-50 rounded-xl px-4 py-3.5 border border-gray-100 mt-2.5"
-          >
-            <View className="flex-row items-center">
-              <Ionicons
-                name="speedometer-outline"
-                size={18}
-                color="#6B7280"
-              />
-              <Text className="text-sm font-medium text-gray-800 ml-2">
-                How did that activity feel?
-              </Text>
-            </View>
-            <Ionicons
-              name="chevron-down"
-              size={16}
-              color="#6B7280"
-            />
-          </Pressable>
-
-          <View className="flex-row items-start bg-gray-50 rounded-xl p-3 border border-gray-100 mt-2.5">
-            <Ionicons
-              name="lock-closed-outline"
-              size={16}
-              color="#6B7280"
-              className="mt-0.5 mr-1.5"
-            />
-            <Text className="text-xs text-gray-500 flex-1 leading-4">
-              Jot down private notes here. Only you can see these.
-            </Text>
-          </View>
-
-          <SectionTitle title="Visibility" className="mt-6" />
-          <Text className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">
-            Who can view
-          </Text>
-          <SelectField
-            value={VISIBILITY_LABEL[visibility].label}
-            icon={VISIBILITY_LABEL[visibility].icon}
-            onPress={() => setVisibilitySheet(true)}
-            accessibilityLabel="Who can view"
-          />
-
           {error ? (
             <View className="mt-4">
               <ErrorState compact message={error} />
             </View>
           ) : null}
-
-          <Button
-            label="Discard Activity"
-            variant="danger"
-            onPress={onDiscard}
-            disabled={saving}
-            className="self-center mt-7"
-          />
         </ScrollView>
 
-        <View
-          style={{ paddingBottom: insets.bottom + 12 }}
-          className="px-4 pt-3 bg-white border-t border-gray-100"
-        >
-          <Button
-            label={error ? "Try again" : "Save Activity"}
-            variant="dark"
-            size="lg"
-            fullWidth
-            loading={saving}
+        {/* Sticky Bottom Save Activity Button */}
+        <View style={{ paddingBottom: Math.max(insets.bottom, 12) + 12 }} className="px-4 pt-3 bg-white border-t border-gray-100 shadow-md">
+          <Pressable
             onPress={onSave}
-            disabled={!title.trim()}
-          />
+            disabled={saving || !title.trim()}
+            accessibilityRole="button"
+            accessibilityLabel="Save Activity"
+            className="h-14 rounded-full bg-[#FC4C02] flex-row items-center justify-center shadow-lg active:bg-[#E03A00]">
+            {saving ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle-outline" size={22} color="#FFFFFF" />
+                <Text className="text-white text-base font-black ml-2">
+                  {error ? 'Try again' : 'Save Activity'}
+                </Text>
+              </>
+            )}
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
 
@@ -398,17 +198,12 @@ export default function SaveActivityScreen() {
         selected={sport}
         onSelect={(s) => {
           setSport(s);
-          if (!titleEdited)
-            setTitle(defaultActivityTitle(sportConfig(s).label, startDate));
+          if (!titleEdited) setTitle(defaultActivityTitle(sportConfig(s).label, startDate));
           setSportSheet(false);
         }}
         onClose={() => setSportSheet(false)}
       />
-      <BottomSheet
-        visible={visibilitySheet}
-        onClose={() => setVisibilitySheet(false)}
-        title="Who can view"
-      >
+      <BottomSheet visible={visibilitySheet} onClose={() => setVisibilitySheet(false)} title="Who can view">
         {VISIBILITY_OPTIONS.map((o) => (
           <OptionRow
             key={o.id}

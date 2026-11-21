@@ -22,7 +22,7 @@ import { SportType } from '../types';
 export default function RecordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ sport?: string }>();
+  const params = useLocalSearchParams<{ sport?: string; autoStart?: string }>();
   const rec = useRecording();
   const status = rec.lifecycle.status;
   const isIdle = status === 'idle' || status === 'preparing';
@@ -47,6 +47,12 @@ export default function RecordScreen() {
     if (!isIdle || requested) return;
     loadLastSport().then((s) => s && setSport(s));
   }, [isIdle, requested]);
+
+  useEffect(() => {
+    if (params.autoStart === 'true' && isIdle) {
+      recordingEngine.start(sport).catch(() => {});
+    }
+  }, [params.autoStart, isIdle, sport]);
 
   useEffect(() => {
     recordingEngine.prepare();

@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import { Alert, Linking } from 'react-native';
 import { DASH, formatClock, kmValue, paceValue, speedValue } from '../../lib/format';
-import { plannedRouteStore } from '../../lib/plannedRoute';
 import { SportConfig } from '../../lib/sports';
 import { recordingEngine } from '../../tracking/engine';
 import { liveSpeed, timerSeconds } from '../../tracking/useRecording';
@@ -78,23 +77,15 @@ export function useRecordMetrics({
     }
   };
 
-  const onFinish = () => {
-    if (rec.distanceM < 50 && (rec.movingTimeS < 15 || !rec.movingTimeS)) {
-      Alert.alert('Short Workout', 'We noticed you haven’t moved very far. Resume, finish or discard?', [
-        { text: 'Resume', style: 'cancel', onPress: () => recordingEngine.resume() },
-        { text: 'Finish & Save', onPress: () => router.push('/save-activity') },
-        {
-          text: 'Discard',
-          style: 'destructive',
-          onPress: async () => {
-            await recordingEngine.discard();
-            plannedRouteStore.set(null);
-            router.back();
-          },
-        },
-      ]);
-      return;
-    }
+  const onFinish = async () => {
+    try {
+      if (status === 'recording') {
+        await recordingEngine.pause();
+      } else if (isIdle) {
+        await recordingEngine.start(sport);
+        await recordingEngine.pause();
+      }
+    } catch {}
     router.push('/save-activity');
   };
 
@@ -111,4 +102,3 @@ export function useRecordMetrics({
     onFinish,
   };
 }
-
