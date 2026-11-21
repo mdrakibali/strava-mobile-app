@@ -37,23 +37,7 @@ export function RecordBottomControls({
 
   if (isIdle) {
     return (
-      <View className="flex-row items-center justify-around py-1">
-        {/* Sport Selector Button */}
-        <Pressable
-          onPress={onOpenSportSheet}
-          accessibilityRole="button"
-          accessibilityLabel={`Sport: ${cfg.label}. Change sport`}
-          className="items-center">
-          <View className="w-16 h-16 rounded-full bg-orange-50 border border-orange-300 items-center justify-center relative shadow-sm active:bg-orange-100">
-            <Ionicons name={cfg.icon} size={28} color="#FC4C02" />
-            <View className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-[#FC4C02] items-center justify-center border border-white">
-              <Ionicons name="checkmark" size={10} color="#FFFFFF" />
-            </View>
-          </View>
-          <AppText className="text-gray-900 text-xs font-bold mt-1.5">{cfg.label}</AppText>
-        </Pressable>
-
-        {/* Huge Orange Start Play Button */}
+      <View className="py-2 items-center justify-center">
         <Pressable
           onPress={onStart}
           disabled={starting || gpsDisabled}
@@ -61,34 +45,6 @@ export function RecordBottomControls({
           accessibilityLabel={`Start ${cfg.label}`}
           className="w-20 h-20 rounded-full bg-[#FC4C02] items-center justify-center shadow-xl active:bg-[#E03A00] border-2 border-orange-400/30">
           <Ionicons name="play" size={38} color="#FFFFFF" className="ml-1" />
-        </Pressable>
-
-        {/* Routes Button */}
-        <Pressable
-          onPress={onOpenRoutes}
-          accessibilityRole="button"
-          accessibilityLabel="Routes"
-          className="items-center">
-          <View
-            className={`w-16 h-16 rounded-full items-center justify-center relative shadow-sm active:bg-gray-100 ${
-              hasPlannedRoute
-                ? 'bg-orange-50 border border-orange-300'
-                : 'bg-gray-100 border border-gray-200'
-            }`}>
-            <Ionicons
-              name="git-network-outline"
-              size={26}
-              color={hasPlannedRoute ? '#FC4C02' : '#374151'}
-            />
-            {hasPlannedRoute ? (
-              <View className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-[#FC4C02] items-center justify-center border border-white">
-                <Ionicons name="checkmark" size={10} color="#FFFFFF" />
-              </View>
-            ) : null}
-          </View>
-          <AppText className="text-gray-900 text-xs font-bold mt-1.5">
-            {hasPlannedRoute ? 'Switch Route' : 'Add Route'}
-          </AppText>
         </Pressable>
       </View>
     );

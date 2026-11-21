@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
   ActivityIndicator,
@@ -24,28 +23,14 @@ export const FormScreen: React.FC<{
 
   return (
     <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-white">
-      {/* Top Header with prominent Save/Create action button */}
-      <AppBar
-        title={title}
-        right={
-          <Pressable
-            onPress={onSubmit}
-            disabled={submitting}
-            hitSlop={8}
-            className="px-3.5 py-1.5 rounded-full bg-[#FC4C02] active:bg-[#E03A00] mr-2">
-            <AppText className="text-white text-xs font-black">
-              {submitting ? 'Saving…' : 'Create'}
-            </AppText>
-          </Pressable>
-        }
-      />
+      <AppBar title={title} />
 
       <KeyboardAvoidingView
-        className="flex-1"
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          className="flex-1"
-          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled">
           {children}
 
@@ -54,48 +39,24 @@ export const FormScreen: React.FC<{
               <ErrorState compact message={error} />
             </View>
           ) : null}
-
-          {/* Form In-line Submit Button */}
-          <View className="mt-8 mb-4">
-            <Pressable
-              onPress={onSubmit}
-              disabled={submitting}
-              accessibilityRole="button"
-              accessibilityLabel={submitLabel}
-              className="h-14 rounded-full bg-[#FC4C02] flex-row items-center justify-center shadow-lg active:bg-[#E03A00]">
-              {submitting ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <>
-                  <Ionicons name="checkmark-circle-outline" size={22} color="#FFFFFF" />
-                  <AppText className="text-white text-base font-black ml-2">
-                    {submitLabel}
-                  </AppText>
-                </>
-              )}
-            </Pressable>
-          </View>
         </ScrollView>
 
-        {/* Sticky Bottom Submit Bar */}
+        {/* Single Sticky Bottom Submit Button */}
         <View
-          style={{ paddingBottom: Math.max(insets.bottom, 8) + 8 }}
-          className="px-4 pt-3 border-t border-gray-100 bg-white shadow-md">
+          style={{ paddingBottom: Math.max(insets.bottom, 12) }}
+          className="px-4 pt-3 pb-3 border-t border-gray-100 bg-white shadow-sm">
           <Pressable
             onPress={onSubmit}
             disabled={submitting}
             accessibilityRole="button"
             accessibilityLabel={submitLabel}
-            className="h-14 rounded-full bg-[#FC4C02] flex-row items-center justify-center shadow-lg active:bg-[#E03A00]">
+            className="h-14 rounded-full bg-[#FC4C02] flex-row items-center justify-center shadow-md active:bg-[#E03A00]">
             {submitting ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <>
-                <Ionicons name="checkmark-circle-outline" size={22} color="#FFFFFF" />
-                <AppText className="text-white text-base font-black ml-2">
-                  {submitLabel}
-                </AppText>
-              </>
+              <AppText className="text-white text-base font-black">
+                {submitLabel}
+              </AppText>
             )}
           </Pressable>
         </View>

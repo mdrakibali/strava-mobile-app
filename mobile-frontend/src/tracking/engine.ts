@@ -298,23 +298,36 @@ class RecordingEngine {
 
   private async startUpdates(sport: string) {
     if (await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK).catch(() => false)) return;
-    await Location.startLocationUpdatesAsync(LOCATION_TASK, {
-      accuracy: Location.Accuracy.BestForNavigation,
-      timeInterval: 1000,
-      distanceInterval: 0,
-      activityType: Location.ActivityType.Fitness,
-      pausesUpdatesAutomatically: false,
-      showsBackgroundLocationIndicator: true,
-      foregroundService: {
-        notificationTitle: `Recording ${sport.toLowerCase()}`,
-        notificationBody: 'GPS is on. Tap to return to your activity.',
-        notificationColor: '#F25C19',
-        killServiceOnDestroy: false,
-      },
-    });
+    try {
+      await Location.startLocationUpdatesAsync(LOCATION_TASK, {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 1000,
+        distanceInterval: 0,
+        activityType: Location.ActivityType.Fitness,
+        pausesUpdatesAutomatically: false,
+        showsBackgroundLocationIndicator: true,
+        foregroundService: {
+          notificationTitle: `Recording ${sport.toLowerCase()}`,
+          notificationBody: 'GPS is on. Tap to return to your activity.',
+          notificationColor: '#F25C19',
+          killServiceOnDestroy: false,
+        },
+      });
+    } catch {
+      if (!this.previewSub) {
+        this.previewSub = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 0 },
+          (l) => {
+            this.ingest([l]);
+          }
+        ).catch(() => null);
+      }
+    }
   }
 
   private async stopUpdates() {
+    this.previewSub?.remove();
+    this.previewSub = null;
     if (await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK).catch(() => false)) {
       await Location.stopLocationUpdatesAsync(LOCATION_TASK).catch(() => {});
     }

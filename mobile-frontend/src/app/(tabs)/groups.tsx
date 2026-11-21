@@ -127,20 +127,23 @@ export default function GroupsScreen() {
     events: '/event/create',
   } as const;
 
-  const fabLabel = tab === 'challenges' ? 'Create Challenge' : tab === 'clubs' ? 'Create Club' : 'Create Event';
-
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-[#F7F7F8]">
       {/* Top Header */}
       <View className="px-5 pt-3 pb-2 bg-white flex-row items-center justify-between border-b border-gray-100">
         <Text className="text-3xl font-black text-gray-900 tracking-tight">Groups</Text>
-        <View className="flex-row items-center space-x-2">
-          <TouchableOpacity onPress={() => router.push(create[tab])} className="flex-row items-center bg-orange-50 border border-orange-200 px-3 py-1.5 rounded-full active:bg-orange-100 mr-2">
-            <Ionicons name="add" size={16} color="#FC4C02" />
-            <Text className="text-xs font-bold text-[#FC4C02] ml-1">Create</Text>
+        <View className="flex-row items-center">
+          <TouchableOpacity
+            onPress={() => router.push('/search')}
+            accessibilityLabel="Search"
+            className="p-2">
+            <Ionicons name="search-outline" size={24} color="#1F2937" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/search')} className="p-2">
-            <Ionicons name="search-outline" size={22} color="#1F2937" />
+          <TouchableOpacity
+            onPress={() => router.push(create[tab])}
+            accessibilityLabel="Create"
+            className="p-2 ml-1">
+            <Ionicons name="add" size={28} color="#1F2937" />
           </TouchableOpacity>
         </View>
       </View>
@@ -185,7 +188,7 @@ export default function GroupsScreen() {
 
       {/* Body List */}
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />}>
         <GroupsTabContent
@@ -200,15 +203,6 @@ export default function GroupsScreen() {
           rsvp={rsvp}
         />
       </ScrollView>
-
-      {/* Floating Action Button (FAB) for Creating */}
-      <TouchableOpacity
-        onPress={() => router.push(create[tab])}
-        activeOpacity={0.85}
-        className="absolute right-5 bottom-6 bg-[#FC4C02] px-5 py-3.5 rounded-full flex-row items-center shadow-2xl active:bg-[#E03A00] z-30">
-        <Ionicons name="add" size={20} color="#FFFFFF" />
-        <Text className="text-white text-sm font-black ml-1.5">{fabLabel}</Text>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
