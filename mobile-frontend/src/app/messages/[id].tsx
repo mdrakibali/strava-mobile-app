@@ -12,11 +12,9 @@ export default function ChatScreen() {
   const router = useRouter();
   const { currentUser } = useApp();
 
+  const [chatId, setChatId] = useState<string>(id?.startsWith('chat_') ? id : '');
   const [partner, setPartner] = useState<any>({
-    id: id || 'partner',
-    displayName: 'Athlete',
-    username: 'athlete',
-    avatarUrl: '',
+    id: id || 'partner', displayName: 'Athlete', username: 'athlete', avatarUrl: '',
   });
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState('');
@@ -30,10 +28,14 @@ export default function ChatScreen() {
   const fetchChatHistory = async () => {
     if (!effectiveId) return;
     try {
-      const profileRes = await api.athletes.getProfile(effectiveId).catch(() => null);
-      if (profileRes?.athlete) setPartner(profileRes.athlete);
       const res = await api.messages.getThread(effectiveId);
       if (res?.messages) setMessages(res.messages);
+      if (res?.partner) setPartner(res.partner);
+      if (res?.chatId) setChatId(res.chatId);
+      if (!res?.partner) {
+        const profileRes = await api.athletes.getProfile(effectiveId).catch(() => null);
+        if (profileRes?.athlete) setPartner(profileRes.athlete);
+      }
     } catch (err) {
       console.warn('Failed to load chat history:', err);
     } finally {
@@ -42,19 +44,29 @@ export default function ChatScreen() {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchChatHistory();
     const unsubMsg = realtimeWs.addListener('new_message', (payload: any) => {
       const dm = payload.directMessage;
       if (!dm) return;
-      if (dm.senderId === effectiveId || dm.recipientId === effectiveId) {
-        setMessages((prev) => (prev.some((m) => m.id === dm.id) ? prev : [...prev, dm]));
+      const isRelevant = dm.chatId === chatId || dm.senderId === partner.id || dm.recipientId === partner.id
+        || dm.senderId === effectiveId || dm.recipientId === effectiveId;
+      if (isRelevant) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === dm.id)) return prev;
+          const tempIdx = prev.findIndex((m) => m.id.startsWith('temp_') && m.text === dm.text && m.senderId === dm.senderId);
+          if (tempIdx !== -1) {
+            const next = [...prev];
+            next[tempIdx] = dm;
+            return next;
+          }
+          return [...prev, dm];
+        });
         setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
       }
     });
 
     const unsubTyping = realtimeWs.addListener('typing', (payload: any) => {
-      if (payload.senderId === effectiveId) {
+      if (payload.senderId === partner.id || payload.senderId === effectiveId) {
         setIsPartnerTyping(true);
         if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
         typingTimerRef.current = setTimeout(() => setIsPartnerTyping(false), 2500);
@@ -66,7 +78,7 @@ export default function ChatScreen() {
       unsubTyping();
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     };
-  }, [effectiveId]);
+  }, [effectiveId, chatId, partner.id]);
 
   const handleSendMessage = async () => {
     if (!inputText.trim() || !effectiveId || isSending) return;
@@ -75,13 +87,24 @@ export default function ChatScreen() {
     setIsSending(true);
 
     const tempId = `temp_${Date.now()}`;
-    setMessages((prev) => [...prev, { id: tempId, senderId: currentUser.id, recipientId: effectiveId, text: textToSend, createdAt: new Date().toISOString() }]);
+    const optimistic = {
+      id: tempId, chatId, senderId: currentUser.id,
+      recipientId: partner.id !== currentUser.id ? partner.id : effectiveId,
+      text: textToSend, createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimistic]);
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      const res = await api.messages.send(effectiveId, textToSend);
+      const res = await api.messages.send(effectiveId, textToSend, { chatId });
+      if (res?.chatId && !chatId) setChatId(res.chatId);
       if (res?.directMessage) {
-        setMessages((prev) => prev.map((m) => (m.id === tempId ? res.directMessage : m)));
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === res.directMessage.id)) {
+            return prev.filter((m) => m.id !== tempId);
+          }
+          return prev.map((m) => (m.id === tempId ? res.directMessage : m));
+        });
       }
     } catch (err: any) {
       console.warn('Send message error:', err);
@@ -117,10 +140,7 @@ export default function ChatScreen() {
           </View>
         ) : (
           <ScrollView
-            ref={scrollViewRef}
-            showsVerticalScrollIndicator={false}
-            style={{ flex: 1 }}
-            keyboardShouldPersistTaps="handled"
+            ref={scrollViewRef} showsVerticalScrollIndicator={false} style={{ flex: 1 }} keyboardShouldPersistTaps="handled"
             onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
             contentContainerStyle={{ padding: 16, flexGrow: 1, justifyContent: messages.length === 0 ? 'center' : 'flex-start' }}>
             {messages.length > 0 ? (
@@ -155,16 +175,14 @@ export default function ChatScreen() {
             value={inputText}
             onChangeText={(val) => {
               setInputText(val);
-              if (val.trim() && effectiveId) realtimeWs.sendTyping(effectiveId);
+              if (val.trim() && (partner.id || effectiveId)) realtimeWs.sendTyping(partner.id || effectiveId);
             }}
             placeholder="Type a message..."
             placeholderTextColor="#9CA3AF"
             className="flex-1 h-10 bg-gray-100 rounded-full px-4 text-xs text-gray-900 mr-2"
           />
           <TouchableOpacity
-            onPress={handleSendMessage}
-            disabled={!inputText.trim() || isSending}
-            activeOpacity={0.8}
+            onPress={handleSendMessage} disabled={!inputText.trim() || isSending} activeOpacity={0.8}
             className={`w-10 h-10 rounded-full bg-[#FC4C02] items-center justify-center ${!inputText.trim() || isSending ? 'opacity-40' : ''}`}>
             <Ionicons name="send" size={16} color="#FFFFFF" />
           </TouchableOpacity>

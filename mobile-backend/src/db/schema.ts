@@ -350,18 +350,45 @@ export const notifications = pgTable('notifications', {
 }, (table) => [index('notifications_recipient_created_idx').on(table.recipientId, table.createdAt)]);
 
 // 17. Direct Messaging (Chat) Table
-export const directMessages = pgTable('direct_messages', {
-  id: text('id').primaryKey(),
-  senderId: text('sender_id')
-    .notNull()
-    .references(() => athletes.id, { onDelete: 'cascade' }),
-  recipientId: text('recipient_id')
-    .notNull()
-    .references(() => athletes.id, { onDelete: 'cascade' }),
-  text: text('text').notNull(),
-  isRead: boolean('is_read').default(false).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+export const chats = pgTable(
+  'chats',
+  {
+    id: text('id').primaryKey(),
+    athlete1Id: text('athlete1_id')
+      .notNull()
+      .references(() => athletes.id, { onDelete: 'cascade' }),
+    athlete2Id: text('athlete2_id')
+      .notNull()
+      .references(() => athletes.id, { onDelete: 'cascade' }),
+    lastMessage: text('last_message'),
+    lastMessageAt: timestamp('last_message_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('unique_chat_participants_idx').on(table.athlete1Id, table.athlete2Id),
+    index('chats_athlete1_idx').on(table.athlete1Id),
+    index('chats_athlete2_idx').on(table.athlete2Id),
+  ]
+);
+
+export const directMessages = pgTable(
+  'direct_messages',
+  {
+    id: text('id').primaryKey(),
+    chatId: text('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
+    senderId: text('sender_id')
+      .notNull()
+      .references(() => athletes.id, { onDelete: 'cascade' }),
+    recipientId: text('recipient_id')
+      .notNull()
+      .references(() => athletes.id, { onDelete: 'cascade' }),
+    text: text('text').notNull(),
+    isRead: boolean('is_read').default(false).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index('direct_messages_chat_idx').on(table.chatId, table.createdAt)]
+);
 
 // 18. Live Beacon Safety Tracking (Spectator Mode)
 export const beaconSessions = pgTable('beacon_sessions', {

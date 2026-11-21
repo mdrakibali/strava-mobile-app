@@ -49,6 +49,7 @@ export default function MessagesInboxScreen() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchConversations();
     const unsub = realtimeWs.addListener('new_message', () => {
       fetchConversations();
@@ -118,7 +119,7 @@ export default function MessagesInboxScreen() {
               <TouchableOpacity
                 key={item.id}
                 activeOpacity={0.8}
-                onPress={() => router.push(`/messages/${item.participant.id}`)}
+                onPress={() => router.push(`/messages/${item.chatId || item.participant?.id || item.id}`)}
                 className="flex-row items-center p-3.5 bg-white rounded-2xl mb-2.5 border border-gray-100 shadow-sm">
                 <View className="relative mr-3">
                   <Image

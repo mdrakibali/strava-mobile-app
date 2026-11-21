@@ -10,7 +10,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --fileParallelism=false",
     "seed": "node scripts/seed.mjs",
     "dev:local": "vite-node scripts/dev-local.ts"
   },

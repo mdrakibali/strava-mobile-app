@@ -406,12 +406,20 @@ export const api = {
   messages: {
     getConversations: () =>
       request<{ conversations: any[] }>('/messages/conversations'),
-    getThread: (participantId: string) =>
-      request<{ messages: any[] }>(`/messages/${participantId}`),
-    send: (recipientId: string, text: string) =>
-      request<{ message: string; directMessage: any }>('/messages/send', {
+    getThread: (idOrParticipantId: string) =>
+      request<{ messages: any[]; chatId?: string; partner?: any }>(`/messages/${idOrParticipantId}`),
+    send: (
+      recipientOrChatId: string,
+      text: string,
+      options?: { chatId?: string; recipientId?: string }
+    ) =>
+      request<{ message: string; directMessage: any; chatId?: string }>('/messages/send', {
         method: 'POST',
-        body: JSON.stringify({ recipientId, text }),
+        body: JSON.stringify({
+          recipientId: options?.recipientId || (recipientOrChatId.startsWith('chat_') ? undefined : recipientOrChatId),
+          chatId: options?.chatId || (recipientOrChatId.startsWith('chat_') ? recipientOrChatId : undefined),
+          text,
+        }),
       }),
   },
 
