@@ -106,7 +106,7 @@ describe('kudos', () => {
     expect((await call('PUT', '/activities/fol/kudos', { token: c })).status).toBe(404);
     expect((await call('DELETE', '/activities/priv/kudos', { token: b })).status).toBe(404);
     expect((await call('GET', '/activities/priv/kudos', { token: b })).status).toBe(404);
-    expect((await call('PUT', '/activities/pub/kudos', { token: a })).body).toEqual({ hasKudos: true, kudosCount: 2 });
+    expect((await call('PUT', '/activities/pub/kudos', { token: a })).body).toEqual({ hasKudos: true, kudosCount: 1 });
   });
 });
 

@@ -97,13 +97,13 @@ export const ActivityBody: React.FC<{
         </View>
         <View className="flex-row mt-3 border-y border-gray-100">
           <Pressable
-            onPress={isOwner ? openKudos : onKudos}
+            onPress={onKudos}
             disabled={kudosPending}
             accessibilityRole="button"
             className="flex-1 flex-row items-center justify-center min-h-[52px] active:bg-gray-50">
             <Ionicons name={social.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'} size={24} color={social.hasKudos ? '#FC4C02' : '#111827'} />
             <AppText variant="label" style={{ marginLeft: space.sm, fontWeight: '600' }} color={social.hasKudos ? 'brandText' : 'ink'}>
-              {isOwner ? 'Kudos' : social.hasKudos ? 'Kudos given' : 'Give kudos'}
+              {social.hasKudos ? 'Kudos given' : 'Give kudos'}
             </AppText>
           </Pressable>
           {activity.visibility !== 'ONLY_ME' ? (

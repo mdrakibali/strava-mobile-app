@@ -74,7 +74,7 @@ export default function SearchScreen() {
       setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, isFollowing: res.isFollowing, pending: false } : r)));
       if (currentUser?.id) {
         updateCurrentUser({
-          followingCount: Math.max(0, (currentUser.followingCount || 0) + (res.isFollowing ? 1 : -1)),
+          followingCount: res.followingCount ?? Math.max(0, (currentUser.followingCount || 0) + (res.isFollowing ? 1 : -1)),
         });
       }
     } catch {

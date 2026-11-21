@@ -314,9 +314,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   /** Apply server-confirmed profile changes locally and to the persisted session profile. */
   const updateCurrentUser = async (patch: Partial<Athlete>) => {
-    const next = { ...currentUser, ...patch };
-    setCurrentUser(next);
-    await AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(next)).catch(() => {});
+    setCurrentUser((prev) => {
+      const next = { ...prev, ...patch };
+      AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(next)).catch(() => {});
+      return next;
+    });
   };
 
   const toggleKudos = (activityId: string) => {
