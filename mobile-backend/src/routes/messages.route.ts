@@ -75,8 +75,14 @@ messagesRouter.get('/:idOrParticipantId', requireAuth, async (c) => {
     const db = getDb(c);
     let partnerId = rawParam;
     if (partnerId.startsWith('chat_')) {
-      const parts = partnerId.replace(/^chat_/, '').split('_');
-      partnerId = parts[0] === myId ? parts.slice(1).join('_') : parts[0];
+      const [chatRow] = await db.select().from(chats).where(eq(chats.id, partnerId)).limit(1);
+      if (chatRow) {
+        partnerId = chatRow.athlete1Id === myId ? chatRow.athlete2Id : chatRow.athlete1Id;
+      } else if (partnerId.startsWith(`chat_${myId}_`)) {
+        partnerId = partnerId.substring(`chat_${myId}_`.length);
+      } else if (partnerId.endsWith(`_${myId}`)) {
+        partnerId = partnerId.substring(5, partnerId.length - `_${myId}`.length);
+      }
     } else if (partnerId.startsWith('conv_')) {
       partnerId = partnerId.replace(/^conv_/, '');
     }
@@ -129,8 +135,14 @@ messagesRouter.post('/send', requireAuth, async (c) => {
     const db = getDb(c);
     let targetRecipientId = recipientId;
     if (!targetRecipientId && chatId?.startsWith('chat_')) {
-      const parts = chatId.replace(/^chat_/, '').split('_');
-      targetRecipientId = parts[0] === myId ? parts.slice(1).join('_') : parts[0];
+      const [chatRow] = await db.select().from(chats).where(eq(chats.id, chatId)).limit(1);
+      if (chatRow) {
+        targetRecipientId = chatRow.athlete1Id === myId ? chatRow.athlete2Id : chatRow.athlete1Id;
+      } else if (chatId.startsWith(`chat_${myId}_`)) {
+        targetRecipientId = chatId.substring(`chat_${myId}_`.length);
+      } else if (chatId.endsWith(`_${myId}`)) {
+        targetRecipientId = chatId.substring(5, chatId.length - `_${myId}`.length);
+      }
     }
     if (targetRecipientId === 'ath_seed_ahmed') targetRecipientId = 'ath_seed_tanvir';
 
