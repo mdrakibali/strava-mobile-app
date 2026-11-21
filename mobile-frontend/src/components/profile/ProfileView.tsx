@@ -11,6 +11,7 @@ import {
   SegmentedTabs,
   Skeleton,
 } from '../../design';
+import { reconcileActivity } from '../../lib/activityEdits';
 import { ActivityView, AthleteSummary, fromProfileActivity, toAthleteSummary } from '../../lib/activityView';
 import { markActivityRemoved, withoutRemoved } from '../../lib/removedActivities';
 import { captureFollowEpochs, commitServerFollow, setFollowing, socialStore, useFollow } from '../../lib/social';
@@ -51,7 +52,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
         api.athletes.stats(athleteId).catch(() => null),
       ]);
       const athlete = { ...toAthleteSummary(res.athlete), bio: res.athlete?.bio ?? null };
-      const all = withoutRemoved((res.recentActivities || []).map((row: any) => fromProfileActivity(row, athlete)));
+      const all = withoutRemoved((res.recentActivities || []).map((row: any) => reconcileActivity(fromProfileActivity(row, athlete))));
       const isFollowing = commitServerFollow(athleteId, Boolean(res.athlete?.isFollowing), snapshot);
       setData({
         athlete,

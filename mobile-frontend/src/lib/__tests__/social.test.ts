@@ -39,6 +39,20 @@ describe('setKudos', () => {
     expect(socialStore.get('a3')).toEqual({ hasKudos: false, kudosCount: 1, commentsCount: 0 });
   });
 
+  it('does not show a like as zero kudos when the previous state was unknown', async () => {
+    socialStore.seed([{ id: 'a9', hasKudos: null, kudosCount: 0, commentsCount: 0 }]);
+    const readTick = socialStore.beginRead();
+    let finish!: (v: any) => void;
+    api.activities.giveKudos.mockReturnValue(new Promise((r) => (finish = r)));
+    const pending = setKudos('a9', true);
+    expect(socialStore.get('a9')).toMatchObject({ hasKudos: true, kudosCount: 1 });
+    socialStore.seed([{ id: 'a9', hasKudos: false, kudosCount: 0, commentsCount: 0 }], readTick);
+    expect(socialStore.get('a9')).toMatchObject({ hasKudos: true, kudosCount: 1 });
+    finish({ hasKudos: true, kudosCount: 0 });
+    await pending;
+    expect(socialStore.get('a9')).toMatchObject({ hasKudos: true, kudosCount: 1 });
+  });
+
   it('does not change the count when the like state is still unknown', async () => {
     socialStore.seed([{ id: 'a8', hasKudos: null, kudosCount: 4, commentsCount: 1 }]);
     api.activities.giveKudos.mockResolvedValue({ hasKudos: true, kudosCount: 4 });

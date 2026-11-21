@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedCard, FeedCardSkeleton } from '../../components/activity/FeedCard';
 import { useApp } from '../../context/AppContext';
 import { AppBar, color, EmptyState, ErrorState, space } from '../../design';
+import { reconcileActivity } from '../../lib/activityEdits';
 import { ActivityView, fromProfileActivity, toAthleteSummary } from '../../lib/activityView';
 import { markActivityRemoved, withoutRemoved } from '../../lib/removedActivities';
 import { socialStore } from '../../lib/social';
@@ -40,7 +41,7 @@ export default function ActivityHistoryScreen() {
         athleteRef.current = toAthleteSummary(profile.athlete);
         cursor.current = page.nextCursor;
         hasNext.current = page.hasNextPage;
-        const rows = withoutRemoved(page.activities.map((r) => fromProfileActivity(r, athleteRef.current)));
+        const rows = withoutRemoved(page.activities.map((r) => reconcileActivity(fromProfileActivity(r, athleteRef.current))));
         socialStore.seed(rows, readTick);
         setItems(rows);
         setStatus('ready');
@@ -67,7 +68,7 @@ export default function ActivityHistoryScreen() {
       const page = await api.athletes.listActivities(athleteId!, cursor.current);
       cursor.current = page.nextCursor;
       hasNext.current = page.hasNextPage;
-      const next = withoutRemoved(page.activities.map((r) => fromProfileActivity(r, athleteRef.current)));
+      const next = withoutRemoved(page.activities.map((r) => reconcileActivity(fromProfileActivity(r, athleteRef.current))));
       socialStore.seed(next, readTick);
       setItems((prev) => {
         const seen = new Set(prev.map((p) => p.id));

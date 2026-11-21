@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 import { useKeyboardInset } from '../../lib/useKeyboardInset';
@@ -20,6 +20,7 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const scrollViewRef = useRef<any>(null);
@@ -27,7 +28,7 @@ export default function ChatScreen() {
   const chatIdRef = useRef(chatId);
   const partnerIdRef = useRef(partner.id);
   const keyboard = useKeyboardInset();
-  const effectiveId = id === 'ath_seed_ahmed' ? 'ath_seed_tanvir' : id;
+  const effectiveId = id;
 
   useEffect(() => {
     chatIdRef.current = chatId;
@@ -37,6 +38,7 @@ export default function ChatScreen() {
   useEffect(() => {
     if (!effectiveId) return;
     let cancelled = false;
+    setLoadError(null);
     api.messages
       .getThread(effectiveId)
       .then((res) => {
@@ -45,8 +47,8 @@ export default function ChatScreen() {
         if (res?.partner) setPartner(res.partner);
         if (res?.chatId) setChatId(res.chatId);
       })
-      .catch(() => {
-        if (!cancelled) setMessages([]);
+      .catch((e: any) => {
+        if (!cancelled) setLoadError(e?.message || 'Couldn’t load this conversation.');
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -123,9 +125,10 @@ export default function ChatScreen() {
           return prev.map((m) => (m.id === tempId ? res.directMessage : m));
         });
       }
-    } catch {
+    } catch (e: any) {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       setInputText(textToSend);
+      Alert.alert('Message not sent', e?.message || 'Check your connection and try again.');
     } finally {
       setIsSending(false);
     }
@@ -161,7 +164,11 @@ export default function ChatScreen() {
             ref={scrollViewRef} showsVerticalScrollIndicator={false} style={{ flex: 1 }} keyboardShouldPersistTaps="handled"
             onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
             contentContainerStyle={{ padding: 16, flexGrow: 1, justifyContent: messages.length === 0 ? 'center' : 'flex-start' }}>
-            {messages.length > 0 ? (
+            {loadError ? (
+              <View className="items-center justify-center py-16 px-6">
+                <Text className="text-sm font-bold text-gray-800 text-center">{loadError}</Text>
+              </View>
+            ) : messages.length > 0 ? (
               messages.map((m) => {
                 const isMe = m.senderId === currentUser.id;
                 const timeString = m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';

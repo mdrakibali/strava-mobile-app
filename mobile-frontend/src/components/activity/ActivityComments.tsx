@@ -36,12 +36,13 @@ export const ActivityComments: React.FC<Props> = ({
   onComposerFocus,
 }) => {
   const social = useSocial(activityId, { hasKudos: null, kudosCount: 0, commentsCount: initialComments.length });
-  const incomingKey = `${social.commentsCount}:${initialComments.map((c) => `${c.id}:${c.updatedAt ?? ''}:${c.content}`).join('|')}`;
+  const incomingKey = `${activityId}:${social.commentsCount}:${initialComments.map((c) => `${c.id}:${c.updatedAt ?? ''}:${c.content}`).join('|')}`;
   const [appliedKey, setAppliedKey] = useState(incomingKey);
   const [comments, setComments] = useState<CommentView[]>(initialComments);
   if (appliedKey !== incomingKey) {
+    const sameActivity = appliedKey.startsWith(`${activityId}:`);
     setAppliedKey(incomingKey);
-    setComments((prev) => mergeCommentLists(prev, initialComments, social.commentsCount));
+    setComments((prev) => (sameActivity ? mergeCommentLists(prev, initialComments, social.commentsCount) : initialComments));
   }
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);

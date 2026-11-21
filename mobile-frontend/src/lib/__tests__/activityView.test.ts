@@ -1,4 +1,5 @@
-import { avgSpeedOf, fromDetailResponse, fromFeedItem, toAthleteSummary, toRoute } from '../activityView';
+import { rememberActivityEdit, reconcileActivity } from '../activityEdits';
+import { avgSpeedOf, fromDetailResponse, fromFeedItem, mergeCommentLists, toAthleteSummary, toRoute } from '../activityView';
 
 const athlete = { id: 'ath_1', username: 'rakib', displayName: 'Rakib', avatarUrl: null, city: 'Dhaka' };
 
@@ -120,5 +121,41 @@ describe('fromDetailResponse', () => {
   it('strips the unit from split pace and drops recorder heart-rate', () => {
     const v = fromDetailResponse({ activity: row, athlete });
     expect(v.splits[0]).toEqual({ index: 1, pace: '5:41', elevationDeltaMeters: 3 });
+  });
+
+  it('does not treat a missing kudos flag as not liked', () => {
+    expect(fromDetailResponse({ activity: row, athlete }).hasKudos).toBeNull();
+  });
+});
+
+const comment = (id: string, content: string) => ({
+  id,
+  content,
+  createdAt: '2026-11-21T00:00:00.000Z',
+  updatedAt: null,
+  author: toAthleteSummary(athlete),
+});
+
+describe('mergeCommentLists', () => {
+  it('keeps comments already on screen when a refetch comes back empty but the count is not zero', () => {
+    const current = [comment('c1', 'Nice')];
+    expect(mergeCommentLists(current, [], 1)).toEqual(current);
+  });
+
+  it('shows the empty state only when the server count is zero', () => {
+    expect(mergeCommentLists([comment('c1', 'Nice')], [], 0)).toEqual([]);
+  });
+});
+
+describe('reconcileActivity', () => {
+  it('keeps a saved edit until a later response matches it', () => {
+    rememberActivityEdit('act_1', { title: 'Updated', description: null, sportType: 'Walk', visibility: 'PUBLIC' });
+    const stale = reconcileActivity({ id: 'act_1', title: 'Old', description: 'x', sportType: 'Run', visibility: 'PUBLIC' });
+    expect(stale.title).toBe('Updated');
+    expect(stale.sportType).toBe('Walk');
+    const fresh = reconcileActivity({ id: 'act_1', title: 'Updated', description: null, sportType: 'Walk', visibility: 'PUBLIC' });
+    expect(fresh.title).toBe('Updated');
+    const after = reconcileActivity({ id: 'act_1', title: 'Old', description: 'x', sportType: 'Run', visibility: 'PUBLIC' });
+    expect(after.title).toBe('Old');
   });
 });

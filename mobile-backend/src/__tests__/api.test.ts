@@ -223,6 +223,19 @@ describe('visibility matrix', () => {
     expect(all.body.feed.map((a: any) => a.title)).toEqual(['Public']);
   });
 
+  it('home feed keeps other athletes visible after the viewer publishes', async () => {
+    await upload(follower, { title: 'Theirs', visibility: 'PUBLIC' });
+    await upload(stranger, { title: 'Mine', visibility: 'PUBLIC' });
+    const home = await call('GET', '/feed?tab=all', { token: stranger });
+    const titles = home.body.feed.map((a: any) => a.title);
+    expect(titles).toEqual(expect.arrayContaining(['Mine', 'Theirs', 'Public']));
+    expect(titles).not.toContain('Private');
+    expect(titles).not.toContain('Followers');
+    const ownerHome = await call('GET', '/feed?tab=all', { token: owner });
+    const ownerTitles = ownerHome.body.feed.map((a: any) => a.title);
+    expect(ownerTitles).toEqual(expect.arrayContaining(['Private', 'Followers', 'Public', 'Theirs', 'Mine']));
+  });
+
   it('kudos, comments and export respect visibility', async () => {
     expect((await call('POST', `/activities/${priv}/kudos`, { token: follower })).status).toBe(404);
     expect((await call('POST', `/activities/${fol}/kudos`, { token: stranger })).status).toBe(404);

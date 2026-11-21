@@ -16,6 +16,7 @@ import {
   space,
   TextField,
 } from '../../../design';
+import { rememberActivityEdit } from '../../../lib/activityEdits';
 import { sportConfig } from '../../../lib/sports';
 import { api } from '../../../services/api';
 import { ActivityVisibility, SportType } from '../../../types';
@@ -67,7 +68,15 @@ export default function EditActivityScreen() {
     setSaving(true);
     setError(null);
     try {
-      await api.activities.update(id!, { title: title.trim(), description: description.trim() || null, sportType: sport, visibility });
+      const descriptionValue = description.trim() || null;
+      const saved = await api.activities.update(id!, { title: title.trim(), description: descriptionValue, sportType: sport, visibility });
+      const row = saved?.activity ?? {};
+      rememberActivityEdit(id!, {
+        title: row.title ?? title.trim(),
+        description: row.description ?? descriptionValue,
+        sportType: row.sportType ?? sport,
+        visibility: row.visibility ?? visibility,
+      });
       router.back();
     } catch (e: any) {
       setError(e?.message ?? 'Could not save changes.');

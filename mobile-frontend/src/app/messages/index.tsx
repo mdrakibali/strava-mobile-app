@@ -23,14 +23,16 @@ export default function MessagesInboxScreen() {
   const [conversations, setConversations] = useState<any[]>([]);
   const [suggestedAthletes, setSuggestedAthletes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchConversations = async () => {
     try {
       const [convRes, athletesRes] = await Promise.all([
-        api.messages.getConversations().catch(() => ({ conversations: [] })),
+        api.messages.getConversations(),
         api.athletes.search('').catch(() => ({ athletes: [] })),
       ]);
+      setLoadError(null);
 
       if (convRes?.conversations) {
         setConversations(convRes.conversations);
@@ -40,8 +42,8 @@ export default function MessagesInboxScreen() {
           athletesRes.athletes.filter((a: any) => a.id !== currentUser?.id).slice(0, 4)
         );
       }
-    } catch (err) {
-      console.warn('Fetch conversations error:', err);
+    } catch (err: any) {
+      setLoadError(err?.message || 'Couldn’t load conversations.');
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -110,7 +112,11 @@ export default function MessagesInboxScreen() {
           contentContainerStyle={{ padding: 12, paddingBottom: 100, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />}>
-          {isLoading ? (
+          {loadError && conversations.length === 0 ? (
+            <View className="py-16 px-6 items-center">
+              <Text className="text-sm font-bold text-gray-800 text-center">{loadError}</Text>
+            </View>
+          ) : isLoading ? (
             <View className="py-20 items-center justify-center">
               <ActivityIndicator size="large" color="#FC4C02" />
             </View>

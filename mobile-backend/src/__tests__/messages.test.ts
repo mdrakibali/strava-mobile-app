@@ -55,6 +55,17 @@ describe('direct messages', () => {
     expect(list.body.conversations[0].unreadCount).toBe(1);
     expect(list.body.conversations[0].lastMessage).toBe('again');
     expect(beforeRead.body.conversations[0].id).toBe(list.body.conversations[0].id);
+    const byChat = await call('POST', '/messages/send', {
+      token: b,
+      body: { recipientId: opened.body.conversation.id, text: 'via chat id' },
+    });
+    expect(byChat.status).toBe(201);
+    expect(byChat.body.directMessage.text).toBe('via chat id');
+    expect(byChat.body.chatId).toBe(opened.body.conversation.id);
+    const missing = await call('POST', '/messages/send', { token: b, body: { recipientId: 'nobody', text: 'x' } });
+    expect(missing.status).toBe(404);
+    expect(missing.body.code).toBe('recipient_not_found');
+    expect(missing.body.error).not.toBe('Endpoint Not Found');
     expect((await call('GET', `/messages/${opened.body.conversation.id}`, { token: b })).status).toBe(200);
     expect((await call('GET', `/messages/${opened.body.conversation.id}`, { token: await seedAthlete(db, 'ath_c') })).status).toBe(403);
   });

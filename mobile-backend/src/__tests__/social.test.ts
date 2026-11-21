@@ -97,6 +97,16 @@ describe('kudos', () => {
     expect(detail.body).toMatchObject({ hasKudos: false, kudosCount: 1 });
   });
 
+  it('like, unlike, then like again stays consistent', async () => {
+    expect((await call('PUT', '/activities/pub/kudos', { token: b })).body).toEqual({ hasKudos: true, kudosCount: 1 });
+    expect((await call('DELETE', '/activities/pub/kudos', { token: b })).body).toEqual({ hasKudos: false, kudosCount: 0 });
+    expect((await call('PUT', '/activities/pub/kudos', { token: b })).body).toEqual({ hasKudos: true, kudosCount: 1 });
+    const detail = await call('GET', '/activities/pub', { token: b });
+    expect(detail.body).toMatchObject({ hasKudos: true, kudosCount: 1 });
+    const feed = await call('GET', '/feed?tab=all', { token: b });
+    expect(feed.body.feed.find((x: any) => x.id === 'pub')).toMatchObject({ hasKudos: true, kudosCount: 1 });
+  });
+
   it('concurrent kudos from the same athlete count once', async () => {
     await Promise.all(Array.from({ length: 5 }, () => call('PUT', '/activities/pub/kudos', { token: b })));
     expect((await call('GET', '/activities/pub', { token: a })).body.kudosCount).toBe(1);
