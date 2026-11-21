@@ -11,8 +11,8 @@ import {
   SegmentedTabs,
   Skeleton,
 } from '../../design';
-import { reconcileActivity } from '../../lib/activityEdits';
 import { ActivityView, AthleteSummary, fromProfileActivity, toAthleteSummary } from '../../lib/activityView';
+import { presentActivities, useActivityRevision } from '../../lib/publishedActivities';
 import { markActivityRemoved, withoutRemoved } from '../../lib/removedActivities';
 import { captureFollowEpochs, commitServerFollow, setFollowing, socialStore, useFollow } from '../../lib/social';
 import { shareAthlete } from '../../lib/share';
@@ -52,7 +52,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
         api.athletes.stats(athleteId).catch(() => null),
       ]);
       const athlete = { ...toAthleteSummary(res.athlete), bio: res.athlete?.bio ?? null };
-      const all = withoutRemoved((res.recentActivities || []).map((row: any) => reconcileActivity(fromProfileActivity(row, athlete))));
+      const all = withoutRemoved((res.recentActivities || []).map((row: any) => fromProfileActivity(row, athlete)));
       const isFollowing = commitServerFollow(athleteId, Boolean(res.athlete?.isFollowing), snapshot);
       setData({
         athlete,
@@ -109,10 +109,16 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
     shareAthlete(athleteId, data.athlete.displayName).catch(() => {});
   };
 
+  const revision = useActivityRevision();
+  const activities = useMemo(() => {
+    if (!data) return [];
+    return presentActivities(data.activities).filter((a) => a.athlete.id === athleteId && (isSelf || a.visibility !== 'ONLY_ME'));
+  }, [data, revision, athleteId, isSelf]);
+
   const progress = useMemo(() => {
     if (!data) return null;
-    return computeProgress(data.activities, data.stats, sportFilter);
-  }, [data, sportFilter]);
+    return computeProgress(activities, data.stats, sportFilter);
+  }, [data, activities, sportFilter]);
 
   const totals = useMemo(() => {
     if (!data?.stats) return null;
@@ -162,7 +168,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
 
   const maxWeek = Math.max(...progress.weeks.map((w) => w.meters), 1);
   const sportsPresent = MVP_SPORTS.filter(
-    (s) => data.activities.some((a) => a.sportType === s.id) || data.stats?.bySport.some((b) => b.sportType === s.id)
+    (s) => activities.some((a) => a.sportType === s.id) || data.stats?.bySport.some((b) => b.sportType === s.id)
   );
 
   return (
@@ -203,7 +209,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
           />
         ) : (
           <ProfileActivitiesTab
-            activities={data.activities}
+            activities={activities}
             athleteId={athleteId}
             isSelf={isSelf}
             recentLimit={RECENT_LIMIT}

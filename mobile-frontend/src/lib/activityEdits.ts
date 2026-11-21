@@ -11,9 +11,26 @@ export interface ActivityEdit {
 }
 
 const edits = new Map<string, ActivityEdit>();
+const listeners = new Set<() => void>();
+let version = 0;
+const emit = () => {
+  version++;
+  listeners.forEach((l) => l());
+};
+
+export const subscribeActivityEdits = (l: () => void) => {
+  listeners.add(l);
+  return () => listeners.delete(l);
+};
+export const activityEditVersion = () => version;
+
+export function resetActivityEditsForTests() {
+  edits.clear();
+}
 
 export function rememberActivityEdit(id: string, edit: ActivityEdit) {
   edits.set(id, edit);
+  emit();
 }
 
 export function activityEditFor(id: string) {

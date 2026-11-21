@@ -14,6 +14,7 @@ import { MapView } from '../../components/map/MapView';
 import { useApp } from '../../context/AppContext';
 import { AppBar, EmptyState, ErrorState, IconButton } from '../../design';
 import { reconcileActivity } from '../../lib/activityEdits';
+import { useActivityRevision } from '../../lib/publishedActivities';
 import { ActivityView, fromDetailResponse } from '../../lib/activityView';
 import { markActivityRemoved } from '../../lib/removedActivities';
 import { socialStore } from '../../lib/social';
@@ -36,6 +37,7 @@ export default function ActivityDetailScreen() {
   const scrollRef = useRef<{ scrollToEnd: (options?: { animated?: boolean }) => void } | null>(null);
   const [fetched, setState] = useState<State>({ status: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
+  const revision = useActivityRevision();
 
   useEffect(() => {
     if (!id) return;
@@ -118,7 +120,8 @@ export default function ActivityDetailScreen() {
     );
   }
 
-  const { activity, isOwner } = state;
+  const { isOwner } = state;
+  const activity = revision >= 0 ? reconcileActivity(state.activity) : state.activity;
   const hasMap = activity.route.length > 1;
   const mapHeight = Math.round(height * 0.42);
 

@@ -1,12 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedCard, FeedCardSkeleton } from '../../components/activity/FeedCard';
 import { useApp } from '../../context/AppContext';
 import { AppBar, color, EmptyState, ErrorState, space } from '../../design';
-import { reconcileActivity } from '../../lib/activityEdits';
 import { ActivityView, fromProfileActivity, toAthleteSummary } from '../../lib/activityView';
+import { presentActivities, useActivityRevision } from '../../lib/publishedActivities';
 import { markActivityRemoved, withoutRemoved } from '../../lib/removedActivities';
 import { socialStore } from '../../lib/social';
 import { api } from '../../services/api';
@@ -30,6 +30,11 @@ export default function ActivityHistoryScreen() {
   const cursor = useRef<string | null>(null);
   const hasNext = useRef(false);
   const athleteRef = useRef(toAthleteSummary({ id: athleteId }));
+  const revision = useActivityRevision();
+  const list = useMemo(
+    () => presentActivities(items).filter((a) => a.athlete.id === athleteId),
+    [items, revision, athleteId]
+  );
 
   useEffect(() => {
     if (!athleteId) return;
@@ -41,7 +46,7 @@ export default function ActivityHistoryScreen() {
         athleteRef.current = toAthleteSummary(profile.athlete);
         cursor.current = page.nextCursor;
         hasNext.current = page.hasNextPage;
-        const rows = withoutRemoved(page.activities.map((r) => reconcileActivity(fromProfileActivity(r, athleteRef.current))));
+        const rows = withoutRemoved(page.activities.map((r) => fromProfileActivity(r, athleteRef.current)));
         socialStore.seed(rows, readTick);
         setItems(rows);
         setStatus('ready');
@@ -68,7 +73,7 @@ export default function ActivityHistoryScreen() {
       const page = await api.athletes.listActivities(athleteId!, cursor.current);
       cursor.current = page.nextCursor;
       hasNext.current = page.hasNextPage;
-      const next = withoutRemoved(page.activities.map((r) => reconcileActivity(fromProfileActivity(r, athleteRef.current))));
+      const next = withoutRemoved(page.activities.map((r) => fromProfileActivity(r, athleteRef.current)));
       socialStore.seed(next, readTick);
       setItems((prev) => {
         const seen = new Set(prev.map((p) => p.id));
@@ -99,7 +104,7 @@ export default function ActivityHistoryScreen() {
         />
       ) : (
         <FlatList
-          data={items}
+          data={list}
           keyExtractor={(a) => a.id}
           renderItem={({ item }) => (
             <FeedCard
@@ -124,7 +129,7 @@ export default function ActivityHistoryScreen() {
               colors={['#FC4C02']}
             />
           }
-          contentContainerStyle={items.length === 0 ? { flexGrow: 1 } : { paddingTop: 8, paddingBottom: 64 }}
+          contentContainerStyle={list.length === 0 ? { flexGrow: 1 } : { paddingTop: 8, paddingBottom: 64 }}
           ListEmptyComponent={
             <EmptyState
               icon="footsteps-outline"

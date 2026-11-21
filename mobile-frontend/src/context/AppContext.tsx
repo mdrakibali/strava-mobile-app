@@ -54,8 +54,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     recordingEngine.setAthlete(id);
     syncWorker.startTriggers();
     syncWorker.setAthlete(id);
+    syncWorker.setViewer(
+      id
+        ? {
+            id: currentUser.id,
+            displayName: currentUser.displayName,
+            username: currentUser.username,
+            avatarUrl: currentUser.avatarUrl,
+            city: currentUser.city ?? null,
+          }
+        : null
+    );
     if (id) recordingEngine.load(true).catch((e) => console.warn('recording recovery failed', e));
-  }, [isAuthenticated, currentUser.id]);
+  }, [isAuthenticated, currentUser.id, currentUser.displayName, currentUser.username, currentUser.avatarUrl, currentUser.city]);
 
   // Helper: map backend club format
   const mapBackendClub = (item: any): Club => ({

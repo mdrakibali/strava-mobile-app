@@ -164,8 +164,11 @@ export const MapView: React.FC<MapViewProps> = ({
     [otherRoutes]
   );
 
+  const nativeUserLocation = mode === 'live' || showUserLocation;
   const userDotData = useMemo<GeoJSON.FeatureCollection | null>(() => {
-    if (!userPosition) return null;
+    // The native puck is the only current-location marker. A second dot tracks a different
+    // GPS subscription and draws another blue circle on top of it.
+    if (nativeUserLocation || !userPosition) return null;
     return {
       type: 'FeatureCollection',
       features: [
@@ -179,11 +182,11 @@ export const MapView: React.FC<MapViewProps> = ({
         },
       ],
     };
-  }, [userPosition]);
+  }, [nativeUserLocation, userPosition]);
 
   const endpoints = useMemo<GeoJSON.FeatureCollection>(() => {
     const features: GeoJSON.Feature[] = [];
-    if (route.length > 0) {
+    if (mode === 'route' && route.length > 0) {
       features.push({ type: 'Feature', properties: { kind: 'start' }, geometry: { type: 'Point', coordinates: route[0] } });
     }
     if (mode === 'route' && route.length > 1) {
@@ -311,7 +314,7 @@ export const MapView: React.FC<MapViewProps> = ({
             />
           </GeoJSONSource>
         ) : null}
-        {mode === 'live' || showUserLocation ? <UserLocation animated accuracy={false} heading={true} /> : null}
+        {nativeUserLocation ? <UserLocation animated accuracy={false} heading={false} /> : null}
         {otherRoutes && otherRoutes.length ? (
           <GeoJSONSource id="other-routes" data={othersData}>
             <Layer

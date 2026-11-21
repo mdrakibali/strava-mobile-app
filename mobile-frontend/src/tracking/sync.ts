@@ -1,5 +1,7 @@
 import * as Network from 'expo-network';
 import { AppState } from 'react-native';
+import { fromFeedItem } from '../lib/activityView';
+import { rememberPublishedActivity } from '../lib/publishedActivities';
 import { ApiError, api, getAuthToken } from '../services/api';
 import { batchesRepo, pointsRepo, SessionRow, sessionsRepo } from './db';
 import {
@@ -41,6 +43,7 @@ class SyncWorker {
   private again = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private athleteId: string | null = null;
+  private viewer: { id: string; displayName: string; username?: string; avatarUrl: string | null; city: string | null } | null = null;
   private pending: PendingUpload[] = [];
   private listeners = new Set<Listener>();
   private lastSynced: { sessionId: string; activityId: string | null } | null = null;
@@ -65,7 +68,13 @@ class SyncWorker {
 
   setAthlete(id: string | null) {
     this.athleteId = id;
+    if (!id) this.viewer = null;
     this.refreshPending().then(() => this.kick());
+  }
+
+  /** Name and photo used when a just-published activity is placed on the feed before the next refetch. */
+  setViewer(viewer: { id: string; displayName: string; username?: string; avatarUrl: string | null; city: string | null } | null) {
+    this.viewer = viewer;
   }
 
   async refreshPending() {
@@ -186,7 +195,7 @@ class SyncWorker {
         await batchesRepo.reset(s.id);
         await batchesRepo.ack(s.id, res.upload.receivedSeqs);
         if (res.upload.status === 'COMPLETED') {
-          return this.markSynced(s, res.upload.activityId);
+          return this.markSynced(s, res.upload.activityId, null);
         }
       } catch (e) {
         // POST /activities/uploads never 404s on a current server, so a 404 means the deployed
@@ -226,7 +235,7 @@ class SyncWorker {
         pauses: s.pauses,
         batchCount,
       });
-      return this.markSynced(s, res.activity?.id ?? null);
+      return this.markSynced(s, res.activity?.id ?? null, res.activity);
     } catch (e) {
       if (e instanceof ApiError && e.code === 'missing_batches') {
         await batchesRepo.unack(s.id, e.details?.missingSeqs ?? []);
@@ -271,12 +280,24 @@ class SyncWorker {
       })),
       elevationProfile: sum.elevGainM == null ? [] : kept.filter((p) => p.alt != null).map((p) => Math.round(p.alt!)),
     });
-    return this.markSynced(s, res?.activity?.id ?? null);
+    return this.markSynced(s, res?.activity?.id ?? null, res?.activity);
   }
 
-  private async markSynced(s: SessionRow, activityId: string | null) {
+  private async markSynced(s: SessionRow, activityId: string | null, row: any) {
     await sessionsRepo.updateSync(s.id, { syncState: 'synced', serverActivityId: activityId, lastError: null, nextAttemptAt: null });
     this.lastSynced = { sessionId: s.id, activityId };
+    if (row?.id && this.viewer) {
+      const activity = fromFeedItem({
+        ...row,
+        startTime: row.startTime instanceof Date ? row.startTime.toISOString() : row.startTime,
+        polyline: row.maskedPolyline ?? row.rawPolyline ?? row.polyline ?? [],
+        athlete: this.viewer,
+        kudosCount: row.kudosCount ?? 0,
+        commentsCount: row.commentsCount ?? 0,
+        hasKudos: false,
+      });
+      rememberPublishedActivity(activity);
+    }
   }
 }
 

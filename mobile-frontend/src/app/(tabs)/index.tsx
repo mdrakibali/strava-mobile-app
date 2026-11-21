@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedCard, FeedCardSkeleton } from '../../components/activity/FeedCard';
@@ -8,8 +8,8 @@ import { HomeHeader } from '../../components/home/HomeHeader';
 import { EmptyState, ErrorState } from '../../design';
 import { useApp } from '../../context/AppContext';
 import { APP_NAME } from '../../config/app';
-import { reconcileActivity } from '../../lib/activityEdits';
 import { ActivityView, fromFeedItem } from '../../lib/activityView';
+import { presentActivities, useActivityRevision } from '../../lib/publishedActivities';
 import { withoutRemoved } from '../../lib/removedActivities';
 import { socialStore } from '../../lib/social';
 import { formatClock } from '../../lib/format';
@@ -48,6 +48,7 @@ export default function HomeFeedScreen() {
   const generation = useRef(0);
   const lastLoadedAt = useRef(0);
   const requestSeq = useRef(0);
+  const revision = useActivityRevision();
 
   // Defence in depth only — the server must enforce visibility (technical audit PRIV-02).
   const visibleToMe = useCallback(
@@ -60,7 +61,7 @@ export default function HomeFeedScreen() {
     const seq = ++requestSeq.current;
     const readTick = socialStore.beginRead();
     const res = await api.feed.getFeed(HOME_FEED_TAB, undefined, 500);
-    const items = withoutRemoved((res?.feed || []).map(fromFeedItem).filter(visibleToMe)).map(reconcileActivity);
+    const items = withoutRemoved((res?.feed || []).map(fromFeedItem).filter(visibleToMe));
     socialStore.seed(items, readTick);
     return {
       seq,
@@ -128,7 +129,7 @@ export default function HomeFeedScreen() {
       if (gen !== generation.current) return; // a refresh replaced the list meanwhile
       cursorRef.current = res.nextCursor;
       hasNextRef.current = res.hasNextPage;
-      const next = withoutRemoved(res.feed.map(fromFeedItem).filter(visibleToMe)).map(reconcileActivity);
+      const next = withoutRemoved(res.feed.map(fromFeedItem).filter(visibleToMe));
       socialStore.seed(next, readTick);
       setItems((prev) => {
         const seen = new Set(prev.map((p) => p.id));
@@ -210,6 +211,8 @@ export default function HomeFeedScreen() {
     </View>
   ) : null;
 
+  const feed = useMemo(() => presentActivities(items).filter(visibleToMe), [items, revision, visibleToMe]);
+
   let body: React.ReactNode;
   if (status === 'loading') {
     body = (<View><FeedCardSkeleton /><FeedCardSkeleton /></View>);
@@ -218,7 +221,7 @@ export default function HomeFeedScreen() {
   } else {
     body = (
       <FlatList
-        data={items}
+        data={feed}
         keyExtractor={(a) => a.id}
         renderItem={({ item }) => (
           <FeedCard activity={item} currentUserId={currentUser.id} onDelete={(id) => setItems((prev) => prev.filter((a) => a.id !== id))} />
@@ -226,7 +229,7 @@ export default function HomeFeedScreen() {
         onEndReached={onEndReached}
         onEndReachedThreshold={0.6}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />}
-        contentContainerStyle={items.length === 0 ? { flexGrow: 1 } : { paddingTop: 8, paddingBottom: 64 }}
+        contentContainerStyle={feed.length === 0 ? { flexGrow: 1 } : { paddingTop: 8, paddingBottom: 64 }}
         initialNumToRender={4}
         windowSize={7}
         ListEmptyComponent={
