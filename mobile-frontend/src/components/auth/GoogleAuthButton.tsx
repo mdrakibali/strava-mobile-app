@@ -73,3 +73,4 @@ export const GoogleAuthButton: React.FC<Props> = ({
     </TouchableOpacity>
   );
 };
+

@@ -70,3 +70,4 @@ export const NewGoalForm: React.FC<Props> = ({
     </View>
   );
 };
+

@@ -48,3 +48,4 @@ export const GoalCard: React.FC<Props> = ({ goal, onDelete }) => {
     </View>
   );
 };
+

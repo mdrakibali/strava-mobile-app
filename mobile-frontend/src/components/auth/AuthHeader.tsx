@@ -18,3 +18,4 @@ export const AuthHeader: React.FC = () => {
     </View>
   );
 };
+
