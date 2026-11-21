@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mobile-frontend",
-    "slug": "mobile-frontend",
+    "name": "Kinetix",
+    "slug": "kinetix",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -45,7 +45,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow Open Strava to use your location to record your route, distance and pace.",
+          "locationWhenInUsePermission": "Allow Kinetix to use your location to record your route, distance and pace.",
           "isAndroidForegroundServiceEnabled": true,
           "isAndroidBackgroundLocationEnabled": false
         }

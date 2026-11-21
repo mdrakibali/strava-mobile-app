@@ -22,7 +22,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   const [selectedStyle, setSelectedStyle] = useState<'orange' | 'dark' | 'minimal'>('orange');
 
   const handleShareAction = (platform: string) => {
-    Alert.alert('Stat Sticker Shared!', `Your Strava workout sticker was shared to ${platform}.`);
+    Alert.alert('Stat Sticker Shared!', `Your Kinetix workout sticker was shared to ${platform}.`);
     onClose();
   };
 
@@ -35,7 +35,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
           {/* Header */}
           <View className="flex-row items-center justify-between mb-3">
             <View>
-              <Text className="text-base font-black text-gray-900">Strava Stat Sticker</Text>
+              <Text className="text-base font-black text-gray-900">Kinetix Stat Sticker</Text>
               <Text className="text-xs text-gray-400">Export graphics to Instagram & socials</Text>
             </View>
             <TouchableOpacity onPress={onClose} className="p-1">
@@ -59,7 +59,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                   className={`text-[10px] font-black tracking-widest ${
                     selectedStyle === 'minimal' ? 'text-[#FC4C02]' : 'text-white/80'
                   }`}>
-                  OPEN STRAVA
+                  KINETIX
                 </Text>
                 <Text
                   className={`text-sm font-black ${

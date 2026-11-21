@@ -28,7 +28,7 @@ export default function PermissionsScreen() {
           Permissions & Safety
         </Text>
         <Text className="text-xs text-gray-500 mb-6 leading-4">
-          To provide real-time GPS tracking and instant community kudos, Open Strava requires two system permissions:
+          To provide real-time GPS tracking and instant community kudos, Kinetix requires two system permissions:
         </Text>
 
         <View className="space-y-4 mb-6">

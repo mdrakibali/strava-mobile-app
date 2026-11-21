@@ -64,7 +64,7 @@ export default function SuggestedAthletesScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} className="p-4" contentContainerClassName="pb-20">
         <Text className="text-xs font-semibold text-gray-500 mb-3">
-          Athletes active in the Open Strava community:
+          Athletes active in the Kinetix community:
         </Text>
 
         {isLoading ? (

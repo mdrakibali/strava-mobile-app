@@ -15,4 +15,4 @@ export const shareActivity = async (a: Pick<ActivityView, 'id' | 'title' | 'spor
 };
 
 export const shareAthlete = async (id: string, name: string) =>
-  Share.share({ message: `${name} on Open Strava\n${athleteLink(id)}`, title: name });
+  Share.share({ message: `${name} on Kinetix\n${athleteLink(id)}`, title: name });

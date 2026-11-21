@@ -17,7 +17,7 @@ export default function ReportScreen() {
   ];
 
   const handleSubmit = () => {
-    alert('Thank you for keeping Open Strava safe. Our moderation team will review this report.');
+    alert('Thank you for keeping Kinetix safe. Our moderation team will review this report.');
     router.back();
   };
 
@@ -34,7 +34,7 @@ export default function ReportScreen() {
 
         <Text className="text-2xl font-black text-gray-900 mb-2">Safety Report</Text>
         <Text className="text-xs text-gray-500 mb-6 leading-4">
-          Open Strava is committed to a positive, authentic, and safe athletic environment. Reports are evaluated strictly against community guidelines.
+          Kinetix is committed to a positive, authentic, and safe athletic environment. Reports are evaluated strictly against community guidelines.
         </Text>
 
         <Text className="text-xs font-bold text-gray-600 mb-2">Primary Reason</Text>

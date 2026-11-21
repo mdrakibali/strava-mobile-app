@@ -26,7 +26,7 @@ import { useRecording } from '../tracking/useRecording';
 import { ActivityVisibility, SportType } from '../types';
 
 const VISIBILITY_OPTIONS: { id: ActivityVisibility; title: string; description: string }[] = [
-  { id: 'PUBLIC', title: 'Everyone', description: 'Anyone on Strava can see this activity.' },
+  { id: 'PUBLIC', title: 'Everyone', description: 'Anyone on Kinetix can see this activity.' },
   { id: 'FOLLOWERS_ONLY', title: 'Followers', description: 'Only people who follow you can view this activity.' },
   { id: 'ONLY_ME', title: 'Only you', description: 'Private. Only you can view this activity.' },
 ];

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { AppText } from '../../design';
 
 interface RecordHeaderControlsProps {
@@ -51,8 +51,8 @@ export function RecordHeaderControls({
               <Ionicons name="flame" size={12} color="#FFFFFF" />
             </View>
             <View>
-              <AppText className="text-white text-[11px] font-bold">See what's popular</AppText>
-              <AppText className="text-gray-300 text-[9px]">Tap to add weekly Heatmap</AppText>
+              <Text style={{ color: '#FFFFFF' }} className="text-[11px] font-bold">See what's popular</Text>
+              <Text style={{ color: '#D1D5DB' }} className="text-[9px]">Tap to add weekly Heatmap</Text>
             </View>
           </Pressable>
         ) : null}

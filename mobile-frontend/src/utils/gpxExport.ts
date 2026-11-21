@@ -26,7 +26,7 @@ export const generateGpxXml = (activity: Activity): string => {
   });
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Open Strava - Community Edition" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Kinetix - GPS Athletic Tracker" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
     <name>${escapeXml(activity.title)}</name>
     <time>${startTime}</time>

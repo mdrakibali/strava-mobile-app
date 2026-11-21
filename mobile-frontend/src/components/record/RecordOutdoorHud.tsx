@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { AppText } from '../../design';
 
 import { LifecycleStatus } from '../../tracking/shared';
@@ -69,9 +69,9 @@ export function RecordOutdoorHud({
           className="flex-row items-center justify-between px-4 py-2 border-b border-gray-200 bg-[#0C2340]">
           <View className="flex-row items-center">
             <Ionicons name="cellular" size={14} color="#38BDF8" />
-            <AppText className="text-white text-xs font-bold tracking-wider ml-1.5">
+            <Text style={{ color: '#FFFFFF' }} className="text-xs font-bold tracking-wider ml-1.5">
               {gpsLabel}
-            </AppText>
+            </Text>
           </View>
           <Pressable onPress={onExpandPress} hitSlop={10} accessibilityLabel="Expand metrics">
             <Ionicons name="expand-outline" size={18} color="#FFFFFF" />

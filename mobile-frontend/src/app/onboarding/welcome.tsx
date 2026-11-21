@@ -60,7 +60,7 @@ export default function WelcomeScreen() {
 
         <SafeAreaView edges={['top']} className="px-6 pt-4 items-center z-20">
           <Text className="text-3xl font-black text-white tracking-widest font-sans">
-            STRAVA
+            KINETIX
           </Text>
         </SafeAreaView>
 
