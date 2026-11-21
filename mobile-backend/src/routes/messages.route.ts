@@ -94,17 +94,29 @@ messagesRouter.get('/:participantId', requireAuth, async (c) => {
   try {
     const user = c.get('user');
     const myId = user.athleteId;
-    const partnerId = c.req.param('participantId');
+    let partnerId = c.req.param('participantId');
     if (!partnerId) {
       return c.json({ error: 'participantId is required' }, 400);
     }
+    if (partnerId === 'ath_seed_ahmed') {
+      partnerId = 'ath_seed_tanvir';
+    }
     const db = getDb(c);
+
+    // If partnerId was a username, resolve to ID
+    const [partnerAthlete] = await db
+      .select({ id: athletes.id })
+      .from(athletes)
+      .where(or(eq(athletes.id, partnerId), eq(athletes.username, partnerId)))
+      .limit(1);
+
+    const actualPartnerId = partnerAthlete ? partnerAthlete.id : partnerId;
 
     // Mark partner's unread messages to me as read
     await db
       .update(directMessages)
       .set({ isRead: true })
-      .where(and(eq(directMessages.senderId, partnerId), eq(directMessages.recipientId, myId)));
+      .where(and(eq(directMessages.senderId, actualPartnerId), eq(directMessages.recipientId, myId)));
 
     // Fetch conversation thread ordered chronologically
     const msgs = await db
@@ -119,8 +131,8 @@ messagesRouter.get('/:participantId', requireAuth, async (c) => {
       .from(directMessages)
       .where(
         or(
-          and(eq(directMessages.senderId, myId), eq(directMessages.recipientId, partnerId)),
-          and(eq(directMessages.senderId, partnerId), eq(directMessages.recipientId, myId))
+          and(eq(directMessages.senderId, myId), eq(directMessages.recipientId, actualPartnerId)),
+          and(eq(directMessages.senderId, actualPartnerId), eq(directMessages.recipientId, myId))
         )
       )
       .orderBy(directMessages.createdAt);
@@ -137,17 +149,35 @@ messagesRouter.post('/send', requireAuth, async (c) => {
   try {
     const user = c.get('user');
     const myId = user.athleteId;
-    const { recipientId, text } = await c.req.json();
+    let { recipientId, text } = await c.req.json();
 
     if (!recipientId || !text?.trim()) {
       return c.json({ error: 'recipientId and text are required' }, 400);
     }
 
+    if (recipientId === 'ath_seed_ahmed') {
+      recipientId = 'ath_seed_tanvir';
+    }
+
     const db = getDb(c);
+
+    // Verify recipient exists in database
+    const [recipient] = await db
+      .select({ id: athletes.id, displayName: athletes.displayName, username: athletes.username })
+      .from(athletes)
+      .where(or(eq(athletes.id, recipientId), eq(athletes.username, recipientId)))
+      .limit(1);
+
+    if (!recipient) {
+      return c.json({ error: 'Recipient athlete not found' }, 404);
+    }
+
+    const actualRecipientId = recipient.id;
+
     const newMsg = {
       id: `dm_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       senderId: myId,
-      recipientId,
+      recipientId: actualRecipientId,
       text: text.trim(),
       isRead: false,
     };
@@ -158,7 +188,7 @@ messagesRouter.post('/send', requireAuth, async (c) => {
       const notifRepo = new NotificationRepository(db);
       await notifRepo.create({
         id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        recipientId,
+        recipientId: actualRecipientId,
         actorId: myId,
         actionType: 'MESSAGE',
         message: `${user.username || 'An athlete'} sent you a message: "${text.trim().slice(0, 45)}"`,

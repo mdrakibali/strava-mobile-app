@@ -27,14 +27,7 @@ placesRouter.get('/nearby', requireAuth, async (c) => {
     throw new HttpError(400, 'validation_failed', 'lat and lng are required (sport: Run|Walk|Hike|Ride, radius 500–15000 m)', parsed.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })));
   }
   const { lat, lng, sport, radius } = parsed.data;
-  let waitUntil: ((p: Promise<unknown>) => void) | undefined;
-  try {
-    const ctx = c.executionCtx;
-    waitUntil = (p) => ctx.waitUntil(p);
-  } catch {
-    waitUntil = undefined;
-  }
-  return c.json(await new PlacesService().nearby(sport, lat, lng, radius, waitUntil));
+  return c.json(await new PlacesService().nearby(sport, lat, lng, radius));
 });
 
 /** GET /places/:type/:id — OSM details + a genuine Wikimedia Commons photo (or null) with attribution. */

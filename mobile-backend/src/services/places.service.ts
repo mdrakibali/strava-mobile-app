@@ -138,7 +138,8 @@ export class PlacesService {
 
     try {
       const photon = (tags: string[]) => {
-        const qs = new URLSearchParams({ lat: String(lat), lon: String(lng), radius: String(radiusM / 1000), limit: '30' });
+        const queryTerm = sport === 'Ride' ? 'cycle' : 'park';
+        const qs = new URLSearchParams({ q: queryTerm, lat: String(lat), lon: String(lng), limit: '30' });
         for (const t of tags) qs.append('osm_tag', t);
         return this.fetcher(`${this.photonUrl}?${qs.toString()}`, { headers: { 'User-Agent': 'OpenStrava/1.1 (fitness app; nearby places)' } });
       };

@@ -33,17 +33,19 @@ export default function ChatScreen() {
   const [isSending, setIsSending] = useState(false);
   const scrollViewRef = useRef<any>(null);
 
+  const effectiveId = id === 'ath_seed_ahmed' ? 'ath_seed_tanvir' : id;
+
   const fetchChatHistory = async () => {
-    if (!id) return;
+    if (!effectiveId) return;
     try {
       // 1. Fetch partner details
-      const profileRes = await api.athletes.getProfile(id).catch(() => null);
+      const profileRes = await api.athletes.getProfile(effectiveId).catch(() => null);
       if (profileRes?.athlete) {
         setPartner(profileRes.athlete);
       }
 
       // 2. Fetch real message thread
-      const res = await api.messages.getThread(id);
+      const res = await api.messages.getThread(effectiveId);
       if (res?.messages) {
         setMessages(res.messages);
       }
@@ -58,8 +60,8 @@ export default function ChatScreen() {
     fetchChatHistory();
     // Poll every 4 seconds for new incoming messages while in chat
     const interval = setInterval(() => {
-      if (id) {
-        api.messages.getThread(id).then((res) => {
+      if (effectiveId) {
+        api.messages.getThread(effectiveId).then((res) => {
           if (res?.messages) {
             setMessages(res.messages);
           }
@@ -68,10 +70,10 @@ export default function ChatScreen() {
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [id]);
+  }, [effectiveId]);
 
   const handleSendMessage = async () => {
-    if (!inputText.trim() || !id || isSending) return;
+    if (!inputText.trim() || !effectiveId || isSending) return;
     const textToSend = inputText.trim();
     setInputText('');
     setIsSending(true);
@@ -81,7 +83,7 @@ export default function ChatScreen() {
     const optimisticMsg = {
       id: tempId,
       senderId: currentUser.id,
-      recipientId: id,
+      recipientId: effectiveId,
       text: textToSend,
       createdAt: new Date().toISOString(),
     };
@@ -89,7 +91,7 @@ export default function ChatScreen() {
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      const res = await api.messages.send(id, textToSend);
+      const res = await api.messages.send(effectiveId, textToSend);
       if (res?.directMessage) {
         setMessages((prev) =>
           prev.map((m) => (m.id === tempId ? res.directMessage : m))

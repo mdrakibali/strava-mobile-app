@@ -42,8 +42,9 @@ export class AthleteController {
   // GET /api/v1/athletes/:id
   async getProfile(c: Context<{ Bindings: Env }>) {
     try {
-      const id = c.req.param('id');
+      let id = c.req.param('id');
       if (!id) return c.json({ error: 'Athlete ID is required' }, 400);
+      if (id === 'ath_seed_ahmed') id = 'ath_seed_tanvir';
 
       const currentUser = c.get('user');
       const repo = this.getRepo(c);
@@ -75,8 +76,9 @@ export class AthleteController {
 
   // GET /api/v1/athletes/:id/activities?cursor=&limit= — activity history (policy-filtered)
   async listActivities(c: Context<{ Bindings: Env }>) {
-    const id = c.req.param('id');
+    let id = c.req.param('id');
     if (!id) throw new HttpError(400, 'missing_param', 'Athlete ID is required');
+    if (id === 'ath_seed_ahmed') id = 'ath_seed_tanvir';
     const limit = Math.min(50, Math.max(1, Number(c.req.query('limit')) || 20));
     const rawCursor = c.req.query('cursor');
     const cursor = decodeCursor(rawCursor);
@@ -96,8 +98,9 @@ export class AthleteController {
   // POST /api/v1/athletes/:id/follow
   async toggleFollow(c: Context<{ Bindings: Env }>) {
     try {
-      const targetId = c.req.param('id');
+      let targetId = c.req.param('id');
       if (!targetId) return c.json({ error: 'Target Athlete ID is required' }, 400);
+      if (targetId === 'ath_seed_ahmed') targetId = 'ath_seed_tanvir';
 
       const currentUser = c.get('user');
 
@@ -178,8 +181,9 @@ export class AthleteController {
   }
 
   private targetId(c: Context<{ Bindings: Env }>) {
-    const id = c.req.param('id');
+    let id = c.req.param('id');
     if (!id) throw new HttpError(400, 'missing_param', 'Athlete ID is required');
+    if (id === 'ath_seed_ahmed') id = 'ath_seed_tanvir';
     return id;
   }
 

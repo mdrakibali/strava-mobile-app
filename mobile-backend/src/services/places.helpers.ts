@@ -31,7 +31,7 @@ export interface NearbyResult {
 }
 
 export const OVERPASS_ENDPOINTS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
-export const PHOTON_REVERSE = 'https://photon.komoot.io/reverse';
+export const PHOTON_REVERSE = 'https://photon.komoot.io/api';
 
 export const PHOTON_TAGS: Record<PlaceSport, { specific: string[]; general: string[] }> = {
   Run: { specific: ['leisure:track', 'leisure:recreation_ground'], general: ['leisure:park', 'leisure:nature_reserve'] },
