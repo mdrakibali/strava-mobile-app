@@ -1,11 +1,11 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 import { AppBar, AppText, Avatar, Button, color, EmptyState, ErrorState, LoadingState, space } from '../../design';
 import { toAthleteSummary } from '../../lib/activityView';
-import { setFollowing } from '../../lib/social';
+import { setFollowing, socialStore } from '../../lib/social';
 import { api } from '../../services/api';
 
 interface Row {
@@ -34,10 +34,18 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
 
   const map = (a: any): Row => {
     const s = toAthleteSummary(a);
-    return { id: s.id, displayName: s.displayName, avatarUrl: s.avatarUrl, city: s.city, isFollowing: Boolean(a.isFollowing), isSelf: a.id === currentUser.id };
+    const cached = socialStore.getFollow(s.id);
+    return {
+      id: s.id,
+      displayName: s.displayName,
+      avatarUrl: s.avatarUrl,
+      city: s.city,
+      isFollowing: cached !== undefined ? cached : Boolean(a.isFollowing),
+      isSelf: a.id === currentUser.id,
+    };
   };
 
-  useEffect(() => {
+  const loadList = useCallback(() => {
     let cancelled = false;
     api.athletes.listFollows(athleteId, kind).then(
       (res) => {
@@ -57,8 +65,17 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [athleteId, kind, reloadKey]);
+  }, [athleteId, kind, currentUser.id]);
+
+  useEffect(() => {
+    return loadList();
+  }, [loadList, reloadKey]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadList();
+    }, [loadList])
+  );
 
   const more = async () => {
     if (!cursor.current || loadingMore) return;
@@ -72,10 +89,10 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
     }
   };
 
-  const toggle = async (r: Row) => {
+  const toggle = async (r: Row, currentFollowing: boolean) => {
     setBusy(r.id);
     try {
-      const res = await setFollowing(r.id, r.isFollowing, !r.isFollowing);
+      const res = await setFollowing(r.id, currentFollowing, !currentFollowing);
       setRows((prev) => prev.map((x) => (x.id === r.id ? { ...x, isFollowing: res.isFollowing } : x)));
       if (currentUser.id) {
         updateCurrentUser({
@@ -112,28 +129,31 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
             />
           }
           ListFooterComponent={loadingMore ? <ActivityIndicator color="#FC4C02" style={{ margin: space.lg }} /> : undefined}
-          renderItem={({ item: r }) => (
-            <Pressable
-              onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: r.id } })}
-              accessibilityRole="button"
-              className="flex-row items-center px-4 py-3 border-b border-gray-100 active:bg-gray-50">
-              <Avatar uri={r.avatarUrl} name={r.displayName} size={48} />
-              <View className="flex-1 ml-3">
-                <AppText variant="bodyStrong">{r.displayName}</AppText>
-                {r.city ? <AppText variant="caption" color="inkSecondary">{r.city}</AppText> : null}
-              </View>
-              {!r.isSelf ? (
-                <Button
-                  label={r.isFollowing ? 'Following' : 'Follow'}
-                  size="sm"
-                  variant={r.isFollowing ? 'outline' : 'primary'}
-                  icon={r.isFollowing ? 'checkmark' : 'person-add-outline'}
-                  loading={busy === r.id}
-                  onPress={() => toggle(r)}
-                />
-              ) : null}
-            </Pressable>
-          )}
+          renderItem={({ item: r }) => {
+            const isFollowing = socialStore.getFollow(r.id) ?? r.isFollowing;
+            return (
+              <Pressable
+                onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: r.id } })}
+                accessibilityRole="button"
+                className="flex-row items-center px-4 py-3 border-b border-gray-100 active:bg-gray-50">
+                <Avatar uri={r.avatarUrl} name={r.displayName} size={48} />
+                <View className="flex-1 ml-3">
+                  <AppText variant="bodyStrong">{r.displayName}</AppText>
+                  {r.city ? <AppText variant="caption" color="inkSecondary">{r.city}</AppText> : null}
+                </View>
+                {!r.isSelf ? (
+                  <Button
+                    label={isFollowing ? 'Following' : 'Follow'}
+                    size="sm"
+                    variant={isFollowing ? 'outline' : 'primary'}
+                    icon={isFollowing ? 'checkmark' : 'person-add-outline'}
+                    loading={busy === r.id}
+                    onPress={() => toggle(r, isFollowing)}
+                  />
+                ) : null}
+              </Pressable>
+            );
+          }}
         />
       )}
     </SafeAreaView>

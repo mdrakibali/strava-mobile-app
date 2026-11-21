@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -20,31 +20,29 @@ export default function SuggestedAthletesScreen() {
   const [suggested, setSuggested] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchSuggested = async () => {
-      setIsLoading(true);
-      try {
-        const res = await api.athletes.search('');
-        if (isMounted && res?.athletes) {
-          const mapped = res.athletes.map((a: any) => {
-            const cached = socialStore.getFollow(a.id);
-            return { ...a, isFollowing: cached !== undefined ? cached : Boolean(a.isFollowing) };
-          });
-          setSuggested(mapped);
-        }
-      } catch (err) {
-        console.warn('Failed to load suggested athletes:', err);
-      } finally {
-        if (isMounted) setIsLoading(false);
+  const fetchSuggested = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await api.athletes.search('');
+      if (res?.athletes) {
+        const mapped = res.athletes.map((a: any) => {
+          const cached = socialStore.getFollow(a.id);
+          return { ...a, isFollowing: cached !== undefined ? cached : Boolean(a.isFollowing) };
+        });
+        setSuggested(mapped);
       }
-    };
-
-    fetchSuggested();
-    return () => {
-      isMounted = false;
-    };
+    } catch (err) {
+      console.warn('Failed to load suggested athletes:', err);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchSuggested();
+    }, [fetchSuggested])
+  );
 
   const toggleFollow = async (id: string) => {
     const row = suggested.find((a) => a.id === id);
@@ -90,48 +88,51 @@ export default function SuggestedAthletesScreen() {
             <Text className="text-sm font-bold text-gray-800 mt-2">No suggested athletes yet</Text>
           </View>
         ) : (
-          suggested.map((athlete) => (
-            <View
-              key={athlete.id}
-              className="p-4 bg-white rounded-2xl mb-3 border border-gray-100 shadow-sm">
-              <View className="flex-row items-center justify-between mb-2">
-                <TouchableOpacity
-                  onPress={() => router.push(`/athlete/${athlete.id}`)}
-                  className="flex-row items-center flex-1 mr-3">
-                  <Image
-                    source={{ uri: athlete.avatarUrl || undefined }}
-                    className="w-14 h-14 rounded-full mr-3 bg-gray-100"
-                  />
-                  <View className="flex-1">
-                    <Text className="text-sm font-bold text-gray-900">{athlete.displayName}</Text>
-                    <Text className="text-xs text-gray-400">@{athlete.username || 'athlete'}</Text>
-                    <View className="flex-row items-center mt-0.5">
-                      <Ionicons name="location-outline" size={11} color="#FC4C02" />
-                      <Text className="text-[11px] text-[#FC4C02] font-semibold ml-0.5">
-                        {athlete.city || 'Dhaka'} · Community Runner
-                      </Text>
+          suggested.map((athlete) => {
+            const isFollowing = socialStore.getFollow(athlete.id) ?? Boolean(athlete.isFollowing);
+            return (
+              <View
+                key={athlete.id}
+                className="p-4 bg-white rounded-2xl mb-3 border border-gray-100 shadow-sm">
+                <View className="flex-row items-center justify-between mb-2">
+                  <TouchableOpacity
+                    onPress={() => router.push(`/athlete/${athlete.id}`)}
+                    className="flex-row items-center flex-1 mr-3">
+                    <Image
+                      source={{ uri: athlete.avatarUrl || undefined }}
+                      className="w-14 h-14 rounded-full mr-3 bg-gray-100"
+                    />
+                    <View className="flex-1">
+                      <Text className="text-sm font-bold text-gray-900">{athlete.displayName}</Text>
+                      <Text className="text-xs text-gray-400">@{athlete.username || 'athlete'}</Text>
+                      <View className="flex-row items-center mt-0.5">
+                        <Ionicons name="location-outline" size={11} color="#FC4C02" />
+                        <Text className="text-[11px] text-[#FC4C02] font-semibold ml-0.5">
+                          {athlete.city || 'Dhaka'} · Community Runner
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                </TouchableOpacity>
+                  </TouchableOpacity>
 
-                <TouchableOpacity
-                  onPress={() => toggleFollow(athlete.id)}
-                  className={`px-4 py-1.5 rounded-full ${
-                    athlete.isFollowing ? 'bg-gray-100' : 'bg-[#FC4C02]'
-                  }`}>
-                  <Text className={`text-xs font-bold ${athlete.isFollowing ? 'text-gray-700' : 'text-white'}`}>
-                    {athlete.isFollowing ? 'Following' : 'Follow +'}
+                  <TouchableOpacity
+                    onPress={() => toggleFollow(athlete.id)}
+                    className={`px-4 py-1.5 rounded-full ${
+                      isFollowing ? 'bg-gray-100' : 'bg-[#FC4C02]'
+                    }`}>
+                    <Text className={`text-xs font-bold ${isFollowing ? 'text-gray-700' : 'text-white'}`}>
+                      {isFollowing ? 'Following' : 'Follow +'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {athlete.bio && (
+                  <Text className="text-xs text-gray-600 leading-4 mt-1 border-t border-gray-50 pt-2">
+                    {athlete.bio}
                   </Text>
-                </TouchableOpacity>
+                )}
               </View>
-
-              {athlete.bio && (
-                <Text className="text-xs text-gray-600 leading-4 mt-1 border-t border-gray-50 pt-2">
-                  {athlete.bio}
-                </Text>
-              )}
-            </View>
-          ))
+            );
+          })
         )}
       </ScrollView>
     </SafeAreaView>

@@ -95,6 +95,7 @@ export const normalizeOverpass = (json: any, lat: number, lng: number, limit = 1
     });
   }
   return Array.from(byKey.values())
+    .filter((p) => p.lengthM == null || p.lengthM >= 300)
     .sort((a, b) => a.distanceM - b.distanceM)
     .slice(0, limit);
 };

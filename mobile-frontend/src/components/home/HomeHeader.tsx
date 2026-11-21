@@ -18,7 +18,10 @@ export const HomeHeader: React.FC<Props> = ({ unreadNotificationCount }) => {
         <TouchableOpacity onPress={() => router.push('/record')} className="p-2">
           <Ionicons name="add" size={26} color="#1F2937" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push('/messages')} className="p-2">
+        <TouchableOpacity
+          onPress={() => router.push('/messages')}
+          className="p-2"
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="chatbubbles-outline" size={22} color="#1F2937" />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.push('/search')} className="p-2">
