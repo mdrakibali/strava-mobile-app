@@ -187,11 +187,16 @@ export const MapView: React.FC<MapViewProps> = ({
       features.push({ type: 'Feature', properties: { kind: 'start' }, geometry: { type: 'Point', coordinates: route[0] } });
     }
     if (mode === 'route' && route.length > 1) {
-      features.push({
-        type: 'Feature',
-        properties: { kind: 'end' },
-        geometry: { type: 'Point', coordinates: route[route.length - 1] },
-      });
+      const isLoop =
+        Math.abs(route[0][0] - route[route.length - 1][0]) < 0.0008 &&
+        Math.abs(route[0][1] - route[route.length - 1][1]) < 0.0008;
+      if (!isLoop) {
+        features.push({
+          type: 'Feature',
+          properties: { kind: 'end' },
+          geometry: { type: 'Point', coordinates: route[route.length - 1] },
+        });
+      }
     }
     return { type: 'FeatureCollection', features };
   }, [route, mode]);
@@ -352,10 +357,10 @@ export const MapView: React.FC<MapViewProps> = ({
             id="route-endpoints"
             type="circle"
             paint={{
-              'circle-radius': 7,
+              'circle-radius': 8,
               'circle-stroke-width': 3,
               'circle-stroke-color': '#FFFFFF',
-              'circle-color': ['match', ['get', 'kind'], 'start', color.routeStart, color.routeEnd],
+              'circle-color': ['match', ['get', 'kind'], 'start', '#10B981', color.routeEnd],
             }}
           />
         </GeoJSONSource>
