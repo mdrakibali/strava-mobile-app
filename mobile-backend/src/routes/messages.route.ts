@@ -1,6 +1,7 @@
 import { and, desc, eq, or } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { athletes, directMessages } from '../db/schema';
+import { verifyToken } from '../lib/auth';
 import { getDb } from '../lib/db';
 import { NotificationRepository } from '../repositories/notification.repository';
 import { requireAuth } from '../middleware/auth';
