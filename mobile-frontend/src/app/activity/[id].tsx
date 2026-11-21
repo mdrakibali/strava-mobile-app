@@ -13,6 +13,7 @@ import { ActivityBody, DetailSkeleton } from '../../components/activity/Activity
 import { MapView } from '../../components/map/MapView';
 import { useApp } from '../../context/AppContext';
 import { AppBar, EmptyState, ErrorState, IconButton } from '../../design';
+import { reconcileActivity } from '../../lib/activityEdits';
 import { ActivityView, fromDetailResponse } from '../../lib/activityView';
 import { markActivityRemoved } from '../../lib/removedActivities';
 import { socialStore } from '../../lib/social';
@@ -45,7 +46,7 @@ export default function ActivityDetailScreen() {
         if (cancelled) return;
         if (!res?.activity) setState({ status: 'notFound' });
         else {
-          const activity = fromDetailResponse(res);
+          const activity = reconcileActivity(fromDetailResponse(res));
           socialStore.seed(
             [{ id: activity.id, hasKudos: activity.hasKudos, kudosCount: activity.kudosCount, commentsCount: activity.commentsCount }],
             readTick

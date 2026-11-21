@@ -239,11 +239,16 @@ messagesRouter.post('/send', requireAuth, async (c) => {
     if (!text.trim()) return c.json({ error: 'Message text is required' }, 400);
 
     const db = getDb(c);
-    let targetId = String(body?.recipientId || '').trim();
-    if (!targetId && body?.chatId) {
-      const [chatRow] = await db.select().from(chats).where(eq(chats.id, String(body.chatId))).limit(1);
+    const rawRecipient = String(body?.recipientId || '').trim();
+    const rawChat = String(body?.chatId || '').trim();
+    // A conversation id is not an athlete. Resolving it here is what keeps
+    // POST /messages/send from answering 404 when the client only has the thread id.
+    const chatKey = rawChat || (rawRecipient.startsWith('chat_') ? rawRecipient : '');
+    let targetId = chatKey && chatKey === rawRecipient ? '' : rawRecipient;
+    if (chatKey) {
+      const [chatRow] = await db.select().from(chats).where(eq(chats.id, chatKey)).limit(1);
       if (!chatRow || (chatRow.athlete1Id !== myId && chatRow.athlete2Id !== myId)) {
-        return c.json({ error: 'Conversation not found' }, 404);
+        return c.json({ error: 'Conversation not found', code: 'conversation_not_found' }, 404);
       }
       targetId = chatRow.athlete1Id === myId ? chatRow.athlete2Id : chatRow.athlete1Id;
     }
@@ -254,7 +259,7 @@ messagesRouter.post('/send', requireAuth, async (c) => {
       .from(athletes)
       .where(or(eq(athletes.id, targetId), eq(athletes.username, targetId)))
       .limit(1);
-    if (!named) return c.json({ error: 'Recipient athlete not found' }, 404);
+    if (!named) return c.json({ error: 'Recipient athlete not found', code: 'recipient_not_found' }, 404);
 
     const opened = await getOrCreateConversation(db, myId, named.id);
     if ('error' in opened && opened.error === 'self') return c.json({ error: 'You cannot message yourself' }, 422);

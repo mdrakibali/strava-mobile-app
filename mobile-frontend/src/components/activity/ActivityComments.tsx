@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { Avatar, Button, Divider, ErrorState, IconButton, SectionTitle, TextField } from '../../design';
-import { CommentView, toAthleteSummary } from '../../lib/activityView';
+import { CommentView, mergeCommentLists, toAthleteSummary } from '../../lib/activityView';
 import { formatRelative } from '../../lib/format';
 import { changeCommentsCount, useSocial } from '../../lib/social';
 import { api } from '../../services/api';
@@ -36,7 +36,13 @@ export const ActivityComments: React.FC<Props> = ({
   onComposerFocus,
 }) => {
   const social = useSocial(activityId, { hasKudos: null, kudosCount: 0, commentsCount: initialComments.length });
+  const incomingKey = `${social.commentsCount}:${initialComments.map((c) => `${c.id}:${c.updatedAt ?? ''}:${c.content}`).join('|')}`;
+  const [appliedKey, setAppliedKey] = useState(incomingKey);
   const [comments, setComments] = useState<CommentView[]>(initialComments);
+  if (appliedKey !== incomingKey) {
+    setAppliedKey(incomingKey);
+    setComments((prev) => mergeCommentLists(prev, initialComments, social.commentsCount));
+  }
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [draft, setDraft] = useState('');
@@ -133,7 +139,7 @@ export const ActivityComments: React.FC<Props> = ({
   return (
     <View className="mt-6 pt-6 border-t border-gray-100">
       <SectionTitle title={social.commentsCount > 0 ? `Comments (${social.commentsCount})` : 'Comments'} />
-      {comments.length === 0 ? (
+      {comments.length === 0 && social.commentsCount === 0 ? (
         <Text className="text-sm text-gray-500 py-2">No comments yet. Be the first to cheer them on!</Text>
       ) : (
         comments.map((c, i) => (

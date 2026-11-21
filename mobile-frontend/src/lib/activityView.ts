@@ -23,6 +23,15 @@ export interface SplitView {
   elevationDeltaMeters: number | null;
 }
 
+/** A refetch that lost the comment list must not replace comments the screen already has. */
+export function mergeCommentLists(current: CommentView[], incoming: CommentView[], serverCount: number): CommentView[] {
+  if (incoming.length === 0 && current.length > 0 && serverCount > 0) return current;
+  if (incoming.length === 0) return serverCount === 0 ? [] : current;
+  const seen = new Set(incoming.map((c) => c.id));
+  const kept = current.filter((c) => !seen.has(c.id) && (c.id.startsWith('local_') || !incoming.some((n) => n.content === c.content && n.author.id === c.author.id)));
+  return [...incoming, ...kept].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+}
+
 export interface CommentView {
   id: string;
   content: string;
@@ -164,7 +173,7 @@ export const fromDetailResponse = (res: any): ActivityView => {
     ...base(row, toAthleteSummary(res.athlete)),
     route: displayRoute(toRoute(row.rawPolyline?.length ? row.rawPolyline : row.maskedPolyline)),
     kudosCount: num(res.kudosCount) ?? 0,
-    hasKudos: Boolean(res.hasKudos),
+    hasKudos: res.hasKudos === true || res.hasKudos === false ? res.hasKudos : null,
     commentsCount: num(res.commentsCount) ?? (Array.isArray(res.comments) ? res.comments.length : 0),
     comments: Array.isArray(res.comments)
       ? res.comments.map((c: any) => ({
@@ -186,7 +195,7 @@ export const fromProfileActivity = (row: any, athlete: AthleteSummary): Activity
   ...base(row, athlete),
   route: displayRoute(toRoute(row.polyline?.length ? row.polyline : row.maskedPolyline?.length ? row.maskedPolyline : row.rawPolyline)),
   kudosCount: num(row.kudosCount) ?? 0,
-  hasKudos: typeof row.hasKudos === 'boolean' ? row.hasKudos : Boolean(row.hasKudos),
+  hasKudos: row.hasKudos === true || row.hasKudos === false ? row.hasKudos : null,
   commentsCount: num(row.commentsCount) ?? 0,
 });
 

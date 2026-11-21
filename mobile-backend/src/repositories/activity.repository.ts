@@ -1,5 +1,6 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { activities, athletes, comments, kudos } from '../db/schema';
+import { countOf } from '../lib/counts';
 import { CursorPayload } from '../lib/cursor';
 import { AppDatabase } from '../lib/db';
 import { visibleActivitiesWhere } from '../lib/policy';
@@ -106,7 +107,7 @@ export class ActivityRepository {
       .select({ count: sql<number>`count(*)` })
       .from(kudos)
       .where(eq(kudos.activityId, activityId));
-    return Number(res?.count || 0);
+    return countOf(res?.count);
   }
 
   async hasKudos(activityId: string, athleteId: string): Promise<boolean> {
@@ -180,7 +181,7 @@ export class ActivityRepository {
 
   async getCommentsCount(activityId: string): Promise<number> {
     const [res] = await this.db.select({ count: sql<number>`count(*)` }).from(comments).where(eq(comments.activityId, activityId));
-    return Number(res?.count || 0);
+    return countOf(res?.count);
   }
 
   async getKudosAthletes(activityId: string) {

@@ -8,6 +8,7 @@ import { HomeHeader } from '../../components/home/HomeHeader';
 import { EmptyState, ErrorState } from '../../design';
 import { useApp } from '../../context/AppContext';
 import { APP_NAME } from '../../config/app';
+import { reconcileActivity } from '../../lib/activityEdits';
 import { ActivityView, fromFeedItem } from '../../lib/activityView';
 import { withoutRemoved } from '../../lib/removedActivities';
 import { socialStore } from '../../lib/social';
@@ -20,9 +21,11 @@ import { isRecordingActive, timerSeconds, useNow, usePendingUploads, useRecordin
 type Status = 'loading' | 'ready' | 'error';
 
 /**
- * Home feed = own + followed athletes (research §13), newest first, cursor-paginated.
- * Reference: ScreensDesign 374837 / 374809.
+ * Home feed = every activity this viewer is allowed to see, newest first.
+ * Using the following list whenever it is non-empty hid everyone else as soon as you
+ * had one activity of your own.
  */
+const HOME_FEED_TAB = 'all' as const;
 export default function HomeFeedScreen() {
   const router = useRouter();
   const { currentUser, unreadNotificationCount } = useApp();
@@ -44,6 +47,7 @@ export default function HomeFeedScreen() {
   // refresh can never be followed by a stale page appended to the fresh list.
   const generation = useRef(0);
   const lastLoadedAt = useRef(0);
+  const requestSeq = useRef(0);
 
   // Defence in depth only — the server must enforce visibility (technical audit PRIV-02).
   const visibleToMe = useCallback(
@@ -53,14 +57,13 @@ export default function HomeFeedScreen() {
 
   /** Fetches page 1 without touching state; callers apply the result. */
   const fetchFirstPage = useCallback(async () => {
+    const seq = ++requestSeq.current;
     const readTick = socialStore.beginRead();
-    let res = await api.feed.getFeed('following', undefined, 500);
-    if (!res?.feed?.length) {
-      res = await api.feed.getFeed('all', undefined, 500);
-    }
-    const items = withoutRemoved((res?.feed || []).map(fromFeedItem).filter(visibleToMe));
+    const res = await api.feed.getFeed(HOME_FEED_TAB, undefined, 500);
+    const items = withoutRemoved((res?.feed || []).map(fromFeedItem).filter(visibleToMe)).map(reconcileActivity);
     socialStore.seed(items, readTick);
     return {
+      seq,
       items,
       cursor: res.nextCursor,
       hasNext: res.hasNextPage,
@@ -73,7 +76,7 @@ export default function HomeFeedScreen() {
     let cancelled = false;
     fetchFirstPage().then(
       (page) => {
-        if (cancelled) return;
+        if (cancelled || page.seq !== requestSeq.current) return;
         generation.current++;
         lastLoadedAt.current = Date.now();
         cursorRef.current = page.cursor;
@@ -98,6 +101,7 @@ export default function HomeFeedScreen() {
     syncWorker.kick(); // also push any activity still waiting to upload
     try {
       const page = await fetchFirstPage();
+      if (page.seq !== requestSeq.current) return;
       generation.current++;
       lastLoadedAt.current = Date.now();
       setLoadMoreError(false);
@@ -120,11 +124,11 @@ export default function HomeFeedScreen() {
     const gen = generation.current;
     const readTick = socialStore.beginRead();
     try {
-      const res = await api.feed.getFeed('following', cursorRef.current);
+      const res = await api.feed.getFeed(HOME_FEED_TAB, cursorRef.current);
       if (gen !== generation.current) return; // a refresh replaced the list meanwhile
       cursorRef.current = res.nextCursor;
       hasNextRef.current = res.hasNextPage;
-      const next = withoutRemoved(res.feed.map(fromFeedItem).filter(visibleToMe));
+      const next = withoutRemoved(res.feed.map(fromFeedItem).filter(visibleToMe)).map(reconcileActivity);
       socialStore.seed(next, readTick);
       setItems((prev) => {
         const seen = new Set(prev.map((p) => p.id));
@@ -143,6 +147,7 @@ export default function HomeFeedScreen() {
     useCallback(() => {
       fetchFirstPage()
         .then((page) => {
+          if (page.seq !== requestSeq.current) return;
           generation.current++;
           lastLoadedAt.current = Date.now();
           cursorRef.current = page.cursor;

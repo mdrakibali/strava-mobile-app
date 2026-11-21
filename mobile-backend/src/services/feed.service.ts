@@ -1,5 +1,6 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, inArray } from 'drizzle-orm';
 import { activities } from '../db/schema';
+import { countOf, flagOf } from '../lib/counts';
 import { decodeCursor, encodeCursor } from '../lib/cursor';
 import { followingFeedWhere, visibleActivitiesWhere } from '../lib/policy';
 import { ActivityRepository } from '../repositories/activity.repository';
@@ -37,7 +38,10 @@ export class FeedService {
       const memberIds = Array.from(new Set([dto.currentUserId, ...allMembers.flat().map((m) => m.athleteId)]));
       where = and(inArray(activities.athleteId, memberIds), visibleActivitiesWhere(dto.currentUserId))!;
     } else {
-      where = eq(activities.visibility, 'PUBLIC');
+      // Everything this viewer is allowed to see: their own activities (any visibility),
+      // public activities from anyone, and followers-only activities from people they follow.
+      // A following-only query would hide other athletes as soon as the viewer has one activity.
+      where = visibleActivitiesWhere(dto.currentUserId);
     }
 
     const { items, hasNextPage, nextCursor: rawNextCursor } = await this.feedRepo.getTimeline({
@@ -69,9 +73,9 @@ export class FeedService {
         polyline: isAuthor ? activity.rawPolyline || activity.maskedPolyline : activity.maskedPolyline,
         photos: activity.photos,
         athlete,
-        kudosCount: Number(kudosCount || 0),
-        hasKudos: Boolean(hasKudos),
-        commentsCount: Number(commentsCount || 0),
+        kudosCount: countOf(kudosCount),
+        hasKudos: flagOf(hasKudos),
+        commentsCount: countOf(commentsCount),
         createdAt: activity.createdAt,
       };
     });

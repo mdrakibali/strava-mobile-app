@@ -98,18 +98,34 @@ export const useFollow = (athleteId: string, initialFollowing: boolean): boolean
  * Give or remove kudos. Optimistic, then reconciled with the server's answer; rolls back on error.
  * The endpoints are idempotent (PUT/DELETE), so a double tap or retry can't flip the state.
  */
+const finiteCount = (value: unknown, fallback: number) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(0, n) : fallback;
+};
+
 export async function setKudos(activityId: string, give: boolean): Promise<SocialState> {
   const epoch = (activityEpoch.get(activityId) ?? 0) + 1;
   activityEpoch.set(activityId, epoch);
   const before = socialStore.get(activityId) ?? { hasKudos: !give, kudosCount: 0, commentsCount: 0 };
-  const known = before.hasKudos === true || before.hasKudos === false;
-  const delta = known && before.hasKudos !== give ? (give ? 1 : -1) : 0;
-  socialStore.patch(activityId, { hasKudos: give, kudosCount: Math.max(0, before.kudosCount + delta) });
+  const wasLiked = before.hasKudos === true;
+  let nextCount = before.kudosCount;
+  if (give) {
+    if (!wasLiked) nextCount += 1;
+    // A liked activity always has at least this viewer's kudos. Unknown state used to leave the
+    // count at 0, so the screen said "No kudos yet" while the thumb was filled.
+    nextCount = Math.max(1, nextCount);
+  } else if (before.hasKudos !== false) {
+    nextCount = Math.max(0, nextCount - 1);
+  }
+  socialStore.patch(activityId, { hasKudos: give, kudosCount: nextCount });
+  socialStore.noteMutation(activityId);
   try {
     const res = give ? await api.activities.giveKudos(activityId) : await api.activities.removeKudos(activityId);
     if (activityEpoch.get(activityId) !== epoch) return socialStore.get(activityId)!;
-    const kudosCount = Math.max(0, Number(res.kudosCount) || 0);
-    socialStore.patch(activityId, { hasKudos: Boolean(res.hasKudos), kudosCount });
+    const hasKudos = res?.hasKudos === true || res?.hasKudos === false ? res.hasKudos : give;
+    let kudosCount = finiteCount(res?.kudosCount, nextCount);
+    if (hasKudos && kudosCount < 1) kudosCount = Math.max(1, nextCount);
+    socialStore.patch(activityId, { hasKudos, kudosCount });
     socialStore.noteMutation(activityId);
   } catch (e) {
     if (activityEpoch.get(activityId) === epoch) socialStore.patch(activityId, before);
@@ -133,6 +149,7 @@ export async function changeCommentsCount(
   const before = socialStore.get(activityId) ?? { hasKudos: null, kudosCount: 0, commentsCount: 0 };
   const optimistic = Math.max(0, before.commentsCount + delta);
   socialStore.patch(activityId, { commentsCount: optimistic });
+  socialStore.noteMutation(activityId);
   try {
     const server = await request();
     if (activityEpoch.get(activityId) !== epoch) return socialStore.get(activityId)?.commentsCount ?? optimistic;

@@ -186,6 +186,8 @@ export class ActivityService {
   async giveKudos(activityId: string, actorId: string, actorUsername: string) {
     const { activity } = await this.loadVisible(activityId, actorId);
     const created = await this.activityRepo.addKudos(activityId, actorId);
+    const liked = created || (await this.activityRepo.hasKudos(activityId, actorId));
+    const kudosCount = Math.max(await this.activityRepo.getKudosCount(activityId), liked ? 1 : 0);
     if (created && activity.athleteId !== actorId) {
       await this.notifRepo.create({
         id: newId('notif'),
@@ -196,7 +198,7 @@ export class ActivityService {
         message: `${actorUsername} gave you kudos on "${activity.title}"!`,
       });
     }
-    return { hasKudos: true, kudosCount: await this.activityRepo.getKudosCount(activityId) };
+    return { hasKudos: liked, kudosCount };
   }
 
   async addComment(activityId: string, actorId: string, actorUsername: string, content: string, parentCommentId?: string) {

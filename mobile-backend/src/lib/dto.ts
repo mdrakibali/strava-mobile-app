@@ -1,4 +1,5 @@
 import { athletes } from '../db/schema';
+import { countOf, flagOf } from './counts';
 
 type AthleteRow = typeof athletes.$inferSelect;
 
@@ -54,7 +55,7 @@ export const toActivityListItem = (r: {
   maxSpeedMps: r.maxSpeedMps != null ? Number(r.maxSpeedMps) : null,
   calories: r.calories,
   polyline: r.maskedPolyline ?? [],
-  kudosCount: Number(r.kudosCount || 0),
-  commentsCount: Number(r.commentsCount || 0),
-  hasKudos: Boolean(r.hasKudos),
+  kudosCount: countOf(r.kudosCount),
+  commentsCount: countOf(r.commentsCount),
+  hasKudos: flagOf(r.hasKudos),
 });
