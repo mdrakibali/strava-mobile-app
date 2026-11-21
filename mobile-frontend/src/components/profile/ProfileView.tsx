@@ -2,6 +2,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useApp } from '../../context/AppContext';
 import {
   AppBar,
   EmptyState,
@@ -31,6 +32,7 @@ interface ProfileData {
 
 export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ athleteId, isSelf }) => {
   const router = useRouter();
+  const { currentUser, updateCurrentUser } = useApp();
   const [data, setData] = useState<ProfileData | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'notFound'>('loading');
   const [refreshing, setRefreshing] = useState(false);
@@ -46,11 +48,14 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
       ]);
       const athlete = { ...toAthleteSummary(res.athlete), bio: res.athlete?.bio ?? null };
       const all = (res.recentActivities || []).map((row: any) => fromProfileActivity(row, athlete));
+      const cachedFollow = socialStore.getFollow(athleteId);
+      const isFollowing = cachedFollow !== undefined ? cachedFollow : Boolean(res.athlete?.isFollowing);
+      socialStore.setFollow(athleteId, isFollowing);
       setData({
         athlete,
         followersCount: Number(res.athlete?.followersCount) || 0,
         followingCount: Number(res.athlete?.followingCount) || 0,
-        isFollowing: Boolean(res.athlete?.isFollowing),
+        isFollowing,
         activities: isSelf ? all : all.filter((a: ActivityView) => a.visibility !== 'ONLY_ME'),
         stats,
       });
@@ -85,6 +90,11 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
         followersCount: res.followersCount ?? data.followersCount + (res.isFollowing ? 1 : -1),
         stats: data.stats,
       });
+      if (currentUser?.id) {
+        updateCurrentUser({
+          followingCount: Math.max(0, (currentUser.followingCount || 0) + (res.isFollowing ? 1 : -1)),
+        });
+      }
     } catch {
       // unchanged
     } finally {

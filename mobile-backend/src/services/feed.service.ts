@@ -24,7 +24,7 @@ export class FeedService {
 
   async getFeed(dto: FeedRequestDTO) {
     const tab = dto.tab || 'all';
-    const limit = Math.min(50, Math.max(1, dto.limit || 15));
+    const limit = Math.min(200, Math.max(1, dto.limit || 100));
     const cursor = decodeCursor(dto.cursor);
 
     let where;

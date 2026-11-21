@@ -13,6 +13,7 @@ export interface SocialState {
 }
 
 const state = new Map<string, SocialState>();
+const followState = new Map<string, boolean>();
 const listeners = new Set<() => void>();
 let version = 0;
 const emit = () => {
@@ -32,6 +33,13 @@ export const socialStore = {
     state.set(id, { ...cur, ...p });
     emit();
   },
+  setFollow(athleteId: string, isFollowing: boolean) {
+    followState.set(athleteId, isFollowing);
+    emit();
+  },
+  getFollow(athleteId: string) {
+    return followState.get(athleteId);
+  },
   subscribe(l: () => void) {
     listeners.add(l);
     return () => listeners.delete(l);
@@ -42,6 +50,12 @@ export const socialStore = {
 export const useSocial = (id: string, fallback: SocialState): SocialState => {
   useSyncExternalStore(socialStore.subscribe, () => version);
   return state.get(id) ?? fallback;
+};
+
+/** Live follow state for an athlete across all screens. */
+export const useFollow = (athleteId: string, initialFollowing: boolean): boolean => {
+  useSyncExternalStore(socialStore.subscribe, () => version);
+  return followState.get(athleteId) ?? initialFollowing;
 };
 
 /**
@@ -63,7 +77,14 @@ export async function setKudos(activityId: string, give: boolean): Promise<Socia
 }
 
 /** Follow/unfollow (idempotent PUT/DELETE); returns the server's resulting state. */
-export async function setFollowing(athleteId: string, _currentlyFollowing: boolean, wantFollowing: boolean) {
-  const res = wantFollowing ? await api.athletes.follow(athleteId) : await api.athletes.unfollow(athleteId);
-  return { isFollowing: Boolean(res.isFollowing), followersCount: res.followersCount, followingCount: res.followingCount };
+export async function setFollowing(athleteId: string, currentlyFollowing: boolean, wantFollowing: boolean) {
+  socialStore.setFollow(athleteId, wantFollowing);
+  try {
+    const res = wantFollowing ? await api.athletes.follow(athleteId) : await api.athletes.unfollow(athleteId);
+    socialStore.setFollow(athleteId, Boolean(res.isFollowing));
+    return { isFollowing: Boolean(res.isFollowing), followersCount: res.followersCount, followingCount: res.followingCount };
+  } catch (e) {
+    socialStore.setFollow(athleteId, currentlyFollowing);
+    throw e;
+  }
 }

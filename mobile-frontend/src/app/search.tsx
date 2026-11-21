@@ -15,7 +15,7 @@ import {
   space,
 } from '../design';
 import { AthleteSummary, toAthleteSummary } from '../lib/activityView';
-import { setFollowing } from '../lib/social';
+import { setFollowing, socialStore } from '../lib/social';
 import { api } from '../services/api';
 
 type Row = AthleteSummary & { isFollowing: boolean; pending?: boolean };
@@ -26,7 +26,7 @@ type Row = AthleteSummary & { isFollowing: boolean; pending?: boolean };
  */
 export default function SearchScreen() {
   const router = useRouter();
-  const { currentUser } = useApp();
+  const { currentUser, updateCurrentUser } = useApp();
   const [query, setQuery] = useState('');
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -41,7 +41,13 @@ export default function SearchScreen() {
       setRows(
         (res.athletes || [])
           .filter((a: any) => a.id !== currentUser.id)
-          .map((a: any) => ({ ...toAthleteSummary(a), isFollowing: Boolean(a.isFollowing) }))
+          .map((a: any) => {
+            const cached = socialStore.getFollow(a.id);
+            return {
+              ...toAthleteSummary(a),
+              isFollowing: cached !== undefined ? cached : Boolean(a.isFollowing),
+            };
+          })
       );
       setStatus('ready');
     } catch {
@@ -66,6 +72,11 @@ export default function SearchScreen() {
     try {
       const res = await setFollowing(row.id, row.isFollowing, !row.isFollowing);
       setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, isFollowing: res.isFollowing, pending: false } : r)));
+      if (currentUser?.id) {
+        updateCurrentUser({
+          followingCount: Math.max(0, (currentUser.followingCount || 0) + (res.isFollowing ? 1 : -1)),
+        });
+      }
     } catch {
       setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, pending: false } : r)));
     }

@@ -10,10 +10,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useApp } from '../../context/AppContext';
+import { setFollowing, socialStore } from '../../lib/social';
 import { api } from '../../services/api';
 
 export default function SuggestedAthletesScreen() {
   const router = useRouter();
+  const { currentUser, updateCurrentUser } = useApp();
   const [suggested, setSuggested] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -24,7 +27,11 @@ export default function SuggestedAthletesScreen() {
       try {
         const res = await api.athletes.search('');
         if (isMounted && res?.athletes) {
-          setSuggested(res.athletes);
+          const mapped = res.athletes.map((a: any) => {
+            const cached = socialStore.getFollow(a.id);
+            return { ...a, isFollowing: cached !== undefined ? cached : Boolean(a.isFollowing) };
+          });
+          setSuggested(mapped);
         }
       } catch (err) {
         console.warn('Failed to load suggested athletes:', err);
@@ -41,15 +48,20 @@ export default function SuggestedAthletesScreen() {
 
   const toggleFollow = async (id: string) => {
     const row = suggested.find((a) => a.id === id);
-    const want = !row?.isFollowing;
+    if (!row) return;
+    const want = !row.isFollowing;
     setSuggested((prev) => prev.map((a) => (a.id === id ? { ...a, isFollowing: want } : a)));
     try {
-      // idempotent PUT/DELETE: a double tap can't flip the state twice
-      const res = await (want ? api.athletes.follow(id) : api.athletes.unfollow(id));
+      const res = await setFollowing(id, row.isFollowing, want);
       setSuggested((prev) => prev.map((a) => (a.id === id ? { ...a, isFollowing: res.isFollowing } : a)));
+      if (currentUser?.id) {
+        updateCurrentUser({
+          followingCount: Math.max(0, (currentUser.followingCount || 0) + (res.isFollowing ? 1 : -1)),
+        });
+      }
     } catch (err) {
       console.warn('Follow error:', err);
-      setSuggested((prev) => prev.map((a) => (a.id === id ? { ...a, isFollowing: !want } : a)));
+      setSuggested((prev) => prev.map((a) => (a.id === id ? { ...a, isFollowing: row.isFollowing } : a)));
     }
   };
 

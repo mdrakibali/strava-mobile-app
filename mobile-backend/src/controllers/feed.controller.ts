@@ -24,7 +24,7 @@ export class FeedController {
       const user = c.get('user');
       const tab = c.req.query('tab') as 'following' | 'all' | 'clubs' | undefined;
       const cursor = c.req.query('cursor');
-      const limit = Number(c.req.query('limit')) || 15;
+      const limit = Number(c.req.query('limit')) || 100;
 
       const service = this.getService(c);
       const result = await service.getFeed({

@@ -181,7 +181,7 @@ export const api = {
 
   // 2. Timeline Feed (Cursor-based)
   feed: {
-    getFeed: (tab: 'all' | 'following' | 'clubs' = 'all', cursor?: string, limit = 15) => {
+    getFeed: (tab: 'all' | 'following' | 'clubs' = 'all', cursor?: string, limit = 100) => {
       const params = new URLSearchParams({ tab, limit: String(limit) });
       if (cursor) params.set('cursor', cursor);
       return request<{

@@ -92,14 +92,23 @@ export const ProfileHeader: React.FC<Props> = ({
             <Button label="Share profile" variant="outline" className="flex-1 ml-3" onPress={onShare} />
           </>
         ) : (
-          <Button
-            label={isFollowing ? 'Following' : 'Follow'}
-            icon={isFollowing ? 'checkmark' : 'person-add-outline'}
-            variant={isFollowing ? 'outline' : 'primary'}
-            loading={followPending}
-            onPress={onToggleFollow}
-            className="flex-1"
-          />
+          <>
+            <Button
+              label={isFollowing ? 'Following' : 'Follow'}
+              icon={isFollowing ? 'checkmark' : 'person-add-outline'}
+              variant={isFollowing ? 'outline' : 'primary'}
+              loading={followPending}
+              onPress={onToggleFollow}
+              className="flex-1"
+            />
+            <Button
+              label="Message"
+              icon="chatbubble-outline"
+              variant="outline"
+              className="flex-1 ml-3"
+              onPress={() => router.push({ pathname: '/messages/[id]', params: { id: athleteId } })}
+            />
+          </>
         )}
       </View>
     </View>
