@@ -149,33 +149,25 @@ eventsRouter.post('/:id/rsvp', requireAuth, async (c) => {
 
     const db = getDb(c);
 
-    const existing = await db
-      .select()
-      .from(eventRsvps)
-      .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.athleteId, user.athleteId)))
-      .limit(1);
+    if (status === 'DECLINED') {
+      await db
+        .delete(eventRsvps)
+        .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.athleteId, user.athleteId)));
+      return c.json({ message: 'RSVP removed', status: null });
+    }
 
-    if (existing.length > 0) {
-      if (status === 'DECLINED') {
-        await db
-          .delete(eventRsvps)
-          .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.athleteId, user.athleteId)));
-        return c.json({ message: 'RSVP removed', status: null });
-      } else {
-        await db
-          .update(eventRsvps)
-          .set({ status })
-          .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.athleteId, user.athleteId)));
-        return c.json({ message: 'RSVP updated', status });
-      }
-    } else {
-      await db.insert(eventRsvps).values({
+    await db
+      .insert(eventRsvps)
+      .values({
         eventId,
         athleteId: user.athleteId,
         status,
+      })
+      .onConflictDoUpdate({
+        target: [eventRsvps.eventId, eventRsvps.athleteId],
+        set: { status },
       });
-      return c.json({ message: 'RSVP recorded', status });
-    }
+    return c.json({ message: 'RSVP recorded', status });
   } catch (err: any) {
     console.error('RSVP error:', err);
     return c.json({ error: err.message || 'Failed to record RSVP' }, 500);
