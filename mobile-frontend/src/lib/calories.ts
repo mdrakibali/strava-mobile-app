@@ -47,6 +47,17 @@ export const metFor = (sport: string, avgSpeedMps: number) => {
   }
 };
 
+/** Estimates calories for stationary indoor sports (Workout, Yoga) based on duration & MET. */
+export const estimateIndoorCalories = (
+  sport: string,
+  movingSeconds: number,
+  weightKg: number = DEFAULT_WEIGHT_KG
+): number => {
+  if (!movingSeconds || movingSeconds < 3) return 0;
+  const met = sport === 'Yoga' ? 3.5 : 6.0;
+  return Math.max(1, Math.round(met * weightKg * (movingSeconds / 3600)));
+};
+
 /** Returns null when an estimate isn't meaningful (no movement or unsupported sport). */
 export const estimateCalories = (
   sport: string,

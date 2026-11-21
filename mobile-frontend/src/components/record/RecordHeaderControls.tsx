@@ -42,21 +42,6 @@ export function RecordHeaderControls({
           <Ionicons name="chevron-back" size={24} color="#111827" />
         </Pressable>
 
-        {isIdle ? (
-          <Pressable
-            onPress={onOpenHeatmap}
-            accessibilityLabel="Heatmap"
-            className="flex-row items-center bg-black/90 px-3.5 py-1.5 rounded-full border border-gray-700 shadow-xl">
-            <View className="w-5 h-5 rounded-full bg-[#FC4C02] items-center justify-center mr-1.5 shadow-sm">
-              <Ionicons name="flame" size={12} color="#FFFFFF" />
-            </View>
-            <View>
-              <Text style={{ color: '#FFFFFF' }} className="text-[11px] font-bold">See what's popular</Text>
-              <Text style={{ color: '#D1D5DB' }} className="text-[9px]">Tap to add weekly Heatmap</Text>
-            </View>
-          </Pressable>
-        ) : null}
-
         <Pressable
           onPress={onOpenSettings}
           accessibilityLabel="Settings"

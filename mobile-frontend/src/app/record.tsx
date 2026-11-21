@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { AppState, View } from 'react-native';
+import { Alert, AppState, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapView } from '../components/map/MapView';
 import { MapStyleKey } from '../components/map/mapTypes';
@@ -12,7 +12,7 @@ import { RecordStatsFullscreen } from '../components/record/RecordStatsFullscree
 import { loadLastSport, SportSheet } from '../components/record/SportSheet';
 import { useRecordMetrics } from '../components/record/useRecordMetrics';
 import { BottomSheet, OptionRow } from '../design';
-import { estimateCalories } from '../lib/calories';
+import { estimateCalories, estimateIndoorCalories } from '../lib/calories';
 import { usePlannedRoute } from '../lib/plannedRoute';
 import { MVP_SPORTS, sportConfig } from '../lib/sports';
 import { recordingEngine } from '../tracking/engine';
@@ -68,49 +68,39 @@ export default function RecordScreen() {
   const userPosition = rec.lastFix ? ([rec.lastFix.lng, rec.lastFix.lat] as [number, number]) : null;
 
   const {
-    gpsLabel,
-    gpsColor,
-    gpsBg,
-    statusAction,
-    time,
-    distance,
-    second,
-    currentMetric,
-    onStart,
-    onFinish,
-  } = useRecordMetrics({
-    rec,
-    now,
-    sport,
-    cfg,
-    status,
-    isIdle,
-    gps,
-    setFollowing,
-    setStarting,
-  });
+    gpsLabel, gpsColor, gpsBg, statusAction,
+    time, distance, second, currentMetric, onStart, onFinish,
+  } = useRecordMetrics({ rec, now, sport, cfg, status, isIdle, gps, setFollowing, setStarting });
 
   const planned = usePlannedRoute();
 
   const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
+    if (status === 'recording' || status === 'paused') {
+      Alert.alert(
+        'Leave Recording?',
+        'Your activity continues in the background. Return anytime from the home banner.',
+        [
+          { text: 'Stay', style: 'cancel' },
+          {
+            text: 'Leave (Keep Recording)',
+            onPress: () => (router.canGoBack() ? router.back() : router.replace('/(tabs)')),
+          },
+        ]
+      );
     } else {
-      router.replace('/(tabs)');
+      if (router.canGoBack()) router.back();
+      else router.replace('/(tabs)');
     }
   };
 
   if (isIndoor) {
+    const indoorCal = estimateIndoorCalories(sport, rec.movingTimeS);
     return (
       <RecordIndoorView
-        status={status}
-        time={time}
-        onBack={handleBack}
-        onSettings={() => router.push('/settings/gps')}
-        onStart={onStart}
-        onPause={() => recordingEngine.pause()}
-        onResume={() => recordingEngine.resume()}
-        onFinish={onFinish}
+        status={status} time={time} sportLabel={cfg.label} calories={indoorCal}
+        heartRate={rec.heartRate} onBack={handleBack} onSettings={() => router.push('/settings/gps')}
+        onStart={onStart} onPause={() => recordingEngine.pause()}
+        onResume={() => recordingEngine.resume()} onFinish={onFinish}
       />
     );
   }
@@ -119,31 +109,15 @@ export default function RecordScreen() {
     const calories = estimateCalories(sport, rec.movingTimeS, rec.distanceM);
     return (
       <RecordStatsFullscreen
-        sportConfig={cfg}
-        time={time}
-        secondLabel={second.label}
-        secondValue={second.value}
-        distance={distance}
-        movingTimeS={rec.movingTimeS}
-        currentLabel={currentMetric.label}
-        currentValue={currentMetric.value}
-        elevGainM={rec.elevGainM}
-        calories={calories}
-        gpsLabel={gpsLabel}
-        gpsColor={gpsColor}
-        gpsBg={gpsBg}
-        status={status}
-        starting={starting}
-        gpsDisabled={gps === 'denied' || gps === 'off'}
-        hasPlannedRoute={Boolean(planned)}
-        onClose={() => setStatsView(false)}
-        onOpenSportSheet={() => setSportSheet(true)}
-        onStart={onStart}
-        onPause={() => recordingEngine.pause()}
-        onResume={() => recordingEngine.resume()}
-        onFinish={onFinish}
-        onOpenRoutes={() => router.push('/(tabs)/maps?source=routes')}
-        onStatusAction={statusAction}
+        sportConfig={cfg} time={time} secondLabel={second.label} secondValue={second.value}
+        distance={distance} movingTimeS={rec.movingTimeS} currentLabel={currentMetric.label}
+        currentValue={currentMetric.value} elevGainM={rec.elevGainM} calories={calories}
+        gpsLabel={gpsLabel} gpsColor={gpsColor} gpsBg={gpsBg} status={status} starting={starting}
+        gpsDisabled={gps === 'denied' || gps === 'off'} hasPlannedRoute={Boolean(planned)}
+        onClose={() => setStatsView(false)} onOpenSportSheet={() => setSportSheet(true)}
+        onStart={onStart} onPause={() => recordingEngine.pause()}
+        onResume={() => recordingEngine.resume()} onFinish={onFinish}
+        onOpenRoutes={() => router.push('/(tabs)/maps?source=routes')} onStatusAction={statusAction}
       />
     );
   }
