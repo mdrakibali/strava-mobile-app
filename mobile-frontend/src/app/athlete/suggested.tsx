@@ -66,7 +66,7 @@ export default function SuggestedAthletesScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-200">
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#111827" />
@@ -74,10 +74,14 @@ export default function SuggestedAthletesScreen() {
         <Text className="text-base font-black text-gray-900 ml-3">Suggested Athletes</Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="p-4" contentContainerClassName="pb-20">
-        <Text className="text-xs font-semibold text-gray-500 mb-3">
-          Athletes active in the Kinetix community:
-        </Text>
+      <View style={{ flex: 1 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 100, flexGrow: 1 }}>
+          <Text className="text-xs font-semibold text-gray-500 mb-3">
+            Athletes active in the Kinetix community:
+          </Text>
 
         {isLoading ? (
           <View className="py-12 items-center">
@@ -145,6 +149,7 @@ export default function SuggestedAthletesScreen() {
           })
         )}
       </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }

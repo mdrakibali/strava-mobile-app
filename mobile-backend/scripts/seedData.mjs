@@ -316,3 +316,4 @@ export const notifications = [
     createdAt: new Date(Date.now() - 1800000).toISOString(),
   },
 ];
+

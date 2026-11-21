@@ -15,7 +15,9 @@ class RealtimeWebSocketService {
     if (token) {
       this.token = token;
     } else {
-      this.token = await AsyncStorage.getItem('auth_token');
+      this.token =
+        (await AsyncStorage.getItem('@open_strava_token')) ||
+        (await AsyncStorage.getItem('auth_token'));
     }
     if (!this.token) return;
 
@@ -28,7 +30,9 @@ class RealtimeWebSocketService {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     if (this.pingInterval) clearInterval(this.pingInterval);
     if (this.ws) {
-      this.ws.close();
+      try {
+        this.ws.close();
+      } catch {}
       this.ws = null;
     }
   }
@@ -48,13 +52,12 @@ class RealtimeWebSocketService {
 
       this.ws.onopen = () => {
         this.isConnecting = false;
-        // Heartbeat ping every 25s
         if (this.pingInterval) clearInterval(this.pingInterval);
         this.pingInterval = setInterval(() => {
           if (this.ws?.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify({ type: 'ping' }));
           }
-        }, 25000);
+        }, 20000);
       };
 
       this.ws.onmessage = (event) => {
@@ -64,15 +67,20 @@ class RealtimeWebSocketService {
 
           const callbacks = this.listeners.get(data.type);
           if (callbacks) {
-            callbacks.forEach((cb) => cb(data));
+            callbacks.forEach((cb) => {
+              try {
+                cb(data);
+              } catch (cbErr) {
+                console.warn('Listener callback error:', cbErr);
+              }
+            });
           }
         } catch (err) {
           console.warn('Realtime message parse error:', err);
         }
       };
 
-      this.ws.onerror = (err) => {
-        console.warn('WebSocket error, reconnecting:', err);
+      this.ws.onerror = () => {
         this.isConnecting = false;
       };
 
@@ -81,14 +89,14 @@ class RealtimeWebSocketService {
         if (this.pingInterval) clearInterval(this.pingInterval);
         if (this.shouldStayConnected) {
           if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-          this.reconnectTimer = setTimeout(() => this.connect(), 3000);
+          this.reconnectTimer = setTimeout(() => this.connect(), 2500);
         }
       };
-    } catch (err) {
+    } catch {
       this.isConnecting = false;
       if (this.shouldStayConnected) {
         if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-        this.reconnectTimer = setTimeout(() => this.connect(), 4000);
+        this.reconnectTimer = setTimeout(() => this.connect(), 3000);
       }
     }
   }
@@ -111,4 +119,3 @@ class RealtimeWebSocketService {
 }
 
 export const realtimeWs = new RealtimeWebSocketService();
-

@@ -175,6 +175,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setAuthToken(storedToken);
           setCurrentUser(JSON.parse(storedAthlete));
           setIsAuthenticated(true);
+          realtimeWs.init(storedToken);
           await loadFeedData();
         } else {
           setIsAuthenticated(false);
@@ -220,6 +221,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setAuthToken(res.token);
         setCurrentUser(athleteProfile);
         setIsAuthenticated(true);
+        realtimeWs.init(res.token);
         await loadFeedData();
       }
     } finally {
@@ -251,6 +253,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setAuthToken(res.token);
         setCurrentUser(athleteProfile);
         setIsAuthenticated(true);
+        realtimeWs.init(res.token);
         await loadFeedData();
       }
     } finally {
@@ -282,6 +285,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setAuthToken(res.token);
         setCurrentUser(athleteProfile);
         setIsAuthenticated(true);
+        realtimeWs.init(res.token);
         await loadFeedData();
       }
     } finally {

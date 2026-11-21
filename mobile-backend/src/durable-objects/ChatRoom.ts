@@ -18,17 +18,19 @@ export class ChatRoom {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
-    // Handle WebSocket upgrade
+    // 1. WebSocket Upgrade
     if (request.headers.get('Upgrade') === 'websocket') {
       const pair = new WebSocketPair();
       const [client, server] = Object.values(pair);
       (server as any).accept();
 
-      let athleteId: string | undefined;
+      let athleteId = url.searchParams.get('athleteId') || undefined;
       const token = url.searchParams.get('token');
-      if (token && this.env.JWT_SECRET) {
-        const user = await verifyToken(token, this.env.JWT_SECRET);
-        if (user) athleteId = user.athleteId;
+      if (!athleteId && token && this.env.JWT_SECRET) {
+        try {
+          const user = await verifyToken(token, this.env.JWT_SECRET);
+          if (user?.athleteId) athleteId = user.athleteId;
+        } catch {}
       }
 
       const meta: SessionMeta = { athleteId };
@@ -41,7 +43,7 @@ export class ChatRoom {
 
           if (data.type === 'auth' && data.token && this.env.JWT_SECRET) {
             const user = await verifyToken(data.token, this.env.JWT_SECRET);
-            if (user) meta.athleteId = user.athleteId;
+            if (user?.athleteId) meta.athleteId = user.athleteId;
           } else if (data.type === 'typing' && meta.athleteId && data.recipientId) {
             this.broadcastToAthlete(data.recipientId, {
               type: 'typing',
@@ -65,7 +67,7 @@ export class ChatRoom {
       return new Response(null, { status: 101, webSocket: client });
     }
 
-    // Handle internal broadcast from API workers
+    // 2. Internal Broadcast from API Workers
     if (request.method === 'POST') {
       try {
         const body = (await request.json()) as any;
@@ -75,8 +77,11 @@ export class ChatRoom {
           const { recipientId, senderId } = body.directMessage;
           delivered += this.broadcastToAthlete(recipientId, body);
           delivered += this.broadcastToAthlete(senderId, body);
+          // Broadcast to sessions without assigned athleteId to ensure delivery
+          delivered += this.broadcastToUnassigned(body);
         } else if (body.type === 'notification' && body.recipientId) {
           delivered += this.broadcastToAthlete(body.recipientId, body);
+          delivered += this.broadcastToUnassigned(body);
         }
 
         return new Response(JSON.stringify({ ok: true, delivered }), {
@@ -105,5 +110,20 @@ export class ChatRoom {
     }
     return count;
   }
-}
 
+  private broadcastToUnassigned(payload: any): number {
+    let count = 0;
+    const msg = JSON.stringify(payload);
+    for (const [ws, meta] of this.sessions.entries()) {
+      if (!meta.athleteId) {
+        try {
+          ws.send(msg);
+          count++;
+        } catch {
+          this.sessions.delete(ws);
+        }
+      }
+    }
+    return count;
+  }
+}

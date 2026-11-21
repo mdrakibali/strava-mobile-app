@@ -13,9 +13,19 @@ messagesRouter.get('/ws', async (c) => {
   if (!c.env.CHAT_ROOM) {
     return c.json({ error: 'ChatRoom not configured' }, 503);
   }
+  const token = c.req.query('token');
+  let athleteId = '';
+  if (token && c.env.JWT_SECRET) {
+    try {
+      const user = await verifyToken(token, c.env.JWT_SECRET);
+      if (user?.athleteId) athleteId = user.athleteId;
+    } catch {}
+  }
   const id = c.env.CHAT_ROOM.idFromName('global_chat');
   const stub = c.env.CHAT_ROOM.get(id);
-  return stub.fetch(c.req.raw);
+  const targetUrl = new URL(c.req.url);
+  if (athleteId) targetUrl.searchParams.set('athleteId', athleteId);
+  return stub.fetch(new Request(targetUrl.toString(), c.req.raw));
 });
 
 // GET /api/v1/messages/conversations
