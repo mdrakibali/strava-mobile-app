@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapView } from '../../components/map/MapView';
-import { AppBar, AppText, Button, Chip, ChipRow, color, elevation, radius, space, TextField } from '../../design';
+import { AppBar, AppText, Button, Chip, ChipRow, space, TextField } from '../../design';
 import { LngLat } from '../../lib/activityView';
 import { formatDuration, kmValue } from '../../lib/format';
 import { MVP_SPORTS } from '../../lib/sports';

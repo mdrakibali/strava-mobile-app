@@ -1,7 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
 import { View } from 'react-native';
-import { color } from '../../design/tokens';
 
 /**
  * The Record tab never shows its own page: pressing the tab opens /record (see (tabs)/_layout).

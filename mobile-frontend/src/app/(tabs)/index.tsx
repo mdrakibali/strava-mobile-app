@@ -7,16 +7,14 @@ import { FeedCard, FeedCardSkeleton } from '../../components/activity/FeedCard';
 import { HomeHeader } from '../../components/home/HomeHeader';
 import { EmptyState, ErrorState } from '../../design';
 import { useApp } from '../../context/AppContext';
-import { APP_NAME } from '../../config/app';
 import { ActivityView, fromFeedItem } from '../../lib/activityView';
 import { presentActivities, useActivityRevision } from '../../lib/publishedActivities';
 import { withoutRemoved } from '../../lib/removedActivities';
 import { socialStore } from '../../lib/social';
-import { formatClock } from '../../lib/format';
 import { api } from '../../services/api';
 import { syncWorker } from '../../tracking/sync';
 import { recordingEngine } from '../../tracking/engine';
-import { isRecordingActive, timerSeconds, useNow, usePendingUploads, useRecording } from '../../tracking/useRecording';
+import { isRecordingActive, usePendingUploads, useRecording } from '../../tracking/useRecording';
 
 type Status = 'loading' | 'ready' | 'error';
 
@@ -32,8 +30,6 @@ export default function HomeFeedScreen() {
   const rec = useRecording();
   const active = isRecordingActive(rec);
   const paused = rec.lifecycle.status === 'paused';
-  const interrupted = rec.lifecycle.pauseReason === 'interrupted';
-  const now = useNow(active && !paused);
   const pending = usePendingUploads();
   const attention = pending.filter((p) => p.state === 'needs_attention');
   const [items, setItems] = useState<ActivityView[]>([]);
@@ -211,7 +207,10 @@ export default function HomeFeedScreen() {
     </View>
   ) : null;
 
-  const feed = useMemo(() => presentActivities(items).filter(visibleToMe), [items, revision, visibleToMe]);
+  const feed = useMemo(() => {
+    void revision;
+    return presentActivities(items).filter(visibleToMe);
+  }, [items, revision, visibleToMe]);
 
   let body: React.ReactNode;
   if (status === 'loading') {

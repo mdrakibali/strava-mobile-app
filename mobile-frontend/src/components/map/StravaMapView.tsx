@@ -7,7 +7,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { MapView } from './MapView';
-import { MapMarkerItem, MapStyleKey, StravaMapViewProps, toMapStyleKey } from './mapTypes';
+import { MapMarkerItem, StravaMapViewProps, toMapStyleKey } from './mapTypes';
 
 export type { HeatmapTypeOption, MapMarkerItem, MapStyleKey, MapTypeOption, TerrainTypeOption } from './mapTypes';
 

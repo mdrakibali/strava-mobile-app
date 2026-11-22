@@ -7,7 +7,7 @@ import { Alert, Linking, Pressable, ScrollView, useWindowDimensions, View } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ElevationProfile } from '../../components/activity/ElevationProfile';
 import { MapView } from '../../components/map/MapView';
-import { AppText, Button, Chip, ChipRow, color, IconButton, MetricRow, MetricTile, radius, space } from '../../design';
+import { AppText, Button, Chip, ChipRow, color, IconButton, MetricRow, MetricTile, space } from '../../design';
 import { LngLat } from '../../lib/activityView';
 import { formatDuration, kmValue } from '../../lib/format';
 import { plannedRouteStore } from '../../lib/plannedRoute';

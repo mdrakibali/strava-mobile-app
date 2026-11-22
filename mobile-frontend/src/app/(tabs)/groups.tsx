@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   RefreshControl,
@@ -23,18 +23,19 @@ export default function GroupsScreen() {
   const params = useLocalSearchParams<{ tab?: Tab }>();
   const { refreshFeed } = useApp();
   const [tab, setTab] = useState<Tab>(params.tab || 'challenges');
+  const [prevTabParam, setPrevTabParam] = useState(params.tab);
+  if (params.tab !== prevTabParam) {
+    setPrevTabParam(params.tab);
+    if (params.tab === 'challenges' || params.tab === 'clubs' || params.tab === 'events') {
+      setTab(params.tab);
+    }
+  }
   const [sport, setSport] = useState<string>('All');
   const [data, setData] = useState<{ challenges: any[]; clubs: any[]; events: any[] } | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [refreshing, setRefreshing] = useState(false);
   const loadedAt = useRef(0);
   const revision = useGroupRevision();
-
-  useEffect(() => {
-    if (params.tab && (params.tab === 'challenges' || params.tab === 'clubs' || params.tab === 'events')) {
-      setTab(params.tab);
-    }
-  }, [params.tab]);
 
   const load = useCallback(async () => {
     const readTick = groupStore.beginRead();
@@ -137,6 +138,7 @@ export default function GroupsScreen() {
   };
 
   const activeData = useMemo(() => {
+    void revision;
     if (!data) return null;
     return {
       challenges: (data.challenges || [])

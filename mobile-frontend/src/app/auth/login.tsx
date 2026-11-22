@@ -227,7 +227,7 @@ export default function LoginScreen() {
           <View className="items-center pt-3 pb-2">
             <View className="flex-row items-center">
               <Text className="text-xs font-medium text-gray-500">
-                Don't have an athlete account?{' '}
+                Don&apos;t have an athlete account?{' '}
               </Text>
               <TouchableOpacity onPress={() => router.replace('/auth/register')}>
                 <Text className="text-xs font-bold text-[#FC4C02]">

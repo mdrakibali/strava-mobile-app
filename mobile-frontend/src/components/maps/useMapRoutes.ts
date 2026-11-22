@@ -101,9 +101,16 @@ export function useMapRoutes(
     }, [loadRoutes, selectedId])
   );
 
-  useEffect(() => {
+  const [prevMe, setPrevMe] = useState(me);
+  if (me !== prevMe) {
+    setPrevMe(me);
     if (!me) {
       setNearbyItems([]);
+    }
+  }
+
+  useEffect(() => {
+    if (!me) {
       return;
     }
     const sports = sport === 'All' ? (['Walk', 'Run', 'Ride'] as const) : ([sport] as const);

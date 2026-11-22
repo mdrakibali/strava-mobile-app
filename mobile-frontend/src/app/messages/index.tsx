@@ -26,7 +26,7 @@ export default function MessagesInboxScreen() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     try {
       const [convRes, athletesRes] = await Promise.all([
         api.messages.getConversations(),
@@ -48,21 +48,49 @@ export default function MessagesInboxScreen() {
       setIsLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [currentUser?.id]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchConversations();
+    let cancelled = false;
+    Promise.all([
+      api.messages.getConversations(),
+      api.athletes.search('').catch(() => ({ athletes: [] })),
+    ])
+      .then(([convRes, athletesRes]) => {
+        if (cancelled) return;
+        setLoadError(null);
+        if (convRes?.conversations) {
+          setConversations(convRes.conversations);
+        }
+        if (athletesRes?.athletes) {
+          setSuggestedAthletes(
+            athletesRes.athletes.filter((a: any) => a.id !== currentUser?.id).slice(0, 4)
+          );
+        }
+      })
+      .catch((err: any) => {
+        if (!cancelled) setLoadError(err?.message || 'Couldn’t load conversations.');
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+          setRefreshing(false);
+        }
+      });
+
     const unsub = realtimeWs.addListener('new_message', () => {
       fetchConversations();
     });
-    return () => unsub();
-  }, []);
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, [currentUser?.id, fetchConversations]);
 
   useFocusEffect(
     useCallback(() => {
       fetchConversations();
-    }, [])
+    }, [fetchConversations])
   );
 
   const onRefresh = () => {

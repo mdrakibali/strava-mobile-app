@@ -4,7 +4,7 @@ import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedCard, FeedCardSkeleton } from '../../components/activity/FeedCard';
 import { useApp } from '../../context/AppContext';
-import { AppBar, color, EmptyState, ErrorState, space } from '../../design';
+import { AppBar, EmptyState, ErrorState, space } from '../../design';
 import { ActivityView, fromProfileActivity, toAthleteSummary } from '../../lib/activityView';
 import { presentActivities, useActivityRevision } from '../../lib/publishedActivities';
 import { markActivityRemoved, withoutRemoved } from '../../lib/removedActivities';
@@ -32,7 +32,10 @@ export default function ActivityHistoryScreen() {
   const athleteRef = useRef(toAthleteSummary({ id: athleteId }));
   const revision = useActivityRevision();
   const list = useMemo(
-    () => presentActivities(items).filter((a) => a.athlete.id === athleteId),
+    () => {
+      void revision;
+      return presentActivities(items).filter((a) => a.athlete.id === athleteId);
+    },
     [items, revision, athleteId]
   );
 

@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
-import { AppBar, AppText, Avatar, Button, color, EmptyState, ErrorState, LoadingState, space } from '../../design';
+import { AppBar, AppText, Avatar, Button, EmptyState, ErrorState, LoadingState, space } from '../../design';
 import { toAthleteSummary } from '../../lib/activityView';
 import { captureFollowEpochs, commitServerFollow, setFollowing, useFollow } from '../../lib/social';
 import { api } from '../../services/api';

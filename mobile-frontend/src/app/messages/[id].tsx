@@ -29,6 +29,12 @@ export default function ChatScreen() {
   const partnerIdRef = useRef(partner.id);
   const keyboard = useKeyboardInset();
   const effectiveId = id;
+  const [prevEffectiveId, setPrevEffectiveId] = useState(effectiveId);
+  if (effectiveId !== prevEffectiveId) {
+    setPrevEffectiveId(effectiveId);
+    setLoadError(null);
+    setIsLoading(true);
+  }
 
   useEffect(() => {
     chatIdRef.current = chatId;
@@ -38,7 +44,6 @@ export default function ChatScreen() {
   useEffect(() => {
     if (!effectiveId) return;
     let cancelled = false;
-    setLoadError(null);
     api.messages
       .getThread(effectiveId)
       .then((res) => {

@@ -34,7 +34,6 @@ export function RecordOutdoorHud({
 }: RecordOutdoorHudProps) {
   const isPaused = status === 'paused';
   const isRecording = status === 'recording';
-  const isIdle = status === 'idle' || status === 'preparing';
 
   return (
     <View className="mx-4 mb-2.5 bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-200">

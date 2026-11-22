@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ImageBackground,
-  ScrollView,
   Text,
   TouchableOpacity,
   View,
@@ -37,14 +36,6 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [slideIndex, setSlideIndex] = useState(0);
-
-  const handleNext = () => {
-    if (slideIndex < SLIDES.length - 1) {
-      setSlideIndex(slideIndex + 1);
-    } else {
-      router.push('/onboarding/sport-preferences');
-    }
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#000000' }}>

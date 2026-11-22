@@ -16,10 +16,14 @@ export default function RouteDetailScreen() {
   const [route, setRoute] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
+  const [prevId, setPrevId] = useState(id);
+  if (id !== prevId) {
+    setPrevId(id);
+    setIsLoading(true);
+  }
 
   useEffect(() => {
     if (!id) return;
-    setIsLoading(true);
 
     api.routes
       .get(id)

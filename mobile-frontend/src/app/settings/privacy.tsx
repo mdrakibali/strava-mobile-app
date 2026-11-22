@@ -14,7 +14,6 @@ import {
   ErrorState,
   IconButton,
   LoadingState,
-  radius,
   space,
   TextField,
 } from '../../design';

@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { AppText } from '../../design';
+import { Pressable, View } from 'react-native';
 
 interface RecordHeaderControlsProps {
   topInset: number;

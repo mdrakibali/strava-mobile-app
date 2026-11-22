@@ -57,14 +57,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // The home feed, profile, activity, club, challenge and event screens load their own data
   // (paginated, with error states). App-wide state is only the session and notifications.
-  const loadFeedData = async () => {
+  const refreshNotifications = useCallback(async () => {
+    try {
+      const notifRes = await api.notifications.list().catch(() => null);
+      if (notifRes?.notifications) {
+        setNotifications(
+          notifRes.notifications.map((n: any) => ({
+            id: n.id,
+            actionType: (n.actionType?.toUpperCase() || 'KUDOS') as any,
+            actor: {
+              id: n.actor?.id || 'ath_unknown',
+              displayName: n.actor?.displayName || 'Athlete',
+              username: n.actor?.username || 'athlete',
+              avatarUrl: n.actor?.avatarUrl || '',
+              city: '',
+              country: '',
+              followersCount: 0,
+              followingCount: 0,
+            },
+            message: n.message,
+            targetActivityId: n.targetActivityId,
+            timeAgo: formatRelative(n.createdAt),
+            isRead: n.isRead,
+          }))
+        );
+      }
+    } catch {}
+  }, []);
+
+  const loadFeedData = useCallback(async () => {
     setIsSyncing(true);
     try {
       await refreshNotifications();
     } finally {
       setIsSyncing(false);
     }
-  };
+  }, [refreshNotifications]);
 
   // Check stored auth session on startup
   useEffect(() => {
@@ -94,7 +122,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     initAuthSession();
-  }, []);
+  }, [loadFeedData]);
 
   const refreshFeed = async () => {
     await loadFeedData();
@@ -208,45 +236,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     api.notifications.markRead(notificationId).catch(console.warn);
   };
 
-  const refreshNotifications = useCallback(async () => {
-    try {
-      const notifRes = await api.notifications.list().catch(() => null);
-      if (notifRes?.notifications) {
-        setNotifications(
-          notifRes.notifications.map((n: any) => ({
-            id: n.id,
-            actionType: (n.actionType?.toUpperCase() || 'KUDOS') as any,
-            actor: {
-              id: n.actor?.id || 'ath_unknown',
-              displayName: n.actor?.displayName || 'Athlete',
-              username: n.actor?.username || 'athlete',
-              avatarUrl: n.actor?.avatarUrl || '',
-              city: '',
-              country: '',
-              followersCount: 0,
-              followingCount: 0,
-            },
-            message: n.message,
-            targetActivityId: n.targetActivityId,
-            timeAgo: formatRelative(n.createdAt),
-            isRead: n.isRead,
-          }))
-        );
-      }
-    } catch {}
-  }, []);
-
   useEffect(() => {
     if (!isAuthenticated) {
       realtimeWs.disconnect();
       return;
     }
     realtimeWs.init();
-    refreshNotifications();
+    let cancelled = false;
+    api.notifications
+      .list()
+      .then((notifRes) => {
+        if (!cancelled && notifRes?.notifications) {
+          setNotifications(
+            notifRes.notifications.map((n: any) => ({
+              id: n.id,
+              actionType: (n.actionType?.toUpperCase() || 'KUDOS') as any,
+              actor: {
+                id: n.actor?.id || 'ath_unknown',
+                displayName: n.actor?.displayName || 'Athlete',
+                username: n.actor?.username || 'athlete',
+                avatarUrl: n.actor?.avatarUrl || '',
+                city: '',
+                country: '',
+                followersCount: 0,
+                followingCount: 0,
+              },
+              message: n.message,
+              targetActivityId: n.targetActivityId,
+              timeAgo: formatRelative(n.createdAt),
+              isRead: n.isRead,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+
     const unsub = realtimeWs.addListener('notification', () => {
       refreshNotifications();
     });
     return () => {
+      cancelled = true;
       unsub();
     };
   }, [isAuthenticated, refreshNotifications]);

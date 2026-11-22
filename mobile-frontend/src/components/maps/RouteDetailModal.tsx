@@ -4,7 +4,6 @@ import React from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { AppText } from '../../design';
 import { kmValue } from '../../lib/format';
-import { sportConfig } from '../../lib/sports';
 import { MapItem } from './mapTypes';
 
 interface RouteDetailModalProps {
@@ -23,7 +22,6 @@ export function RouteDetailModal({
   onToggleSave,
 }: RouteDetailModalProps) {
   if (!item) return null;
-  const cfg = sportConfig(item.sportType);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>

@@ -5,7 +5,7 @@ import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FEATURES } from '../config/features';
 import { useApp } from '../context/AppContext';
-import { AppBar, AppText, Avatar, Button, color, Divider, EmptyState, space } from '../design';
+import { AppBar, AppText, Avatar, Button, Divider, EmptyState, space } from '../design';
 import { toAthleteSummary } from '../lib/activityView';
 import { NotificationItem } from '../types';
 import { realtimeWs } from '../services/websocket';

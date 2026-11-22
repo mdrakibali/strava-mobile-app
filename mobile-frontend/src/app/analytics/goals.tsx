@@ -26,7 +26,7 @@ export default function GoalsScreen() {
   const [saving, setSaving] = useState(false);
 
   // Progress (currentValue) is computed by the server from the athlete's saved activities.
-  const fetchGoals = async () => {
+  const fetchGoals = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.goals.list();
@@ -36,10 +36,24 @@ export default function GoalsScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchGoals();
+    let cancelled = false;
+    api.goals
+      .list()
+      .then((res) => {
+        if (!cancelled && res?.goals) setGoals(res.goals as TrainingGoal[]);
+      })
+      .catch((err) => {
+        console.warn('Failed to load goals:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleAddGoal = async () => {

@@ -24,7 +24,7 @@ function NavigationRoot() {
     } else if (isAuthenticated && inAuthGroup) {
       router.replace('/(tabs)');
     }
-  }, [isAuthenticated, isAuthLoading, segments]);
+  }, [isAuthenticated, isAuthLoading, router, segments]);
 
   if (isAuthLoading) {
     return (

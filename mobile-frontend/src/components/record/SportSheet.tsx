@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
 import { Pressable, View } from 'react-native';
-import { AppText, BottomSheet, color, space } from '../../design';
+import { AppText, BottomSheet } from '../../design';
 import { MVP_SPORTS } from '../../lib/sports';
 import { SportType } from '../../types';
 

@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppBar, AppText, ErrorState, space } from '../../design';
+import { AppBar, ErrorState, space } from '../../design';
 
 export const FormScreen: React.FC<{
   title: string;

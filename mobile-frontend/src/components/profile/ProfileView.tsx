@@ -110,19 +110,21 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
   };
 
   const revision = useActivityRevision();
+  const athleteData = data?.athlete;
   const athlete = useMemo(() => {
-    if (!data?.athlete) return null;
-    if (!isSelf) return data.athlete;
+    if (!athleteData) return null;
+    if (!isSelf) return athleteData;
     return {
-      ...data.athlete,
-      displayName: currentUser.displayName || data.athlete.displayName,
-      avatarUrl: currentUser.avatarUrl ?? data.athlete.avatarUrl,
-      city: currentUser.city !== undefined ? currentUser.city : data.athlete.city,
-      bio: currentUser.bio !== undefined ? currentUser.bio : data.athlete.bio,
+      ...athleteData,
+      displayName: currentUser.displayName || athleteData.displayName,
+      avatarUrl: currentUser.avatarUrl ?? athleteData.avatarUrl,
+      city: currentUser.city !== undefined ? currentUser.city : athleteData.city,
+      bio: currentUser.bio !== undefined ? currentUser.bio : athleteData.bio,
     };
-  }, [data?.athlete, isSelf, currentUser]);
+  }, [athleteData, isSelf, currentUser]);
 
   const activities = useMemo(() => {
+    void revision;
     if (!data) return [];
     return presentActivities(data.activities).filter((a) => a.athlete.id === athleteId && (isSelf || a.visibility !== 'ONLY_ME'));
   }, [data, revision, athleteId, isSelf]);
@@ -134,7 +136,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
       ...data.stats,
       activityCount: Math.max(0, data.stats.activityCount - Math.max(0, removedCount)),
     };
-  }, [data?.stats, data?.activities, activities.length]);
+  }, [data, activities.length]);
 
   const progress = useMemo(() => {
     if (!data) return null;

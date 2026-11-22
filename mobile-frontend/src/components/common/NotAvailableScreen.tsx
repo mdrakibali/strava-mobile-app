@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppBar, color, EmptyState } from '../../design';
+import { AppBar, EmptyState } from '../../design';
 
 /**
  * Honest placeholder for analytics features that have no real data source yet. These screens used

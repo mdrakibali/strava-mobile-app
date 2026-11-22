@@ -1,7 +1,6 @@
 import { Image } from 'expo-image';
 import React from 'react';
 import { View } from 'react-native';
-import { color } from '../tokens';
 import { AppText } from './AppText';
 
 const TINTS = ['#FDE7D9', '#DCEBFF', '#E2F4E8', '#F3E4FF', '#FFF0C7', '#E3F1F4'];

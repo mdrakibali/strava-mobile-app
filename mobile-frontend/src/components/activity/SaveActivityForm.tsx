@@ -12,7 +12,7 @@ import {
 import { VISIBILITY_LABEL } from './FeedCard';
 import { formatDuration, formatElevation, kmValue } from '../../lib/format';
 import { SportConfig } from '../../lib/sports';
-import { ActivityVisibility, SportType } from '../../types';
+import { ActivityVisibility } from '../../types';
 
 interface SaveActivityFormProps {
   distanceM: number;
