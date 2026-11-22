@@ -54,8 +54,25 @@ export default function ChatScreen() {
         if (res?.partner) setPartner(res.partner);
         if (res?.chatId) setChatId(res.chatId);
       })
-      .catch((e: any) => {
-        if (!cancelled) setLoadError(e?.message || 'Couldn’t load this conversation.');
+      .catch(async (e: any) => {
+        if (cancelled) return;
+        // If effectiveId is an athlete ID or new thread, fetch profile to allow first-time conversation
+        if (effectiveId.startsWith('ath_') || !effectiveId.startsWith('chat_')) {
+          try {
+            const profile = await api.athletes.getProfile(effectiveId);
+            if (!cancelled && profile?.athlete) {
+              setPartner({
+                id: profile.athlete.id,
+                displayName: profile.athlete.displayName,
+                username: profile.athlete.username || 'athlete',
+                avatarUrl: profile.athlete.avatarUrl || '',
+              });
+              setMessages([]);
+              return;
+            }
+          } catch {}
+        }
+        setLoadError(e?.message || 'Couldn’t load this conversation.');
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -122,7 +139,10 @@ export default function ChatScreen() {
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      const res = await api.messages.send(effectiveId, textToSend, { chatId });
+      const res = await api.messages.send(effectiveId, textToSend, {
+        chatId: chatId || undefined,
+        recipientId: partner.id && partner.id !== 'partner' ? partner.id : effectiveId,
+      });
       if (res?.chatId && !chatId) setChatId(res.chatId);
       if (res?.directMessage) {
         setMessages((prev) => {

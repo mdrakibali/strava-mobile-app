@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { FormScreen } from '../../components/forms/FormScreen';
 import { useApp } from '../../context/AppContext';
@@ -17,6 +17,7 @@ const DURATIONS = [
 
 export default function CreateChallengeScreen() {
   const router = useRouter();
+  const { editId } = useLocalSearchParams<{ editId?: string }>();
   const { refreshFeed } = useApp();
   const [title, setTitle] = useState('');
   const [sportType, setSportType] = useState('Run');
@@ -25,6 +26,20 @@ export default function CreateChallengeScreen() {
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!editId) return;
+    api.challenges.get(editId).then((res) => {
+      if (res?.challenge) {
+        setTitle(res.challenge.title || '');
+        setSportType(res.challenge.sportType || 'Run');
+        if (res.challenge.targetMeters) {
+          setTargetKm(String(Number(res.challenge.targetMeters) / 1000));
+        }
+        setDescription(res.challenge.description || '');
+      }
+    }).catch(() => {});
+  }, [editId]);
 
   const km = Number(targetKm.replace(',', '.'));
   const valid = title.trim().length > 2 && Number.isFinite(km) && km > 0 && km <= 100_000;
@@ -42,30 +57,44 @@ export default function CreateChallengeScreen() {
     setSaving(true);
     setError(null);
     try {
-      const start = new Date();
-      const res = await api.challenges.create({
-        title: title.trim(),
-        sportType,
-        targetMeters: Math.round(km * 1000),
-        description: description.trim() || undefined,
-        startDate: start.toISOString(),
-        endDate: new Date(start.getTime() + days * 86_400_000).toISOString(),
-      });
-      if (res?.challenge) {
-        groupStore.seedChallenges([res.challenge]);
+      if (editId) {
+        const res = await api.challenges.update(editId, {
+          title: title.trim(),
+          sportType,
+          targetMeters: Math.round(km * 1000),
+          description: description.trim() || undefined,
+        });
+        if (res?.challenge) {
+          groupStore.patchChallenge(editId, res.challenge);
+        }
+        await refreshFeed().catch(() => {});
+        router.replace({ pathname: '/challenge/[id]', params: { id: editId } });
+      } else {
+        const start = new Date();
+        const res = await api.challenges.create({
+          title: title.trim(),
+          sportType,
+          targetMeters: Math.round(km * 1000),
+          description: description.trim() || undefined,
+          startDate: start.toISOString(),
+          endDate: new Date(start.getTime() + days * 86_400_000).toISOString(),
+        });
+        if (res?.challenge) {
+          groupStore.seedChallenges([res.challenge]);
+        }
+        await refreshFeed().catch(() => {});
+        router.replace({ pathname: '/challenge/[id]', params: { id: res.challenge.id } });
       }
-      await refreshFeed().catch(() => {});
-      router.replace({ pathname: '/challenge/[id]', params: { id: res.challenge.id } });
     } catch (e: any) {
-      setError(e?.message ?? 'Could not create the challenge.');
+      setError(e?.message ?? (editId ? 'Could not update the challenge.' : 'Could not create the challenge.'));
       setSaving(false);
     }
   };
 
   return (
     <FormScreen
-      title="Create Challenge"
-      submitLabel="Create Challenge"
+      title={editId ? 'Edit Challenge' : 'Create Challenge'}
+      submitLabel={editId ? 'Save Changes' : 'Create Challenge'}
       canSubmit={valid}
       submitting={saving}
       error={error}

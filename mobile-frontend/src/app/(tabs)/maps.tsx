@@ -1,7 +1,7 @@
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, Linking, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapView } from '../../components/map/MapView';
 import { DEFAULT_MAP_STYLE, MAP_STYLE_OPTIONS, MapStyleKey } from '../../components/map/mapTypes';
@@ -44,25 +44,33 @@ export default function MapsScreen() {
 
   const [mapMode, setMapMode] = useState<MapStyleKey>(DEFAULT_MAP_STYLE);
   const [styleModalVisible, setStyleModalVisible] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<'checking' | 'granted' | 'denied'>('checking');
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  const requestLocation = useCallback(async () => {
+    setLocationLoading(true);
+    let perm = await Location.getForegroundPermissionsAsync().catch(() => null);
+    if (!perm?.granted) {
+      perm = await Location.requestForegroundPermissionsAsync().catch(() => null);
+    }
+    if (!perm?.granted) {
+      setPermissionStatus('denied');
+      setLocationLoading(false);
+      return;
+    }
+    setPermissionStatus('granted');
+    const fix =
+      (await Location.getLastKnownPositionAsync({ maxAge: 120_000 }).catch(() => null)) ??
+      (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null));
+    if (fix) {
+      setMe([fix.coords.longitude, fix.coords.latitude]);
+    }
+    setLocationLoading(false);
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      // First check if already granted; if not, request permission so the user gets a dialog
-      let perm = await Location.getForegroundPermissionsAsync().catch(() => null);
-      if (!perm?.granted) {
-        perm = await Location.requestForegroundPermissionsAsync().catch(() => null);
-      }
-      if (!perm?.granted || cancelled) return;
-      const fix =
-        (await Location.getLastKnownPositionAsync({ maxAge: 120_000 }).catch(() => null)) ??
-        (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null));
-      if (fix && !cancelled) setMe([fix.coords.longitude, fix.coords.latitude]);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    requestLocation();
+  }, [requestLocation]);
 
   const { routeStatus, selectedId, setSelectedId, visible, toggleSave } = useMapRoutes(
     source,
@@ -219,6 +227,22 @@ export default function MapsScreen() {
         />
       </View>
 
+      {permissionStatus === 'denied' ? (
+        <View className="absolute top-36 left-4 right-4 z-20 p-4 rounded-2xl bg-white border border-red-200 shadow-xl">
+          <View className="flex-row items-center mb-1.5">
+            <Text className="text-sm font-bold text-gray-900">Location Permission Needed</Text>
+          </View>
+          <Text className="text-xs text-gray-600 mb-3 leading-4">
+            To discover running and walking routes near you, please grant location access.
+          </Text>
+          <TouchableOpacity
+            onPress={() => Linking.openSettings()}
+            className="bg-[#FC4C02] py-2.5 px-4 rounded-xl items-center active:opacity-90">
+            <Text className="text-xs font-bold text-white">Enable Location in Settings</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       <MapFloatingControls
         topOffset={insets.top + 120}
         onOpenLayers={() => setStyleModalVisible(true)}
@@ -230,8 +254,9 @@ export default function MapsScreen() {
         listRef={listRef}
         items={visible}
         selectedIndex={selectedIndex}
-        loading={routeStatus === 'loading'}
+        loading={routeStatus === 'loading' || locationLoading}
         source={source}
+        hasActiveFilter={Boolean(query.trim() || lengthFilter || difficultyFilter || sport !== 'All')}
         onSelect={select}
         onOpenDetail={(item) => {
           setSelectedId(item.id);

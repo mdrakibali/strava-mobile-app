@@ -98,7 +98,10 @@ export function useMapRoutes(
     }
     let cancelled = false;
     (async () => {
-      const res = await api.places.nearby(me[1], me[0], sport, 5000).catch(() => null);
+      let res = await api.places.nearby(me[1], me[0], sport, 5000).catch(() => null);
+      if (!res?.places?.length) {
+        res = await api.places.nearby(me[1], me[0], sport, 10000).catch(() => null);
+      }
       if (cancelled) return;
       const places = res?.places ?? [];
       const seen = new Set<string>();

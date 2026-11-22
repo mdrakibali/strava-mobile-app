@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedCard, FeedCardSkeleton } from '../../components/activity/FeedCard';
@@ -66,6 +66,17 @@ export default function ActivityHistoryScreen() {
       cancelled = true;
     };
   }, [athleteId, reloadKey]);
+
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      setReloadKey((k) => k + 1);
+    }, [])
+  );
 
   const loadMore = async () => {
     if (loadingMore || !hasNext.current || !cursor.current || status !== 'ready') return;

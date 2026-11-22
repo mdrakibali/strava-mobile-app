@@ -131,7 +131,20 @@ eventsRouter.get('/:id', optionalAuth, async (c) => {
       .innerJoin(athletes, eq(eventRsvps.athleteId, athletes.id))
       .where(eq(eventRsvps.eventId, id));
 
-    return c.json({ event, attendees });
+    const user = c.get('user');
+    const myRsvp = user ? attendees.find((a) => a.athleteId === user.athleteId) : null;
+    const rsvpStatus = myRsvp ? myRsvp.status : null;
+    const goingAttendees = attendees.filter((a) => a.status === 'GOING');
+    const attendeesCount = goingAttendees.length;
+
+    return c.json({
+      event: {
+        ...event,
+        attendeesCount,
+        rsvpStatus,
+      },
+      attendees,
+    });
   } catch (err: any) {
     console.error('Event detail error:', err);
     return c.json({ error: err.message || 'Failed to fetch event' }, 500);

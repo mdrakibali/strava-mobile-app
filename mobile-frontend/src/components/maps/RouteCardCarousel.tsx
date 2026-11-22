@@ -19,6 +19,7 @@ interface RouteCardCarouselProps {
   selectedIndex: number;
   loading: boolean;
   source?: MapSource;
+  hasActiveFilter?: boolean;
   onSelect: (index: number) => void;
   onOpenDetail: (item: MapItem) => void;
   onToggleSave: (item: MapItem) => void;
@@ -55,6 +56,7 @@ export function RouteCardCarousel({
   selectedIndex,
   loading,
   source = 'routes',
+  hasActiveFilter = false,
   onSelect,
   onOpenDetail,
   onToggleSave,
@@ -67,7 +69,9 @@ export function RouteCardCarousel({
       ? 'No saved routes yet. Tap bookmark on any route to save it here.'
       : source === 'nearby'
         ? 'No outdoor places found nearby. Make sure location is turned on or pan to another area.'
-        : 'No routes match your filter. Try adjusting your search query or sport filter.';
+        : hasActiveFilter
+          ? 'No routes match your filter. Try adjusting your search query or sport filter.'
+          : 'No routes discovered near your location yet. Start a workout to record a new route!';
 
   return (
     <View className="absolute left-0 right-0 bottom-2 z-20" pointerEvents="box-none">

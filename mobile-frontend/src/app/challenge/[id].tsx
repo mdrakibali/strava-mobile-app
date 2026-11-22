@@ -111,7 +111,10 @@ export default function ChallengeDetailScreen() {
     const want = !challenge.isJoined;
     setJoining(true);
     try {
-      await groupStore.joinChallenge(challenge.id, want, challenge);
+      const updated = await groupStore.joinChallenge(challenge.id, want, challenge);
+      setServerChallenge((prev: any) =>
+        prev ? { ...prev, isJoined: updated.isJoined, participantsCount: updated.participantsCount } : updated
+      );
     } catch (e: any) {
       Alert.alert('Couldn’t update challenge', e?.message ?? 'Please try again.');
     } finally {
@@ -269,6 +272,38 @@ export default function ChallengeDetailScreen() {
 
       {/* Action Footer */}
       <View style={{ backgroundColor: '#FFFFFF', padding: 16, borderTopWidth: 1, borderTopColor: '#E5E7EB' }}>
+        {challenge.creatorId === currentUser?.id ? (
+          <View className="flex-row mb-3">
+            <TouchableOpacity
+              className="flex-1 py-2.5 rounded-xl items-center border border-gray-300 bg-white mr-2"
+              onPress={() => router.push({ pathname: '/challenge/create', params: { editId: challenge.id } })}>
+              <Text className="text-xs font-bold text-gray-900">Edit Challenge</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="flex-1 py-2.5 rounded-xl items-center border border-red-300 bg-white"
+              onPress={() =>
+                Alert.alert('Delete this challenge?', 'This cannot be undone and will remove it permanently.', [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await api.challenges.remove(challenge.id);
+                        groupStore.remove(challenge.id);
+                        router.replace('/(tabs)/groups');
+                      } catch (e: any) {
+                        Alert.alert('Couldn’t delete challenge', e?.message ?? 'Please try again.');
+                      }
+                    },
+                  },
+                ])
+              }>
+              <Text className="text-xs font-bold text-red-600">Delete</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         <TouchableOpacity
           onPress={handleToggleJoin}
           disabled={joining}
@@ -282,9 +317,13 @@ export default function ChallengeDetailScreen() {
             borderWidth: challenge.isJoined ? 1 : 0,
             borderColor: '#D1D5DB',
           }}>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: challenge.isJoined ? '#111827' : '#FFFFFF' }}>
-            {challenge.isJoined ? 'Leave Challenge' : 'Join Challenge Now'}
-          </Text>
+          {joining ? (
+            <ActivityIndicator size="small" color={challenge.isJoined ? '#111827' : '#FFFFFF'} />
+          ) : (
+            <Text style={{ fontSize: 16, fontWeight: '700', color: challenge.isJoined ? '#111827' : '#FFFFFF' }}>
+              {challenge.isJoined ? 'Leave Challenge' : 'Join Challenge Now'}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

@@ -49,21 +49,22 @@ export class ChallengeService {
     const ch = await this.challengeRepo.findById(challengeId);
     if (!ch) return null;
 
-    const participants = await this.challengeRepo.getLeaderboard(challengeId);
-    const userParticipation = athleteId
-      ? participants.find((p) => p.athleteId === athleteId)
-      : null;
+    const [participants, userParticipation, participantCount] = await Promise.all([
+      this.challengeRepo.getLeaderboard(challengeId),
+      athleteId ? this.challengeRepo.getParticipation(challengeId, athleteId) : Promise.resolve(null),
+      this.challengeRepo.getParticipantCount(challengeId),
+    ]);
 
     return {
       challenge: {
         ...ch,
         targetMeters: Number(ch.targetMeters),
-        participantsCount: participants.length,
+        participantsCount: participantCount,
         isJoined: Boolean(userParticipation),
         userProgress: userParticipation
           ? {
-              currentMeters: userParticipation.currentMeters,
-              isCompleted: userParticipation.isCompleted,
+              currentMeters: Number(userParticipation.currentMeters) || 0,
+              isCompleted: Boolean(userParticipation.isCompleted),
               completedAt: userParticipation.completedAt,
             }
           : null,

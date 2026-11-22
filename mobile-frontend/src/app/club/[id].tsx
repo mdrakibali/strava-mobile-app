@@ -168,16 +168,23 @@ export default function ClubDetailScreen() {
                 const want = !club.isMember;
                 setJoining(true);
                 try {
-                  await groupStore.joinClub(club.id, want, club);
+                  const updated = await groupStore.joinClub(club.id, want, club);
+                  setServerClub((prev: any) =>
+                    prev ? { ...prev, isMember: updated.isMember, memberCount: updated.memberCount } : updated
+                  );
                 } catch (e: any) {
                   Alert.alert('Couldn’t update membership', e?.message ?? 'Please try again.');
                 } finally {
                   setJoining(false);
                 }
               }}>
-              <Text className={`text-sm font-bold ${club.isMember ? 'text-gray-900' : 'text-white'}`}>
-                {club.isMember ? 'Joined (Tap to Leave)' : 'Join Club'}
-              </Text>
+              {joining ? (
+                <ActivityIndicator size="small" color={club.isMember ? '#111827' : '#FFFFFF'} />
+              ) : (
+                <Text className={`text-sm font-bold ${club.isMember ? 'text-gray-900' : 'text-white'}`}>
+                  {club.isMember ? 'Joined (Tap to Leave)' : 'Join Club'}
+                </Text>
+              )}
             </TouchableOpacity>
             )}
           </View>

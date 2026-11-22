@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
@@ -41,6 +41,12 @@ export default function EventDetailScreen() {
       cancelled = true;
     };
   }, [id, reloadKey]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setReloadKey((k) => k + 1);
+    }, [])
+  );
 
   const liveEvent = useEvent(id ?? '', event);
   const currentEvent = liveEvent && event ? { ...event, ...liveEvent } : (liveEvent ?? event);
@@ -119,6 +125,40 @@ export default function EventDetailScreen() {
             <Button label={mine === 'MAYBE' ? 'Maybe ✓' : 'Maybe'} variant="outline" disabled={busy} style={{ flex: 1, marginLeft: space.sm }} onPress={() => setRsvp('MAYBE')} />
             {mine ? <Button label="Can’t go" variant="ghost" disabled={busy} style={{ marginLeft: space.sm }} onPress={() => setRsvp('DECLINED')} /> : null}
           </View>
+
+          {currentUser?.id === event.creator?.id ? (
+            <View className="flex-row items-center mt-3">
+              <Button
+                label="Edit Event"
+                variant="outline"
+                style={{ flex: 1, marginRight: space.sm }}
+                onPress={() => router.push({ pathname: '/event/create', params: { editId: event.id } })}
+              />
+              <Button
+                label="Delete Event"
+                variant="destructive"
+                style={{ flex: 1 }}
+                onPress={() =>
+                  Alert.alert('Delete this event?', 'Attendees will be notified. This cannot be undone.', [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Delete',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          await api.events.remove(event.id);
+                          groupStore.remove(event.id);
+                          router.replace('/(tabs)/groups');
+                        } catch (e: any) {
+                          Alert.alert('Couldn’t delete event', e?.message ?? 'Please try again.');
+                        }
+                      },
+                    },
+                  ])
+                }
+              />
+            </View>
+          ) : null}
 
           <SectionTitle title={`Attendees (${attendees.length})`} style={{ marginTop: space.xl }} />
           {attendees.length === 0 ? (

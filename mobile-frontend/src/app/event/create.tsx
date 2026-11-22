@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { FormScreen } from '../../components/forms/FormScreen';
 import { useApp } from '../../context/AppContext';
@@ -14,6 +14,7 @@ const label = (min: number) =>
 
 export default function CreateEventScreen() {
   const router = useRouter();
+  const { editId } = useLocalSearchParams<{ editId?: string }>();
   const { refreshFeed } = useApp();
   const [title, setTitle] = useState('');
   const [sportType, setSportType] = useState('Run');
@@ -24,6 +25,21 @@ export default function CreateEventScreen() {
   const [distanceKm, setDistanceKm] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!editId) return;
+    api.events.get(editId).then((res) => {
+      if (res?.event) {
+        setTitle(res.event.title || '');
+        setSportType(res.event.sportType || 'Run');
+        setMeetingPoint(res.event.meetingPoint || '');
+        setPace(res.event.paceDescription || '');
+        if (res.event.distanceMeters) {
+          setDistanceKm(String(Number(res.event.distanceMeters) / 1000));
+        }
+      }
+    }).catch(() => {});
+  }, [editId]);
 
   const [now] = useState(() => Date.now());
   const days = useMemo(() => {
@@ -36,7 +52,7 @@ export default function CreateEventScreen() {
   const valid =
     title.trim().length > 2 &&
     meetingPoint.trim().length > 1 &&
-    when.getTime() > now &&
+    (editId || when.getTime() > now) &&
     (km == null || (Number.isFinite(km) && km >= 0));
 
   const submit = async () => {
@@ -52,32 +68,48 @@ export default function CreateEventScreen() {
     setSaving(true);
     setError(null);
     try {
-      const res = await api.events.create({
-        title: title.trim(),
-        sportType,
-        eventDate: when.toISOString(),
-        meetingPoint: meetingPoint.trim(),
-        paceDescription: pace.trim() || undefined,
-        distanceMeters: km != null ? Math.round(km * 1000) : undefined,
-      });
-      if (res?.event) {
-        groupStore.seedEvents([res.event]);
+      if (editId) {
+        const res = await api.events.update(editId, {
+          title: title.trim(),
+          sportType,
+          meetingPoint: meetingPoint.trim(),
+          paceDescription: pace.trim() || null,
+          distanceMeters: km != null ? Math.round(km * 1000) : null,
+        });
+        if (res?.event) {
+          groupStore.patchEvent(editId, res.event);
+        }
+        await refreshFeed().catch(() => {});
+        router.replace({ pathname: '/event/[id]', params: { id: editId } });
+      } else {
+        const res = await api.events.create({
+          title: title.trim(),
+          sportType,
+          eventDate: when.toISOString(),
+          meetingPoint: meetingPoint.trim(),
+          paceDescription: pace.trim() || undefined,
+          distanceMeters: km != null ? Math.round(km * 1000) : undefined,
+        });
+        if (res?.event) {
+          groupStore.seedEvents([res.event]);
+        }
+        await refreshFeed().catch(() => {});
+        router.replace({ pathname: '/event/[id]', params: { id: res.event.id } });
       }
-      await refreshFeed().catch(() => {});
-      router.replace({ pathname: '/event/[id]', params: { id: res.event.id } });
     } catch (e: any) {
-      setError(e?.message ?? 'Could not create the event.');
+      setError(e?.message ?? (editId ? 'Could not update the event.' : 'Could not create the event.'));
       setSaving(false);
     }
   };
 
   return (
     <FormScreen
-      title="Create Event"
-      submitLabel="Create Event"
+      title={editId ? 'Edit Event' : 'Create Event'}
+      submitLabel={editId ? 'Save Changes' : 'Create Event'}
       canSubmit={valid}
       submitting={saving}
       error={error}
+      onSubmit={submit}>
       onSubmit={submit}>
       <TextField
         value={title}

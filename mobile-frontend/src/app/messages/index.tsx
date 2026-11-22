@@ -172,16 +172,11 @@ export default function MessagesInboxScreen() {
                     </Text>
                   </View>
                   <Text
-                    className={`text-xs ${item.unreadCount > 0 ? 'font-bold text-gray-900' : 'font-normal text-gray-500'}`}
+                    className="text-xs font-normal text-gray-500"
                     numberOfLines={1}>
                     {item.lastMessage}
                   </Text>
                 </View>
-                {item.unreadCount > 0 && (
-                  <View className="w-5 h-5 rounded-full bg-[#FC4C02] items-center justify-center">
-                    <Text className="text-[10px] font-bold text-white">{item.unreadCount}</Text>
-                  </View>
-                )}
               </TouchableOpacity>
             ))
           ) : (
