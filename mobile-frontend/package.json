@@ -58,6 +58,7 @@
     "android": "expo run:android",
     "build:debug": "cd android && ./gradlew assembleDebug",
     "build:release": "cd android && ./gradlew assembleRelease",
+    "build:share": "npm run build:release && cp android/app/build/outputs/apk/release/app-release.apk ../kinetix.apk && echo '✅ Shareable APK ready at kinetix.apk'",
     "install:debug": "adb install -r android/app/build/outputs/apk/debug/app-debug.apk",
     "build:install": "npm run build:debug && npm run install:debug",
     "app:launch": "adb shell monkey -p com.anonymous.mobilefrontend -c android.intent.category.LAUNCHER 1",
