@@ -1,18 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function BlockedUsersScreen() {
   const router = useRouter();
-  const [blockedList, setBlockedList] = useState([
-    { id: 'blk_1', name: 'Spam Bot 3000', username: 'spambot', reason: 'Unsolicited promotional links' },
-  ]);
+  const [blockedList, setBlockedList] = useState<any[]>([]);
 
   const handleUnblock = (id: string) => {
     setBlockedList((prev) => prev.filter((b) => b.id !== id));
-    alert('Athlete unblocked.');
+    Alert.alert('Unblock', 'Athlete unblocked.');
   };
 
   return (

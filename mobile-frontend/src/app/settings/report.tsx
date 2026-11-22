@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ReportScreen() {
@@ -17,8 +17,9 @@ export default function ReportScreen() {
   ];
 
   const handleSubmit = () => {
-    alert('Thank you for keeping Kinetix safe. Our moderation team will review this report.');
-    router.back();
+    Alert.alert('Report Submitted', 'Thank you for keeping our community safe. Our moderation team will review this report.', [
+      { text: 'OK', onPress: () => router.back() },
+    ]);
   };
 
   return (

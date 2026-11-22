@@ -50,7 +50,7 @@ export default function GoalsScreen() {
     const targetNum = parseFloat(newTarget) || 50;
     try {
       setSaving(true);
-      await api.goals.create({
+      const res = await api.goals.create({
         title: newTitle.trim(),
         targetValue: targetNum,
         unit: 'km',
@@ -59,7 +59,11 @@ export default function GoalsScreen() {
       });
       setIsAdding(false);
       setNewTitle('');
-      await fetchGoals();
+      if (res?.goal) {
+        setGoals((prev) => [res.goal as TrainingGoal, ...prev.filter((g) => g.id !== (res.goal as any).id)]);
+      } else {
+        await fetchGoals();
+      }
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to save goal');
     } finally {
@@ -74,10 +78,12 @@ export default function GoalsScreen() {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
+          const removed = goals.find((g) => g.id === goalId);
+          setGoals((prev) => prev.filter((g) => g.id !== goalId));
           try {
             await api.goals.delete(goalId);
-            setGoals((prev) => prev.filter((g) => g.id !== goalId));
           } catch (err: any) {
+            if (removed) setGoals((prev) => [...prev, removed]);
             Alert.alert('Error', err.message || 'Failed to delete goal');
           }
         },

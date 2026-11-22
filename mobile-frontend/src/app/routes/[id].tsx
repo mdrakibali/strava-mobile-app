@@ -26,6 +26,9 @@ export default function RouteDetailScreen() {
       .then((res) => {
         if (res?.route) {
           setRoute(res.route);
+          if (res.route.isSaved !== undefined) {
+            setIsSaved(Boolean(res.route.isSaved));
+          }
         } else {
           const curated = CURATED_DHAKA_ROUTES.find((c) => c.id === id);
           if (curated) {
@@ -72,10 +75,13 @@ export default function RouteDetailScreen() {
 
   const handleToggleSave = async () => {
     if (!id) return;
+    const prev = isSaved;
+    setIsSaved(!prev);
     try {
       const res = await api.routes.toggleSave(id);
-      setIsSaved(res.isSaved);
+      setIsSaved(Boolean(res.isSaved));
     } catch (err) {
+      setIsSaved(prev);
       console.warn('Toggle save route error:', err);
     }
   };

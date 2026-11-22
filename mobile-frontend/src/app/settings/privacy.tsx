@@ -84,10 +84,12 @@ export default function PrivacyZonesScreen() {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
+          const removed = zone;
+          setZones((prev) => prev.filter((z) => z.id !== zone.id));
           try {
             await api.privacyZones.delete(zone.id);
-            setZones((prev) => prev.filter((z) => z.id !== zone.id));
           } catch (e: any) {
+            setZones((prev) => (prev.some((z) => z.id === removed.id) ? prev : [...prev, removed]));
             Alert.alert('Couldn’t delete', e?.message || 'Try again.');
           }
         },

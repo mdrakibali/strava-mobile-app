@@ -115,7 +115,18 @@ routesRouter.get('/:id', optionalAuth, async (c) => {
       return c.json({ error: 'Route not found' }, 404);
     }
 
-    return c.json({ route });
+    const user = c.get('user' as any) as { athleteId?: string } | undefined;
+    let isSaved = false;
+    if (user?.athleteId) {
+      const [saved] = await db
+        .select()
+        .from(savedRoutes)
+        .where(and(eq(savedRoutes.athleteId, user.athleteId), eq(savedRoutes.routeId, id)))
+        .limit(1);
+      isSaved = Boolean(saved);
+    }
+
+    return c.json({ route: { ...route, isSaved } });
   } catch (err: any) {
     console.error('Route get error:', err);
     return c.json({ error: err.message || 'Failed to fetch route' }, 500);
