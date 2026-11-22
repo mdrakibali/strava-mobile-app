@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
 import { AppText, Avatar, Skeleton, space } from '../../design';
 import { ActivityView } from '../../lib/activityView';
+import { useActivity, useActivityStore } from '../../lib/activityStore';
 import { formatActivityDate } from '../../lib/format';
 import { setKudos, useSocial } from '../../lib/social';
 import { shareActivity } from '../../lib/share';
@@ -20,21 +21,26 @@ export const ActivityBody: React.FC<{
   currentUserName: string;
   currentUserAvatar?: string;
   onComposerFocus?: () => void;
-}> = ({ activity, isOwner, currentUserId, currentUserName, currentUserAvatar, onComposerFocus }) => {
+}> = ({ activity: initialActivity, isOwner, currentUserId, currentUserName, currentUserAvatar, onComposerFocus }) => {
   const router = useRouter();
+  const live = useActivity(initialActivity.id);
+  const activity = live ? { ...initialActivity, ...live } : initialActivity;
   const sport = sportConfig(activity.sportType);
   const social = useSocial(activity.id, {
     hasKudos: activity.hasKudos,
     kudosCount: activity.kudosCount,
     commentsCount: activity.commentsCount,
   });
+  const hasKudos = activity.hasKudos !== null && activity.hasKudos !== undefined ? activity.hasKudos : social.hasKudos;
+  const kudosCount = Math.max(activity.kudosCount ?? 0, social.kudosCount ?? 0);
+  const commentsCount = Math.max(activity.commentsCount ?? 0, social.commentsCount ?? 0);
   const [kudosPending, setKudosPending] = useState(false);
 
   const onKudos = async () => {
     if (kudosPending) return;
     setKudosPending(true);
     try {
-      await setKudos(activity.id, !social.hasKudos);
+      await useActivityStore.getState().toggleKudos(activity.id);
     } catch (e: any) {
       Alert.alert('Kudos not updated', e?.message ?? 'Check your connection and try again.');
     } finally {
@@ -87,13 +93,13 @@ export const ActivityBody: React.FC<{
 
       <View className="mt-6 pt-6 border-t border-gray-100">
         <View className="flex-row justify-between items-center">
-          <Pressable onPress={openKudos} disabled={social.kudosCount === 0} accessibilityRole="button" style={{ flex: 1 }}>
-            <AppText variant="bodyStrong" color={social.kudosCount > 0 ? 'ink' : 'inkSecondary'}>
-              {social.kudosCount > 0 ? `${social.kudosCount} gave kudos ›` : 'No kudos yet'}
+          <Pressable onPress={openKudos} disabled={kudosCount === 0} accessibilityRole="button" style={{ flex: 1 }}>
+            <AppText variant="bodyStrong" color={kudosCount > 0 ? 'ink' : 'inkSecondary'}>
+              {kudosCount > 0 ? `${kudosCount} gave kudos ›` : 'No kudos yet'}
             </AppText>
           </Pressable>
           <AppText variant="label" color="inkSecondary">
-            {social.commentsCount} {social.commentsCount === 1 ? 'comment' : 'comments'}
+            {commentsCount} {commentsCount === 1 ? 'comment' : 'comments'}
           </AppText>
         </View>
         <View className="flex-row mt-3 border-y border-gray-100">
@@ -103,12 +109,12 @@ export const ActivityBody: React.FC<{
             accessibilityRole="button"
             className="flex-1 flex-row items-center justify-center min-h-[52px] active:bg-gray-50">
             {kudosPending ? (
-              <ActivityIndicator size="small" color={social.hasKudos ? '#FC4C02' : '#111827'} />
+              <ActivityIndicator size="small" color={hasKudos ? '#FC4C02' : '#111827'} />
             ) : (
-              <Ionicons name={social.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'} size={24} color={social.hasKudos ? '#FC4C02' : '#111827'} />
+              <Ionicons name={hasKudos ? 'thumbs-up' : 'thumbs-up-outline'} size={24} color={hasKudos ? '#FC4C02' : '#111827'} />
             )}
-            <AppText variant="label" style={{ marginLeft: space.sm, fontWeight: '600' }} color={social.hasKudos ? 'brandText' : 'ink'}>
-              {social.hasKudos ? 'Kudos given' : 'Give kudos'}
+            <AppText variant="label" style={{ marginLeft: space.sm, fontWeight: '600' }} color={hasKudos ? 'brandText' : 'ink'}>
+              {hasKudos ? 'Kudos given' : 'Give kudos'}
             </AppText>
           </Pressable>
           {activity.visibility !== 'ONLY_ME' ? (

@@ -8,6 +8,7 @@ import { HomeHeader } from '../../components/home/HomeHeader';
 import { EmptyState, ErrorState } from '../../design';
 import { useApp } from '../../context/AppContext';
 import { ActivityView, fromFeedItem } from '../../lib/activityView';
+import { useActivityStore } from '../../lib/activityStore';
 import { presentActivities, useActivityRevision } from '../../lib/publishedActivities';
 import { withoutRemoved } from '../../lib/removedActivities';
 import { socialStore } from '../../lib/social';
@@ -59,6 +60,8 @@ export default function HomeFeedScreen() {
     const res = await api.feed.getFeed(HOME_FEED_TAB, undefined, 500);
     const items = withoutRemoved((res?.feed || []).map(fromFeedItem).filter(visibleToMe));
     socialStore.seed(items, readTick);
+    useActivityStore.getState().upsertActivities(items);
+    useActivityStore.getState().setFeedIds(items.map((i) => i.id));
     return {
       seq,
       items,
@@ -133,6 +136,8 @@ export default function HomeFeedScreen() {
       hasNextRef.current = res.hasNextPage;
       const next = withoutRemoved(res.feed.map(fromFeedItem).filter(visibleToMe));
       socialStore.seed(next, readTick);
+      useActivityStore.getState().upsertActivities(next);
+      useActivityStore.getState().appendFeedIds(next.map((i) => i.id));
       setItems((prev) => {
         const seen = new Set(prev.map((p) => p.id));
         return [...prev, ...next.filter((n) => !seen.has(n.id))];
@@ -211,6 +216,7 @@ export default function HomeFeedScreen() {
     body = (
       <FlatList
         data={feed}
+        extraData={revision}
         keyExtractor={(a) => a.id}
         renderItem={({ item }) => (
           <FeedCard activity={item} currentUserId={currentUser.id} onDelete={(id) => setItems((prev) => prev.filter((a) => a.id !== id))} />

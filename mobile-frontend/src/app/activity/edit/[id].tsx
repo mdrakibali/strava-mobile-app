@@ -17,6 +17,7 @@ import {
   TextField,
 } from '../../../design';
 import { rememberActivityEdit } from '../../../lib/activityEdits';
+import { useActivityStore } from '../../../lib/activityStore';
 import { sportConfig } from '../../../lib/sports';
 import { api } from '../../../services/api';
 import { ActivityVisibility, SportType } from '../../../types';
@@ -71,14 +72,11 @@ export default function EditActivityScreen() {
     const cleanTitle = title.trim();
     console.log(`[ACTIVITY_EDIT] Saving edit for activity ${id}: title="${cleanTitle}", sport="${sport}", visibility="${visibility}"`);
     try {
-      const saved = await api.activities.update(id!, { title: cleanTitle, description: descriptionValue, sportType: sport, visibility });
-      console.log(`[ACTIVITY_EDIT] Saved successfully:`, saved);
-      const row = saved?.activity ?? {};
-      rememberActivityEdit(id!, {
-        title: row.title ?? cleanTitle,
-        description: row.description ?? descriptionValue,
-        sportType: row.sportType ?? sport,
-        visibility: row.visibility ?? visibility,
+      await useActivityStore.getState().updateActivityDetails(id!, {
+        title: cleanTitle,
+        description: descriptionValue,
+        sportType: sport,
+        visibility,
       });
       router.back();
     } catch (e: any) {

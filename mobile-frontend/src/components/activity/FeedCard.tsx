@@ -12,6 +12,7 @@ import {
   speedValue,
 } from '../../lib/format';
 import { markActivityRemoved } from '../../lib/removedActivities';
+import { useActivity, useActivityStore } from '../../lib/activityStore';
 import { setKudos, useSocial } from '../../lib/social';
 import { shareActivity } from '../../lib/share';
 import { sportConfig } from '../../lib/sports';
@@ -35,12 +36,14 @@ interface FeedCardProps {
 
 /** Feed card (reference: ScreensDesign 374837). Title → 3 stats → route → social. */
 export const FeedCard = memo(function FeedCard({
-  activity,
+  activity: initialActivity,
   currentUserId,
   showAthlete = true,
   onDelete,
 }: FeedCardProps) {
   const router = useRouter();
+  const live = useActivity(initialActivity.id);
+  const activity = live ? { ...initialActivity, ...live } : initialActivity;
   const sport = sportConfig(activity.sportType);
   const isOwn = activity.athlete.id === currentUserId;
   const social = useSocial(activity.id, {
@@ -48,6 +51,9 @@ export const FeedCard = memo(function FeedCard({
     kudosCount: activity.kudosCount,
     commentsCount: activity.commentsCount,
   });
+  const hasKudos = activity.hasKudos !== null && activity.hasKudos !== undefined ? activity.hasKudos : social.hasKudos;
+  const kudosCount = Math.max(activity.kudosCount ?? 0, social.kudosCount ?? 0);
+  const commentsCount = Math.max(activity.commentsCount ?? 0, social.commentsCount ?? 0);
   const [pending, setPending] = useState(false);
 
   const open = () => router.push({ pathname: '/activity/[id]', params: { id: activity.id } });
@@ -58,7 +64,7 @@ export const FeedCard = memo(function FeedCard({
     if (pending) return;
     setPending(true);
     try {
-      await setKudos(activity.id, !social.hasKudos);
+      await useActivityStore.getState().toggleKudos(activity.id);
     } catch (e: any) {
       Alert.alert('Kudos not updated', e?.message ?? 'Check your connection and try again.');
     } finally {
@@ -196,15 +202,15 @@ export const FeedCard = memo(function FeedCard({
       </Pressable>
 
       <View className="pt-3 px-4 flex-row justify-between">
-        <Pressable onPress={openKudos} disabled={social.kudosCount === 0} accessibilityRole="button" hitSlop={8}>
+        <Pressable onPress={openKudos} disabled={kudosCount === 0} accessibilityRole="button" hitSlop={8}>
           <Text className="text-xs text-gray-500 font-medium">
-            {social.kudosCount > 0 ? `${social.kudosCount} gave kudos` : isOwn ? 'No kudos yet' : 'Be the first to give kudos'}
+            {kudosCount > 0 ? `${kudosCount} gave kudos` : isOwn ? 'No kudos yet' : 'Be the first to give kudos'}
           </Text>
         </Pressable>
-        {social.commentsCount > 0 ? (
+        {commentsCount > 0 ? (
           <Pressable onPress={openComments} accessibilityRole="button" hitSlop={8}>
             <Text className="text-xs text-gray-500 font-medium">
-              {social.commentsCount} {social.commentsCount === 1 ? 'comment' : 'comments'}
+              {commentsCount} {commentsCount === 1 ? 'comment' : 'comments'}
             </Text>
           </Pressable>
         ) : null}
@@ -215,16 +221,16 @@ export const FeedCard = memo(function FeedCard({
           onPress={onKudos}
           disabled={pending}
           accessibilityRole="button"
-          accessibilityLabel={social.hasKudos ? 'Remove kudos' : 'Give kudos'}
-          accessibilityState={{ selected: social.hasKudos === true, busy: pending }}
+          accessibilityLabel={hasKudos ? 'Remove kudos' : 'Give kudos'}
+          accessibilityState={{ selected: hasKudos === true, busy: pending }}
           className="flex-1 flex-row items-center justify-center min-h-[48px] active:bg-gray-50">
           {pending ? (
-            <ActivityIndicator size="small" color={social.hasKudos ? '#FC4C02' : '#1F2937'} />
+            <ActivityIndicator size="small" color={hasKudos ? '#FC4C02' : '#1F2937'} />
           ) : (
             <Ionicons
-              name={social.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'}
+              name={hasKudos ? 'thumbs-up' : 'thumbs-up-outline'}
               size={22}
-              color={social.hasKudos ? '#FC4C02' : '#1F2937'}
+              color={hasKudos ? '#FC4C02' : '#1F2937'}
             />
           )}
         </Pressable>

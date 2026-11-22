@@ -14,6 +14,7 @@ import { MapView } from '../../components/map/MapView';
 import { useApp } from '../../context/AppContext';
 import { AppBar, AppText, EmptyState, ErrorState, IconButton } from '../../design';
 import { reconcileActivity } from '../../lib/activityEdits';
+import { useActivity, useActivityStore } from '../../lib/activityStore';
 import { useActivityRevision } from '../../lib/publishedActivities';
 import { ActivityView, fromDetailResponse } from '../../lib/activityView';
 import { markActivityRemoved } from '../../lib/removedActivities';
@@ -53,6 +54,7 @@ export default function ActivityDetailScreen() {
           if (!res?.activity) setState({ status: 'notFound' });
           else {
             const activity = reconcileActivity(fromDetailResponse(res));
+            useActivityStore.getState().upsertActivity(activity);
             socialStore.seed(
               [{ id: activity.id, hasKudos: activity.hasKudos, kudosCount: activity.kudosCount, commentsCount: activity.commentsCount }],
               readTick
@@ -100,7 +102,8 @@ export default function ActivityDetailScreen() {
   }
 
   const { isOwner } = state;
-  const activity = revision >= 0 ? reconcileActivity(state.activity) : state.activity;
+  const storeActivity = useActivity(id);
+  const activity = storeActivity ?? (revision >= 0 ? reconcileActivity(state.activity) : state.activity);
   const hasMap = activity.route.length > 1;
   const mapHeight = Math.round(height * 0.42);
 
@@ -113,6 +116,7 @@ export default function ActivityDetailScreen() {
         onPress: async () => {
           try {
             await api.activities.remove(activityId);
+            useActivityStore.getState().removeActivity(activityId);
             markActivityRemoved(activityId);
             router.back();
           } catch (e: any) {
