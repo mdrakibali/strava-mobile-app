@@ -15,7 +15,7 @@ import {
 
 // 1. Athletes (Users) Table
 export const athletes = pgTable('athletes', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => `ath_${crypto.randomUUID()}`),
   googleId: text('google_id').unique(),
   username: varchar('username', { length: 50 }).notNull().unique(),
   email: varchar('email', { length: 255 }).notNull().unique(),
@@ -68,7 +68,7 @@ export const privacyZones = pgTable('privacy_zones', {
 
 // 4. Activities Table
 export const activities = pgTable('activities', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => `act_${crypto.randomUUID()}`),
   athleteId: text('athlete_id')
     .notNull()
     .references(() => athletes.id, { onDelete: 'cascade' }),
@@ -177,7 +177,7 @@ export const comments = pgTable('comments', {
 
 // 7. Clubs Table
 export const clubs = pgTable('clubs', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => `clb_${crypto.randomUUID()}`),
   name: text('name').notNull(),
   sportType: varchar('sport_type', { length: 50 }).notNull(),
   city: varchar('city', { length: 100 }),
@@ -212,7 +212,7 @@ export const clubMembers = pgTable(
 
 // 9. Challenges Table
 export const challenges = pgTable('challenges', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => `chl_${crypto.randomUUID()}`),
   title: text('title').notNull(),
   description: text('description'),
   sportType: varchar('sport_type', { length: 50 }).notNull(),
@@ -248,7 +248,7 @@ export const challengeParticipants = pgTable(
 
 // 11. Group Events Table
 export const groupEvents = pgTable('group_events', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => `evt_${crypto.randomUUID()}`),
   title: text('title').notNull(),
   sportType: varchar('sport_type', { length: 50 }).notNull(),
   clubId: text('club_id').references(() => clubs.id, { onDelete: 'set null' }),
@@ -283,7 +283,7 @@ export const eventRsvps = pgTable(
 
 // 13. Segments Table
 export const segments = pgTable('segments', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => `seg_${crypto.randomUUID()}`),
   name: text('name').notNull(),
   sportType: varchar('sport_type', { length: 50 }).notNull(),
   distanceMeters: decimal('distance_meters', { precision: 10, scale: 2 }).notNull(),
@@ -411,7 +411,7 @@ export const beaconSessions = pgTable('beacon_sessions', {
 
 // 19. Routes Table (Community and User Created Routes)
 export const routes = pgTable('routes', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => `route_${crypto.randomUUID()}`),
   creatorId: text('creator_id')
     .notNull()
     .references(() => athletes.id, { onDelete: 'cascade' }),
@@ -447,7 +447,7 @@ export const savedRoutes = pgTable(
 
 // 21. Training Goals Table
 export const trainingGoals = pgTable('training_goals', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => `goal_${crypto.randomUUID()}`),
   athleteId: text('athlete_id')
     .notNull()
     .references(() => athletes.id, { onDelete: 'cascade' }),

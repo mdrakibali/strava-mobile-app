@@ -1,10 +1,10 @@
 // Clean seed data for Kinetix / Strava community testing
 // Retains minimal sample users, challenges, clubs, and events.
+// IDs are auto-created dynamically at runtime; no hardcoded synthetic IDs.
 // Strictly no fake activities, fake kudos, fake comments, fake follows, fake routes, or fake notifications.
 
 export const athletes = [
   {
-    id: 'ath_seed_tanvir',
     username: 'tanvir_runner',
     email: 'tanvir@kinetix.run',
     displayName: 'Tanvir Ahmed',
@@ -14,7 +14,6 @@ export const athletes = [
     bio: 'Marathoner & ultra runner. Training for the 25K challenge! 🏃‍♂️',
   },
   {
-    id: 'ath_seed_sultana',
     username: 'nusrat_cyclist',
     email: 'nusrat@kinetix.run',
     displayName: 'Nusrat Sultana',
@@ -24,7 +23,6 @@ export const athletes = [
     bio: 'Endurance cyclist & weekend trail hiker. Exploring scenic routes. 🚴‍♀️',
   },
   {
-    id: 'ath_seed_farhan',
     username: 'farhan_tri',
     email: 'farhan@kinetix.run',
     displayName: 'Farhan Kabir',
@@ -34,7 +32,6 @@ export const athletes = [
     bio: 'Triathlete & trail explorer. High elevation lover.',
   },
   {
-    id: 'ath_seed_anika',
     username: 'anika_pace',
     email: 'anika@kinetix.run',
     displayName: 'Anika Tabassum',
@@ -44,7 +41,6 @@ export const athletes = [
     bio: 'Morning 5K enthusiast, passionate about community fitness and health.',
   },
   {
-    id: 'ath_seed_rahim',
     username: 'rahim_hiker',
     email: 'rahim@kinetix.run',
     displayName: 'Rahim Chowdhury',
@@ -54,7 +50,6 @@ export const athletes = [
     bio: 'Weekend hill walker and trail explorer.',
   },
   {
-    id: 'ath_seed_elena',
     username: 'elena_ride',
     email: 'elena@kinetix.run',
     displayName: 'Elena Rostova',
@@ -67,7 +62,6 @@ export const athletes = [
 
 export const clubs = [
   {
-    id: 'clb_seed_dhaka_runners',
     name: 'Road Runners Club',
     sportType: 'Run',
     city: 'Dhaka',
@@ -75,11 +69,10 @@ export const clubs = [
     description: 'Official club for urban runners. Weekly long runs and track workouts.',
     avatarUrl: 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=200',
     bannerUrl: 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=800',
-    creatorId: 'ath_seed_tanvir',
-    members: ['ath_seed_tanvir', 'ath_seed_farhan', 'ath_seed_anika'],
+    creatorUsername: 'tanvir_runner',
+    memberUsernames: ['tanvir_runner', 'farhan_tri', 'anika_pace'],
   },
   {
-    id: 'clb_seed_bd_cyclists',
     name: 'Cycling Brotherhood Network',
     sportType: 'Ride',
     city: 'Dhaka',
@@ -87,11 +80,10 @@ export const clubs = [
     description: 'The largest cycling network in the city. Weekend morning rides & tours.',
     avatarUrl: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=200',
     bannerUrl: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800',
-    creatorId: 'ath_seed_sultana',
-    members: ['ath_seed_sultana', 'ath_seed_tanvir', 'ath_seed_elena'],
+    creatorUsername: 'nusrat_cyclist',
+    memberUsernames: ['nusrat_cyclist', 'tanvir_runner', 'elena_ride'],
   },
   {
-    id: 'clb_seed_trail_blazers',
     name: 'Trail & Hiking Enthusiasts',
     sportType: 'Hike',
     city: 'Sylhet',
@@ -99,14 +91,13 @@ export const clubs = [
     description: 'Active weekend trail walking and hill hiking group.',
     avatarUrl: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=200',
     bannerUrl: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=800',
-    creatorId: 'ath_seed_rahim',
-    members: ['ath_seed_rahim', 'ath_seed_anika', 'ath_seed_farhan'],
+    creatorUsername: 'rahim_hiker',
+    memberUsernames: ['rahim_hiker', 'anika_pace', 'farhan_tri'],
   },
 ];
 
 export const challenges = [
   {
-    id: 'chl_seed_monthly_50k',
     title: 'Monthly 50K Running Challenge',
     description: 'Log 50 kilometers of running this month to earn the digital Finisher Badge.',
     sportType: 'Run',
@@ -114,11 +105,10 @@ export const challenges = [
     badgeUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=200',
     startDate: new Date(Date.now() - 5 * 86400000).toISOString(),
     endDate: new Date(Date.now() + 25 * 86400000).toISOString(),
-    creatorId: 'ath_seed_tanvir',
-    participants: ['ath_seed_tanvir', 'ath_seed_farhan'],
+    creatorUsername: 'tanvir_runner',
+    participantUsernames: ['tanvir_runner', 'farhan_tri'],
   },
   {
-    id: 'chl_seed_century_ride',
     title: 'Weekend 100K Century Ride',
     description: 'Complete 100km on your bicycle over the course of the challenge.',
     sportType: 'Ride',
@@ -126,11 +116,10 @@ export const challenges = [
     badgeUrl: 'https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?w=200',
     startDate: new Date(Date.now() - 2 * 86400000).toISOString(),
     endDate: new Date(Date.now() + 10 * 86400000).toISOString(),
-    creatorId: 'ath_seed_sultana',
-    participants: ['ath_seed_sultana', 'ath_seed_elena'],
+    creatorUsername: 'nusrat_cyclist',
+    participantUsernames: ['nusrat_cyclist', 'elena_ride'],
   },
   {
-    id: 'chl_seed_elevation_hike',
     title: 'Trail Climbing 20K Challenge',
     description: 'Climb and trek 20 kilometers along outdoor trails and hills.',
     sportType: 'Hike',
@@ -138,11 +127,10 @@ export const challenges = [
     badgeUrl: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=200',
     startDate: new Date(Date.now() - 1 * 86400000).toISOString(),
     endDate: new Date(Date.now() + 20 * 86400000).toISOString(),
-    creatorId: 'ath_seed_rahim',
-    participants: ['ath_seed_rahim'],
+    creatorUsername: 'rahim_hiker',
+    participantUsernames: ['rahim_hiker'],
   },
   {
-    id: 'chl_seed_walk_streak',
     title: 'Daily 30K Walking Challenge',
     description: 'Reach 30 kilometers of mindful walking over the month.',
     sportType: 'Walk',
@@ -150,34 +138,32 @@ export const challenges = [
     badgeUrl: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=200',
     startDate: new Date(Date.now() - 3 * 86400000).toISOString(),
     endDate: new Date(Date.now() + 27 * 86400000).toISOString(),
-    creatorId: 'ath_seed_anika',
-    participants: ['ath_seed_anika'],
+    creatorUsername: 'anika_pace',
+    participantUsernames: ['anika_pace'],
   },
 ];
 
 export const groupEvents = [
   {
-    id: 'evt_seed_sunrise_run',
     title: 'Sunrise 10K Group Run',
     sportType: 'Run',
-    clubId: 'clb_seed_dhaka_runners',
-    creatorId: 'ath_seed_tanvir',
+    clubName: 'Road Runners Club',
+    creatorUsername: 'tanvir_runner',
     meetingPoint: 'Hatirjheel Amphitheatre (Rampura bridge)',
     paceDescription: '5:30 min/km conversational pace',
     distanceMeters: 10000.0,
     eventDate: new Date(Date.now() + 2 * 86400000).toISOString(),
-    rsvps: ['ath_seed_tanvir', 'ath_seed_farhan'],
+    rsvpUsernames: ['tanvir_runner', 'farhan_tri'],
   },
   {
-    id: 'evt_seed_weekend_ride',
     title: 'Weekend Morning Peloton Ride',
     sportType: 'Ride',
-    clubId: 'clb_seed_bd_cyclists',
-    creatorId: 'ath_seed_sultana',
+    clubName: 'Cycling Brotherhood Network',
+    creatorUsername: 'nusrat_cyclist',
     meetingPoint: 'Kuril Flyover Roundabout (Underpass)',
     paceDescription: '25-28 km/h rolling group',
     distanceMeters: 30000.0,
     eventDate: new Date(Date.now() + 5 * 86400000).toISOString(),
-    rsvps: ['ath_seed_sultana', 'ath_seed_elena'],
+    rsvpUsernames: ['nusrat_cyclist', 'elena_ride'],
   },
 ];
