@@ -30,13 +30,14 @@ export default function ChatScreen() {
   const keyboard = useKeyboardInset();
   const effectiveId = id;
 
-  // Reset conversation state when navigating to a different chat
-  useEffect(() => {
+  const [prevId, setPrevId] = useState(effectiveId);
+  if (prevId !== effectiveId) {
+    setPrevId(effectiveId);
     setLoadError(null);
     setIsLoading(true);
     setMessages([]);
     setChatId(effectiveId?.startsWith('chat_') ? (effectiveId ?? '') : '');
-  }, [effectiveId]);
+  }
 
   useEffect(() => {
     chatIdRef.current = chatId;

@@ -45,10 +45,9 @@ export default function MapsScreen() {
   const [mapMode, setMapMode] = useState<MapStyleKey>(DEFAULT_MAP_STYLE);
   const [styleModalVisible, setStyleModalVisible] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<'checking' | 'granted' | 'denied'>('checking');
-  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(true);
 
   const requestLocation = useCallback(async () => {
-    setLocationLoading(true);
     let perm = await Location.getForegroundPermissionsAsync().catch(() => null);
     if (!perm?.granted) {
       perm = await Location.requestForegroundPermissionsAsync().catch(() => null);
@@ -69,6 +68,7 @@ export default function MapsScreen() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     requestLocation();
   }, [requestLocation]);
 
