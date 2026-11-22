@@ -12,7 +12,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ActivityBody, DetailSkeleton } from '../../components/activity/ActivityBody';
 import { MapView } from '../../components/map/MapView';
 import { useApp } from '../../context/AppContext';
-import { AppBar, EmptyState, ErrorState, IconButton } from '../../design';
+import { AppBar, AppText, EmptyState, ErrorState, IconButton } from '../../design';
 import { reconcileActivity } from '../../lib/activityEdits';
 import { useActivityRevision } from '../../lib/publishedActivities';
 import { ActivityView, fromDetailResponse } from '../../lib/activityView';
@@ -37,6 +37,7 @@ export default function ActivityDetailScreen() {
   const scrollRef = useRef<{ scrollToEnd: (options?: { animated?: boolean }) => void } | null>(null);
   const [fetched, setState] = useState<State>({ status: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
+  const [isScrolled, setIsScrolled] = useState(false);
   const revision = useActivityRevision();
 
   useFocusEffect(
@@ -131,6 +132,12 @@ export default function ActivityDetailScreen() {
           style={{ flex: 1 }}
           automaticallyAdjustKeyboardInsets
           keyboardShouldPersistTaps="handled"
+          onScroll={(e) => {
+            const y = e.nativeEvent.contentOffset.y;
+            const threshold = hasMap ? mapHeight - (insets.top + 56) : 20;
+            setIsScrolled(y > threshold);
+          }}
+          scrollEventThrottle={16}
           contentContainerStyle={{ paddingBottom: insets.bottom + 32 + keyboard }}>
           {hasMap ? (
             <View style={{ height: mapHeight }}>
@@ -153,25 +160,60 @@ export default function ActivityDetailScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-      <View style={{ top: insets.top + 8 }} className="absolute left-4">
-        <IconButton icon="arrow-back" appearance="floating" accessibilityLabel="Back" onPress={() => router.back()} />
-      </View>
-      {isOwner ? (
-        <View style={{ top: insets.top + 8 }} className="absolute right-4">
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: insets.top + 56,
+          paddingTop: insets.top,
+          backgroundColor: isScrolled || !hasMap ? '#FFFFFF' : 'transparent',
+          borderBottomWidth: isScrolled || !hasMap ? 1 : 0,
+          borderBottomColor: '#F3F4F6',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 16,
+          zIndex: 50,
+        }}>
+        <IconButton
+          icon="arrow-back"
+          appearance={isScrolled || !hasMap ? 'plain' : 'floating'}
+          accessibilityLabel="Back"
+          onPress={() => router.back()}
+        />
+        {isScrolled || !hasMap ? (
+          <AppText
+            variant="title3"
+            numberOfLines={1}
+            style={{ flex: 1, marginHorizontal: 12, textAlign: 'center' }}>
+            {activity.title}
+          </AppText>
+        ) : (
+          <View style={{ flex: 1 }} />
+        )}
+        {isOwner ? (
           <IconButton
             icon="ellipsis-vertical"
-            appearance="floating"
+            appearance={isScrolled || !hasMap ? 'plain' : 'floating'}
             accessibilityLabel="Activity options"
             onPress={() =>
               Alert.alert(activity.title, undefined, [
-                { text: 'Edit activity', onPress: () => router.push({ pathname: '/activity/edit/[id]', params: { id: activity.id } }) },
+                {
+                  text: 'Edit activity',
+                  onPress: () => router.push({ pathname: '/activity/edit/[id]', params: { id: activity.id } }),
+                },
                 { text: 'Delete activity', style: 'destructive', onPress: () => confirmDelete(activity.id) },
                 { text: 'Cancel', style: 'cancel' },
               ])
             }
           />
-        </View>
-      ) : null}
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
+      </View>
     </View>
   );
 }

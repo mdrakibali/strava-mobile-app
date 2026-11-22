@@ -67,18 +67,22 @@ export default function EditActivityScreen() {
     if (saving) return;
     setSaving(true);
     setError(null);
+    const descriptionValue = description.trim() || null;
+    const cleanTitle = title.trim();
+    console.log(`[ACTIVITY_EDIT] Saving edit for activity ${id}: title="${cleanTitle}", sport="${sport}", visibility="${visibility}"`);
     try {
-      const descriptionValue = description.trim() || null;
-      const saved = await api.activities.update(id!, { title: title.trim(), description: descriptionValue, sportType: sport, visibility });
+      const saved = await api.activities.update(id!, { title: cleanTitle, description: descriptionValue, sportType: sport, visibility });
+      console.log(`[ACTIVITY_EDIT] Saved successfully:`, saved);
       const row = saved?.activity ?? {};
       rememberActivityEdit(id!, {
-        title: row.title ?? title.trim(),
+        title: row.title ?? cleanTitle,
         description: row.description ?? descriptionValue,
         sportType: row.sportType ?? sport,
         visibility: row.visibility ?? visibility,
       });
       router.back();
     } catch (e: any) {
+      console.error(`[ACTIVITY_EDIT_ERROR] Failed to save activity ${id}:`, e);
       setError(e?.message ?? 'Could not save changes.');
       setSaving(false);
     }

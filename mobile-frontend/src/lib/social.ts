@@ -116,6 +116,7 @@ export async function setKudos(activityId: string, give: boolean): Promise<Socia
   } else if (before.hasKudos !== false) {
     nextCount = Math.max(0, nextCount - 1);
   }
+  console.log(`[KUDOS] Toggling kudos for activity ${activityId}: give=${give}, optimisticCount=${nextCount}`);
   socialStore.patch(activityId, { hasKudos: give, kudosCount: nextCount });
   socialStore.noteMutation(activityId);
 
@@ -127,10 +128,12 @@ export async function setKudos(activityId: string, give: boolean): Promise<Socia
     const hasKudos = res?.hasKudos === true || res?.hasKudos === false ? res.hasKudos : give;
     let kudosCount = finiteCount(res?.kudosCount, nextCount);
     if (hasKudos && kudosCount < 1) kudosCount = Math.max(1, nextCount);
+    console.log(`[KUDOS_SUCCESS] Server confirmed kudos for ${activityId}: hasKudos=${hasKudos}, kudosCount=${kudosCount}`);
     socialStore.patch(activityId, { hasKudos, kudosCount });
     socialStore.noteMutation(activityId);
     return socialStore.get(activityId)!;
   } catch (e) {
+    console.error(`[KUDOS_ERROR] Failed to toggle kudos for ${activityId}:`, e);
     if (activityEpoch.get(activityId) === epoch) {
       socialStore.patch(activityId, before);
       socialStore.noteMutation(activityId);
@@ -153,6 +156,7 @@ export async function changeCommentsCount(
   activityEpoch.set(activityId, epoch);
   const before = socialStore.get(activityId) ?? { hasKudos: null, kudosCount: 0, commentsCount: 0 };
   const optimistic = Math.max(0, before.commentsCount + delta);
+  console.log(`[COMMENT_COUNT] Updating comments count for activity ${activityId}: delta=${delta}, optimistic=${optimistic}`);
   socialStore.patch(activityId, { commentsCount: optimistic });
   socialStore.noteMutation(activityId);
   try {
@@ -160,10 +164,12 @@ export async function changeCommentsCount(
     if (activityEpoch.get(activityId) !== epoch) return socialStore.get(activityId)?.commentsCount ?? optimistic;
     const parsed = Number(server);
     const count = Number.isFinite(parsed) ? Math.max(0, parsed) : optimistic;
+    console.log(`[COMMENT_COUNT_SUCCESS] Server confirmed comments for ${activityId}: count=${count}`);
     socialStore.patch(activityId, { commentsCount: count });
     socialStore.noteMutation(activityId);
     return count;
   } catch (e) {
+    console.error(`[COMMENT_COUNT_ERROR] Failed to update comments for ${activityId}:`, e);
     if (activityEpoch.get(activityId) === epoch) socialStore.patch(activityId, before);
     throw e;
   }
