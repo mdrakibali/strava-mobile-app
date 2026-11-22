@@ -67,26 +67,31 @@ export default function HomeFeedScreen() {
     };
   }, [visibleToMe]);
 
-  // First page: state is only set in promise callbacks (status starts as 'loading').
+  // Single focus effect: loads fresh data on initial mount and on every return to Home.
   const [reloadKey, setReloadKey] = useState(0);
-  useEffect(() => {
-    let cancelled = false;
-    fetchFirstPage().then(
-      (page) => {
-        if (cancelled || page.seq !== requestSeq.current) return;
-        generation.current++;
-        lastLoadedAt.current = Date.now();
-        cursorRef.current = page.cursor;
-        hasNextRef.current = page.hasNext;
-        setItems(page.items);
-        setStatus('ready');
-      },
-      () => !cancelled && setStatus('error')
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [fetchFirstPage, reloadKey]);
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void reloadKey;
+      fetchFirstPage().then(
+        (page) => {
+          if (cancelled) return;
+          generation.current++;
+          lastLoadedAt.current = Date.now();
+          cursorRef.current = page.cursor;
+          hasNextRef.current = page.hasNext;
+          setItems(page.items);
+          setStatus('ready');
+        },
+        () => {
+          if (!cancelled) setStatus((s) => (s === 'ready' ? s : 'error'));
+        }
+      );
+      return () => {
+        cancelled = true;
+      };
+    }, [fetchFirstPage, reloadKey])
+  );
 
   const retry = () => {
     setStatus('loading');
@@ -138,23 +143,7 @@ export default function HomeFeedScreen() {
     }
   };
 
-  // Fresh data whenever Home is shown again (after saving, following someone, commenting, deleting…),
-  // without a loading flash.
-  useFocusEffect(
-    useCallback(() => {
-      fetchFirstPage()
-        .then((page) => {
-          if (page.seq !== requestSeq.current) return;
-          generation.current++;
-          lastLoadedAt.current = Date.now();
-          cursorRef.current = page.cursor;
-          hasNextRef.current = page.hasNext;
-          setItems(page.items);
-          setStatus('ready');
-        })
-        .catch(() => {});
-    }, [fetchFirstPage])
-  );
+
 
   // An activity just finished uploading → show it.
   const pendingCount = pending.length;

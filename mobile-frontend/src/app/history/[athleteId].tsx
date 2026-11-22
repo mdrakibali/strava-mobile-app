@@ -1,5 +1,5 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedCard, FeedCardSkeleton } from '../../components/activity/FeedCard';
@@ -39,43 +39,35 @@ export default function ActivityHistoryScreen() {
     [items, revision, athleteId]
   );
 
-  useEffect(() => {
-    if (!athleteId) return;
-    let cancelled = false;
-    const readTick = socialStore.beginRead();
-    Promise.all([api.athletes.getProfile(athleteId), api.athletes.listActivities(athleteId, null)]).then(
-      ([profile, page]) => {
-        if (cancelled) return;
-        athleteRef.current = toAthleteSummary(profile.athlete);
-        cursor.current = page.nextCursor;
-        hasNext.current = page.hasNextPage;
-        const rows = withoutRemoved(page.activities.map((r) => fromProfileActivity(r, athleteRef.current)));
-        socialStore.seed(rows, readTick);
-        setItems(rows);
-        setStatus('ready');
-        setRefreshing(false);
-      },
-      (e: any) => {
-        if (cancelled) return;
-        setErrMsg(e?.message ?? null);
-        setStatus('error');
-        setRefreshing(false);
-      }
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [athleteId, reloadKey]);
-
-  const firstFocus = useRef(true);
   useFocusEffect(
     useCallback(() => {
-      if (firstFocus.current) {
-        firstFocus.current = false;
-        return;
-      }
-      setReloadKey((k) => k + 1);
-    }, [])
+      if (!athleteId) return;
+      let cancelled = false;
+      void reloadKey;
+      const readTick = socialStore.beginRead();
+      Promise.all([api.athletes.getProfile(athleteId), api.athletes.listActivities(athleteId, null)]).then(
+        ([profile, page]) => {
+          if (cancelled) return;
+          athleteRef.current = toAthleteSummary(profile.athlete);
+          cursor.current = page.nextCursor;
+          hasNext.current = page.hasNextPage;
+          const rows = withoutRemoved(page.activities.map((r) => fromProfileActivity(r, athleteRef.current)));
+          socialStore.seed(rows, readTick);
+          setItems(rows);
+          setStatus('ready');
+          setRefreshing(false);
+        },
+        (e: any) => {
+          if (cancelled) return;
+          setErrMsg(e?.message ?? null);
+          setStatus('error');
+          setRefreshing(false);
+        }
+      );
+      return () => {
+        cancelled = true;
+      };
+    }, [athleteId, reloadKey])
   );
 
   const loadMore = async () => {

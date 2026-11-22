@@ -103,11 +103,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const storedAthlete = await AsyncStorage.getItem('@open_strava_athlete');
 
         if (storedToken && storedAthlete) {
+          const parsed = JSON.parse(storedAthlete);
           setAuthToken(storedToken);
-          setCurrentUser(JSON.parse(storedAthlete));
+          setCurrentUser(parsed);
           setIsAuthenticated(true);
           realtimeWs.init(storedToken);
           await loadFeedData();
+          if (parsed?.id) {
+            api.athletes.getProfile(parsed.id).then((fresh) => {
+              if (fresh?.athlete) {
+                const nextAthlete = {
+                  ...parsed,
+                  displayName: fresh.athlete.displayName ?? parsed.displayName,
+                  username: fresh.athlete.username ?? parsed.username,
+                  avatarUrl: fresh.athlete.avatarUrl ?? parsed.avatarUrl,
+                  bio: fresh.athlete.bio ?? parsed.bio,
+                  city: fresh.athlete.city ?? parsed.city,
+                  country: fresh.athlete.country ?? parsed.country,
+                  followersCount: fresh.athlete.followersCount ?? parsed.followersCount,
+                  followingCount: fresh.athlete.followingCount ?? parsed.followingCount,
+                };
+                setCurrentUser(nextAthlete);
+                AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(nextAthlete)).catch(() => {});
+              }
+            }).catch(() => {});
+          }
         } else {
           setIsAuthenticated(false);
           setIsSyncing(false);
