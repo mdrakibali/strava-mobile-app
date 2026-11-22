@@ -4,6 +4,7 @@ import { Alert, View } from 'react-native';
 import { FormScreen } from '../../components/forms/FormScreen';
 import { useApp } from '../../context/AppContext';
 import { Chip, ChipRow, SectionTitle, TextField } from '../../design';
+import { groupStore } from '../../lib/groupStore';
 import { MVP_SPORTS } from '../../lib/sports';
 import { api } from '../../services/api';
 
@@ -59,6 +60,9 @@ export default function CreateEventScreen() {
         paceDescription: pace.trim() || undefined,
         distanceMeters: km != null ? Math.round(km * 1000) : undefined,
       });
+      if (res?.event) {
+        groupStore.seedEvents([res.event]);
+      }
       await refreshFeed().catch(() => {});
       router.replace({ pathname: '/event/[id]', params: { id: res.event.id } });
     } catch (e: any) {

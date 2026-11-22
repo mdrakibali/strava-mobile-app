@@ -93,7 +93,7 @@ export class TrackAccumulator {
     // keeps getting farther from the anchor, on a stable heading, outside the accuracy circle.
     const anchor = this.anchor!;
     const d = haversineM(anchor.lat, anchor.lng, p.lat, p.lng);
-    const accRadius = Math.max(anchor.acc ?? 0, p.acc ?? 0);
+    const accRadius = Math.max(anchor.acc ?? 10, p.acc ?? 10);
     const dtSec = Math.max(0.001, (p.t - anchor.t) / 1000);
     const implied = d / dtSec;
     const doppler = p.speed != null && p.speed >= 0 ? p.speed : null;
@@ -179,10 +179,11 @@ export class TrackAccumulator {
 
   /** Distance still sitting between the anchor and the latest fix, when that step is real movement. */
   private pendingChord(to: RawPoint | null): { d: number; from: RawPoint; to: RawPoint } | null {
+    if (this.distanceM === 0) return null;
     const anchor = this.anchor;
     if (!anchor || !to || to === anchor || to.t <= anchor.t) return null;
     const d = haversineM(anchor.lat, anchor.lng, to.lat, to.lng);
-    const accRadius = Math.max(anchor.acc ?? 0, to.acc ?? 0);
+    const accRadius = Math.max(anchor.acc ?? 10, to.acc ?? 10);
     const dtSec = (to.t - anchor.t) / 1000;
     if (dtSec < 1 || dtSec > ENGINE.maxMovingGapMs / 1000) return null;
     const implied = d / dtSec;
@@ -295,6 +296,7 @@ export class TrackAccumulator {
 
   /** Latest fix when it continues real movement but has not yet been confirmed onto the route. */
   tailPoint(): RawPoint | null {
+    if (this.distanceM === 0) return null;
     return this.pendingChord(this.lastAccepted)?.to ?? null;
   }
 

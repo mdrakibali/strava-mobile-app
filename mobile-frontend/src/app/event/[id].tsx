@@ -5,6 +5,7 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 import { AppBar, AppText, Avatar, Button, color, EmptyState, ErrorState, LoadingState, SectionTitle, space } from '../../design';
+import { groupStore, useEvent } from '../../lib/groupStore';
 import { kmValue } from '../../lib/format';
 import { sportConfig } from '../../lib/sports';
 import { api } from '../../services/api';
@@ -29,6 +30,9 @@ export default function EventDetailScreen() {
         if (cancelled) return;
         setEvent(res.event);
         setAttendees(res.attendees ?? []);
+        if (res.event) {
+          groupStore.seedEvents([res.event]);
+        }
         setStatus('ready');
       },
       (e: any) => !cancelled && setStatus(/not found/i.test(String(e?.message)) ? 'notFound' : 'error')
@@ -38,17 +42,19 @@ export default function EventDetailScreen() {
     };
   }, [id, reloadKey]);
 
-  const mine: Rsvp = (attendees.find((a) => a.athleteId === currentUser.id)?.status as Rsvp) ?? null;
+  const liveEvent = useEvent(id ?? '', event);
+  const currentEvent = liveEvent && event ? { ...event, ...liveEvent } : (liveEvent ?? event);
+  const mine: Rsvp = (liveEvent?.rsvpStatus as Rsvp) ?? (attendees.find((a) => a.athleteId === currentUser.id)?.status as Rsvp) ?? null;
   const going = attendees.filter((a) => a.status === 'GOING');
 
   const setRsvp = async (next: 'GOING' | 'MAYBE' | 'DECLINED') => {
     setBusy(true);
     try {
-      const res = await api.events.rsvp(id!, next);
+      const updated = await groupStore.rsvpEvent(id!, next, currentEvent);
       setAttendees((prev) => {
         const others = prev.filter((a) => a.athleteId !== currentUser.id);
-        return res.status
-          ? [...others, { athleteId: currentUser.id, status: res.status, displayName: currentUser.displayName, avatarUrl: currentUser.avatarUrl }]
+        return updated.rsvpStatus
+          ? [...others, { athleteId: currentUser.id, status: updated.rsvpStatus, displayName: currentUser.displayName, avatarUrl: currentUser.avatarUrl }]
           : others;
       });
     } catch (e: any) {

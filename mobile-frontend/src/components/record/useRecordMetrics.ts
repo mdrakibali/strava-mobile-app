@@ -45,7 +45,16 @@ export function useRecordMetrics({
     gpsLabel = 'Paused';
     gpsColor = '#D97706';
     gpsBg = '#FFFBEB';
-  } else if (isIdle && gps === 'acquiring') {
+  } else if (gps === 'lost') {
+    gpsLabel = 'GPS Signal Lost';
+    gpsColor = '#DC2626';
+    gpsBg = '#FEF2F2';
+  } else if (gps === 'weak') {
+    const accM = rec.lastFix?.acc != null ? ` (±${Math.round(rec.lastFix.acc)}m)` : '';
+    gpsLabel = `Weak GPS signal${accM}`;
+    gpsColor = '#D97706';
+    gpsBg = '#FFFBEB';
+  } else if (gps === 'acquiring') {
     gpsLabel = 'Acquiring GPS…';
     gpsColor = '#6B7280';
     gpsBg = '#F3F4F6';

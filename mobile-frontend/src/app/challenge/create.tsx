@@ -4,6 +4,7 @@ import { Alert, View } from 'react-native';
 import { FormScreen } from '../../components/forms/FormScreen';
 import { useApp } from '../../context/AppContext';
 import { Chip, ChipRow, SectionTitle, TextField } from '../../design';
+import { groupStore } from '../../lib/groupStore';
 import { MVP_SPORTS } from '../../lib/sports';
 import { api } from '../../services/api';
 
@@ -50,6 +51,9 @@ export default function CreateChallengeScreen() {
         startDate: start.toISOString(),
         endDate: new Date(start.getTime() + days * 86_400_000).toISOString(),
       });
+      if (res?.challenge) {
+        groupStore.seedChallenges([res.challenge]);
+      }
       await refreshFeed().catch(() => {});
       router.replace({ pathname: '/challenge/[id]', params: { id: res.challenge.id } });
     } catch (e: any) {

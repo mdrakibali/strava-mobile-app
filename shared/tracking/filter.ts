@@ -38,7 +38,7 @@ export class PointFilter {
 
   push(p: RawPoint): FilterResult {
     if (!Number.isFinite(p.t) || !isValidCoordinate(p.lat, p.lng)) return { accepted: false, reason: 'invalid' };
-    if (p.acc != null && (!Number.isFinite(p.acc) || p.acc > this.cfg.maxAccuracyM))
+    if (p.acc != null && (!Number.isFinite(p.acc) || p.acc <= 0 || p.acc > this.cfg.maxAccuracyM))
       return { accepted: false, reason: 'accuracy' };
 
     const last = this.last;

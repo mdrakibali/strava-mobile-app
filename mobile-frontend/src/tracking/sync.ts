@@ -252,6 +252,7 @@ class SyncWorker {
     const sum = summarizeTrack({ sport: wireSport, points, startedAt: s.startedAt!, finishedAt: s.finishedAt, pauses: s.pauses });
     const kept = acceptedPoints(wireSport, points);
     const drawn = routePoints(wireSport, points);
+    const track = sum.distanceM >= 10 && drawn.length >= 2 ? drawn : [];
     const res = await api.activities.create({
       clientActivityId: s.id,
       title: save.title,
@@ -265,7 +266,7 @@ class SyncWorker {
       elevationGainMeters: sum.elevGainM ?? 0,
       maxSpeedMps: sum.maxSpeedMps ?? undefined,
       calories: estimateCalories(save.sportType, sum.distanceM, sum.movingTimeS) ?? undefined,
-      rawPolyline: (drawn.length > 0 ? drawn : kept).map((p) => ({ latitude: p.lat, longitude: p.lng, altitude: p.alt, timestamp: p.t, speed: p.speed })),
+      rawPolyline: track.map((p) => ({ latitude: p.lat, longitude: p.lng, altitude: p.alt, timestamp: p.t, speed: p.speed })),
       splits: sum.splits.map((sp) => ({
         splitNumber: sp.index,
         distanceKm: Math.round(sp.distanceM) / 1000,

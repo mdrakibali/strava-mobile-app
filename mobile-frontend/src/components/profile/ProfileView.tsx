@@ -110,20 +110,41 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
   };
 
   const revision = useActivityRevision();
+  const athlete = useMemo(() => {
+    if (!data?.athlete) return null;
+    if (!isSelf) return data.athlete;
+    return {
+      ...data.athlete,
+      displayName: currentUser.displayName || data.athlete.displayName,
+      avatarUrl: currentUser.avatarUrl ?? data.athlete.avatarUrl,
+      city: currentUser.city !== undefined ? currentUser.city : data.athlete.city,
+      bio: currentUser.bio !== undefined ? currentUser.bio : data.athlete.bio,
+    };
+  }, [data?.athlete, isSelf, currentUser]);
+
   const activities = useMemo(() => {
     if (!data) return [];
     return presentActivities(data.activities).filter((a) => a.athlete.id === athleteId && (isSelf || a.visibility !== 'ONLY_ME'));
   }, [data, revision, athleteId, isSelf]);
 
+  const reconciledStats = useMemo(() => {
+    if (!data?.stats) return null;
+    const removedCount = (data.activities || []).length - activities.length;
+    return {
+      ...data.stats,
+      activityCount: Math.max(0, data.stats.activityCount - Math.max(0, removedCount)),
+    };
+  }, [data?.stats, data?.activities, activities.length]);
+
   const progress = useMemo(() => {
     if (!data) return null;
-    return computeProgress(activities, data.stats, sportFilter);
-  }, [data, activities, sportFilter]);
+    return computeProgress(activities, reconciledStats, sportFilter);
+  }, [data, activities, reconciledStats, sportFilter]);
 
   const totals = useMemo(() => {
-    if (!data?.stats) return null;
-    return computeTotals(data.stats, sportFilter);
-  }, [data, sportFilter]);
+    if (!reconciledStats) return null;
+    return computeTotals(reconciledStats, sportFilter);
+  }, [reconciledStats, sportFilter]);
 
   const header = isSelf ? (
     <AppBar
@@ -139,7 +160,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
       }
     />
   ) : (
-    <AppBar title={data?.athlete.displayName ?? ''} />
+    <AppBar title={athlete?.displayName ?? ''} />
   );
 
   if (status !== 'ready' || !data || !progress) {
@@ -179,8 +200,8 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
         contentContainerStyle={{ paddingBottom: 64 }}>
         <ProfileHeader
           athleteId={athleteId}
-          athlete={data.athlete}
-          stats={data.stats}
+          athlete={athlete!}
+          stats={reconciledStats}
           followersCount={data.followersCount}
           followingCount={data.followingCount}
           isFollowing={displayedFollowing}

@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatBox } from '../../components/common/StatBox';
 import { useApp } from '../../context/AppContext';
+import { groupStore, useChallenge } from '../../lib/groupStore';
 import { shareChallenge } from '../../lib/share';
 import { api } from '../../services/api';
 
@@ -27,8 +28,8 @@ export default function ChallengeDetailScreen() {
 
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadNonce, setReloadNonce] = useState(0);
-  // The server copy is the only source: never fall back to some other challenge from a list.
-  const challenge = serverChallenge;
+  const liveChallenge = useChallenge(id ?? '', serverChallenge);
+  const challenge = liveChallenge && serverChallenge ? { ...serverChallenge, ...liveChallenge } : (liveChallenge ?? serverChallenge);
 
   useFocusEffect(
     useCallback(() => {
@@ -42,7 +43,7 @@ export default function ChallengeDetailScreen() {
         const res = await api.challenges.get(id);
         if (isMounted && res) {
           if (res.challenge) {
-            setServerChallenge({
+            const challengeData = {
               id: res.challenge.id,
               title: res.challenge.title,
               description: res.challenge.description || '',
@@ -55,7 +56,9 @@ export default function ChallengeDetailScreen() {
               isCompleted: res.challenge.userProgress ? res.challenge.userProgress.isCompleted : false,
               daysRemaining: Number(res.challenge.daysRemaining) || 0,
               creatorId: res.challenge.creatorId ?? null,
-            });
+            };
+            setServerChallenge(challengeData);
+            groupStore.seedChallenges([challengeData]);
           }
           if (res.leaderboard) {
             setLeaderboard(res.leaderboard);
@@ -104,27 +107,12 @@ export default function ChallengeDetailScreen() {
   const progressPercent = targetKm > 0 ? Math.min(100, Math.round((currentKm / targetKm) * 100)) : 0;
 
   const handleToggleJoin = async () => {
-    if (joining) return;
-    const before = {
-      isJoined: Boolean(challenge.isJoined),
-      participantsCount: Number(challenge.participantsCount) || 0,
-    };
-    const want = !before.isJoined;
+    if (joining || !challenge) return;
+    const want = !challenge.isJoined;
     setJoining(true);
-    setServerChallenge((prev: any) => ({
-      ...(prev || challenge),
-      isJoined: want,
-      participantsCount: Math.max(0, before.participantsCount + (want ? 1 : -1)),
-    }));
     try {
-      const res = await api.challenges.join(challenge.id, want);
-      setServerChallenge((prev: any) => ({
-        ...(prev || challenge),
-        isJoined: Boolean(res.isJoined),
-        participantsCount: typeof res.participantsCount === 'number' ? res.participantsCount : prev?.participantsCount,
-      }));
+      await groupStore.joinChallenge(challenge.id, want, challenge);
     } catch (e: any) {
-      setServerChallenge((prev: any) => ({ ...(prev || challenge), ...before }));
       Alert.alert('Couldn’t update challenge', e?.message ?? 'Please try again.');
     } finally {
       setJoining(false);
@@ -141,9 +129,35 @@ export default function ChallengeDetailScreen() {
         <Text className="text-base font-black text-gray-900 flex-1 text-center mx-2" numberOfLines={1}>
           {challenge.title}
         </Text>
-        <TouchableOpacity onPress={() => shareChallenge(challenge.id, challenge.title).catch(() => {})} className="p-1">
-          <Ionicons name="share-social-outline" size={22} color="#111827" />
-        </TouchableOpacity>
+        <View className="flex-row items-center">
+          {challenge.creatorId && challenge.creatorId === currentUser?.id ? (
+            <TouchableOpacity
+              onPress={() =>
+                Alert.alert('Delete this challenge?', 'Participants will lose access. This cannot be undone.', [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await api.challenges.remove(challenge.id);
+                        groupStore.remove(challenge.id);
+                        router.replace('/(tabs)/groups');
+                      } catch (e: any) {
+                        Alert.alert('Couldn’t delete the challenge', e?.message ?? 'Please try again.');
+                      }
+                    },
+                  },
+                ])
+              }
+              className="p-1 mr-2">
+              <Ionicons name="trash-outline" size={20} color="#DC2626" />
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity onPress={() => shareChallenge(challenge.id, challenge.title).catch(() => {})} className="p-1">
+            <Ionicons name="share-social-outline" size={22} color="#111827" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={{ flex: 1 }}>

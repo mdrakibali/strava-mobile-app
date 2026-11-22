@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   RefreshControl,
@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GroupsTabContent } from '../../components/groups/GroupsTabContent';
 import { useApp } from '../../context/AppContext';
+import { groupStore, useGroupRevision } from '../../lib/groupStore';
 import { MVP_SPORTS } from '../../lib/sports';
 import { api } from '../../services/api';
 
@@ -27,6 +28,7 @@ export default function GroupsScreen() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [refreshing, setRefreshing] = useState(false);
   const loadedAt = useRef(0);
+  const revision = useGroupRevision();
 
   useEffect(() => {
     if (params.tab && (params.tab === 'challenges' || params.tab === 'clubs' || params.tab === 'events')) {
@@ -35,34 +37,50 @@ export default function GroupsScreen() {
   }, [params.tab]);
 
   const load = useCallback(async () => {
+    const readTick = groupStore.beginRead();
     const [ch, cl, ev] = await Promise.all([
       api.challenges.list().catch(() => ({ challenges: [] })),
       api.clubs.list().catch(() => ({ clubs: [] })),
       api.events.list().catch(() => ({ events: [] })),
     ]);
+
+    const challenges = (ch.challenges || []).map((c: any) => ({
+      id: c.id,
+      title: c.title,
+      description: c.description ?? null,
+      sportType: c.sportType,
+      targetMeters: Number(c.targetMeters) || 0,
+      currentMeters: Number(c.currentMeters) || 0,
+      daysRemaining: Number(c.daysRemaining) || 0,
+      isJoined: Boolean(c.isJoined),
+      isCompleted: Boolean(c.isCompleted),
+      participantsCount: Number(c.participantsCount) || 0,
+    }));
+
+    const clubs = (cl.clubs || []).map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      sportType: c.sportType,
+      city: c.city ?? null,
+      description: c.description ?? null,
+      avatarUrl: c.avatarUrl ?? null,
+      memberCount: Number(c.memberCount ?? c.membersCount) || 0,
+      isMember: Boolean(c.isMember),
+    }));
+
+    const events = (ev.events || []).map((e: any) => ({
+      ...e,
+      attendeesCount: Number(e.attendeesCount) || 0,
+    }));
+
+    groupStore.seedChallenges(challenges, readTick);
+    groupStore.seedClubs(clubs, readTick);
+    groupStore.seedEvents(events, readTick);
+
     setData({
-      challenges: (ch.challenges || []).map((c: any) => ({
-        id: c.id,
-        title: c.title,
-        description: c.description ?? null,
-        sportType: c.sportType,
-        targetMeters: Number(c.targetMeters) || 0,
-        currentMeters: Number(c.currentMeters) || 0,
-        daysRemaining: Number(c.daysRemaining) || 0,
-        isJoined: Boolean(c.isJoined),
-        isCompleted: Boolean(c.isCompleted),
-      })),
-      clubs: (cl.clubs || []).map((c: any) => ({
-        id: c.id,
-        name: c.name,
-        sportType: c.sportType,
-        city: c.city ?? null,
-        description: c.description ?? null,
-        avatarUrl: c.avatarUrl ?? null,
-        memberCount: Number(c.memberCount ?? c.membersCount) || 0,
-        isMember: Boolean(c.isMember),
-      })),
-      events: ev.events || [],
+      challenges,
+      clubs,
+      events,
     });
     loadedAt.current = Date.now();
   }, []);
@@ -92,52 +110,55 @@ export default function GroupsScreen() {
     }
   };
 
-  const update = <K extends Tab>(key: K, id: string, patch: Partial<any>) =>
-    setData((d) => (d ? { ...d, [key]: (d[key] as any[]).map((x) => (x.id === id ? { ...x, ...patch } : x)) } : d));
-
   const joinChallenge = async (c: any) => {
-    update('challenges', c.id, { isJoined: !c.isJoined });
     try {
-      const res = await api.challenges.join(c.id, !c.isJoined);
-      update('challenges', c.id, {
-        isJoined: Boolean(res.isJoined),
-        ...(typeof res.participantsCount === 'number' ? { participantsCount: res.participantsCount } : {}),
-      });
+      await groupStore.joinChallenge(c.id, !c.isJoined, c);
     } catch (e: any) {
-      update('challenges', c.id, { isJoined: c.isJoined });
       Alert.alert('Error', e?.message ?? 'Could not update challenge');
     }
   };
 
   const joinClub = async (c: any) => {
     const want = !c.isMember;
-    update('clubs', c.id, { isMember: want, memberCount: c.memberCount + (want ? 1 : -1) });
     try {
-      const res = await api.clubs.join(c.id, want);
-      update('clubs', c.id, {
-        isMember: Boolean(res.isMember),
-        ...(typeof res.membersCount === 'number' ? { memberCount: res.membersCount } : {}),
-      });
+      await groupStore.joinClub(c.id, want, c);
     } catch (e: any) {
-      update('clubs', c.id, { isMember: c.isMember, memberCount: c.memberCount });
       Alert.alert('Error', e?.message ?? 'Could not update membership');
     }
   };
 
   const rsvp = async (e: any) => {
     const going = e.rsvpStatus === 'GOING';
-    update('events', e.id, { rsvpStatus: going ? null : 'GOING', attendeesCount: e.attendeesCount + (going ? -1 : 1) });
     try {
-      const res = await api.events.rsvp(e.id, going ? 'DECLINED' : 'GOING');
-      update('events', e.id, {
-        rsvpStatus: res.status,
-        ...(typeof res.attendeesCount === 'number' ? { attendeesCount: res.attendeesCount } : {}),
-      });
+      await groupStore.rsvpEvent(e.id, going ? 'DECLINED' : 'GOING', e);
     } catch (err: any) {
-      update('events', e.id, { rsvpStatus: e.rsvpStatus, attendeesCount: e.attendeesCount });
       Alert.alert('Error', err?.message ?? 'Could not update RSVP');
     }
   };
+
+  const activeData = useMemo(() => {
+    if (!data) return null;
+    return {
+      challenges: (data.challenges || [])
+        .filter((c) => !groupStore.isRemoved(c.id))
+        .map((c) => {
+          const s = groupStore.getChallenge(c.id);
+          return s ? { ...c, ...s } : c;
+        }),
+      clubs: (data.clubs || [])
+        .filter((c) => !groupStore.isRemoved(c.id))
+        .map((c) => {
+          const s = groupStore.getClub(c.id);
+          return s ? { ...c, ...s } : c;
+        }),
+      events: (data.events || [])
+        .filter((e) => !groupStore.isRemoved(e.id))
+        .map((e) => {
+          const s = groupStore.getEvent(e.id);
+          return s ? { ...e, ...s } : e;
+        }),
+    };
+  }, [data, revision]);
 
   const bySport = <T extends { sportType: string }>(rows: T[]) =>
     sport === 'All' ? rows : rows.filter((r) => r.sportType?.toLowerCase() === sport.toLowerCase());
@@ -199,7 +220,7 @@ export default function GroupsScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />}>
           <GroupsTabContent
             tab={tab}
-            data={data}
+            data={activeData}
             status={status}
             onRefresh={() => { setStatus('loading'); onRefresh(); }}
             bySport={bySport}

@@ -4,6 +4,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
+import { groupStore, useClub } from '../../lib/groupStore';
 import { shareClub } from '../../lib/share';
 import { api } from '../../services/api';
 
@@ -19,8 +20,8 @@ export default function ClubDetailScreen() {
 
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadNonce, setReloadNonce] = useState(0);
-  // The server copy is the only source: never fall back to some other club from a list.
-  const club = serverClub;
+  const liveClub = useClub(id ?? '', serverClub);
+  const club = liveClub && serverClub ? { ...serverClub, ...liveClub } : (liveClub ?? serverClub);
 
   useFocusEffect(
     useCallback(() => {
@@ -34,7 +35,7 @@ export default function ClubDetailScreen() {
         const res = await api.clubs.get(id);
         if (isMounted && res) {
           if (res.club) {
-            setServerClub({
+            const clubData = {
               id: res.club.id,
               name: res.club.name,
               sportType: res.club.sportType,
@@ -46,7 +47,9 @@ export default function ClubDetailScreen() {
               isMember: Boolean(res.club.isMember),
               userRole: res.club.userRole ?? null,
               isPrivate: Boolean(res.club.isPrivate),
-            });
+            };
+            setServerClub(clubData);
+            groupStore.seedClubs([clubData]);
           }
           if (res.weeklyLeaderboard) {
             setWeeklyLeaderboard(res.weeklyLeaderboard);
@@ -142,6 +145,7 @@ export default function ClubDetailScreen() {
                         onPress: async () => {
                           try {
                             await api.clubs.remove(club.id);
+                            groupStore.remove(club.id);
                             router.replace('/(tabs)/groups');
                           } catch (e: any) {
                             Alert.alert('Couldn’t delete the club', e?.message ?? 'Please try again.');
@@ -160,24 +164,12 @@ export default function ClubDetailScreen() {
                 club.isMember ? 'bg-white border-gray-300' : 'bg-[#FC4C02] border-[#FC4C02]'
               }`}
               onPress={async () => {
-                if (joining) return;
-                const before = { isMember: Boolean(club.isMember), memberCount: Number(club.memberCount) || 0 };
-                const want = !before.isMember;
+                if (joining || !club) return;
+                const want = !club.isMember;
                 setJoining(true);
-                setServerClub((prev: any) => ({
-                  ...(prev || club),
-                  isMember: want,
-                  memberCount: Math.max(0, before.memberCount + (want ? 1 : -1)),
-                }));
                 try {
-                  const res = await api.clubs.join(club.id, want);
-                  setServerClub((prev: any) => ({
-                    ...(prev || club),
-                    isMember: Boolean(res.isMember),
-                    memberCount: typeof res.membersCount === 'number' ? res.membersCount : prev?.memberCount,
-                  }));
+                  await groupStore.joinClub(club.id, want, club);
                 } catch (e: any) {
-                  setServerClub((prev: any) => ({ ...(prev || club), ...before }));
                   Alert.alert('Couldn’t update membership', e?.message ?? 'Please try again.');
                 } finally {
                   setJoining(false);

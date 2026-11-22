@@ -212,7 +212,7 @@ export const buildActivityRow = (o: {
   const { summary: s, input } = o;
   const kept = acceptedPoints(input.sportType, o.raw);
   const drawn = routePoints(input.sportType, o.raw);
-  const track = (drawn.length > 0 ? drawn : kept).map((p) => ({ latitude: p.lat, longitude: p.lng, altitude: p.alt, timestamp: p.t, speed: p.speed }));
+  const track = (s.distanceM >= 10 && drawn.length >= 2 ? drawn : []).map((p) => ({ latitude: p.lat, longitude: p.lng, altitude: p.alt, timestamp: p.t, speed: p.speed }));
   return {
     id: crypto.randomUUID(),
     athleteId: o.athleteId,

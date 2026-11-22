@@ -47,6 +47,8 @@ export const routeSegments = (sport: string, points: RawPoint[]): RawPoint[][] =
   const acc = new TrackAccumulator(sport);
   const route = new RouteSegments();
   for (const p of points) route.add(p, acc.add(p));
-  route.attachTail(acc.tailPoint());
+  if (acc.distanceM > 0) {
+    route.attachTail(acc.tailPoint());
+  }
   return route.drawn();
 };
