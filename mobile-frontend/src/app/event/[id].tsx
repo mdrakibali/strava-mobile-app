@@ -136,7 +136,7 @@ export default function EventDetailScreen() {
               />
               <Button
                 label="Delete Event"
-                variant="destructive"
+                variant="danger"
                 style={{ flex: 1 }}
                 onPress={() =>
                   Alert.alert('Delete this event?', 'Attendees will be notified. This cannot be undone.', [

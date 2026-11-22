@@ -49,11 +49,12 @@ export default function CreateEventScreen() {
   }, []);
   const when = new Date(days[dayOffset].getTime() + time * 60_000);
   const km = distanceKm ? Number(distanceKm.replace(',', '.')) : null;
-  const valid =
+  const valid = Boolean(
     title.trim().length > 2 &&
     meetingPoint.trim().length > 1 &&
-    (editId || when.getTime() > now) &&
-    (km == null || (Number.isFinite(km) && km >= 0));
+    (Boolean(editId) || when.getTime() > now) &&
+    (km == null || (Number.isFinite(km) && km >= 0))
+  );
 
   const submit = async () => {
     if (!title.trim() || title.trim().length < 3) {
@@ -109,7 +110,6 @@ export default function CreateEventScreen() {
       canSubmit={valid}
       submitting={saving}
       error={error}
-      onSubmit={submit}>
       onSubmit={submit}>
       <TextField
         value={title}

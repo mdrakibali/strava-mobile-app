@@ -130,8 +130,7 @@ export class TrackAccumulator {
     const hopBand = hopSpeed >= this.cfg.minMovingSpeedMps && hopSpeed <= this.cfg.maxSpeedMps;
     const hopBearing = bearingDeg(prev.lat, prev.lng, p.lat, p.lng);
     const hopTurn = this.hopBearing == null ? 0 : turnDeg(this.hopBearing, hopBearing);
-    const maxHopTurn = this.cfg.minMovingSpeedMps <= 0.5 ? 85 : 45;
-    if (hopBand && hopDt > 0 && hopDt <= ENGINE.maxMovingGapMs && hopTurn <= maxHopTurn && dopplerMatches(this.cfg, doppler, hopSpeed)) {
+    if (hopBand && hopDt > 0 && hopDt <= ENGINE.maxMovingGapMs && hopTurn <= 35 && dopplerMatches(this.cfg, doppler, hopSpeed)) {
       this.hopStreak++;
       this.hopBearing = hopBearing;
       if (this.hopStreak >= 2) this.movingMs += hopDt;
