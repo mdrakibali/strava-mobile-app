@@ -14,13 +14,12 @@ export interface TrackingConfig {
 }
 
 export const TRACKING_CONFIG: Record<TrackingSport, TrackingConfig> = {
-  // Run keeps 25 m because runners should have good outdoor signal.
-  Run: { minMovingSpeedMps: 0.9, maxSpeedMps: 12, maxAccuracyM: 25 },
-  // Walk/Hike raised to 40 m: short indoor-to-outdoor walks often have degraded accuracy
-  // during the first minutes while the chip acquires satellites. 40 m still rejects
-  // indoor Wi-Fi positioning (typically 5-15 m) but accepts a warming-up chip.
-  Walk: { minMovingSpeedMps: 0.4, maxSpeedMps: 5, maxAccuracyM: 40 },
-  Hike: { minMovingSpeedMps: 0.3, maxSpeedMps: 5, maxAccuracyM: 40 },
+  // Run keeps 30 m to allow chip warm-up while rejecting indoor wander.
+  Run: { minMovingSpeedMps: 0.9, maxSpeedMps: 12, maxAccuracyM: 30 },
+  // Walk/Hike raised to 65 m: walking workouts frequently start indoors or in stairwells
+  // where GPS signal degrades before clearing the building.
+  Walk: { minMovingSpeedMps: 0.4, maxSpeedMps: 5, maxAccuracyM: 65 },
+  Hike: { minMovingSpeedMps: 0.3, maxSpeedMps: 5, maxAccuracyM: 65 },
   Ride: { minMovingSpeedMps: 1.0, maxSpeedMps: 30, maxAccuracyM: 25 },
 };
 

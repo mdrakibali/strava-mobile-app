@@ -97,13 +97,14 @@ export class TrackAccumulator {
     const dtSec = Math.max(0.001, (p.t - anchor.t) / 1000);
     const implied = d / dtSec;
     const doppler = p.speed != null && p.speed >= 0 ? p.speed : null;
-    const gate = Math.max(ENGINE.minStepM, accRadius > 0 ? accRadius : 4);
+    const gate = Math.max(ENGINE.minStepM, Math.min(22, accRadius > 0 ? accRadius * 0.7 : 4));
     const inBand = implied >= this.cfg.minMovingSpeedMps && implied <= this.cfg.maxSpeedMps;
     const dopplerAgrees = dopplerMatches(this.cfg, doppler, implied);
     const leaving = d >= gate && inBand && dopplerAgrees;
     const bearing = bearingDeg(anchor.lat, anchor.lng, p.lat, p.lng);
     const turn = this.departBearing == null ? 0 : turnDeg(this.departBearing, bearing);
-    const progressing = leaving && d >= this.departDist + 0.8 && turn <= 40;
+    const maxTurn = this.cfg.minMovingSpeedMps <= 0.5 ? 90 : 55;
+    const progressing = leaving && d >= this.departDist + 0.8 && turn <= maxTurn;
     if (progressing) {
       this.departStreak++;
       this.departDist = d;
@@ -116,7 +117,7 @@ export class TrackAccumulator {
 
     let advanced = false;
     const distBefore = this.distanceM;
-    if (progressing && this.departStreak >= 3) {
+    if (progressing && this.departStreak >= 2) {
       this.distanceM += d;
       advanced = true;
     }
@@ -129,7 +130,8 @@ export class TrackAccumulator {
     const hopBand = hopSpeed >= this.cfg.minMovingSpeedMps && hopSpeed <= this.cfg.maxSpeedMps;
     const hopBearing = bearingDeg(prev.lat, prev.lng, p.lat, p.lng);
     const hopTurn = this.hopBearing == null ? 0 : turnDeg(this.hopBearing, hopBearing);
-    if (hopBand && hopDt > 0 && hopDt <= ENGINE.maxMovingGapMs && hopTurn <= 35 && dopplerMatches(this.cfg, doppler, hopSpeed)) {
+    const maxHopTurn = this.cfg.minMovingSpeedMps <= 0.5 ? 85 : 45;
+    if (hopBand && hopDt > 0 && hopDt <= ENGINE.maxMovingGapMs && hopTurn <= maxHopTurn && dopplerMatches(this.cfg, doppler, hopSpeed)) {
       this.hopStreak++;
       this.hopBearing = hopBearing;
       if (this.hopStreak >= 2) this.movingMs += hopDt;

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { memo, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { Avatar } from '../../design';
 import { ActivityView, avgSpeedOf } from '../../lib/activityView';
 import {
@@ -218,11 +218,15 @@ export const FeedCard = memo(function FeedCard({
           accessibilityLabel={social.hasKudos ? 'Remove kudos' : 'Give kudos'}
           accessibilityState={{ selected: social.hasKudos === true, busy: pending }}
           className="flex-1 flex-row items-center justify-center min-h-[48px] active:bg-gray-50">
-          <Ionicons
-            name={social.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'}
-            size={22}
-            color={social.hasKudos ? '#FC4C02' : '#1F2937'}
-          />
+          {pending ? (
+            <ActivityIndicator size="small" color={social.hasKudos ? '#FC4C02' : '#1F2937'} />
+          ) : (
+            <Ionicons
+              name={social.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'}
+              size={22}
+              color={social.hasKudos ? '#FC4C02' : '#1F2937'}
+            />
+          )}
         </Pressable>
         <Pressable
           onPress={openComments}

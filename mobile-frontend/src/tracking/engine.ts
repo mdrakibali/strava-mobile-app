@@ -318,8 +318,8 @@ class RecordingEngine {
       await Location.startLocationUpdatesAsync(LOCATION_TASK, {
         accuracy: Location.Accuracy.BestForNavigation,
         timeInterval: 1000,
-        // Ignore sub-5 m hand jitter at the provider. The accumulator still rejects larger wander.
-        distanceInterval: 5,
+        // Stream 1Hz fixes continuously. The accumulator filter rejects stationary wander.
+        distanceInterval: 0,
         activityType: Location.ActivityType.Fitness,
         pausesUpdatesAutomatically: false,
         showsBackgroundLocationIndicator: true,

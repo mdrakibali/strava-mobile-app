@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
 import { AppText, Avatar, Skeleton, space } from '../../design';
 import { ActivityView } from '../../lib/activityView';
 import { formatActivityDate } from '../../lib/format';
@@ -102,7 +102,11 @@ export const ActivityBody: React.FC<{
             disabled={kudosPending}
             accessibilityRole="button"
             className="flex-1 flex-row items-center justify-center min-h-[52px] active:bg-gray-50">
-            <Ionicons name={social.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'} size={24} color={social.hasKudos ? '#FC4C02' : '#111827'} />
+            {kudosPending ? (
+              <ActivityIndicator size="small" color={social.hasKudos ? '#FC4C02' : '#111827'} />
+            ) : (
+              <Ionicons name={social.hasKudos ? 'thumbs-up' : 'thumbs-up-outline'} size={24} color={social.hasKudos ? '#FC4C02' : '#111827'} />
+            )}
             <AppText variant="label" style={{ marginLeft: space.sm, fontWeight: '600' }} color={social.hasKudos ? 'brandText' : 'ink'}>
               {social.hasKudos ? 'Kudos given' : 'Give kudos'}
             </AppText>

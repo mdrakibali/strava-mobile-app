@@ -50,15 +50,38 @@ export function RecordOutdoorHud({
           </Pressable>
         </View>
       ) : isRecording ? (
-        // Recording Sport Title Row (Matching user screenshot 6)
-        <View className="flex-row items-center justify-between px-4 py-2 border-b border-gray-100 bg-white">
-          <View className="w-5" />
-          <AppText className="text-gray-900 text-sm font-bold">
-            {sportLabel}
-          </AppText>
-          <Pressable onPress={onExpandPress} hitSlop={10} accessibilityLabel="Expand metrics">
-            <Ionicons name="expand-outline" size={18} color="#111827" />
-          </Pressable>
+        // Recording Sport Title Row with live GPS status indicator
+        <View>
+          {gpsLabel !== 'GPS Acquired' ? (
+            <View
+              style={{ backgroundColor: gpsBg }}
+              className="flex-row items-center justify-between px-4 py-1.5 border-b border-gray-100">
+              <View className="flex-row items-center">
+                <Ionicons
+                  name={gpsLabel.includes('Lost') ? 'alert-circle' : 'cellular'}
+                  size={14}
+                  color={gpsColor}
+                />
+                <Text style={{ color: gpsColor }} className="text-xs font-bold tracking-wider ml-1.5">
+                  {gpsLabel}
+                </Text>
+              </View>
+              <Text style={{ color: gpsColor }} className="text-[11px] font-medium">
+                {gpsLabel.includes('Lost') ? 'Move to open sky' : 'Tracking active'}
+              </Text>
+            </View>
+          ) : null}
+          <View className="flex-row items-center justify-between px-4 py-2 border-b border-gray-100 bg-white">
+            <View className="flex-row items-center">
+              <View className="w-2 h-2 rounded-full bg-emerald-500 mr-2" />
+              <AppText className="text-gray-900 text-sm font-bold">
+                {sportLabel}
+              </AppText>
+            </View>
+            <Pressable onPress={onExpandPress} hitSlop={10} accessibilityLabel="Expand metrics">
+              <Ionicons name="expand-outline" size={18} color="#111827" />
+            </Pressable>
+          </View>
         </View>
       ) : (
         // Idle GPS Status Banner (Matching user screenshot 9)
