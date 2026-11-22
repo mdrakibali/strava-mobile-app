@@ -18,7 +18,8 @@ export const RoutePreview: React.FC<RoutePreviewProps> = ({
   height = 220,
   rounded = false,
 }) => {
-  if (!route || route.length === 0) return null;
+  // One point is not a route: it would render an empty map with no line.
+  if (!route || route.length < 2) return null;
 
   return (
     <View
@@ -27,8 +28,7 @@ export const RoutePreview: React.FC<RoutePreviewProps> = ({
       className={`w-full bg-[#EEF0EC] overflow-hidden ${rounded ? 'rounded-2xl' : ''}`}>
       <MapView
         mode="route"
-        route={route.length > 1 ? route : []}
-        focus={route.length < 2 ? { center: route[0], zoom: 15 } : null}
+        route={route}
         interactive={false}
         showUserLocation={false}
         padding={{ top: 18, bottom: 18, left: 18, right: 18 }}
