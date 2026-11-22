@@ -22,6 +22,7 @@ interface RecordStatsFullscreenProps {
   gpsLabel: string;
   gpsColor: string;
   gpsBg: string;
+  trackingMode?: 'idle' | 'background' | 'foreground_only';
   status: LifecycleStatus;
   starting: boolean;
   gpsDisabled: boolean;
@@ -50,6 +51,7 @@ export function RecordStatsFullscreen({
   gpsLabel,
   gpsColor,
   gpsBg,
+  trackingMode,
   status,
   starting,
   gpsDisabled,
@@ -94,6 +96,15 @@ export function RecordStatsFullscreen({
           {gpsLabel}
         </Text>
       </Pressable>
+
+      {trackingMode === 'foreground_only' ? (
+        <View className="mx-4 mt-2 py-2 px-4 rounded-xl flex-row items-center justify-center bg-amber-50 border border-amber-200">
+          <Ionicons name="warning-outline" size={14} color="#D97706" />
+          <Text className="text-xs font-bold text-amber-800 ml-1.5">
+            Foreground only · Keep app open to record
+          </Text>
+        </View>
+      ) : null}
 
       {/* Grid of Display Metrics */}
       <View className="flex-1 justify-evenly px-5">

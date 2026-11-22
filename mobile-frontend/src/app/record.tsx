@@ -120,7 +120,7 @@ export default function RecordScreen() {
         sportConfig={cfg} time={time} secondLabel={second.label} secondValue={second.value}
         distance={distance} movingTimeS={rec.movingTimeS} currentLabel={currentMetric.label}
         currentValue={currentMetric.value} elevGainM={rec.elevGainM} calories={calories}
-        gpsLabel={gpsLabel} gpsColor={gpsColor} gpsBg={gpsBg} status={status} starting={starting}
+        gpsLabel={gpsLabel} gpsColor={gpsColor} gpsBg={gpsBg} trackingMode={rec.trackingMode} status={status} starting={starting}
         gpsDisabled={gps === 'denied' || gps === 'off'} hasPlannedRoute={Boolean(planned)}
         onClose={() => setStatsView(false)} onOpenSportSheet={() => setSportSheet(true)}
         onStart={onStart} onPause={() => recordingEngine.pause()}
