@@ -29,12 +29,14 @@ export default function ChatScreen() {
   const partnerIdRef = useRef(partner.id);
   const keyboard = useKeyboardInset();
   const effectiveId = id;
-  const [prevEffectiveId, setPrevEffectiveId] = useState(effectiveId);
-  if (effectiveId !== prevEffectiveId) {
-    setPrevEffectiveId(effectiveId);
+
+  // Reset conversation state when navigating to a different chat
+  useEffect(() => {
     setLoadError(null);
     setIsLoading(true);
-  }
+    setMessages([]);
+    setChatId(effectiveId?.startsWith('chat_') ? (effectiveId ?? '') : '');
+  }, [effectiveId]);
 
   useEffect(() => {
     chatIdRef.current = chatId;

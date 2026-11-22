@@ -103,6 +103,9 @@ const finiteCount = (value: unknown, fallback: number) => {
   return Number.isFinite(n) ? Math.max(0, n) : fallback;
 };
 
+const inFlightKudos = new Map<string, Promise<any>>();
+const queuedKudosTarget = new Map<string, boolean>();
+
 export async function setKudos(activityId: string, give: boolean): Promise<SocialState> {
   const epoch = (activityEpoch.get(activityId) ?? 0) + 1;
   activityEpoch.set(activityId, epoch);
@@ -111,26 +114,49 @@ export async function setKudos(activityId: string, give: boolean): Promise<Socia
   let nextCount = before.kudosCount;
   if (give) {
     if (!wasLiked) nextCount += 1;
-    // A liked activity always has at least this viewer's kudos. Unknown state used to leave the
-    // count at 0, so the screen said "No kudos yet" while the thumb was filled.
     nextCount = Math.max(1, nextCount);
   } else if (before.hasKudos !== false) {
     nextCount = Math.max(0, nextCount - 1);
   }
   socialStore.patch(activityId, { hasKudos: give, kudosCount: nextCount });
   socialStore.noteMutation(activityId);
-  try {
-    const res = give ? await api.activities.giveKudos(activityId) : await api.activities.removeKudos(activityId);
-    if (activityEpoch.get(activityId) !== epoch) return socialStore.get(activityId)!;
-    const hasKudos = res?.hasKudos === true || res?.hasKudos === false ? res.hasKudos : give;
-    let kudosCount = finiteCount(res?.kudosCount, nextCount);
-    if (hasKudos && kudosCount < 1) kudosCount = Math.max(1, nextCount);
-    socialStore.patch(activityId, { hasKudos, kudosCount });
-    socialStore.noteMutation(activityId);
-  } catch (e) {
-    if (activityEpoch.get(activityId) === epoch) socialStore.patch(activityId, before);
-    throw e;
+
+  // If a request is already in-flight for this activity, queue the latest desired state
+  // so concurrent HTTP requests don't race or arrive out of order on the backend.
+  queuedKudosTarget.set(activityId, give);
+  if (inFlightKudos.has(activityId)) {
+    await inFlightKudos.get(activityId).catch(() => {});
+    // If the queued target hasn't changed from what we just desired, we're done
+    if (queuedKudosTarget.get(activityId) === undefined) {
+      return socialStore.get(activityId)!;
+    }
   }
+
+  const runRequest = async () => {
+    while (queuedKudosTarget.has(activityId)) {
+      const target = queuedKudosTarget.get(activityId)!;
+      queuedKudosTarget.delete(activityId);
+      try {
+        const res = target ? await api.activities.giveKudos(activityId) : await api.activities.removeKudos(activityId);
+        if (activityEpoch.get(activityId) === epoch) {
+          const hasKudos = res?.hasKudos === true || res?.hasKudos === false ? res.hasKudos : target;
+          let kudosCount = finiteCount(res?.kudosCount, nextCount);
+          if (hasKudos && kudosCount < 1) kudosCount = Math.max(1, nextCount);
+          socialStore.patch(activityId, { hasKudos, kudosCount });
+          socialStore.noteMutation(activityId);
+        }
+      } catch (e) {
+        if (activityEpoch.get(activityId) === epoch) socialStore.patch(activityId, before);
+        throw e;
+      }
+    }
+  };
+
+  const p = runRequest().finally(() => {
+    inFlightKudos.delete(activityId);
+  });
+  inFlightKudos.set(activityId, p);
+  await p.catch(() => {});
   return socialStore.get(activityId)!;
 }
 

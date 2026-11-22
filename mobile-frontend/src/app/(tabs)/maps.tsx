@@ -48,7 +48,11 @@ export default function MapsScreen() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const perm = await Location.getForegroundPermissionsAsync().catch(() => null);
+      // First check if already granted; if not, request permission so the user gets a dialog
+      let perm = await Location.getForegroundPermissionsAsync().catch(() => null);
+      if (!perm?.granted) {
+        perm = await Location.requestForegroundPermissionsAsync().catch(() => null);
+      }
       if (!perm?.granted || cancelled) return;
       const fix =
         (await Location.getLastKnownPositionAsync({ maxAge: 120_000 }).catch(() => null)) ??
