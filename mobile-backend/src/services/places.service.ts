@@ -105,7 +105,7 @@ const memory = new Map<string, { value: NearbyResult; expiresAt: number }>();
 
 export class PlacesService {
   constructor(
-    private fetcher: Fetcher = fetch as unknown as Fetcher,
+    private fetcher: Fetcher = (url, init) => fetch(url, init),
     private endpoints: string[] = OVERPASS_ENDPOINTS,
     private photonUrl: string = PHOTON_REVERSE
   ) {}

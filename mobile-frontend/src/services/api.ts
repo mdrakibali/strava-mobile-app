@@ -127,9 +127,20 @@ export class ApiError extends Error {
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  const method = (options.method || 'GET').toUpperCase();
+  const finalUrl =
+    method === 'GET'
+      ? url.includes('?')
+        ? `${url}&_t=${Date.now()}`
+        : `${url}?_t=${Date.now()}`
+      : url;
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
     ...(options.headers as Record<string, string>),
   };
 
@@ -143,7 +154,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   let res: Response;
   try {
     // no-store: the feed and social counts must always come from the server (stale-feed fix).
-    res = await fetch(url, { cache: 'no-store', ...options, headers, signal: controller.signal });
+    res = await fetch(finalUrl, { cache: 'no-store', ...options, headers, signal: controller.signal });
   } catch (e: any) {
     throw new ApiError(
       e?.name === 'AbortError' ? 'The server took too long to respond.' : 'No connection to the server.',
