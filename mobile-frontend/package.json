@@ -55,24 +55,17 @@
   },
   "scripts": {
     "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web",
-    "lint": "eslint src",
-    "postinstall": "node scripts/patch-asset.js",
+    "build:debug": "cd android && ./gradlew assembleDebug",
+    "build:release": "cd android && ./gradlew assembleRelease",
+    "install:debug": "adb install -r android/app/build/outputs/apk/debug/app-debug.apk",
+    "build:install": "npm run build:debug && npm run install:debug",
+    "app:launch": "adb shell monkey -p com.anonymous.mobilefrontend -c android.intent.category.LAUNCHER 1",
+    "run:device": "npm run build:install && npm run app:launch",
     "test": "jest",
+    "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "prebuild": "expo prebuild",
-    "prebuild:clean": "expo prebuild --clean",
-    "export": "expo export",
-    "build:apk": "eas build --platform android --profile preview",
-    "build:apk:local": "eas build --platform android --profile preview --local",
-    "build:app-bundle": "eas build --platform android --profile production",
-    "build:ios": "eas build --platform ios --profile preview",
-    "build:all": "eas build --platform all",
-    "build:android:debug": "cd android && ./gradlew assembleDebug",
-    "build:android:release": "cd android && ./gradlew assembleRelease"
+    "postinstall": "node scripts/patch-asset.js"
   },
   "overrides": {
     "lightningcss": "1.30.1"
