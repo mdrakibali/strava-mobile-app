@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
@@ -22,30 +22,27 @@ export default function EventDetailScreen() {
   const [busy, setBusy] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
-  useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    api.events.get(id).then(
-      (res) => {
-        if (cancelled) return;
-        setEvent(res.event);
-        setAttendees(res.attendees ?? []);
-        if (res.event) {
-          groupStore.seedEvents([res.event]);
-        }
-        setStatus('ready');
-      },
-      (e: any) => !cancelled && setStatus(/not found/i.test(String(e?.message)) ? 'notFound' : 'error')
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [id, reloadKey]);
-
   useFocusEffect(
     useCallback(() => {
-      setReloadKey((k) => k + 1);
-    }, [])
+      if (!id) return;
+      let cancelled = false;
+      void reloadKey;
+      api.events.get(id).then(
+        (res) => {
+          if (cancelled) return;
+          setEvent(res.event);
+          setAttendees(res.attendees ?? []);
+          if (res.event) {
+            groupStore.seedEvents([res.event]);
+          }
+          setStatus('ready');
+        },
+        (e: any) => !cancelled && setStatus(/not found/i.test(String(e?.message)) ? 'notFound' : 'error')
+      );
+      return () => {
+        cancelled = true;
+      };
+    }, [id, reloadKey])
   );
 
   const liveEvent = useEvent(id ?? '', event);

@@ -1,5 +1,5 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -39,59 +39,36 @@ export default function ActivityDetailScreen() {
   const [reloadKey, setReloadKey] = useState(0);
   const revision = useActivityRevision();
 
-  useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    const readTick = socialStore.beginRead();
-    api.activities.get(id).then(
-      (res) => {
-        if (cancelled) return;
-        if (!res?.activity) setState({ status: 'notFound' });
-        else {
-          const activity = reconcileActivity(fromDetailResponse(res));
-          socialStore.seed(
-            [{ id: activity.id, hasKudos: activity.hasKudos, kudosCount: activity.kudosCount, commentsCount: activity.commentsCount }],
-            readTick
-          );
-          setState((prev) => {
-            if (prev.status === 'ready' && socialStore.isStaleRead(activity.id, readTick)) {
-              return {
-                status: 'ready',
-                isOwner: Boolean(res.isOwner),
-                activity: {
-                  ...activity,
-                  hasKudos: prev.activity.hasKudos,
-                  kudosCount: prev.activity.kudosCount,
-                  commentsCount: prev.activity.commentsCount,
-                  comments: prev.activity.comments,
-                },
-              };
-            }
-            return { status: 'ready', activity, isOwner: Boolean(res.isOwner) };
-          });
-        }
-      },
-      (e: any) => {
-        if (cancelled) return;
-        const msg = String(e?.message || '');
-        if (/not found/i.test(msg)) setState({ status: 'notFound' });
-        else setState({ status: 'error', message: msg || 'Check your connection and try again.' });
-      }
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [id, reloadKey]);
-
-  const firstFocus = useRef(true);
   useFocusEffect(
     useCallback(() => {
-      if (firstFocus.current) {
-        firstFocus.current = false;
-        return;
-      }
-      setReloadKey((k) => k + 1);
-    }, [])
+      if (!id) return;
+      let cancelled = false;
+      void reloadKey;
+      const readTick = socialStore.beginRead();
+      api.activities.get(id).then(
+        (res) => {
+          if (cancelled) return;
+          if (!res?.activity) setState({ status: 'notFound' });
+          else {
+            const activity = reconcileActivity(fromDetailResponse(res));
+            socialStore.seed(
+              [{ id: activity.id, hasKudos: activity.hasKudos, kudosCount: activity.kudosCount, commentsCount: activity.commentsCount }],
+              readTick
+            );
+            setState({ status: 'ready', activity, isOwner: Boolean(res.isOwner) });
+          }
+        },
+        (e: any) => {
+          if (cancelled) return;
+          const msg = String(e?.message || '');
+          if (/not found/i.test(msg)) setState({ status: 'notFound' });
+          else setState({ status: 'error', message: msg || 'Check your connection and try again.' });
+        }
+      );
+      return () => {
+        cancelled = true;
+      };
+    }, [id, reloadKey])
   );
 
   const state: State = id ? fetched : { status: 'notFound' };
