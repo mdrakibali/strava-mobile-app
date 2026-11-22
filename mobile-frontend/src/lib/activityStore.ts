@@ -33,6 +33,8 @@ export interface ActivityStoreState {
 
   setCommentsCount: (id: string, count: number) => void;
   addComment: (id: string, comment: CommentView) => void;
+  removeComment: (activityId: string, commentId: string) => void;
+  updateComment: (activityId: string, commentId: string, content: string, updatedAt?: string | null) => void;
 }
 
 export const useActivityStore = create<ActivityStoreState>((set, get) => ({
@@ -47,16 +49,18 @@ export const useActivityStore = create<ActivityStoreState>((set, get) => ({
         if (!cur) {
           next[item.id] = item;
         } else {
-          // Merge preserving any newer client-side optimistic values
+          // Merge: adopt latest values while preserving existing loaded comments & optimistic kudos
+          const comments = item.comments?.length ? item.comments : (cur.comments || []);
           next[item.id] = {
             ...item,
-            title: cur.title ?? item.title,
-            description: cur.description !== undefined ? cur.description : item.description,
-            sportType: cur.sportType ?? item.sportType,
-            visibility: cur.visibility ?? item.visibility,
-            hasKudos: cur.hasKudos !== null ? cur.hasKudos : item.hasKudos,
+            title: item.title || cur.title,
+            description: item.description !== undefined ? item.description : cur.description,
+            sportType: item.sportType || cur.sportType,
+            visibility: item.visibility || cur.visibility,
+            hasKudos: item.hasKudos !== null ? item.hasKudos : cur.hasKudos,
             kudosCount: Math.max(cur.kudosCount, item.kudosCount),
-            commentsCount: Math.max(cur.commentsCount, item.commentsCount),
+            commentsCount: Math.max(cur.commentsCount, item.commentsCount, comments.length),
+            comments,
           };
         }
       }
@@ -67,18 +71,31 @@ export const useActivityStore = create<ActivityStoreState>((set, get) => ({
   upsertActivity: (item) => {
     set((state) => {
       const cur = state.activities[item.id];
+      const incomingComments = item.comments || [];
+      const currentComments = cur?.comments || [];
+      const incomingIds = new Set(incomingComments.map((c) => c.id));
+      const localUnsynced = currentComments.filter((c) => !incomingIds.has(c.id) && c.id.startsWith('local_'));
+      const mergedComments =
+        incomingComments.length > 0 || localUnsynced.length > 0
+          ? [...incomingComments, ...localUnsynced].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+          : currentComments;
+
       const merged: ActivityView = cur
         ? {
             ...item,
-            title: cur.title ?? item.title,
-            description: cur.description !== undefined ? cur.description : item.description,
-            sportType: cur.sportType ?? item.sportType,
-            visibility: cur.visibility ?? item.visibility,
-            hasKudos: cur.hasKudos !== null ? cur.hasKudos : item.hasKudos,
+            title: item.title || cur.title,
+            description: item.description !== undefined ? item.description : cur.description,
+            sportType: item.sportType || cur.sportType,
+            visibility: item.visibility || cur.visibility,
+            hasKudos: item.hasKudos !== null ? item.hasKudos : cur.hasKudos,
             kudosCount: Math.max(cur.kudosCount, item.kudosCount),
-            commentsCount: Math.max(cur.commentsCount, item.commentsCount),
+            commentsCount: Math.max(cur.commentsCount, item.commentsCount, mergedComments.length),
+            comments: mergedComments,
           }
-        : item;
+        : {
+            ...item,
+            comments: mergedComments,
+          };
       return {
         activities: {
           ...state.activities,
@@ -275,13 +292,57 @@ export const useActivityStore = create<ActivityStoreState>((set, get) => ({
     set((state) => {
       const act = state.activities[id];
       if (!act) return state;
+      const seen = new Set((act.comments || []).map((c) => c.id));
+      const nextComments = seen.has(comment.id)
+        ? act.comments
+        : [...(act.comments || []), comment].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+      const newCount = Math.max(act.commentsCount + 1, nextComments.length);
+      socialStore.patch(id, { commentsCount: newCount });
       return {
         activities: {
           ...state.activities,
           [id]: {
             ...act,
-            commentsCount: act.commentsCount + 1,
-            comments: [...(act.comments || []), comment],
+            commentsCount: newCount,
+            comments: nextComments,
+          },
+        },
+      };
+    });
+  },
+
+  removeComment: (activityId, commentId) => {
+    set((state) => {
+      const act = state.activities[activityId];
+      if (!act) return state;
+      const nextComments = (act.comments || []).filter((c) => c.id !== commentId);
+      const newCount = Math.max(0, act.commentsCount - 1);
+      socialStore.patch(activityId, { commentsCount: newCount });
+      return {
+        activities: {
+          ...state.activities,
+          [activityId]: {
+            ...act,
+            commentsCount: newCount,
+            comments: nextComments,
+          },
+        },
+      };
+    });
+  },
+
+  updateComment: (activityId, commentId, content, updatedAt) => {
+    set((state) => {
+      const act = state.activities[activityId];
+      if (!act) return state;
+      return {
+        activities: {
+          ...state.activities,
+          [activityId]: {
+            ...act,
+            comments: (act.comments || []).map((c) =>
+              c.id === commentId ? { ...c, content, updatedAt: updatedAt ?? new Date().toISOString() } : c
+            ),
           },
         },
       };

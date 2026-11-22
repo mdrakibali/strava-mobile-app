@@ -122,4 +122,43 @@ describe('useActivityStore', () => {
     expect(useActivityStore.getState().activities['act_1'].hasKudos).toBe(false);
     expect(useActivityStore.getState().activities['act_1'].kudosCount).toBe(2);
   });
+
+  test('addComment, updateComment, removeComment and preservation during feed upsert', () => {
+    const a1 = mockActivity('act_1', 'Run 1');
+    useActivityStore.getState().upsertActivity(a1);
+
+    const c1 = {
+      id: 'cmt_1',
+      content: 'Great run!',
+      createdAt: '2026-11-22T07:00:00Z',
+      updatedAt: null,
+      author: { id: 'ath_2', displayName: 'Tanvir', avatarUrl: null, city: null },
+    };
+
+    // 1. Add comment
+    useActivityStore.getState().addComment('act_1', c1);
+    let act = useActivityStore.getState().activities['act_1'];
+    expect(act.comments).toHaveLength(1);
+    expect(act.comments[0].content).toBe('Great run!');
+    expect(act.commentsCount).toBe(2); // mockActivity started with 1
+
+    // 2. Update comment
+    useActivityStore.getState().updateComment('act_1', 'cmt_1', 'Edited run comment', '2026-11-22T07:05:00Z');
+    act = useActivityStore.getState().activities['act_1'];
+    expect(act.comments[0].content).toBe('Edited run comment');
+    expect(act.comments[0].updatedAt).toBe('2026-11-22T07:05:00Z');
+
+    // 3. Feed upsert with empty comments must NOT overwrite existing comments
+    const feedItem = { ...mockActivity('act_1', 'Run 1'), comments: [] };
+    useActivityStore.getState().upsertActivities([feedItem]);
+    act = useActivityStore.getState().activities['act_1'];
+    expect(act.comments).toHaveLength(1);
+    expect(act.comments[0].content).toBe('Edited run comment');
+
+    // 4. Remove comment
+    useActivityStore.getState().removeComment('act_1', 'cmt_1');
+    act = useActivityStore.getState().activities['act_1'];
+    expect(act.comments).toHaveLength(0);
+    expect(act.commentsCount).toBe(1);
+  });
 });

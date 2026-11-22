@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,12 +13,12 @@ import {
   CommentView,
   getDeletedCommentIds,
   markCommentDeleted,
-  mergeCommentLists,
   toAthleteSummary,
   unmarkCommentDeleted,
 } from '../../lib/activityView';
 import { formatRelative } from '../../lib/format';
 import { changeCommentsCount, useSocial } from '../../lib/social';
+import { useActivity, useActivityStore } from '../../lib/activityStore';
 import { api } from '../../services/api';
 
 interface Props {
@@ -42,22 +42,19 @@ export const ActivityComments: React.FC<Props> = ({
   onCommentsCountChange,
   onComposerFocus,
 }) => {
+  const storeActivity = useActivity(activityId);
   const social = useSocial(activityId, { hasKudos: null, kudosCount: 0, commentsCount: initialComments.length });
-  const incomingKey = `${activityId}:${initialComments.map((c) => `${c.id}:${c.updatedAt ?? ''}:${c.content}`).join('|')}`;
-  const [appliedKey, setAppliedKey] = useState(incomingKey);
-  const [comments, setComments] = useState<CommentView[]>(() =>
-    mergeCommentLists([], initialComments, initialComments.length, getDeletedCommentIds(activityId))
-  );
-  if (appliedKey !== incomingKey) {
-    const sameActivity = appliedKey.startsWith(`${activityId}:`);
-    setAppliedKey(incomingKey);
-    const tombstones = getDeletedCommentIds(activityId);
-    setComments((prev) =>
-      sameActivity
-        ? mergeCommentLists(prev, initialComments, social.commentsCount, tombstones)
-        : mergeCommentLists([], initialComments, initialComments.length, tombstones)
-    );
-  }
+
+  useEffect(() => {
+    if (initialComments.length > 0 && !useActivityStore.getState().activities[activityId]?.comments?.length) {
+      useActivityStore.getState().patchActivity(activityId, { comments: initialComments });
+    }
+  }, [activityId, initialComments]);
+
+  const tombstones = getDeletedCommentIds(activityId);
+  const rawComments = storeActivity?.comments ?? initialComments;
+  const comments = rawComments.filter((c) => !tombstones.has(c.id));
+
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [draft, setDraft] = useState('');
@@ -81,7 +78,7 @@ export const ActivityComments: React.FC<Props> = ({
               onPress: async () => {
                 const removed = c;
                 markCommentDeleted(activityId, removed.id);
-                setComments((prev) => prev.filter((x) => x.id !== removed.id));
+                useActivityStore.getState().removeComment(activityId, removed.id);
                 try {
                   const newCount = await changeCommentsCount(activityId, -1, async () => {
                     const res = await api.activities.deleteComment(activityId, removed.id);
@@ -90,7 +87,7 @@ export const ActivityComments: React.FC<Props> = ({
                   onCommentsCountChange?.(newCount);
                 } catch (e: any) {
                   unmarkCommentDeleted(activityId, removed.id);
-                  setComments((prev) => (prev.some((x) => x.id === removed.id) ? prev : [...prev, removed].sort((a, b) => a.createdAt.localeCompare(b.createdAt))));
+                  useActivityStore.getState().addComment(activityId, removed);
                   Alert.alert('Couldn’t delete', e?.message ?? 'Please try again.');
                 }
               },
@@ -106,12 +103,15 @@ export const ActivityComments: React.FC<Props> = ({
   const onSaveEdit = async () => {
     if (!editing || !editing.text.trim() || savingEdit) return;
     setSavingEdit(true);
+    const commentId = editing.id;
+    const newText = editing.text.trim();
     try {
-      const res = await api.activities.editComment(activityId, editing.id, editing.text.trim());
-      setComments((prev) =>
-        prev.map((x) =>
-          x.id === editing.id ? { ...x, content: res.comment.content, updatedAt: res.comment.updatedAt } : x
-        )
+      const res = await api.activities.editComment(activityId, commentId, newText);
+      useActivityStore.getState().updateComment(
+        activityId,
+        commentId,
+        res.comment.content,
+        res.comment.updatedAt
       );
       setEditing(null);
     } catch (e: any) {
@@ -126,25 +126,43 @@ export const ActivityComments: React.FC<Props> = ({
     if (!content || posting) return;
     setPosting(true);
     setCommentError(null);
+    const tempId = `local_${Date.now()}`;
+    const localComment: CommentView = {
+      id: tempId,
+      content,
+      createdAt: new Date().toISOString(),
+      updatedAt: null,
+      author: toAthleteSummary({ id: currentUserId, displayName: currentUserName, avatarUrl: currentUserAvatar }),
+    };
+
+    // Immediate optimistic update to central store
+    useActivityStore.getState().addComment(activityId, localComment);
+    setDraft('');
+
     try {
       let created: CommentView | null = null;
       const newCount = await changeCommentsCount(activityId, 1, async () => {
         const res = await api.activities.addComment(activityId, content);
         const c = res?.comment;
         created = {
-          id: String(c?.id ?? `local_${Date.now()}`),
+          id: String(c?.id ?? tempId),
           content,
-          createdAt: c?.createdAt ?? new Date().toISOString(),
+          createdAt: c?.createdAt ?? localComment.createdAt,
           updatedAt: null,
           author: toAthleteSummary({ id: currentUserId, displayName: currentUserName, avatarUrl: currentUserAvatar }),
         };
         const serverCount = Number(res?.commentsCount);
         return Number.isFinite(serverCount) ? serverCount : null;
       });
-      if (created) setComments((prev) => (prev.some((x) => x.id === created!.id) ? prev : [...prev, created!]));
-      setDraft('');
+
+      if (created) {
+        useActivityStore.getState().removeComment(activityId, tempId);
+        useActivityStore.getState().addComment(activityId, created);
+      }
       onCommentsCountChange?.(newCount);
     } catch (e: any) {
+      // Revert optimistic add on network failure
+      useActivityStore.getState().removeComment(activityId, tempId);
       setCommentError(e?.message || 'Couldn’t post your comment. Try again.');
     } finally {
       setPosting(false);

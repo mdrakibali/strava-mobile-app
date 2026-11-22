@@ -32,11 +32,12 @@ export default function EditActivityScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [loaded, setLoaded] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [sport, setSport] = useState<SportType>('Run');
-  const [visibility, setVisibility] = useState<ActivityVisibility>('PUBLIC');
+  const cached = id ? useActivityStore.getState().activities[id] : undefined;
+  const [loaded, setLoaded] = useState<'loading' | 'ready' | 'error'>(cached ? 'ready' : 'loading');
+  const [title, setTitle] = useState(cached?.title ?? '');
+  const [description, setDescription] = useState(cached?.description ?? '');
+  const [sport, setSport] = useState<SportType>(cached?.sportType ?? 'Run');
+  const [visibility, setVisibility] = useState<ActivityVisibility>(cached?.visibility ?? 'PUBLIC');
   const [sportSheet, setSportSheet] = useState(false);
   const [visibilitySheet, setVisibilitySheet] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -56,12 +57,14 @@ export default function EditActivityScreen() {
         setVisibility(a.visibility);
         setLoaded('ready');
       },
-      () => !cancelled && setLoaded('error')
+      () => {
+        if (!cancelled && !cached) setLoaded('error');
+      }
     );
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, cached]);
 
   const onSave = async () => {
     if (saving) return;
