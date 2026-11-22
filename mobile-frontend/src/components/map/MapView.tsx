@@ -328,7 +328,7 @@ export const MapView: React.FC<MapViewProps> = ({
             data={markerData}
             cluster
             clusterRadius={45}
-            clusterMaxZoomLevel={14}
+            clusterMaxZoom={14}
             hitbox={{ top: 16, right: 16, bottom: 16, left: 16 }}
             onPress={(e) => {
               const id = e.nativeEvent.features?.[0]?.properties?.id;

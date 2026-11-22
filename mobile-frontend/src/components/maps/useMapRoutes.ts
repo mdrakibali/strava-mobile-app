@@ -1,7 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LngLat, toRoute } from '../../lib/activityView';
-import { CURATED_DHAKA_ROUTES } from '../../lib/curatedRoutes';
 import { formatDuration, kmValue } from '../../lib/format';
 import { api, NearbyPlace } from '../../services/api';
 import { haversineM } from '../../tracking/shared';
@@ -13,7 +12,8 @@ export function useMapRoutes(
   query: string,
   lengthFilter: string | null,
   me: LngLat | null,
-  initialRouteId?: string
+  initialRouteId?: string,
+  difficultyFilter?: string | null
 ) {
   const [routeItems, setRouteItems] = useState<MapItem[]>([]);
   const [nearbyItems, setNearbyItems] = useState<MapItem[]>([]);
@@ -36,7 +36,7 @@ export function useMapRoutes(
           id: r.id ?? r.routeId,
           kind: 'route' as const,
           name: r.name,
-          subtitle: `${r.sportType} • ${kmValue(Number(r.distanceMeters) || 0)} km • Dhaka`,
+          subtitle: `${r.sportType} • ${kmValue(Number(r.distanceMeters) || 0)} km`,
           sportType: r.sportType,
           paths: [path],
           anchor: path[0],
@@ -47,39 +47,22 @@ export function useMapRoutes(
           estimatedTimeSeconds: Number(r.estimatedTimeSeconds) || 0,
           estTimeText: r.estimatedTimeSeconds ? formatDuration(r.estimatedTimeSeconds) : '',
           surfacePercentPaved: r.surfaceTypes?.pavedPercent ?? 90,
-          description: r.description || 'Verified cycling and running route.',
+          description: r.description || '',
           creatorName: r.creator?.displayName || 'Community Athlete',
-          locationName: 'Dhaka Metropolitan',
+          locationName: r.locationName || 'Local Route',
           photos: [],
+          elevationProfile: r.elevationProfile ?? null,
+          difficulty:
+            Number(r.distanceMeters) > 15000 || Number(r.elevationGainMeters) > 300
+              ? 'Hard'
+              : Number(r.distanceMeters) > 7000 || Number(r.elevationGainMeters) > 100
+                ? 'Moderate'
+                : 'Easy',
         };
       })
       .filter((r: MapItem) => r.paths[0].length > 1);
 
-    const curatedItems: MapItem[] = CURATED_DHAKA_ROUTES.map((c) => ({
-      id: c.id,
-      kind: 'route' as const,
-      name: c.name,
-      subtitle: c.subtitle,
-      sportType: c.sportType,
-      paths: [c.polyline],
-      anchor: c.polyline[0],
-      distanceFromMeM: null,
-      saved: savedIds.has(c.id),
-      distanceMeters: c.distanceMeters,
-      elevationGainMeters: c.elevationGainMeters,
-      estimatedTimeSeconds: c.estimatedTimeSeconds,
-      estTimeText: c.estTimeText,
-      surfacePercentPaved: c.surfacePercentPaved,
-      description: c.description,
-      creatorName: c.creatorName,
-      locationName: c.locationName,
-      photos: c.photos,
-    }));
-
-    if (source === 'saved') {
-      return [...serverItems, ...curatedItems.filter((c) => savedIds.has(c.id))];
-    }
-    return [...curatedItems, ...serverItems];
+    return serverItems;
   }, [source]);
 
   useFocusEffect(
@@ -113,41 +96,21 @@ export function useMapRoutes(
     if (!me) {
       return;
     }
-    const sports = sport === 'All' ? (['Walk', 'Run', 'Ride'] as const) : ([sport] as const);
     let cancelled = false;
     (async () => {
-      const lists = await Promise.all(
-        sports.map((s) => api.places.nearby(me[1], me[0], s, 5000).catch(() => null))
-      );
+      const res = await api.places.nearby(me[1], me[0], sport, 5000).catch(() => null);
       if (cancelled) return;
-      const places = lists.flatMap((list, i) => (list?.places ?? []).map((p) => ({ ...p, sportType: sports[i] })));
+      const places = res?.places ?? [];
       const seen = new Set<string>();
       const unique = places.filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
-      const withPath = unique.filter((p) => (p.path ?? []).some((line) => line.length > 1));
-      const needsPlan = unique.filter((p) => !(p.path ?? []).some((line) => line.length > 1)).slice(0, 2);
-      const planned = (
-        await Promise.all(
-          needsPlan.map(async (p) => {
-            try {
-              const plan = await api.routing.plan(p.sportType, { lat: me[1], lng: me[0] }, { lat: p.lat, lng: p.lng });
-              const route = plan.routes[0];
-              if (!route || route.geometry.length < 2) return null;
-              return placeRouteItem(p, p.sportType, route.geometry, route.distanceM, route.durationS, route.elevationGainM ?? 0);
-            } catch {
-              return null;
-            }
-          })
-        )
-      ).filter((item): item is MapItem => item != null);
-      if (cancelled) return;
-      setNearbyItems([
-        ...withPath.map((p) => {
+
+      setNearbyItems(
+        unique.map((p) => {
           const lines = (p.path ?? []).filter((line) => line.length > 1);
-          const length = p.lengthM || lines.reduce((sum, line) => sum + pathLength(line), 0);
-          return placeRouteItem(p, p.sportType, lines[0], length, null, 0, lines);
-        }),
-        ...planned,
-      ]);
+          const length = p.lengthM || (lines.length > 0 ? lines.reduce((sum, line) => sum + pathLength(line), 0) : 0);
+          return placeRouteItem(p, sport === 'All' ? 'Run' : sport, lines[0] ?? [], length, null, 0, lines);
+        })
+      );
     })();
     return () => {
       cancelled = true;
@@ -155,19 +118,44 @@ export function useMapRoutes(
   }, [me, sport]);
 
   const visible = useMemo(() => {
-    let rows = [...nearbyItems, ...routeItems].filter((i) => sport === 'All' || i.sportType === sport);
+    let rows: MapItem[];
+    if (source === 'saved') {
+      rows = routeItems.filter((i) => i.saved);
+    } else if (source === 'nearby') {
+      rows = nearbyItems;
+    } else {
+      rows = [...routeItems, ...nearbyItems];
+    }
+
+    if (sport !== 'All') {
+      rows = rows.filter((i) => i.sportType === sport);
+    }
+
     const q = query.trim().toLowerCase();
-    if (q) rows = rows.filter((i) => i.name.toLowerCase().includes(q) || i.description.toLowerCase().includes(q));
+    if (q) {
+      rows = rows.filter(
+        (i) =>
+          i.name.toLowerCase().includes(q) ||
+          i.description.toLowerCase().includes(q) ||
+          i.subtitle.toLowerCase().includes(q)
+      );
+    }
+
     if (lengthFilter === '< 5 km') rows = rows.filter((i) => i.distanceMeters < 5000);
     else if (lengthFilter === '5-10 km') rows = rows.filter((i) => i.distanceMeters >= 5000 && i.distanceMeters <= 10000);
     else if (lengthFilter === '> 10 km') rows = rows.filter((i) => i.distanceMeters > 10000);
+
+    if (difficultyFilter) {
+      rows = rows.filter((i) => !i.difficulty || i.difficulty === difficultyFilter);
+    }
+
     if (!me) return rows;
     const withDist = rows.map((i) => ({
       ...i,
       distanceFromMeM: haversineM(me[1], me[0], i.anchor[1], i.anchor[0]),
     }));
     return withDist.sort((a, b) => (a.distanceFromMeM ?? 0) - (b.distanceFromMeM ?? 0));
-  }, [routeItems, nearbyItems, sport, query, lengthFilter, me]);
+  }, [routeItems, nearbyItems, source, sport, query, lengthFilter, difficultyFilter, me]);
 
   const toggleSave = async (item: MapItem) => {
     const patch = (list: MapItem[]) => list.map((x) => (x.id === item.id ? { ...x, saved: !x.saved } : x));
@@ -212,10 +200,10 @@ const placeRouteItem = (
   id: `place:${place.id}`,
   kind: 'place',
   name: place.name,
-  subtitle: place.address || place.category,
+  subtitle: place.address || place.category.replace(/_/g, ' '),
   sportType,
-  paths: paths && paths.length ? paths : [line],
-  anchor: line[0] ?? [place.lng, place.lat],
+  paths: paths && paths.length ? paths : (line.length > 1 ? [line] : []),
+  anchor: [place.lng, place.lat],
   distanceFromMeM: place.distanceM,
   saved: false,
   distanceMeters: distanceM,
@@ -223,9 +211,11 @@ const placeRouteItem = (
   estimatedTimeSeconds: durationS ?? 0,
   estTimeText: durationS ? formatDuration(durationS) : '',
   surfacePercentPaved: place.surface === 'asphalt' || place.surface === 'paved' ? 100 : 0,
-  description: place.address || `Mapped ${place.category.replace('_', ' ')} near you.`,
+  description: place.address || `Mapped ${place.category.replace(/_/g, ' ')} near you.`,
   creatorName: 'OpenStreetMap',
   locationName: place.address || place.name,
   photos: [],
+  placeCategory: place.category,
+  placeAddress: place.address,
+  osmUrl: place.osmUrl,
 });
-

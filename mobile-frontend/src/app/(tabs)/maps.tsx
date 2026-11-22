@@ -16,6 +16,7 @@ import { AppText, BottomSheet, OptionRow } from '../../design';
 import { LngLat } from '../../lib/activityView';
 import { plannedRouteStore } from '../../lib/plannedRoute';
 import { MVP_SPORTS } from '../../lib/sports';
+import { api } from '../../services/api';
 
 export default function MapsScreen() {
   const router = useRouter();
@@ -65,7 +66,8 @@ export default function MapsScreen() {
     query,
     lengthFilter,
     me,
-    params.routeId
+    params.routeId,
+    difficultyFilter
   );
 
   const selectedIndex = Math.max(0, visible.findIndex((v) => v.id === selectedId));
@@ -84,17 +86,40 @@ export default function MapsScreen() {
     if (visible[0].id !== selectedId) setSelectedId(visible[0].id);
   }, [me, visible, selectedId, setSelectedId]);
 
-  const startRoute = (item: MapItem) => {
+  const startRoute = async (item: MapItem) => {
+    let geometry = item.paths[0] ?? [];
+    let dist = item.distanceMeters;
+    let dur = item.estimatedTimeSeconds;
+    let elev = item.elevationGainMeters;
+
+    if (item.kind === 'place' && geometry.length < 2 && me) {
+      try {
+        const plan = await api.routing.plan(
+          item.sportType || 'Run',
+          { lat: me[1], lng: me[0] },
+          { lat: item.anchor[1], lng: item.anchor[0] }
+        );
+        if (plan.routes[0]?.geometry?.length > 1) {
+          geometry = plan.routes[0].geometry;
+          dist = plan.routes[0].distanceM;
+          dur = plan.routes[0].durationS;
+          elev = plan.routes[0].elevationGainM ?? 0;
+        }
+      } catch (err) {
+        console.warn('Could not plan route to place:', err);
+      }
+    }
+
     plannedRouteStore.set({
       name: item.name,
-      sport: item.sportType,
-      geometry: item.paths[0],
-      distanceM: item.distanceMeters,
-      durationS: item.estimatedTimeSeconds,
-      elevationGainM: item.elevationGainMeters,
+      sport: item.sportType || 'Run',
+      geometry,
+      distanceM: dist,
+      durationS: dur,
+      elevationGainM: elev,
     });
     setDetailModalVisible(false);
-    router.push({ pathname: '/record', params: { sport: item.sportType } });
+    router.push({ pathname: '/record', params: { sport: item.sportType || 'Run' } });
   };
 
   const cycleLength = () => {
@@ -122,7 +147,14 @@ export default function MapsScreen() {
     [visible, current, me]
   );
   const routeMarkers = useMemo(
-    () => visible.map((v) => ({ id: v.id, coordinate: v.anchor, selected: v.id === current?.id })),
+    () =>
+      visible.map((v) => ({
+        id: v.id,
+        coordinate: v.anchor,
+        selected: v.id === current?.id,
+        category: v.kind === 'place' ? v.placeCategory : undefined,
+        name: v.name,
+      })),
     [visible, current]
   );
 
@@ -153,7 +185,7 @@ export default function MapsScreen() {
         styleKey={mapMode}
       />
 
-      {current ? (
+      {current && current.kind === 'route' ? (
         <View
           style={{ top: insets.top + 116 }}
           className="absolute left-4 z-10 flex-row items-center bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-md">
@@ -172,8 +204,10 @@ export default function MapsScreen() {
           onToggleSaved={() => setSource((s) => (s === 'saved' ? 'routes' : 'saved'))}
         />
         <MapFilterChips
-          activeFilter={source === 'routes' ? 'Routes' : ''}
-          onFilterPress={(f) => f === 'Routes' && setSource('routes')}
+          source={source}
+          onSourceChange={setSource}
+          selectedSport={sport}
+          onSportChange={setSport}
           lengthFilter={lengthFilter}
           onCycleLength={cycleLength}
           difficultyFilter={difficultyFilter}
@@ -193,8 +227,12 @@ export default function MapsScreen() {
         items={visible}
         selectedIndex={selectedIndex}
         loading={routeStatus === 'loading'}
+        source={source}
         onSelect={select}
-        onOpenDetail={() => setDetailModalVisible(true)}
+        onOpenDetail={(item) => {
+          setSelectedId(item.id);
+          setDetailModalVisible(true);
+        }}
         onToggleSave={toggleSave}
       />
 

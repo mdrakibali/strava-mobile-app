@@ -142,6 +142,9 @@ const createRouteSchema = z.object({
     .array(z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }))
     .min(2)
     .max(5000),
+  elevationGainMeters: z.number().nonnegative().optional(),
+  elevationProfile: z.array(z.number()).optional(),
+  surfaceTypes: z.any().optional(),
   isPublic: z.boolean().optional(),
 });
 
@@ -164,11 +167,11 @@ routesRouter.post('/', requireAuth, async (c) => {
     description: body.description || '',
     sportType: body.sportType,
     distanceMeters: distance.toFixed(2),
-    elevationGainMeters: 0, // unknown: no elevation source for drawn routes
+    elevationGainMeters: body.elevationGainMeters ?? 0,
     estimatedTimeSeconds: Math.round(distance / TYPICAL_SPEED[body.sportType]),
     polylinePoints: pts,
-    elevationProfile: null,
-    surfaceTypes: null,
+    elevationProfile: body.elevationProfile ?? null,
+    surfaceTypes: body.surfaceTypes ?? null,
     isPublic: body.isPublic !== false,
   };
   const db = getDb(c);

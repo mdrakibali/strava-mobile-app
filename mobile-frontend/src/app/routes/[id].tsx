@@ -3,12 +3,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ElevationChart } from '../../components/common/ElevationChart';
+import { ElevationProfile } from '../../components/activity/ElevationProfile';
 import { StatBox } from '../../components/common/StatBox';
 import { StravaMapView } from '../../components/map/StravaMapView';
-import { api } from '../../services/api';
-import { CURATED_DHAKA_ROUTES } from '../../lib/curatedRoutes';
 import { plannedRouteStore } from '../../lib/plannedRoute';
+import { api } from '../../services/api';
 
 export default function RouteDetailScreen() {
   const router = useRouter();
@@ -34,43 +33,11 @@ export default function RouteDetailScreen() {
             setIsSaved(Boolean(res.route.isSaved));
           }
         } else {
-          const curated = CURATED_DHAKA_ROUTES.find((c) => c.id === id);
-          if (curated) {
-            setRoute({
-              id: curated.id,
-              name: curated.name,
-              description: curated.description,
-              sportType: curated.sportType,
-              distanceMeters: curated.distanceMeters,
-              elevationGainMeters: curated.elevationGainMeters,
-              estimatedTimeSeconds: curated.estimatedTimeSeconds,
-              polylinePoints: curated.polyline,
-              surfaceTypes: { pavedPercent: curated.surfacePercentPaved, unpavedPercent: 100 - curated.surfacePercentPaved },
-              creator: { displayName: curated.creatorName },
-            });
-          } else {
-            setRoute(null);
-          }
+          setRoute(null);
         }
       })
       .catch(() => {
-        const curated = CURATED_DHAKA_ROUTES.find((c) => c.id === id);
-        if (curated) {
-          setRoute({
-            id: curated.id,
-            name: curated.name,
-            description: curated.description,
-            sportType: curated.sportType,
-            distanceMeters: curated.distanceMeters,
-            elevationGainMeters: curated.elevationGainMeters,
-            estimatedTimeSeconds: curated.estimatedTimeSeconds,
-            polylinePoints: curated.polyline,
-            surfaceTypes: { pavedPercent: curated.surfacePercentPaved, unpavedPercent: 100 - curated.surfacePercentPaved },
-            creator: { displayName: curated.creatorName },
-          });
-        } else {
-          setRoute(null);
-        }
+        setRoute(null);
       })
       .finally(() => {
         setIsLoading(false);
@@ -140,10 +107,10 @@ export default function RouteDetailScreen() {
       </View>
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
-        {/* Full Interactive Map View */}
+        {/* Full Interactive Map View - Light Outdoor Style */}
         <View className="h-72 w-full bg-stone-100 relative">
           <StravaMapView
-            styleKey="positron"
+            styleKey="outdoor"
             centerCoordinate={centerCoord}
             routeCoordinates={coords}
             showControls={false}
@@ -179,15 +146,18 @@ export default function RouteDetailScreen() {
             <StatBox label="Elevation Gain" value={route.elevationGainMeters ? `${route.elevationGainMeters} m` : '–'} />
           </View>
 
-          {/* Elevation profile only when real samples exist (no invented 10/15/20 m curve). */}
-          {Array.isArray(route.elevationProfile) && route.elevationProfile.length > 1 ? (
-            <View className="my-2">
-              <Text className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
-                Elevation Profile
-              </Text>
-              <ElevationChart elevations={route.elevationProfile} height={110} />
-            </View>
-          ) : null}
+          {/* Elevation Profile Component */}
+          <View className="my-2">
+            <Text className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
+              Elevation Profile
+            </Text>
+            <ElevationProfile
+              samples={route.elevationProfile}
+              distanceMeters={Number(route.distanceMeters) || 0}
+              gainMeters={Number(route.elevationGainMeters) || 0}
+              height={110}
+            />
+          </View>
 
           {/* Surface Breakdown */}
           {route.surfaceTypes && route.surfaceTypes.pavedPercent != null && (
