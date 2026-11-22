@@ -13,7 +13,7 @@ import {
 } from '../../lib/format';
 import { markActivityRemoved } from '../../lib/removedActivities';
 import { useActivity, useActivityStore } from '../../lib/activityStore';
-import { setKudos, useSocial } from '../../lib/social';
+import { useSocial } from '../../lib/social';
 import { shareActivity } from '../../lib/share';
 import { sportConfig } from '../../lib/sports';
 import { api } from '../../services/api';

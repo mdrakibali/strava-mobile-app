@@ -40,6 +40,7 @@ export default function ActivityDetailScreen() {
   const [reloadKey, setReloadKey] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
   const revision = useActivityRevision();
+  const storeActivity = useActivity(id);
 
   useFocusEffect(
     useCallback(() => {
@@ -102,7 +103,6 @@ export default function ActivityDetailScreen() {
   }
 
   const { isOwner } = state;
-  const storeActivity = useActivity(id);
   const activity = storeActivity ?? (revision >= 0 ? reconcileActivity(state.activity) : state.activity);
   const hasMap = activity.route.length > 1;
   const mapHeight = Math.round(height * 0.42);

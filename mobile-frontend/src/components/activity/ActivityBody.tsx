@@ -6,7 +6,7 @@ import { AppText, Avatar, Skeleton, space } from '../../design';
 import { ActivityView } from '../../lib/activityView';
 import { useActivity, useActivityStore } from '../../lib/activityStore';
 import { formatActivityDate } from '../../lib/format';
-import { setKudos, useSocial } from '../../lib/social';
+import { useSocial } from '../../lib/social';
 import { shareActivity } from '../../lib/share';
 import { sportConfig } from '../../lib/sports';
 import { VISIBILITY_LABEL } from './FeedCard';

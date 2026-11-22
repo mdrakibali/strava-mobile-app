@@ -16,7 +16,6 @@ import {
   space,
   TextField,
 } from '../../../design';
-import { rememberActivityEdit } from '../../../lib/activityEdits';
 import { useActivityStore } from '../../../lib/activityStore';
 import { sportConfig } from '../../../lib/sports';
 import { api } from '../../../services/api';
