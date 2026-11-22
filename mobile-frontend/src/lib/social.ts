@@ -42,7 +42,7 @@ export const socialStore = {
   },
   /** True when this activity changed after `readTick` was taken. */
   isStaleRead(activityId: string, readTick: number) {
-    return readTick < (mutationTick.get(activityId) ?? 0);
+    return readTick <= (mutationTick.get(activityId) ?? 0);
   },
   /**
    * Server data for these activities. When `readTick` is set, activities that changed after
@@ -54,9 +54,10 @@ export const socialStore = {
   ) {
     let changed = false;
     for (const i of items) {
-      if (readTick != null && readTick < (mutationTick.get(i.id) ?? 0)) continue;
-      const next = { hasKudos: i.hasKudos, kudosCount: i.kudosCount, commentsCount: i.commentsCount };
+      if (readTick != null && readTick <= (mutationTick.get(i.id) ?? 0)) continue;
       const cur = state.get(i.id);
+      const nextHasKudos = i.hasKudos != null ? i.hasKudos : cur?.hasKudos ?? null;
+      const next = { hasKudos: nextHasKudos, kudosCount: i.kudosCount, commentsCount: i.commentsCount };
       if (cur && cur.hasKudos === next.hasKudos && cur.kudosCount === next.kudosCount && cur.commentsCount === next.commentsCount) continue;
       state.set(i.id, next);
       changed = true;

@@ -88,7 +88,19 @@ export default function EditActivityScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-      <AppBar title="Edit Activity" />
+      <AppBar
+        title="Edit Activity"
+        right={
+          <Button
+            label="Save"
+            size="sm"
+            variant="primary"
+            loading={saving}
+            disabled={!title.trim()}
+            onPress={onSave}
+          />
+        }
+      />
       {loaded === 'loading' ? (
         <LoadingState />
       ) : loaded === 'error' ? (

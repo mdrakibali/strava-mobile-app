@@ -73,6 +73,7 @@ export default function HomeFeedScreen() {
     useCallback(() => {
       let cancelled = false;
       void reloadKey;
+      void revision;
       fetchFirstPage().then(
         (page) => {
           if (cancelled) return;
@@ -90,7 +91,7 @@ export default function HomeFeedScreen() {
       return () => {
         cancelled = true;
       };
-    }, [fetchFirstPage, reloadKey])
+    }, [fetchFirstPage, reloadKey, revision])
   );
 
   const retry = () => {

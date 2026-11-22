@@ -44,6 +44,7 @@ export default function ActivityDetailScreen() {
       if (!id) return;
       let cancelled = false;
       void reloadKey;
+      void revision;
       const readTick = socialStore.beginRead();
       api.activities.get(id).then(
         (res) => {
@@ -68,7 +69,7 @@ export default function ActivityDetailScreen() {
       return () => {
         cancelled = true;
       };
-    }, [id, reloadKey])
+    }, [id, reloadKey, revision])
   );
 
   const state: State = id ? fetched : { status: 'notFound' };

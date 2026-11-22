@@ -4,6 +4,13 @@ const { withNativewind } = require('nativewind/metro');
 const path = require('path');
 
 let config = getDefaultConfig(__dirname);
+// Exclude native android & ios build directories from Metro watcher to prevent ENOSPC watcher exhaustion
+config.resolver.blockList = [
+  ...(Array.isArray(config.resolver.blockList) ? config.resolver.blockList : [config.resolver.blockList].filter(Boolean)),
+  /.*[/\\]android[/\\]app[/\\]\.cxx[/\\].*/,
+  /.*[/\\]android[/\\]app[/\\]build[/\\].*/,
+  /.*[/\\]android[/\\]\.gradle[/\\].*/,
+];
 // Shared, platform-free tracking core also compiled by the backend (repo-root /shared).
 config.watchFolders = [...(config.watchFolders || []), path.resolve(__dirname, '../shared')];
 // /shared has no node_modules of its own: resolve its imports (e.g. @babel/runtime) from the app.
