@@ -95,6 +95,12 @@ export default function RecordScreen() {
     }
   };
 
+  const handleResume = () => {
+    recordingEngine.resume().catch((e: any) => {
+      Alert.alert('Can’t resume recording', e?.message ?? 'Please try again.');
+    });
+  };
+
   if (isIndoor) {
     const indoorCal = estimateIndoorCalories(sport, rec.movingTimeS);
     return (
@@ -102,7 +108,7 @@ export default function RecordScreen() {
         status={status} time={time} sportLabel={cfg.label} calories={indoorCal}
         heartRate={null} onBack={handleBack} onSettings={() => router.push('/settings/gps')}
         onStart={onStart} onPause={() => recordingEngine.pause()}
-        onResume={() => recordingEngine.resume()} onFinish={onFinish}
+        onResume={handleResume} onFinish={onFinish}
       />
     );
   }
@@ -118,7 +124,7 @@ export default function RecordScreen() {
         gpsDisabled={gps === 'denied' || gps === 'off'} hasPlannedRoute={Boolean(planned)}
         onClose={() => setStatsView(false)} onOpenSportSheet={() => setSportSheet(true)}
         onStart={onStart} onPause={() => recordingEngine.pause()}
-        onResume={() => recordingEngine.resume()} onFinish={onFinish}
+        onResume={handleResume} onFinish={onFinish}
         onOpenRoutes={() => router.push('/(tabs)/maps?source=routes')} onStatusAction={statusAction}
       />
     );
@@ -162,6 +168,7 @@ export default function RecordScreen() {
           secondLabel={second.label}
           secondValue={second.value}
           distance={distance}
+          trackingMode={rec.trackingMode}
           onExpandPress={() => setStatsView(true)}
           onStatusAction={statusAction}
         />
@@ -179,7 +186,7 @@ export default function RecordScreen() {
             onOpenSportSheet={() => setSportSheet(true)}
             onStart={onStart}
             onPause={() => recordingEngine.pause()}
-            onResume={() => recordingEngine.resume()}
+            onResume={handleResume}
             onFinish={onFinish}
             onOpenRoutes={() => router.push('/(tabs)/maps?source=routes')}
           />

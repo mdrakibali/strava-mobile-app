@@ -9,7 +9,14 @@ import {
   View,
 } from 'react-native';
 import { Avatar, Button, Divider, ErrorState, IconButton, SectionTitle, TextField } from '../../design';
-import { CommentView, mergeCommentLists, toAthleteSummary } from '../../lib/activityView';
+import {
+  CommentView,
+  getDeletedCommentIds,
+  markCommentDeleted,
+  mergeCommentLists,
+  toAthleteSummary,
+  unmarkCommentDeleted,
+} from '../../lib/activityView';
 import { formatRelative } from '../../lib/format';
 import { changeCommentsCount, useSocial } from '../../lib/social';
 import { api } from '../../services/api';
@@ -36,13 +43,20 @@ export const ActivityComments: React.FC<Props> = ({
   onComposerFocus,
 }) => {
   const social = useSocial(activityId, { hasKudos: null, kudosCount: 0, commentsCount: initialComments.length });
-  const incomingKey = `${activityId}:${social.commentsCount}:${initialComments.map((c) => `${c.id}:${c.updatedAt ?? ''}:${c.content}`).join('|')}`;
+  const incomingKey = `${activityId}:${initialComments.map((c) => `${c.id}:${c.updatedAt ?? ''}:${c.content}`).join('|')}`;
   const [appliedKey, setAppliedKey] = useState(incomingKey);
-  const [comments, setComments] = useState<CommentView[]>(initialComments);
+  const [comments, setComments] = useState<CommentView[]>(() =>
+    mergeCommentLists([], initialComments, initialComments.length, getDeletedCommentIds(activityId))
+  );
   if (appliedKey !== incomingKey) {
     const sameActivity = appliedKey.startsWith(`${activityId}:`);
     setAppliedKey(incomingKey);
-    setComments((prev) => (sameActivity ? mergeCommentLists(prev, initialComments, social.commentsCount) : initialComments));
+    const tombstones = getDeletedCommentIds(activityId);
+    setComments((prev) =>
+      sameActivity
+        ? mergeCommentLists(prev, initialComments, social.commentsCount, tombstones)
+        : mergeCommentLists([], initialComments, initialComments.length, tombstones)
+    );
   }
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -66,6 +80,7 @@ export const ActivityComments: React.FC<Props> = ({
               style: 'destructive',
               onPress: async () => {
                 const removed = c;
+                markCommentDeleted(activityId, removed.id);
                 setComments((prev) => prev.filter((x) => x.id !== removed.id));
                 try {
                   const newCount = await changeCommentsCount(activityId, -1, async () => {
@@ -74,6 +89,7 @@ export const ActivityComments: React.FC<Props> = ({
                   });
                   onCommentsCountChange?.(newCount);
                 } catch (e: any) {
+                  unmarkCommentDeleted(activityId, removed.id);
                   setComments((prev) => (prev.some((x) => x.id === removed.id) ? prev : [...prev, removed].sort((a, b) => a.createdAt.localeCompare(b.createdAt))));
                   Alert.alert('Couldn’t delete', e?.message ?? 'Please try again.');
                 }

@@ -1,5 +1,16 @@
 import { rememberActivityEdit, reconcileActivity } from '../activityEdits';
-import { avgSpeedOf, fromDetailResponse, fromFeedItem, mergeCommentLists, toAthleteSummary, toRoute } from '../activityView';
+import {
+  avgSpeedOf,
+  clearCommentTombstonesForTesting,
+  fromDetailResponse,
+  fromFeedItem,
+  getDeletedCommentIds,
+  markCommentDeleted,
+  mergeCommentLists,
+  toAthleteSummary,
+  toRoute,
+  unmarkCommentDeleted,
+} from '../activityView';
 
 const athlete = { id: 'ath_1', username: 'rakib', displayName: 'Rakib', avatarUrl: null, city: 'Dhaka' };
 
@@ -137,6 +148,10 @@ const comment = (id: string, content: string) => ({
 });
 
 describe('mergeCommentLists', () => {
+  beforeEach(() => {
+    clearCommentTombstonesForTesting();
+  });
+
   it('keeps comments already on screen when a refetch comes back empty but the count is not zero', () => {
     const current = [comment('c1', 'Nice')];
     expect(mergeCommentLists(current, [], 1)).toEqual(current);
@@ -144,6 +159,37 @@ describe('mergeCommentLists', () => {
 
   it('shows the empty state only when the server count is zero', () => {
     expect(mergeCommentLists([comment('c1', 'Nice')], [], 0)).toEqual([]);
+  });
+
+  it('does not re-merge a locally deleted comment from stale incoming props', () => {
+    const c1 = comment('c1', 'Great run!');
+    const c2 = comment('c2', 'Delete me');
+    const initial = [c1, c2];
+
+    markCommentDeleted('act_1', 'c2');
+    const tombstones = getDeletedCommentIds('act_1');
+
+    // User deleted c2 locally, current state is [c1]
+    const current = [c1];
+    // incoming props are still stale and contain [c1, c2]
+    const merged = mergeCommentLists(current, initial, 1, tombstones);
+
+    expect(merged.map((c) => c.id)).toEqual(['c1']);
+    expect(merged.some((c) => c.id === 'c2')).toBe(false);
+  });
+
+  it('restores a deleted comment if deletion failed and tombstone is removed', () => {
+    const c1 = comment('c1', 'Great run!');
+    const c2 = comment('c2', 'Keep me');
+
+    markCommentDeleted('act_1', 'c2');
+    expect(getDeletedCommentIds('act_1').has('c2')).toBe(true);
+
+    unmarkCommentDeleted('act_1', 'c2');
+    expect(getDeletedCommentIds('act_1').has('c2')).toBe(false);
+
+    const merged = mergeCommentLists([c1], [c1, c2], 2, getDeletedCommentIds('act_1'));
+    expect(merged.map((c) => c.id)).toEqual(['c1', 'c2']);
   });
 });
 

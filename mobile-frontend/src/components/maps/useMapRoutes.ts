@@ -18,7 +18,14 @@ export function useMapRoutes(
   const [routeItems, setRouteItems] = useState<MapItem[]>([]);
   const [nearbyItems, setNearbyItems] = useState<MapItem[]>([]);
   const [routeStatus, setRouteStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [nearbyStatus, setNearbyStatus] = useState<'idle' | 'loading' | 'ready' | 'empty' | 'error'>('idle');
+  const [nearbyError, setNearbyError] = useState<string | null>(null);
+  const [nearbyNonce, setNearbyNonce] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(initialRouteId ?? null);
+
+  const reloadNearby = useCallback(() => {
+    setNearbyNonce((n) => n + 1);
+  }, []);
 
   const loadRoutes = useCallback(async (): Promise<MapItem[]> => {
     const [list, saved] = await Promise.all([
@@ -89,36 +96,75 @@ export function useMapRoutes(
     setPrevMe(me);
     if (!me) {
       setNearbyItems([]);
+      setNearbyStatus('idle');
+      setNearbyError(null);
     }
   }
 
   useEffect(() => {
-    if (!me) {
-      return;
-    }
+    if (!me) return;
     let cancelled = false;
-    (async () => {
-      let res = await api.places.nearby(me[1], me[0], sport, 5000).catch(() => null);
-      if (!res?.places?.length) {
-        res = await api.places.nearby(me[1], me[0], sport, 10000).catch(() => null);
-      }
-      if (cancelled) return;
-      const places = res?.places ?? [];
-      const seen = new Set<string>();
-      const unique = places.filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
 
-      setNearbyItems(
-        unique.map((p) => {
-          const lines = (p.path ?? []).filter((line) => line.length > 1);
-          const length = p.lengthM || (lines.length > 0 ? lines.reduce((sum, line) => sum + pathLength(line), 0) : 0);
-          return placeRouteItem(p, sport === 'All' ? 'Run' : sport, lines[0] ?? [], length, null, 0, lines);
-        })
-      );
+    (async () => {
+      setNearbyStatus('loading');
+      setNearbyError(null);
+      try {
+        let res: any = null;
+        let lastErr: any = null;
+        try {
+          res = await api.places.nearby(me[1], me[0], sport, 5000);
+        } catch (e: any) {
+          lastErr = e;
+        }
+
+        // Only expand to 10 km if 5 km succeeded with 0 places (not on provider error)
+        if (!lastErr && (!res?.places || res.places.length === 0)) {
+          try {
+            res = await api.places.nearby(me[1], me[0], sport, 10000);
+          } catch (e: any) {
+            lastErr = e;
+          }
+        }
+
+        if (cancelled) return;
+
+        if (lastErr) {
+          setNearbyError(lastErr?.message || 'Nearby places are temporarily unavailable.');
+          setNearbyStatus('error');
+          setNearbyItems([]);
+          return;
+        }
+
+        const places = res?.places ?? [];
+        if (places.length === 0) {
+          setNearbyStatus('empty');
+          setNearbyItems([]);
+          return;
+        }
+
+        const seen = new Set<string>();
+        const unique = places.filter((p: any) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
+
+        setNearbyItems(
+          unique.map((p: any) => {
+            const lines = (p.path ?? []).filter((line: any) => line.length > 1);
+            const length = p.lengthM || (lines.length > 0 ? lines.reduce((sum: number, line: any) => sum + pathLength(line), 0) : 0);
+            return placeRouteItem(p, sport === 'All' ? 'Run' : sport, lines[0] ?? [], length, null, 0, lines);
+          })
+        );
+        setNearbyStatus('ready');
+      } catch (err: any) {
+        if (cancelled) return;
+        setNearbyError(err?.message || 'Nearby places are temporarily unavailable.');
+        setNearbyStatus('error');
+        setNearbyItems([]);
+      }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [me, sport]);
+  }, [me, sport, nearbyNonce]);
 
   const visible = useMemo(() => {
     let rows: MapItem[];
@@ -178,6 +224,9 @@ export function useMapRoutes(
 
   return {
     routeStatus,
+    nearbyStatus,
+    nearbyError,
+    reloadNearby,
     selectedId,
     setSelectedId,
     visible,

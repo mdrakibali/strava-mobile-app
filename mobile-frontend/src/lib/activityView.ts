@@ -23,13 +23,53 @@ export interface SplitView {
   elevationDeltaMeters: number | null;
 }
 
+const activityCommentTombstones = new Map<string, Set<string>>();
+
+export function markCommentDeleted(activityId: string, commentId: string) {
+  let set = activityCommentTombstones.get(activityId);
+  if (!set) {
+    set = new Set<string>();
+    activityCommentTombstones.set(activityId, set);
+  }
+  set.add(commentId);
+}
+
+export function unmarkCommentDeleted(activityId: string, commentId: string) {
+  const set = activityCommentTombstones.get(activityId);
+  if (set) {
+    set.delete(commentId);
+  }
+}
+
+export function getDeletedCommentIds(activityId: string): ReadonlySet<string> {
+  return activityCommentTombstones.get(activityId) ?? new Set();
+}
+
+export function clearCommentTombstonesForTesting() {
+  activityCommentTombstones.clear();
+}
+
 /** A refetch that lost the comment list must not replace comments the screen already has. */
-export function mergeCommentLists(current: CommentView[], incoming: CommentView[], serverCount: number): CommentView[] {
-  if (incoming.length === 0 && current.length > 0 && serverCount > 0) return current;
-  if (incoming.length === 0) return serverCount === 0 ? [] : current;
-  const seen = new Set(incoming.map((c) => c.id));
-  const kept = current.filter((c) => !seen.has(c.id) && (c.id.startsWith('local_') || !incoming.some((n) => n.content === c.content && n.author.id === c.author.id)));
-  return [...incoming, ...kept].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+export function mergeCommentLists(
+  current: CommentView[],
+  incoming: CommentView[],
+  serverCount: number,
+  deletedCommentIds?: ReadonlySet<string>
+): CommentView[] {
+  const isDeleted = (id: string) => Boolean(deletedCommentIds?.has(id));
+  const activeIncoming = incoming.filter((c) => !isDeleted(c.id));
+  const activeCurrent = current.filter((c) => !isDeleted(c.id));
+
+  if (activeIncoming.length === 0 && activeCurrent.length > 0 && serverCount > 0) return activeCurrent;
+  if (activeIncoming.length === 0) return serverCount === 0 ? [] : activeCurrent;
+  const seen = new Set(activeIncoming.map((c) => c.id));
+  const kept = activeCurrent.filter(
+    (c) =>
+      !seen.has(c.id) &&
+      (c.id.startsWith('local_') ||
+        !activeIncoming.some((n) => n.content === c.content && n.author.id === c.author.id))
+  );
+  return [...activeIncoming, ...kept].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
 }
 
 export interface CommentView {

@@ -4,7 +4,9 @@ import React, { RefObject } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Linking,
   Pressable,
+  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -20,6 +22,11 @@ interface RouteCardCarouselProps {
   loading: boolean;
   source?: MapSource;
   hasActiveFilter?: boolean;
+  locationStatus?: 'checking' | 'permission_denied' | 'services_off' | 'no_fix' | 'ready';
+  nearbyStatus?: 'idle' | 'loading' | 'ready' | 'empty' | 'error';
+  nearbyError?: string | null;
+  onRetryNearby?: () => void;
+  onRetryLocation?: () => void;
   onSelect: (index: number) => void;
   onOpenDetail: (item: MapItem) => void;
   onToggleSave: (item: MapItem) => void;
@@ -57,6 +64,11 @@ export function RouteCardCarousel({
   loading,
   source = 'routes',
   hasActiveFilter = false,
+  locationStatus = 'ready',
+  nearbyStatus = 'idle',
+  nearbyError = null,
+  onRetryNearby,
+  onRetryLocation,
   onSelect,
   onOpenDetail,
   onToggleSave,
@@ -68,7 +80,7 @@ export function RouteCardCarousel({
     source === 'saved'
       ? 'No saved routes yet. Tap bookmark on any route to save it here.'
       : source === 'nearby'
-        ? 'No outdoor places found nearby. Make sure location is turned on or pan to another area.'
+        ? 'No outdoor places found within 10 km. Try selecting another sport or panning the map.'
         : hasActiveFilter
           ? 'No routes match your filter. Try adjusting your search query or sport filter.'
           : 'No routes discovered near your location yet. Start a workout to record a new route!';
@@ -80,10 +92,55 @@ export function RouteCardCarousel({
           <ActivityIndicator color="#FC4C02" />
           <AppText className="text-gray-500 text-xs mt-2 font-medium">Discovering routes and places…</AppText>
         </View>
+      ) : source === 'nearby' && locationStatus === 'permission_denied' ? (
+        <View className="mx-4 p-5 rounded-2xl bg-white border border-red-200 items-center justify-center shadow-lg">
+          <Ionicons name="lock-closed-outline" size={24} color="#EF4444" />
+          <AppText className="text-gray-900 text-sm font-bold mt-1.5">Location Permission Needed</AppText>
+          <AppText className="text-gray-500 text-xs mt-1 text-center">Grant location access in Settings to discover places near you.</AppText>
+          <Pressable onPress={() => Linking.openSettings()} className="mt-3 bg-[#FC4C02] px-4 py-2 rounded-xl active:opacity-90">
+            <Text className="text-xs font-bold text-white">Enable Location in Settings</Text>
+          </Pressable>
+        </View>
+      ) : source === 'nearby' && locationStatus === 'services_off' ? (
+        <View className="mx-4 p-5 rounded-2xl bg-white border border-amber-200 items-center justify-center shadow-lg">
+          <Ionicons name="location-outline" size={24} color="#F59E0B" />
+          <AppText className="text-gray-900 text-sm font-bold mt-1.5">Location Services Disabled</AppText>
+          <AppText className="text-gray-500 text-xs mt-1 text-center">Turn on GPS on your device to discover routes and places near you.</AppText>
+          <Pressable onPress={() => Linking.openSettings()} className="mt-3 bg-[#FC4C02] px-4 py-2 rounded-xl active:opacity-90">
+            <Text className="text-xs font-bold text-white">Open Device Settings</Text>
+          </Pressable>
+        </View>
+      ) : source === 'nearby' && locationStatus === 'no_fix' ? (
+        <View className="mx-4 p-5 rounded-2xl bg-white border border-amber-200 items-center justify-center shadow-lg">
+          <Ionicons name="navigate-outline" size={24} color="#F59E0B" />
+          <AppText className="text-gray-900 text-sm font-bold mt-1.5">GPS Fix Unavailable</AppText>
+          <AppText className="text-gray-500 text-xs mt-1 text-center">We couldn’t get a GPS fix. Move outdoors or near a window and retry.</AppText>
+          {onRetryLocation ? (
+            <Pressable onPress={onRetryLocation} className="mt-3 bg-[#FC4C02] px-4 py-2 rounded-xl active:opacity-90">
+              <Text className="text-xs font-bold text-white">Retry GPS Fix</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : source === 'nearby' && nearbyStatus === 'error' ? (
+        <View className="mx-4 p-5 rounded-2xl bg-white border border-red-200 items-center justify-center shadow-lg">
+          <Ionicons name="cloud-offline-outline" size={24} color="#EF4444" />
+          <AppText className="text-gray-900 text-sm font-bold mt-1.5">Nearby places temporarily unavailable</AppText>
+          <AppText className="text-gray-500 text-xs mt-1 text-center">{nearbyError || 'Check your internet connection and try again.'}</AppText>
+          {onRetryNearby ? (
+            <Pressable onPress={onRetryNearby} className="mt-3 bg-[#FC4C02] px-4 py-2 rounded-xl active:opacity-90">
+              <Text className="text-xs font-bold text-white">Retry</Text>
+            </Pressable>
+          ) : null}
+        </View>
       ) : items.length === 0 ? (
         <View className="mx-4 p-5 rounded-2xl bg-white border border-gray-200 items-center justify-center shadow-lg">
           <AppText className="text-gray-900 text-sm font-bold">No results found</AppText>
           <AppText className="text-gray-500 text-xs mt-1 text-center">{emptyMessage}</AppText>
+          {source === 'nearby' && onRetryNearby ? (
+            <Pressable onPress={onRetryNearby} className="mt-3 bg-gray-100 px-4 py-2 rounded-xl active:opacity-90">
+              <Text className="text-xs font-bold text-gray-700">Refresh</Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : (
         <FlatList

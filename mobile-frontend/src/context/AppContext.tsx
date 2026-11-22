@@ -33,6 +33,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isSyncing, setIsSyncing] = useState<boolean>(true);
+  const profileMutationEpochRef = useRef(0);
 
   // Recording + upload state live outside React (src/tracking). They only need to know who is
   // signed in: recordings and pending uploads are bound to the athlete who made them.
@@ -110,21 +111,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           realtimeWs.init(storedToken);
           await loadFeedData();
           if (parsed?.id) {
+            const requestEpoch = profileMutationEpochRef.current;
             api.athletes.getProfile(parsed.id).then((fresh) => {
-              if (fresh?.athlete) {
-                const nextAthlete = {
-                  ...parsed,
-                  displayName: fresh.athlete.displayName ?? parsed.displayName,
-                  username: fresh.athlete.username ?? parsed.username,
-                  avatarUrl: fresh.athlete.avatarUrl ?? parsed.avatarUrl,
-                  bio: fresh.athlete.bio ?? parsed.bio,
-                  city: fresh.athlete.city ?? parsed.city,
-                  country: fresh.athlete.country ?? parsed.country,
-                  followersCount: fresh.athlete.followersCount ?? parsed.followersCount,
-                  followingCount: fresh.athlete.followingCount ?? parsed.followingCount,
-                };
-                setCurrentUser(nextAthlete);
-                AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(nextAthlete)).catch(() => {});
+              if (fresh?.athlete && profileMutationEpochRef.current === requestEpoch) {
+                setCurrentUser((prev) => {
+                  if (prev.id !== fresh.athlete.id) return prev;
+                  const nextAthlete = {
+                    ...prev,
+                    displayName: fresh.athlete.displayName ?? prev.displayName,
+                    username: fresh.athlete.username ?? prev.username,
+                    avatarUrl: fresh.athlete.avatarUrl ?? prev.avatarUrl,
+                    bio: fresh.athlete.bio ?? prev.bio,
+                    city: fresh.athlete.city ?? prev.city,
+                    country: fresh.athlete.country ?? prev.country,
+                    followersCount: fresh.athlete.followersCount ?? prev.followersCount,
+                    followingCount: fresh.athlete.followingCount ?? prev.followingCount,
+                  };
+                  AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(nextAthlete)).catch(() => {});
+                  return nextAthlete;
+                });
               }
             }).catch(() => {});
           }
@@ -151,6 +156,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   /** Single place where a session starts. Clears the previous account's local state first. */
   const startSession = async (res: { token?: string; athlete?: any } | undefined) => {
     if (!res?.token || !res?.athlete) return;
+    profileMutationEpochRef.current += 1;
     const athleteProfile: Athlete = {
       id: res.athlete.id,
       displayName: res.athlete.displayName,
@@ -242,6 +248,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   /** Apply server-confirmed profile changes locally and to the persisted session profile. */
   const updateCurrentUser = async (patch: Partial<Athlete>) => {
+    profileMutationEpochRef.current += 1;
     setCurrentUser((prev) => {
       const next = { ...prev, ...patch };
       AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(next)).catch(() => {});

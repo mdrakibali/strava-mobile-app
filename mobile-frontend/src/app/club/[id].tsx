@@ -31,6 +31,7 @@ export default function ClubDetailScreen() {
     const fetchClubDetail = async () => {
       setIsLoading(true);
       setLoadError(null);
+      const readTick = groupStore.beginRead();
       try {
         const res = await api.clubs.get(id);
         if (isMounted && res) {
@@ -48,8 +49,18 @@ export default function ClubDetailScreen() {
               userRole: res.club.userRole ?? null,
               isPrivate: Boolean(res.club.isPrivate),
             };
-            setServerClub(clubData);
-            groupStore.seedClubs([clubData]);
+            const isStale = groupStore.isStaleRead(id, readTick);
+            setServerClub((prev: any) => {
+              if (isStale && prev) {
+                return {
+                  ...clubData,
+                  isMember: prev.isMember,
+                  memberCount: prev.memberCount,
+                };
+              }
+              return clubData;
+            });
+            groupStore.seedClubs([clubData], readTick);
           }
           if (res.weeklyLeaderboard) {
             setWeeklyLeaderboard(res.weeklyLeaderboard);

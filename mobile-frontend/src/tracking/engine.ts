@@ -36,6 +36,7 @@ export interface Fix {
 }
 
 export type PermissionState = 'unknown' | 'granted' | 'denied' | 'services_off';
+export type TrackingMode = 'idle' | 'background' | 'foreground_only';
 
 export interface RecordingSnapshot {
   ready: boolean;
@@ -59,6 +60,7 @@ export interface RecordingSnapshot {
   /** Last raw fix of any quality (incl. while paused / preparing) — GPS status + map position. */
   lastFix: Fix | null;
   permission: PermissionState;
+  trackingMode: TrackingMode;
   error: string | null;
 }
 
@@ -77,6 +79,7 @@ const EMPTY: RecordingSnapshot = {
   routeSegments: [],
   lastFix: null,
   permission: 'unknown',
+  trackingMode: 'idle',
   error: null,
 };
 
@@ -192,6 +195,7 @@ class RecordingEngine {
         lifecycle,
         route: routeSegments.flat(),
         routeSegments,
+        trackingMode: running ? 'background' : 'idle',
       };
       this.listeners.forEach((l) => l());
     });
@@ -312,8 +316,12 @@ class RecordingEngine {
     });
   }
 
-  private async startUpdates(sport: string) {
-    if (await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK).catch(() => false)) return;
+  private async startUpdates(sport: string): Promise<TrackingMode> {
+    if (await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK).catch(() => false)) {
+      this.set({ trackingMode: 'background' });
+      return 'background';
+    }
+    let bgErr: any = null;
     try {
       await Location.startLocationUpdatesAsync(LOCATION_TASK, {
         accuracy: Location.Accuracy.BestForNavigation,
@@ -330,16 +338,37 @@ class RecordingEngine {
           killServiceOnDestroy: false,
         },
       });
-    } catch {
-      if (!this.previewSub) {
+      this.set({ trackingMode: 'background' });
+      return 'background';
+    } catch (err: any) {
+      bgErr = err;
+      console.warn('Background location service startup failed, attempting foreground fallback:', err);
+    }
+
+    if (!this.previewSub) {
+      try {
         this.previewSub = await Location.watchPositionAsync(
           { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 0 },
           (l) => {
             this.ingest([l]);
           }
-        ).catch(() => null);
+        );
+      } catch (watchErr: any) {
+        this.set({ trackingMode: 'idle' });
+        throw new Error(watchErr?.message || bgErr?.message || 'Could not start GPS tracking service');
       }
     }
+
+    if (this.previewSub) {
+      this.set({
+        trackingMode: 'foreground_only',
+        error: 'Background tracking unavailable. Keep app open to record.',
+      });
+      return 'foreground_only';
+    }
+
+    this.set({ trackingMode: 'idle' });
+    throw new Error(bgErr?.message || 'Could not start GPS tracking service');
   }
 
   private async stopUpdates() {
@@ -348,6 +377,7 @@ class RecordingEngine {
     if (await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK).catch(() => false)) {
       await Location.stopLocationUpdatesAsync(LOCATION_TASK).catch(() => {});
     }
+    this.set({ trackingMode: 'idle' });
   }
 
   pause() {
@@ -365,13 +395,14 @@ class RecordingEngine {
     return this.serial(async () => {
       const id = this.snap.sessionId;
       if (!id || this.snap.lifecycle.status !== 'paused') return;
-      const lifecycle = this.apply({ type: 'RESUME', at: Date.now() });
-      await sessionsRepo.saveLifecycle(id, lifecycle, 'resume');
-      this.set({ lifecycle, error: null });
       try {
-        await this.startUpdates(this.snap.sport); // needed after an interruption
+        await this.startUpdates(this.snap.sport); // ensure location stream is alive first
+        const lifecycle = this.apply({ type: 'RESUME', at: Date.now() });
+        await sessionsRepo.saveLifecycle(id, lifecycle, 'resume');
+        this.set({ lifecycle, error: null });
       } catch (e: any) {
         this.set({ error: e?.message ?? 'Could not restart GPS' });
+        throw e;
       }
     });
   }
@@ -418,7 +449,15 @@ class RecordingEngine {
   private reset() {
     this.acc = null;
     this.routeBuilder = new RouteSegments();
-    this.set({ ...this.metrics(), sessionId: null, lifecycle: INITIAL_LIFECYCLE, route: [], routeSegments: [], error: null });
+    this.set({
+      ...this.metrics(),
+      sessionId: null,
+      lifecycle: INITIAL_LIFECYCLE,
+      route: [],
+      routeSegments: [],
+      error: null,
+      trackingMode: 'idle',
+    });
   }
 }
 

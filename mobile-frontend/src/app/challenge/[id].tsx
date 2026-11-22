@@ -39,6 +39,7 @@ export default function ChallengeDetailScreen() {
     const fetchChallenge = async () => {
       setIsLoading(true);
       setLoadError(null);
+      const readTick = groupStore.beginRead();
       try {
         const res = await api.challenges.get(id);
         if (isMounted && res) {
@@ -57,8 +58,18 @@ export default function ChallengeDetailScreen() {
               daysRemaining: Number(res.challenge.daysRemaining) || 0,
               creatorId: res.challenge.creatorId ?? null,
             };
-            setServerChallenge(challengeData);
-            groupStore.seedChallenges([challengeData]);
+            const isStale = groupStore.isStaleRead(id, readTick);
+            setServerChallenge((prev: any) => {
+              if (isStale && prev) {
+                return {
+                  ...challengeData,
+                  isJoined: prev.isJoined,
+                  participantsCount: prev.participantsCount,
+                };
+              }
+              return challengeData;
+            });
+            groupStore.seedChallenges([challengeData], readTick);
           }
           if (res.leaderboard) {
             setLeaderboard(res.leaderboard);

@@ -15,6 +15,7 @@ interface RecordOutdoorHudProps {
   secondLabel: string;
   secondValue: string;
   distance: string;
+  trackingMode?: 'idle' | 'background' | 'foreground_only';
   onExpandPress: () => void;
   onStatusAction?: () => void;
 }
@@ -29,6 +30,7 @@ export function RecordOutdoorHud({
   secondLabel,
   secondValue,
   distance,
+  trackingMode,
   onExpandPress,
   onStatusAction,
 }: RecordOutdoorHudProps) {
@@ -69,6 +71,16 @@ export function RecordOutdoorHud({
               <Text style={{ color: gpsColor }} className="text-[11px] font-medium">
                 {gpsLabel.includes('Lost') ? 'Move to open sky' : 'Tracking active'}
               </Text>
+            </View>
+          ) : null}
+          {trackingMode === 'foreground_only' ? (
+            <View className="flex-row items-center justify-between px-4 py-1.5 bg-amber-50 border-b border-amber-200">
+              <View className="flex-row items-center">
+                <Ionicons name="warning-outline" size={13} color="#D97706" />
+                <Text className="text-[11px] font-bold text-amber-800 ml-1.5">
+                  Foreground only · Keep app open to record
+                </Text>
+              </View>
             </View>
           ) : null}
           <View className="flex-row items-center justify-between px-4 py-2 border-b border-gray-100 bg-white">

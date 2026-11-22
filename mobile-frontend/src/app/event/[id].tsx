@@ -27,13 +27,24 @@ export default function EventDetailScreen() {
       if (!id) return;
       let cancelled = false;
       void reloadKey;
+      const readTick = groupStore.beginRead();
       api.events.get(id).then(
         (res) => {
           if (cancelled) return;
-          setEvent(res.event);
+          const isStale = groupStore.isStaleRead(id, readTick);
+          setEvent((prev: any) => {
+            if (isStale && prev && res.event) {
+              return {
+                ...res.event,
+                rsvpStatus: prev.rsvpStatus,
+                attendeesCount: prev.attendeesCount,
+              };
+            }
+            return res.event;
+          });
           setAttendees(res.attendees ?? []);
           if (res.event) {
-            groupStore.seedEvents([res.event]);
+            groupStore.seedEvents([res.event], readTick);
           }
           setStatus('ready');
         },

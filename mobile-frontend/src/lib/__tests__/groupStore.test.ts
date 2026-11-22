@@ -147,12 +147,14 @@ describe('groupStore', () => {
   });
 
   describe('Stale read race conditions', () => {
-    it('does not overwrite newer mutation with older in-flight read', () => {
+    it('does not overwrite newer mutation with older in-flight read for clubs', () => {
       const readTick = groupStore.beginRead();
 
       groupStore.seedClubs([{ id: 'c1', name: 'Club A', isMember: false, memberCount: 10 }]);
       groupStore.patchClub('c1', { isMember: true, memberCount: 11 });
       groupStore.noteMutation('c1');
+
+      expect(groupStore.isStaleRead('c1', readTick)).toBe(true);
 
       // Now an older in-flight response arrives from when readTick was taken
       groupStore.seedClubs(
@@ -163,6 +165,42 @@ describe('groupStore', () => {
       // Must NOT be overwritten
       expect(groupStore.getClub('c1')?.isMember).toBe(true);
       expect(groupStore.getClub('c1')?.memberCount).toBe(11);
+    });
+
+    it('does not overwrite newer mutation with older in-flight read for challenges', () => {
+      const readTick = groupStore.beginRead();
+
+      groupStore.seedChallenges([{ id: 'ch1', title: '50k', isJoined: false, participantsCount: 20 }]);
+      groupStore.patchChallenge('ch1', { isJoined: true, participantsCount: 21 });
+      groupStore.noteMutation('ch1');
+
+      expect(groupStore.isStaleRead('ch1', readTick)).toBe(true);
+
+      groupStore.seedChallenges(
+        [{ id: 'ch1', title: '50k', isJoined: false, participantsCount: 20 }],
+        readTick
+      );
+
+      expect(groupStore.getChallenge('ch1')?.isJoined).toBe(true);
+      expect(groupStore.getChallenge('ch1')?.participantsCount).toBe(21);
+    });
+
+    it('does not overwrite newer mutation with older in-flight read for events', () => {
+      const readTick = groupStore.beginRead();
+
+      groupStore.seedEvents([{ id: 'ev1', title: 'Ride', rsvpStatus: null, attendeesCount: 5 }]);
+      groupStore.patchEvent('ev1', { rsvpStatus: 'GOING', attendeesCount: 6 });
+      groupStore.noteMutation('ev1');
+
+      expect(groupStore.isStaleRead('ev1', readTick)).toBe(true);
+
+      groupStore.seedEvents(
+        [{ id: 'ev1', title: 'Ride', rsvpStatus: null, attendeesCount: 5 }],
+        readTick
+      );
+
+      expect(groupStore.getEvent('ev1')?.rsvpStatus).toBe('GOING');
+      expect(groupStore.getEvent('ev1')?.attendeesCount).toBe(6);
     });
   });
 });

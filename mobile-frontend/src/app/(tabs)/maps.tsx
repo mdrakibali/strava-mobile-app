@@ -44,27 +44,49 @@ export default function MapsScreen() {
 
   const [mapMode, setMapMode] = useState<MapStyleKey>(DEFAULT_MAP_STYLE);
   const [styleModalVisible, setStyleModalVisible] = useState(false);
-  const [permissionStatus, setPermissionStatus] = useState<'checking' | 'granted' | 'denied'>('checking');
+  const [locationStatus, setLocationStatus] = useState<'checking' | 'permission_denied' | 'services_off' | 'no_fix' | 'ready'>('checking');
   const [locationLoading, setLocationLoading] = useState(true);
 
   const requestLocation = useCallback(async () => {
-    let perm = await Location.getForegroundPermissionsAsync().catch(() => null);
-    if (!perm?.granted) {
-      perm = await Location.requestForegroundPermissionsAsync().catch(() => null);
-    }
-    if (!perm?.granted) {
-      setPermissionStatus('denied');
+    setLocationLoading(true);
+    setLocationStatus('checking');
+    try {
+      let perm = await Location.getForegroundPermissionsAsync().catch(() => null);
+      if (!perm?.granted) {
+        perm = await Location.requestForegroundPermissionsAsync().catch(() => null);
+      }
+      if (!perm?.granted) {
+        setLocationStatus('permission_denied');
+        setMe(null);
+        setLocationLoading(false);
+        return;
+      }
+
+      const servicesOn = await Location.hasServicesEnabledAsync().catch(() => true);
+      if (!servicesOn) {
+        setLocationStatus('services_off');
+        setMe(null);
+        setLocationLoading(false);
+        return;
+      }
+
+      let fix = await Location.getLastKnownPositionAsync({ maxAge: 120_000 }).catch(() => null);
+      if (!fix) {
+        fix = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null);
+      }
+      if (fix?.coords) {
+        setMe([fix.coords.longitude, fix.coords.latitude]);
+        setLocationStatus('ready');
+      } else {
+        setLocationStatus('no_fix');
+        setMe(null);
+      }
+    } catch {
+      setLocationStatus('no_fix');
+      setMe(null);
+    } finally {
       setLocationLoading(false);
-      return;
     }
-    setPermissionStatus('granted');
-    const fix =
-      (await Location.getLastKnownPositionAsync({ maxAge: 120_000 }).catch(() => null)) ??
-      (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null));
-    if (fix) {
-      setMe([fix.coords.longitude, fix.coords.latitude]);
-    }
-    setLocationLoading(false);
   }, []);
 
   useEffect(() => {
@@ -72,7 +94,16 @@ export default function MapsScreen() {
     requestLocation();
   }, [requestLocation]);
 
-  const { routeStatus, selectedId, setSelectedId, visible, toggleSave } = useMapRoutes(
+  const {
+    routeStatus,
+    nearbyStatus,
+    nearbyError,
+    reloadNearby,
+    selectedId,
+    setSelectedId,
+    visible,
+    toggleSave,
+  } = useMapRoutes(
     source,
     sport,
     query,
@@ -227,7 +258,7 @@ export default function MapsScreen() {
         />
       </View>
 
-      {permissionStatus === 'denied' ? (
+      {locationStatus === 'permission_denied' ? (
         <View className="absolute top-36 left-4 right-4 z-20 p-4 rounded-2xl bg-white border border-red-200 shadow-xl">
           <View className="flex-row items-center mb-1.5">
             <Text className="text-sm font-bold text-gray-900">Location Permission Needed</Text>
@@ -239,6 +270,34 @@ export default function MapsScreen() {
             onPress={() => Linking.openSettings()}
             className="bg-[#FC4C02] py-2.5 px-4 rounded-xl items-center active:opacity-90">
             <Text className="text-xs font-bold text-white">Enable Location in Settings</Text>
+          </TouchableOpacity>
+        </View>
+      ) : locationStatus === 'services_off' ? (
+        <View className="absolute top-36 left-4 right-4 z-20 p-4 rounded-2xl bg-white border border-amber-200 shadow-xl">
+          <View className="flex-row items-center mb-1.5">
+            <Text className="text-sm font-bold text-gray-900">Location Services Disabled</Text>
+          </View>
+          <Text className="text-xs text-gray-600 mb-3 leading-4">
+            GPS is turned off on your device. Turn on location services to discover routes and places near you.
+          </Text>
+          <TouchableOpacity
+            onPress={() => Linking.openSettings()}
+            className="bg-[#FC4C02] py-2.5 px-4 rounded-xl items-center active:opacity-90">
+            <Text className="text-xs font-bold text-white">Open Device Settings</Text>
+          </TouchableOpacity>
+        </View>
+      ) : locationStatus === 'no_fix' && source === 'nearby' ? (
+        <View className="absolute top-36 left-4 right-4 z-20 p-4 rounded-2xl bg-white border border-amber-200 shadow-xl">
+          <View className="flex-row items-center mb-1.5">
+            <Text className="text-sm font-bold text-gray-900">GPS Fix Pending</Text>
+          </View>
+          <Text className="text-xs text-gray-600 mb-3 leading-4">
+            We couldn’t acquire a GPS fix yet. Move outdoors or retry to find nearby places.
+          </Text>
+          <TouchableOpacity
+            onPress={requestLocation}
+            className="bg-[#FC4C02] py-2.5 px-4 rounded-xl items-center active:opacity-90">
+            <Text className="text-xs font-bold text-white">Retry GPS Fix</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -254,9 +313,14 @@ export default function MapsScreen() {
         listRef={listRef}
         items={visible}
         selectedIndex={selectedIndex}
-        loading={routeStatus === 'loading' || locationLoading}
+        loading={routeStatus === 'loading' || (locationLoading && source === 'nearby')}
         source={source}
         hasActiveFilter={Boolean(query.trim() || lengthFilter || difficultyFilter || sport !== 'All')}
+        locationStatus={locationStatus}
+        nearbyStatus={nearbyStatus}
+        nearbyError={nearbyError}
+        onRetryNearby={reloadNearby}
+        onRetryLocation={requestLocation}
         onSelect={select}
         onOpenDetail={(item) => {
           setSelectedId(item.id);
