@@ -43,6 +43,8 @@ export interface MapMarker {
   id: string;
   coordinate: LngLat;
   selected?: boolean;
+  category?: string;
+  name?: string;
 }
 
 export interface MapViewProps {
@@ -189,7 +191,12 @@ export const MapView: React.FC<MapViewProps> = ({
       type: 'FeatureCollection',
       features: (markers ?? []).map((m) => ({
         type: 'Feature',
-        properties: { id: m.id, selected: m.selected ? 1 : 0 },
+        properties: {
+          id: m.id,
+          selected: m.selected ? 1 : 0,
+          category: m.category || 'park',
+          name: m.name || '',
+        },
         geometry: { type: 'Point', coordinates: m.coordinate },
       })),
     }),
@@ -319,19 +326,74 @@ export const MapView: React.FC<MapViewProps> = ({
           <GeoJSONSource
             id="markers"
             data={markerData}
-            hitbox={{ top: 12, right: 12, bottom: 12, left: 12 }}
+            cluster
+            clusterRadius={45}
+            clusterMaxZoomLevel={14}
+            hitbox={{ top: 16, right: 16, bottom: 16, left: 16 }}
             onPress={(e) => {
               const id = e.nativeEvent.features?.[0]?.properties?.id;
               if (id != null) onMarkerPress?.(String(id));
             }}>
             <Layer
-              id="markers-circle"
+              id="clustered-points"
               type="circle"
+              filter={['has', 'point_count']}
               paint={{
-                'circle-radius': ['case', ['==', ['get', 'selected'], 1], 11, 7],
-                'circle-color': ['case', ['==', ['get', 'selected'], 1], color.brand, '#FFFFFF'],
-                'circle-stroke-color': color.brand,
-                'circle-stroke-width': 3,
+                'circle-color': color.brand,
+                'circle-radius': ['step', ['get', 'point_count'], 16, 5, 20, 10, 24],
+                'circle-stroke-width': 2.5,
+                'circle-stroke-color': '#FFFFFF',
+              }}
+            />
+            <Layer
+              id="cluster-count"
+              type="symbol"
+              filter={['has', 'point_count']}
+              layout={{
+                'text-field': '{point_count_abbreviated}',
+                'text-size': 12,
+              }}
+              paint={{
+                'text-color': '#FFFFFF',
+              }}
+            />
+            <Layer
+              id="unclustered-point"
+              type="circle"
+              filter={['!', ['has', 'point_count']]}
+              paint={{
+                'circle-radius': ['case', ['==', ['get', 'selected'], 1], 12, 8],
+                'circle-color': [
+                  'match',
+                  ['get', 'category'],
+                  'park',
+                  '#10B981',
+                  'garden',
+                  '#10B981',
+                  'nature',
+                  '#059669',
+                  'playground',
+                  '#F59E0B',
+                  'sports_ground',
+                  '#3B82F6',
+                  'stadium',
+                  '#8B5CF6',
+                  'track',
+                  '#EF4444',
+                  'cycleway',
+                  '#EC4899',
+                  'cycle_route',
+                  '#EC4899',
+                  'trail',
+                  '#D97706',
+                  'hiking_route',
+                  '#D97706',
+                  'green_space',
+                  '#10B981',
+                  '#FC4C02',
+                ],
+                'circle-stroke-width': ['case', ['==', ['get', 'selected'], 1], 3.5, 2],
+                'circle-stroke-color': '#FFFFFF',
               }}
             />
           </GeoJSONSource>

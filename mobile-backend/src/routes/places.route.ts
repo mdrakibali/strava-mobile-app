@@ -11,7 +11,7 @@ export const placesRouter = new Hono<{ Bindings: Env }>();
 const querySchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),
-  sport: z.enum(['Run', 'Walk', 'Hike', 'Ride']).default('Run'),
+  sport: z.enum(['All', 'Run', 'Walk', 'Hike', 'Ride']).default('All'),
   radius: z.coerce.number().int().min(500).max(15_000).default(5000),
 });
 

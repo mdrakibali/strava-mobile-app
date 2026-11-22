@@ -21,5 +21,9 @@ export interface MapItem {
   creatorName: string;
   locationName: string;
   photos: string[];
+  placeCategory?: string;
+  placeAddress?: string | null;
+  osmUrl?: string;
+  difficulty?: string;
+  elevationProfile?: number[];
 }
-

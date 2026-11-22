@@ -189,6 +189,33 @@ export class RoutingService {
     memory.set(key, { at: this.now(), body });
     return body;
   }
+
+  /**
+   * Valhalla map matching via /trace_route.
+   * Matches GPS traces to real OpenStreetMap roads/paths when valid.
+   * If trace is in an unmapped area or match is unreliable, returns null so the raw GPS route is preserved.
+   */
+  async matchTrace(sport: PlanSport, points: { lat: number; lng: number; time?: number }[]): Promise<[number, number][] | null> {
+    if (!points || points.length < 2) return null;
+    try {
+      const shape = points.map((p) => ({ lat: p.lat, lon: p.lng, ...(p.time ? { time: p.time } : {}) }));
+      const costingName = sport === 'Ride' ? 'bicycle' : 'pedestrian';
+      const res = await this.post('/trace_route', {
+        shape,
+        costing: costingName,
+        shape_match: 'walk_or_snap',
+        directions_type: 'none',
+      });
+      if (!res.ok) return null;
+      const data: any = await res.json().catch(() => null);
+      const encoded = data?.trip?.legs?.[0]?.shape;
+      if (!encoded) return null;
+      const matched = decodePolyline6(encoded);
+      return matched.length >= 2 ? matched : null;
+    } catch {
+      return null;
+    }
+  }
 }
 
 export const _clearRoutingCache = () => memory.clear();
