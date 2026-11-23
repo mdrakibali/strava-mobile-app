@@ -58,9 +58,9 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
-    "clean:android": "cd android && ./gradlew clean",
-    "build:release": "cd android && ./gradlew clean assembleRelease --no-build-cache",
-    "build:debug": "cd android && ./gradlew clean assembleDebug --no-build-cache",
+    "clean:android": "find . -type d -name '.cxx' -exec rm -rf {} + 2>/dev/null; cd android && rm -rf build app/build && ./gradlew clean",
+    "build:release": "npm run clean:android && cd android && ./gradlew assembleRelease --no-build-cache",
+    "build:debug": "npm run clean:android && cd android && ./gradlew assembleDebug --no-build-cache",
     "build:share": "npm run build:release && cp android/app/build/outputs/apk/release/app-release.apk ../kinetix.apk && echo '✅ Shareable APK ready at kinetix.apk'",
     "share:device": "npm run build:release && cp android/app/build/outputs/apk/release/app-release.apk ../kinetix.apk && adb install -r android/app/build/outputs/apk/release/app-release.apk && npm run app:launch && echo '✅ Installed on your phone and ready to share at kinetix.apk'",
     "install:device": "adb install -r android/app/build/outputs/apk/release/app-release.apk && npm run app:launch",
