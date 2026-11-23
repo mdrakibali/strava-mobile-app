@@ -116,7 +116,11 @@ export default function CreateClubScreen() {
       <View style={{ marginTop: space.sm }}>
         <SectionTitle title="Access" />
         <ChipRow>
-          <Chip label="Public (anyone can join)" selected={!isPrivate} onPress={() => setIsPrivate(false)} />
+          <Chip
+            label="Public (anyone can join)"
+            selected={!isPrivate}
+            onPress={() => setIsPrivate(false)}
+          />
           <Chip label="Invite only" selected={isPrivate} onPress={() => setIsPrivate(true)} />
         </ChipRow>
       </View>

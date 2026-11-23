@@ -49,7 +49,7 @@ export function useDeleteGoal() {
       if (previousGoals) {
         queryClient.setQueryData<TrainingGoal[]>(
           GOALS_QUERY_KEY,
-          previousGoals.filter((g) => g.id !== goalId),
+          previousGoals.filter((g) => g.id !== goalId)
         );
       }
 

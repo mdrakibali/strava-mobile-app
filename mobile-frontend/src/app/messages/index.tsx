@@ -24,13 +24,7 @@ export default function MessagesInboxScreen() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const {
-    data: conversations = [],
-    isLoading,
-    isRefetching,
-    refetch,
-    error,
-  } = useConversations();
+  const { data: conversations = [], isLoading, isRefetching, refetch, error } = useConversations();
 
   const { data: athletes = [] } = useSearchAthletes('');
 

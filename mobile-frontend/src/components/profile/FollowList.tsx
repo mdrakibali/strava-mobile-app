@@ -68,10 +68,14 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
   const athleteId = params.id || currentUser.id;
   const router = useRouter();
 
-  const { data: rawList = [], isLoading, isError, error, isRefetching, refetch } = useAthleteFollows(
-    athleteId,
-    kind
-  );
+  const {
+    data: rawList = [],
+    isLoading,
+    isError,
+    error,
+    isRefetching,
+    refetch,
+  } = useAthleteFollows(athleteId, kind);
   const followMutation = useFollowMutation();
   const [busyId, setBusyId] = useState<string | null>(null);
 

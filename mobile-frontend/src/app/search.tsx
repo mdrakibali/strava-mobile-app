@@ -144,11 +144,7 @@ export default function SearchScreen() {
                   </AppText>
                 ) : null}
               </View>
-              <SearchFollowButton
-                row={item}
-                onFollow={onFollow}
-                loading={pendingId === item.id}
-              />
+              <SearchFollowButton row={item} onFollow={onFollow} loading={pendingId === item.id} />
             </Pressable>
           )}
         />

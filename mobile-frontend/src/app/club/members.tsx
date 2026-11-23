@@ -39,10 +39,7 @@ export default function ClubMembersScreen() {
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
         <Text className="text-base font-black text-gray-900">Members ({members.length})</Text>
-        <TouchableOpacity
-          onPress={() => id && shareClub(id, clubName)}
-          className="p-1"
-        >
+        <TouchableOpacity onPress={() => id && shareClub(id, clubName)} className="p-1">
           <Ionicons name="share-social-outline" size={22} color="#111827" />
         </TouchableOpacity>
       </View>
@@ -121,9 +118,7 @@ export default function ClubMembersScreen() {
                     className="w-11 h-11 rounded-full bg-gray-200"
                   />
                   <View className="ml-3 flex-1">
-                    <Text className="text-sm font-bold text-gray-900">
-                      {member.displayName}
-                    </Text>
+                    <Text className="text-sm font-bold text-gray-900">{member.displayName}</Text>
                     {member.city ? (
                       <Text className="text-xs text-gray-500 mt-0.5">{member.city}</Text>
                     ) : null}

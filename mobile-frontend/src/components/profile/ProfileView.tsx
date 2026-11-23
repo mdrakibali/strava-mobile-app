@@ -122,7 +122,10 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({
     [activities, data?.stats, sportFilter]
   );
 
-  const totals = useMemo(() => computeTotals(data?.stats ?? null, sportFilter), [data?.stats, sportFilter]);
+  const totals = useMemo(
+    () => computeTotals(data?.stats ?? null, sportFilter),
+    [data?.stats, sportFilter]
+  );
 
   const reconciledStats = useMemo<AthleteStats | null>(() => {
     if (!data?.stats) return null;
@@ -134,7 +137,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({
 
   const header = (
     <AppBar
-      title={isSelf ? 'You' : athlete?.displayName ?? 'Athlete'}
+      title={isSelf ? 'You' : (athlete?.displayName ?? 'Athlete')}
       right={
         isSelf ? (
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -150,11 +153,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({
             />
           </View>
         ) : (
-          <IconButton
-            icon="share-outline"
-            accessibilityLabel="Share profile"
-            onPress={onShare}
-          />
+          <IconButton icon="share-outline" accessibilityLabel="Share profile" onPress={onShare} />
         )
       }
     />

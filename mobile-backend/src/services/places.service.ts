@@ -184,14 +184,7 @@ export class PlacesService {
       if (spec.ok && gen.ok) {
         const [a, b]: any[] = await Promise.all([spec.json(), gen.json()]);
         const merged = { features: [...(a?.features ?? []), ...(b?.features ?? [])] };
-        const places = normalizePhoton(
-          merged,
-          lat,
-          lng,
-          radiusM,
-          12,
-          specificCategoriesFor(sport)
-        );
+        const places = normalizePhoton(merged, lat, lng, radiusM, 12, specificCategoriesFor(sport));
         if (places.length > 0) {
           return await finish(places, 'photon');
         }

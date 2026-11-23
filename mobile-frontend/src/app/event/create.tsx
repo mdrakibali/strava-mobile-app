@@ -138,7 +138,11 @@ export default function CreateEventScreen() {
                   ? 'Today'
                   : i === 1
                     ? 'Tomorrow'
-                    : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                    : d.toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                      });
               return (
                 <Chip
                   key={d.toISOString()}
@@ -153,12 +157,7 @@ export default function CreateEventScreen() {
           <SectionTitle title="Start time" />
           <ChipRow>
             {TIMES.map((m) => (
-              <Chip
-                key={m}
-                label={label(m)}
-                selected={time === m}
-                onPress={() => setTime(m)}
-              />
+              <Chip key={m} label={label(m)} selected={time === m} onPress={() => setTime(m)} />
             ))}
           </ChipRow>
         </View>

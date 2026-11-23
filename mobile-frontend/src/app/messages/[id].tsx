@@ -42,14 +42,12 @@ export default function ChatScreen() {
   const partnerIdRef = useRef(partner.id);
   const keyboard = useKeyboardInset();
 
-  const {
-    data: threadData,
-    isLoading,
-    error: threadError,
-  } = useMessageThread(effectiveId);
+  const { data: threadData, isLoading, error: threadError } = useMessageThread(effectiveId);
   const sendMessageMutation = useSendMessageMutation();
 
-  const loadError = threadError ? (threadError as any)?.message || 'Couldn’t load this conversation.' : null;
+  const loadError = threadError
+    ? (threadError as any)?.message || 'Couldn’t load this conversation.'
+    : null;
 
   useEffect(() => {
     chatIdRef.current = chatId;
