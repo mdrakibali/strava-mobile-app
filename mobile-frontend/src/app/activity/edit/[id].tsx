@@ -16,9 +16,8 @@ import {
   space,
   TextField,
 } from '../../../design';
-import { useActivityStore } from '../../../lib/activityStore';
+import { useActivityDetail, useUpdateActivity } from '../../../hooks/useActivities';
 import { sportConfig } from '../../../lib/sports';
-import { api } from '../../../services/api';
 import { ActivityVisibility, SportType } from '../../../types';
 
 const VISIBILITY_OPTIONS: { id: ActivityVisibility; title: string; description: string }[] = [
@@ -27,65 +26,53 @@ const VISIBILITY_OPTIONS: { id: ActivityVisibility; title: string; description: 
   { id: 'ONLY_ME', title: 'Only you', description: 'Private. Only you can view this activity.' },
 ];
 
-/** Edit activity (owner only; the server enforces ownership — PATCH /activities/:id). */
+/** Edit activity (owner only; PATCH /activities/:id). */
 export default function EditActivityScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const cached = id ? useActivityStore.getState().activities[id] : undefined;
-  const [loaded, setLoaded] = useState<'loading' | 'ready' | 'error'>(cached ? 'ready' : 'loading');
-  const [title, setTitle] = useState(cached?.title ?? '');
-  const [description, setDescription] = useState(cached?.description ?? '');
-  const [sport, setSport] = useState<SportType>(cached?.sportType ?? 'Run');
-  const [visibility, setVisibility] = useState<ActivityVisibility>(cached?.visibility ?? 'PUBLIC');
+
+  const { data, isLoading, isError } = useActivityDetail(id);
+  const { mutate: updateActivity, isPending: saving } = useUpdateActivity();
+
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [sport, setSport] = useState<SportType>('Run');
+  const [visibility, setVisibility] = useState<ActivityVisibility>('PUBLIC');
   const [sportSheet, setSportSheet] = useState(false);
   const [visibilitySheet, setVisibilitySheet] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    api.activities.get(id).then(
-      (res) => {
-        if (cancelled) return;
-        if (!res?.isOwner) return setLoaded('error');
-        const a = res.activity;
-        setTitle(a.title ?? '');
-        setDescription(a.description ?? '');
-        setSport(a.sportType);
-        setVisibility(a.visibility);
-        setLoaded('ready');
-      },
-      () => {
-        if (!cancelled && !cached) setLoaded('error');
-      }
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [id, cached]);
+    if (data?.activity) {
+      setTitle(data.activity.title ?? '');
+      setDescription(data.activity.description ?? '');
+      setSport(data.activity.sportType ?? 'Run');
+      setVisibility(data.activity.visibility ?? 'PUBLIC');
+    }
+  }, [data]);
 
-  const onSave = async () => {
-    if (saving) return;
-    setSaving(true);
+  const onSave = () => {
+    if (saving || !id) return;
     setError(null);
     const descriptionValue = description.trim() || null;
     const cleanTitle = title.trim();
-    console.log(`[ACTIVITY_EDIT] Saving edit for activity ${id}: title="${cleanTitle}", sport="${sport}", visibility="${visibility}"`);
-    try {
-      await useActivityStore.getState().updateActivityDetails(id!, {
-        title: cleanTitle,
-        description: descriptionValue,
-        sportType: sport,
-        visibility,
-      });
-      router.back();
-    } catch (e: any) {
-      console.error(`[ACTIVITY_EDIT_ERROR] Failed to save activity ${id}:`, e);
-      setError(e?.message ?? 'Could not save changes.');
-      setSaving(false);
-    }
+
+    updateActivity(
+      {
+        id,
+        patch: {
+          title: cleanTitle,
+          description: descriptionValue,
+          sportType: sport,
+          visibility,
+        },
+      },
+      {
+        onSuccess: () => router.back(),
+        onError: (e: any) => setError(e?.message ?? 'Could not save changes.'),
+      }
+    );
   };
 
   const cfg = sportConfig(sport);
@@ -105,9 +92,9 @@ export default function EditActivityScreen() {
           />
         }
       />
-      {loaded === 'loading' ? (
+      {isLoading ? (
         <LoadingState />
-      ) : loaded === 'error' ? (
+      ) : isError || (data && !data.isOwner) ? (
         <ErrorState message="This activity can’t be edited." />
       ) : (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -143,36 +130,39 @@ export default function EditActivityScreen() {
                 </View>
               ) : null}
             </ScrollView>
-          </View>
-          <View style={{ paddingBottom: Math.max(insets.bottom, 16), backgroundColor: '#FFFFFF' }} className="px-4 pt-3 border-t border-gray-100">
-            <Button label="Save changes" size="lg" fullWidth loading={saving} disabled={!title.trim()} onPress={onSave} />
+
+            <SportSheet
+              visible={sportSheet}
+              onClose={() => setSportSheet(false)}
+              value={sport}
+              onSelect={(next) => {
+                setSport(next);
+                setSportSheet(false);
+              }}
+            />
+
+            <BottomSheet
+              visible={visibilitySheet}
+              onClose={() => setVisibilitySheet(false)}
+              title="Who can see this?">
+              <View style={{ paddingBottom: insets.bottom + space.lg }}>
+                {VISIBILITY_OPTIONS.map((opt) => (
+                  <OptionRow
+                    key={opt.id}
+                    title={opt.title}
+                    description={opt.description}
+                    selected={visibility === opt.id}
+                    onPress={() => {
+                      setVisibility(opt.id);
+                      setVisibilitySheet(false);
+                    }}
+                  />
+                ))}
+              </View>
+            </BottomSheet>
           </View>
         </KeyboardAvoidingView>
       )}
-      <SportSheet
-        visible={sportSheet}
-        selected={sport}
-        onSelect={(s) => {
-          setSport(s);
-          setSportSheet(false);
-        }}
-        onClose={() => setSportSheet(false)}
-      />
-      <BottomSheet visible={visibilitySheet} onClose={() => setVisibilitySheet(false)} title="Who can view">
-        {VISIBILITY_OPTIONS.map((o) => (
-          <OptionRow
-            key={o.id}
-            title={o.title}
-            description={o.description}
-            icon={VISIBILITY_LABEL[o.id].icon}
-            selected={visibility === o.id}
-            onPress={() => {
-              setVisibility(o.id);
-              setVisibilitySheet(false);
-            }}
-          />
-        ))}
-      </BottomSheet>
     </SafeAreaView>
   );
 }

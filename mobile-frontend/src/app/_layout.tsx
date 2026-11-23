@@ -5,6 +5,8 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '../lib/queryClient';
 import { Colors } from '../constants/theme';
 import { AppProvider, useApp } from '../context/AppContext';
 import '../global.css';
@@ -116,10 +118,12 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AppProvider>
-        <StatusBar style="dark" />
-        <NavigationRoot />
-      </AppProvider>
+      <QueryClientProvider client={queryClient}>
+        <AppProvider>
+          <StatusBar style="dark" />
+          <NavigationRoot />
+        </AppProvider>
+      </QueryClientProvider>
     </SafeAreaProvider>
   );
 }

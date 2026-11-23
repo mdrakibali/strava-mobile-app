@@ -1,30 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useMemo } from 'react';
 import { ActivityIndicator, Alert, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedCard, FeedCardSkeleton } from '../../components/activity/FeedCard';
 import { HomeHeader } from '../../components/home/HomeHeader';
 import { EmptyState, ErrorState } from '../../design';
 import { useApp } from '../../context/AppContext';
-import { ActivityView, fromFeedItem } from '../../lib/activityView';
-import { useActivityStore } from '../../lib/activityStore';
-import { presentActivities, useActivityRevision } from '../../lib/publishedActivities';
-import { withoutRemoved } from '../../lib/removedActivities';
-import { socialStore } from '../../lib/social';
-import { api } from '../../services/api';
+import { useFeed } from '../../hooks/useActivities';
 import { syncWorker } from '../../tracking/sync';
 import { recordingEngine } from '../../tracking/engine';
 import { isRecordingActive, usePendingUploads, useRecording } from '../../tracking/useRecording';
 
-type Status = 'loading' | 'ready' | 'error';
-
-/**
- * Home feed = every activity this viewer is allowed to see, newest first.
- * Using the following list whenever it is non-empty hid everyone else as soon as you
- * had one activity of your own.
- */
 const HOME_FEED_TAB = 'all' as const;
+
 export default function HomeFeedScreen() {
   const router = useRouter();
   const { currentUser, unreadNotificationCount } = useApp();
@@ -33,133 +22,39 @@ export default function HomeFeedScreen() {
   const paused = rec.lifecycle.status === 'paused';
   const pending = usePendingUploads();
   const attention = pending.filter((p) => p.state === 'needs_attention');
-  const [items, setItems] = useState<ActivityView[]>([]);
-  const [status, setStatus] = useState<Status>('loading');
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [loadMoreError, setLoadMoreError] = useState(false);
-  const cursorRef = useRef<string | null>(null);
-  const hasNextRef = useRef(false);
-  // Bumped by every first-page load; a "load more" that started before it is discarded, so a
-  // refresh can never be followed by a stale page appended to the fresh list.
-  const generation = useRef(0);
-  const lastLoadedAt = useRef(0);
-  const requestSeq = useRef(0);
-  const revision = useActivityRevision();
 
-  // Defence in depth only — the server must enforce visibility (technical audit PRIV-02).
-  const visibleToMe = useCallback(
-    (a: ActivityView) => a.athlete.id === currentUser.id || a.visibility !== 'ONLY_ME',
-    [currentUser.id]
-  );
+  // React Query infinite feed
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useFeed(HOME_FEED_TAB);
 
-  /** Fetches page 1 without touching state; callers apply the result. */
-  const fetchFirstPage = useCallback(async () => {
-    const seq = ++requestSeq.current;
-    const readTick = socialStore.beginRead();
-    const res = await api.feed.getFeed(HOME_FEED_TAB, undefined, 500);
-    const items = withoutRemoved((res?.feed || []).map(fromFeedItem).filter(visibleToMe));
-    socialStore.seed(items, readTick);
-    useActivityStore.getState().upsertActivities(items);
-    useActivityStore.getState().setFeedIds(items.map((i) => i.id));
-    return {
-      seq,
-      items,
-      cursor: res.nextCursor,
-      hasNext: res.hasNextPage,
-    };
-  }, [visibleToMe]);
-
-  // Single focus effect: loads fresh data on initial mount and on every return to Home.
-  const [reloadKey, setReloadKey] = useState(0);
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      void reloadKey;
-      void revision;
-      fetchFirstPage().then(
-        (page) => {
-          if (cancelled) return;
-          generation.current++;
-          lastLoadedAt.current = Date.now();
-          cursorRef.current = page.cursor;
-          hasNextRef.current = page.hasNext;
-          setItems(page.items);
-          setStatus('ready');
-        },
-        () => {
-          if (!cancelled) setStatus((s) => (s === 'ready' ? s : 'error'));
-        }
-      );
-      return () => {
-        cancelled = true;
-      };
-    }, [fetchFirstPage, reloadKey, revision])
-  );
-
-  const retry = () => {
-    setStatus('loading');
-    setReloadKey((k) => k + 1);
-  };
+  // Flatten and filter activities
+  const feed = useMemo(() => {
+    const pages = data?.pages ?? [];
+    const all = pages.flatMap((p) => p.items ?? []);
+    // Defence in depth: server enforces visibility
+    return all.filter((a) => a.athlete.id === currentUser.id || a.visibility !== 'ONLY_ME');
+  }, [data, currentUser.id]);
 
   const onRefresh = async () => {
-    setRefreshing(true);
-    syncWorker.kick(); // also push any activity still waiting to upload
-    try {
-      const page = await fetchFirstPage();
-      if (page.seq !== requestSeq.current) return;
-      generation.current++;
-      lastLoadedAt.current = Date.now();
-      setLoadMoreError(false);
-      cursorRef.current = page.cursor;
-      hasNextRef.current = page.hasNext;
-      setItems(page.items);
-      setStatus('ready');
-    } catch {
-      // keep current items; surface error only if we have nothing to show
-      if (items.length === 0) setStatus('error');
-    } finally {
-      setRefreshing(false);
+    syncWorker.kick();
+    await refetch();
+  };
+
+  const onEndReached = () => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
   };
 
-  const onEndReached = async () => {
-    if (loadingMore || !hasNextRef.current || !cursorRef.current || status !== 'ready') return;
-    setLoadingMore(true);
-    setLoadMoreError(false);
-    const gen = generation.current;
-    const readTick = socialStore.beginRead();
-    try {
-      const res = await api.feed.getFeed(HOME_FEED_TAB, cursorRef.current);
-      if (gen !== generation.current) return; // a refresh replaced the list meanwhile
-      cursorRef.current = res.nextCursor;
-      hasNextRef.current = res.hasNextPage;
-      const next = withoutRemoved(res.feed.map(fromFeedItem).filter(visibleToMe));
-      socialStore.seed(next, readTick);
-      useActivityStore.getState().upsertActivities(next);
-      useActivityStore.getState().appendFeedIds(next.map((i) => i.id));
-      setItems((prev) => {
-        const seen = new Set(prev.map((p) => p.id));
-        return [...prev, ...next.filter((n) => !seen.has(n.id))];
-      });
-    } catch {
-      setLoadMoreError(true);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-
-
-  // An activity just finished uploading → show it.
-  const pendingCount = pending.length;
-  const prevPending = useRef(pendingCount);
-  useEffect(() => {
-    if (pendingCount < prevPending.current) setReloadKey((k) => k + 1);
-    prevPending.current = pendingCount;
-  }, [pendingCount]);
-
-  // Saved on the phone but not yet confirmed by the server (local-first; never silently dropped).
+  // Uploads banner
   const uploadsBanner =
     pending.length > 0 ? (
       <TouchableOpacity
@@ -175,6 +70,7 @@ export default function HomeFeedScreen() {
       </TouchableOpacity>
     ) : null;
 
+  // Active workout banner
   const activeWorkoutBanner = active ? (
     <View className="mx-4 my-2 p-3 rounded-2xl bg-orange-50 border-2 border-[#FC4C02] flex-row items-center justify-between shadow-sm">
       <TouchableOpacity onPress={() => router.push('/record')} activeOpacity={0.85} className="flex-row items-center flex-1 mr-2">
@@ -202,28 +98,27 @@ export default function HomeFeedScreen() {
     </View>
   ) : null;
 
-  const feed = useMemo(() => {
-    void revision;
-    return presentActivities(items).filter(visibleToMe);
-  }, [items, revision, visibleToMe]);
-
   let body: React.ReactNode;
-  if (status === 'loading') {
-    body = (<View><FeedCardSkeleton /><FeedCardSkeleton /></View>);
-  } else if (status === 'error') {
-    body = <ErrorState message="We couldn’t load your feed. Check your connection and try again." onRetry={retry} />;
+  if (isLoading) {
+    body = (
+      <View>
+        <FeedCardSkeleton />
+        <FeedCardSkeleton />
+      </View>
+    );
+  } else if (isError) {
+    body = <ErrorState message="We couldn’t load your feed. Check your connection and try again." onRetry={() => refetch()} />;
   } else {
     body = (
       <FlatList
         data={feed}
-        extraData={revision}
         keyExtractor={(a) => a.id}
         renderItem={({ item }) => (
-          <FeedCard activity={item} currentUserId={currentUser.id} onDelete={(id) => setItems((prev) => prev.filter((a) => a.id !== id))} />
+          <FeedCard activity={item} currentUserId={currentUser.id} />
         )}
         onEndReached={onEndReached}
-        onEndReachedThreshold={0.6}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />}
+        onEndReachedThreshold={0.5}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} colors={['#FC4C02']} />}
         contentContainerStyle={feed.length === 0 ? { flexGrow: 1 } : { paddingTop: 8, paddingBottom: 64 }}
         initialNumToRender={4}
         windowSize={7}
@@ -237,9 +132,7 @@ export default function HomeFeedScreen() {
           />
         }
         ListFooterComponent={
-          loadingMore ? <ActivityIndicator className="m-6" color="#FC4C02" /> : loadMoreError ? (
-            <View className="p-4"><ErrorState compact message="Couldn’t load more activities." onRetry={onEndReached} /></View>
-          ) : undefined
+          isFetchingNextPage ? <ActivityIndicator className="m-6" color="#FC4C02" /> : undefined
         }
       />
     );

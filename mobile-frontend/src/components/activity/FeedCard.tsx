@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { memo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import { memo } from 'react';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { Avatar } from '../../design';
+import { useDeleteActivity, useToggleKudos } from '../../hooks/useActivities';
 import { ActivityView, avgSpeedOf } from '../../lib/activityView';
 import {
   formatActivityDate,
@@ -11,12 +12,8 @@ import {
   paceValue,
   speedValue,
 } from '../../lib/format';
-import { markActivityRemoved } from '../../lib/removedActivities';
-import { useActivity, useActivityStore } from '../../lib/activityStore';
-import { useSocial } from '../../lib/social';
 import { shareActivity } from '../../lib/share';
 import { sportConfig } from '../../lib/sports';
-import { api } from '../../services/api';
 import { RoutePreview } from '../map/RoutePreview';
 
 export const VISIBILITY_LABEL = {
@@ -36,40 +33,30 @@ interface FeedCardProps {
 
 /** Feed card (reference: ScreensDesign 374837). Title → 3 stats → route → social. */
 export const FeedCard = memo(function FeedCard({
-  activity: initialActivity,
+  activity,
   currentUserId,
   showAthlete = true,
   onDelete,
 }: FeedCardProps) {
   const router = useRouter();
-  const live = useActivity(initialActivity.id);
-  const activity = live ? { ...initialActivity, ...live } : initialActivity;
   const sport = sportConfig(activity.sportType);
   const isOwn = activity.athlete.id === currentUserId;
-  const social = useSocial(activity.id, {
-    hasKudos: activity.hasKudos,
-    kudosCount: activity.kudosCount,
-    commentsCount: activity.commentsCount,
-  });
-  const hasKudos = activity.hasKudos !== null && activity.hasKudos !== undefined ? activity.hasKudos : social.hasKudos;
-  const kudosCount = Math.max(activity.kudosCount ?? 0, social.kudosCount ?? 0);
-  const commentsCount = Math.max(activity.commentsCount ?? 0, social.commentsCount ?? 0);
-  const [pending, setPending] = useState(false);
+  const hasKudos = Boolean(activity.hasKudos);
+  const kudosCount = activity.kudosCount ?? 0;
+  const commentsCount = activity.commentsCount ?? 0;
+
+  const { mutate: toggleKudos } = useToggleKudos();
+  const { mutate: deleteActivity } = useDeleteActivity();
 
   const open = () => router.push({ pathname: '/activity/[id]', params: { id: activity.id } });
   const openKudos = () => router.push({ pathname: '/activity/kudos/[id]', params: { id: activity.id } });
   const openComments = () => router.push({ pathname: '/activity/[id]', params: { id: activity.id, focus: 'comments' } });
 
-  const onKudos = async () => {
-    if (pending) return;
-    setPending(true);
-    try {
-      await useActivityStore.getState().toggleKudos(activity.id);
-    } catch (e: any) {
-      Alert.alert('Kudos not updated', e?.message ?? 'Check your connection and try again.');
-    } finally {
-      setPending(false);
-    }
+  const onKudos = () => {
+    toggleKudos({
+      activityId: activity.id,
+      give: !hasKudos,
+    });
   };
 
   const confirmDelete = () =>
@@ -78,14 +65,11 @@ export const FeedCard = memo(function FeedCard({
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: async () => {
-          try {
-            await api.activities.remove(activity.id);
-            markActivityRemoved(activity.id);
-            onDelete?.(activity.id);
-          } catch (e: any) {
-            Alert.alert('Could not delete', e?.message || 'Try again.');
-          }
+        onPress: () => {
+          deleteActivity(activity.id, {
+            onSuccess: () => onDelete?.(activity.id),
+            onError: (e: any) => Alert.alert('Could not delete', e?.message || 'Try again.'),
+          });
         },
       },
     ]);
@@ -219,20 +203,15 @@ export const FeedCard = memo(function FeedCard({
       <View className="flex-row mt-1 border-t border-gray-50">
         <Pressable
           onPress={onKudos}
-          disabled={pending}
           accessibilityRole="button"
           accessibilityLabel={hasKudos ? 'Remove kudos' : 'Give kudos'}
-          accessibilityState={{ selected: hasKudos === true, busy: pending }}
+          accessibilityState={{ selected: hasKudos }}
           className="flex-1 flex-row items-center justify-center min-h-[48px] active:bg-gray-50">
-          {pending ? (
-            <ActivityIndicator size="small" color={hasKudos ? '#FC4C02' : '#1F2937'} />
-          ) : (
-            <Ionicons
-              name={hasKudos ? 'thumbs-up' : 'thumbs-up-outline'}
-              size={22}
-              color={hasKudos ? '#FC4C02' : '#1F2937'}
-            />
-          )}
+          <Ionicons
+            name={hasKudos ? 'thumbs-up' : 'thumbs-up-outline'}
+            size={22}
+            color={hasKudos ? '#FC4C02' : '#1F2937'}
+          />
         </Pressable>
         <Pressable
           onPress={openComments}

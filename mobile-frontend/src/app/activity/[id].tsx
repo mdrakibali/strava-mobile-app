@@ -1,5 +1,5 @@
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useRef, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -13,20 +13,8 @@ import { ActivityBody, DetailSkeleton } from '../../components/activity/Activity
 import { MapView } from '../../components/map/MapView';
 import { useApp } from '../../context/AppContext';
 import { AppBar, AppText, EmptyState, ErrorState, IconButton } from '../../design';
-import { reconcileActivity } from '../../lib/activityEdits';
-import { useActivity, useActivityStore } from '../../lib/activityStore';
-import { useActivityRevision } from '../../lib/publishedActivities';
-import { ActivityView, fromDetailResponse } from '../../lib/activityView';
-import { markActivityRemoved } from '../../lib/removedActivities';
-import { socialStore } from '../../lib/social';
+import { useActivityDetail, useDeleteActivity } from '../../hooks/useActivities';
 import { useKeyboardInset } from '../../lib/useKeyboardInset';
-import { api } from '../../services/api';
-
-type State =
-  | { status: 'loading' }
-  | { status: 'notFound' }
-  | { status: 'error'; message: string }
-  | { status: 'ready'; activity: ActivityView; isOwner: boolean };
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -36,59 +24,26 @@ export default function ActivityDetailScreen() {
   const { currentUser } = useApp();
   const keyboard = useKeyboardInset();
   const scrollRef = useRef<{ scrollToEnd: (options?: { animated?: boolean }) => void } | null>(null);
-  const [fetched, setState] = useState<State>({ status: 'loading' });
-  const [reloadKey, setReloadKey] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
-  const revision = useActivityRevision();
-  const storeActivity = useActivity(id);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!id) return;
-      let cancelled = false;
-      void reloadKey;
-      void revision;
-      const readTick = socialStore.beginRead();
-      api.activities.get(id).then(
-        (res) => {
-          if (cancelled) return;
-          if (!res?.activity) setState({ status: 'notFound' });
-          else {
-            const activity = reconcileActivity(fromDetailResponse(res));
-            useActivityStore.getState().upsertActivity(activity);
-            socialStore.seed(
-              [{ id: activity.id, hasKudos: activity.hasKudos, kudosCount: activity.kudosCount, commentsCount: activity.commentsCount }],
-              readTick
-            );
-            setState({ status: 'ready', activity, isOwner: Boolean(res.isOwner) });
-          }
-        },
-        (e: any) => {
-          if (cancelled) return;
-          const msg = String(e?.message || '');
-          if (/not found/i.test(msg)) setState({ status: 'notFound' });
-          else setState({ status: 'error', message: msg || 'Check your connection and try again.' });
-        }
-      );
-      return () => {
-        cancelled = true;
-      };
-    }, [id, reloadKey, revision])
-  );
+  const { data, isLoading, isError, error, refetch } = useActivityDetail(id);
+  const { mutate: deleteActivity } = useDeleteActivity();
 
-  const state: State = id ? fetched : { status: 'notFound' };
-  const retry = () => {
-    setState({ status: 'loading' });
-    setReloadKey((k) => k + 1);
-  };
-
-  if (state.status !== 'ready') {
+  if (isLoading) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-        <AppBar title={state.status === 'loading' ? '' : 'Activity'} />
-        {state.status === 'loading' ? (
-          <DetailSkeleton />
-        ) : state.status === 'notFound' ? (
+        <AppBar title="" />
+        <DetailSkeleton />
+      </SafeAreaView>
+    );
+  }
+
+  if (isError || !data?.activity) {
+    const isNotFound = /not found/i.test(String(error?.message || ''));
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        <AppBar title="Activity" />
+        {isNotFound ? (
           <EmptyState
             icon="eye-off-outline"
             title="This activity isn’t available"
@@ -96,14 +51,16 @@ export default function ActivityDetailScreen() {
             primary={{ label: 'Go back', onPress: () => router.back() }}
           />
         ) : (
-          <ErrorState message={state.message} onRetry={retry} />
+          <ErrorState
+            message={error?.message || 'We couldn’t load this activity.'}
+            onRetry={() => refetch()}
+          />
         )}
       </SafeAreaView>
     );
   }
 
-  const { isOwner } = state;
-  const activity = storeActivity ?? (revision >= 0 ? reconcileActivity(state.activity) : state.activity);
+  const { activity, isOwner } = data;
   const hasMap = activity.route.length > 1;
   const mapHeight = Math.round(height * 0.42);
 
@@ -113,22 +70,21 @@ export default function ActivityDetailScreen() {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: async () => {
-          try {
-            await api.activities.remove(activityId);
-            useActivityStore.getState().removeActivity(activityId);
-            markActivityRemoved(activityId);
-            router.back();
-          } catch (e: any) {
-            Alert.alert('Couldn’t delete', e?.message ?? 'Please try again.');
-          }
+        onPress: () => {
+          deleteActivity(activityId, {
+            onSuccess: () => router.back(),
+            onError: (e: any) => Alert.alert('Couldn’t delete', e?.message ?? 'Please try again.'),
+          });
         },
       },
     ]);
 
   return (
     <View className="flex-1 bg-white">
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={insets.top}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={insets.top}>
         <ScrollView
           ref={(node) => {
             scrollRef.current = node;
