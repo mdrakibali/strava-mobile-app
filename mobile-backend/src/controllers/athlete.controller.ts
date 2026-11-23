@@ -1,5 +1,4 @@
 import { Context } from 'hono';
-import { decodeCursor, encodeCursor } from '../lib/cursor';
 import { getDb } from '../lib/db';
 import { toActivityListItem, toPrivateAthlete, toPublicAthlete } from '../lib/dto';
 import { HttpError } from '../lib/http';
@@ -56,7 +55,7 @@ export class AthleteController {
       const followingCount = await repo.getFollowingCount(id);
       const isFollowing = currentUser ? await repo.isFollowing(currentUser.athleteId, id) : false;
       // Policy-filtered (ONLY_ME / FOLLOWERS_ONLY respected) and without the raw track (PRIV-02/03).
-      const rows = await new ActivityRepository(getDb(c)).listVisibleByAthlete(id, currentUser?.athleteId, 10, null);
+      const rows = await new ActivityRepository(getDb(c)).listVisibleByAthlete(id, currentUser?.athleteId);
       const recentActivities = rows.slice(0, 10).map(toActivityListItem);
       const isSelf = currentUser?.athleteId === id;
 
@@ -74,24 +73,16 @@ export class AthleteController {
     }
   }
 
-  // GET /api/v1/athletes/:id/activities?cursor=&limit= — activity history (policy-filtered)
+  // GET /api/v1/athletes/:id/activities — activity history (policy-filtered)
   async listActivities(c: Context<{ Bindings: Env }>) {
     let id = c.req.param('id');
     if (!id) throw new HttpError(400, 'missing_param', 'Athlete ID is required');
     if (id === 'ath_seed_ahmed') id = 'ath_seed_tanvir';
-    const limit = Math.min(50, Math.max(1, Number(c.req.query('limit')) || 20));
-    const rawCursor = c.req.query('cursor');
-    const cursor = decodeCursor(rawCursor);
-    if (rawCursor && !cursor) throw new HttpError(400, 'invalid_cursor', 'Invalid cursor');
     const viewer = c.get('user')?.athleteId;
-    const rows = await new ActivityRepository(getDb(c)).listVisibleByAthlete(id, viewer, limit, cursor);
-    const hasNextPage = rows.length > limit;
-    const items = rows.slice(0, limit);
-    const last = items[items.length - 1];
+    const rows = await new ActivityRepository(getDb(c)).listVisibleByAthlete(id, viewer);
     return c.json({
-      activities: items.map(toActivityListItem),
-      hasNextPage,
-      nextCursor: hasNextPage && last ? encodeCursor(last.startTime, last.id) : null,
+      activities: rows.map(toActivityListItem),
+      count: rows.length,
     });
   }
 
@@ -172,14 +163,6 @@ export class AthleteController {
     }
   }
 
-  private page(c: Context<{ Bindings: Env }>) {
-    const limit = Math.min(50, Math.max(1, Number(c.req.query('limit')) || 30));
-    const raw = c.req.query('cursor');
-    const cursor = decodeCursor(raw);
-    if (raw && !cursor) throw new HttpError(400, 'invalid_cursor', 'Invalid cursor');
-    return { limit, cursor };
-  }
-
   private targetId(c: Context<{ Bindings: Env }>) {
     let id = c.req.param('id');
     if (!id) throw new HttpError(400, 'missing_param', 'Athlete ID is required');
@@ -200,8 +183,7 @@ export class AthleteController {
 
   // GET /athletes/:id/followers | /following
   async listFollows(c: Context<{ Bindings: Env }>, kind: 'followers' | 'following') {
-    const { limit, cursor } = this.page(c);
-    return c.json(await new SocialService(getDb(c)).list(kind, this.targetId(c), c.get('user')?.athleteId, limit, cursor));
+    return c.json(await new SocialService(getDb(c)).list(kind, this.targetId(c), c.get('user')?.athleteId));
   }
 
   // GET /athletes/:id/stats (policy-aware totals + 12 weeks)

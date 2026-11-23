@@ -1,6 +1,5 @@
 import { Context } from 'hono';
 import { z } from 'zod';
-import { decodeCursor } from '../lib/cursor';
 import { getDb } from '../lib/db';
 import { HttpError, parseBody } from '../lib/http';
 import {
@@ -90,24 +89,14 @@ export class ActivityController {
     return c.json(await this.service(c).removeKudos(this.param(c, 'id'), c.get('user').athleteId));
   }
 
-  private page(c: C, max = 50, def = 30) {
-    const limit = Math.min(max, Math.max(1, Number(c.req.query('limit')) || def));
-    const raw = c.req.query('cursor');
-    const cursor = decodeCursor(raw);
-    if (raw && !cursor) throw new HttpError(400, 'invalid_cursor', 'Invalid cursor');
-    return { limit, cursor };
-  }
-
   // GET /activities/:id/kudos
   async listKudos(c: C) {
-    const { limit, cursor } = this.page(c);
-    return c.json(await this.service(c).listKudos(this.param(c, 'id'), c.get('user')?.athleteId, limit, cursor));
+    return c.json(await this.service(c).listKudos(this.param(c, 'id'), c.get('user')?.athleteId));
   }
 
   // GET /activities/:id/comments
   async listComments(c: C) {
-    const { limit, cursor } = this.page(c, 100, 50);
-    return c.json(await this.service(c).listComments(this.param(c, 'id'), c.get('user')?.athleteId, limit, cursor));
+    return c.json(await this.service(c).listComments(this.param(c, 'id'), c.get('user')?.athleteId));
   }
 
   // PATCH /activities/:id/comments/:commentId (author only)

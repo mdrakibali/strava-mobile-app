@@ -1,5 +1,5 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ActivityView, CommentView, fromDetailResponse, fromFeedItem } from '../lib/activityView';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ActivityView, fromDetailResponse, fromFeedItem, fromProfileActivity, toAthleteSummary } from '../lib/activityView';
 import { api } from '../services/api';
 
 export const activityKeys = {
@@ -11,22 +11,15 @@ export const activityKeys = {
 };
 
 /**
- * 1. Feed Hook: Supports cursor pagination, caching, and pull-to-refresh
+ * 1. Feed Hook: Fetches all feed activities directly without cursor pagination.
  */
 export function useFeed(tab: 'all' | 'following' | 'clubs' = 'all') {
-  return useInfiniteQuery({
+  return useQuery({
     queryKey: activityKeys.feed(tab),
-    queryFn: async ({ pageParam }) => {
-      const res = await api.feed.getFeed(tab, pageParam ?? undefined, 20);
-      return {
-        items: (res?.feed || []).map(fromFeedItem),
-        count: res.count,
-        nextCursor: res.nextCursor,
-        hasNextPage: res.hasNextPage,
-      };
+    queryFn: async () => {
+      const res = await api.feed.getFeed(tab);
+      return (res?.feed || []).map(fromFeedItem);
     },
-    initialPageParam: null as string | null,
-    getNextPageParam: (lastPage) => (lastPage.hasNextPage && lastPage.nextCursor ? lastPage.nextCursor : null),
   });
 }
 
@@ -49,7 +42,44 @@ export function useActivityDetail(id?: string) {
 }
 
 /**
- * 3. Instant Optimistic Kudos Toggle Hook
+ * 3. Kudos List Hook: Fetches all athletes who gave kudos directly without cursor pagination.
+ */
+export function useKudosList(activityId?: string) {
+  return useQuery({
+    queryKey: activityKeys.kudos(activityId || ''),
+    queryFn: async () => {
+      if (!activityId) throw new Error('Activity ID required');
+      const res = await api.activities.listKudos(activityId);
+      return {
+        athletes: res.athletes || [],
+        kudosCount: res.kudosCount ?? (res.athletes || []).length,
+      };
+    },
+    enabled: Boolean(activityId),
+  });
+}
+
+/**
+ * 4. Athlete Activity History Hook: Fetches all athlete activities directly without cursor pagination.
+ */
+export function useAthleteActivities(athleteId?: string) {
+  return useQuery({
+    queryKey: activityKeys.history(athleteId || ''),
+    queryFn: async () => {
+      if (!athleteId) throw new Error('Athlete ID required');
+      const [profile, page] = await Promise.all([
+        api.athletes.getProfile(athleteId),
+        api.athletes.listActivities(athleteId),
+      ]);
+      const athlete = toAthleteSummary(profile.athlete);
+      return (page.activities || []).map((r) => fromProfileActivity(r, athlete));
+    },
+    enabled: Boolean(athleteId),
+  });
+}
+
+/**
+ * 5. Instant Optimistic Kudos Toggle Hook
  */
 export function useToggleKudos() {
   const queryClient = useQueryClient();
@@ -73,19 +103,13 @@ export function useToggleKudos() {
         };
       };
 
-      // Update feed queries
-      queryClient.setQueriesData({ queryKey: ['activities', 'feed'] }, (old: any) => {
-        if (!old?.pages) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page: any) => ({
-            ...page,
-            items: (page.items || []).map(patchItem),
-          })),
-        };
+      // 1. Update feed queries (plain arrays)
+      queryClient.setQueriesData({ queryKey: ['activities', 'feed'] }, (old?: ActivityView[]) => {
+        if (!Array.isArray(old)) return old;
+        return old.map(patchItem);
       });
 
-      // Update detail query
+      // 2. Update detail query
       queryClient.setQueryData(activityKeys.detail(activityId), (old: any) => {
         if (!old?.activity) return old;
         return {
@@ -94,16 +118,10 @@ export function useToggleKudos() {
         };
       });
 
-      // Update history queries
-      queryClient.setQueriesData({ queryKey: ['activities', 'history'] }, (old: any) => {
-        if (!old?.pages) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page: any) => ({
-            ...page,
-            items: (page.items || []).map(patchItem),
-          })),
-        };
+      // 3. Update history queries (plain arrays)
+      queryClient.setQueriesData({ queryKey: ['activities', 'history'] }, (old?: ActivityView[]) => {
+        if (!Array.isArray(old)) return old;
+        return old.map(patchItem);
       });
 
       return { previousQueries };
@@ -122,7 +140,7 @@ export function useToggleKudos() {
 }
 
 /**
- * 4. Update Activity Details
+ * 6. Update Activity Details
  */
 export function useUpdateActivity() {
   const queryClient = useQueryClient();
@@ -147,7 +165,7 @@ export function useUpdateActivity() {
 }
 
 /**
- * 5. Delete Activity
+ * 7. Delete Activity
  */
 export function useDeleteActivity() {
   const queryClient = useQueryClient();
@@ -161,27 +179,15 @@ export function useDeleteActivity() {
       await queryClient.cancelQueries({ queryKey: activityKeys.all });
 
       // Optimistically remove from feed
-      queryClient.setQueriesData({ queryKey: ['activities', 'feed'] }, (old: any) => {
-        if (!old?.pages) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page: any) => ({
-            ...page,
-            items: (page.items || []).filter((item: ActivityView) => item.id !== deletedId),
-          })),
-        };
+      queryClient.setQueriesData({ queryKey: ['activities', 'feed'] }, (old?: ActivityView[]) => {
+        if (!Array.isArray(old)) return old;
+        return old.filter((item) => item.id !== deletedId);
       });
 
       // Optimistically remove from history
-      queryClient.setQueriesData({ queryKey: ['activities', 'history'] }, (old: any) => {
-        if (!old?.pages) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page: any) => ({
-            ...page,
-            items: (page.items || []).filter((item: ActivityView) => item.id !== deletedId),
-          })),
-        };
+      queryClient.setQueriesData({ queryKey: ['activities', 'history'] }, (old?: ActivityView[]) => {
+        if (!Array.isArray(old)) return old;
+        return old.filter((item) => item.id !== deletedId);
       });
     },
     onSettled: () => {
@@ -191,7 +197,7 @@ export function useDeleteActivity() {
 }
 
 /**
- * 6. Comments Mutations
+ * 8. Comments Mutations
  */
 export function useAddComment(activityId: string) {
   const queryClient = useQueryClient();
@@ -230,4 +236,3 @@ export function useEditComment(activityId: string) {
     },
   });
 }
-

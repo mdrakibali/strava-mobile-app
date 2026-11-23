@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { estimateCalories } from '../../../shared/tracking/calories';
-import { CursorPayload, encodeCursor } from '../lib/cursor';
 import { buildGpx } from '../lib/gpx';
 import { HttpError, notFound } from '../lib/http';
 import { canViewActivity } from '../lib/policy';
@@ -137,28 +136,20 @@ export class ActivityService {
     return { hasKudos: false, kudosCount: await this.activityRepo.getKudosCount(activityId) };
   }
 
-  async listKudos(activityId: string, viewerId: string | undefined, limit: number, cursor: CursorPayload | null) {
+  async listKudos(activityId: string, viewerId: string | undefined) {
     await this.loadVisible(activityId, viewerId);
-    const rows = await this.activityRepo.listKudos(activityId, limit, cursor);
-    const items = rows.slice(0, limit);
-    const last = items[items.length - 1];
+    const rows = await this.activityRepo.listKudos(activityId);
     return {
-      athletes: items.map((r) => ({ ...r.athlete, givenAt: r.createdAt })),
+      athletes: rows.map((r) => ({ ...r.athlete, givenAt: r.createdAt })),
       kudosCount: await this.activityRepo.getKudosCount(activityId),
-      hasNextPage: rows.length > limit,
-      nextCursor: rows.length > limit && last ? encodeCursor(last.createdAt, last.id) : null,
     };
   }
 
-  async listComments(activityId: string, viewerId: string | undefined, limit: number, cursor: CursorPayload | null) {
+  async listComments(activityId: string, viewerId: string | undefined) {
     await this.loadVisible(activityId, viewerId);
-    const rows = await this.activityRepo.getComments(activityId, limit + 1, cursor);
-    const items = rows.slice(0, limit);
-    const last = items[items.length - 1];
+    const rows = await this.activityRepo.getComments(activityId);
     return {
-      comments: items,
-      hasNextPage: rows.length > limit,
-      nextCursor: rows.length > limit && last ? encodeCursor(last.createdAt, last.id) : null,
+      comments: rows,
     };
   }
 

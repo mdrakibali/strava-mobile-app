@@ -291,17 +291,9 @@ describe('activity management', () => {
         elapsedTimeSeconds: 300,
       });
     }
-    const seen: string[] = [];
-    let cursor: string | null = null;
-    do {
-      const q: string = `/athletes/ath_a/activities?limit=3${cursor ? `&cursor=${cursor}` : ''}`;
-      const page = await call('GET', q, { token: owner });
-      seen.push(...page.body.activities.map((a: any) => a.id));
-      cursor = page.body.nextCursor;
-    } while (cursor);
-    expect(seen).toHaveLength(7);
-    expect(new Set(seen).size).toBe(7);
-    expect((await call('GET', '/athletes/ath_a/activities?cursor=garbage', { token: owner })).status).toBe(400);
+    const res = await call('GET', '/athletes/ath_a/activities', { token: owner });
+    expect(res.body.activities).toHaveLength(7);
+    expect(new Set(res.body.activities.map((a: any) => a.id)).size).toBe(7);
   });
 });
 

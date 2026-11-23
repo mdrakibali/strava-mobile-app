@@ -23,35 +23,23 @@ export default function HomeFeedScreen() {
   const pending = usePendingUploads();
   const attention = pending.filter((p) => p.state === 'needs_attention');
 
-  // React Query infinite feed
+  // React Query feed (unpaginated, loads all at once)
   const {
-    data,
+    data: feedData = [],
     isLoading,
     isError,
     refetch,
     isRefetching,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
   } = useFeed(HOME_FEED_TAB);
 
-  // Flatten and filter activities
+  // Filter activities
   const feed = useMemo(() => {
-    const pages = data?.pages ?? [];
-    const all = pages.flatMap((p) => p.items ?? []);
-    // Defence in depth: server enforces visibility
-    return all.filter((a) => a.athlete.id === currentUser.id || a.visibility !== 'ONLY_ME');
-  }, [data, currentUser.id]);
+    return feedData.filter((a) => a.athlete.id === currentUser.id || a.visibility !== 'ONLY_ME');
+  }, [feedData, currentUser.id]);
 
   const onRefresh = async () => {
     syncWorker.kick();
     await refetch();
-  };
-
-  const onEndReached = () => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
   };
 
   // Uploads banner
@@ -116,11 +104,9 @@ export default function HomeFeedScreen() {
         renderItem={({ item }) => (
           <FeedCard activity={item} currentUserId={currentUser.id} />
         )}
-        onEndReached={onEndReached}
-        onEndReachedThreshold={0.5}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} colors={['#FC4C02']} />}
         contentContainerStyle={feed.length === 0 ? { flexGrow: 1 } : { paddingTop: 8, paddingBottom: 64 }}
-        initialNumToRender={4}
+        initialNumToRender={10}
         windowSize={7}
         ListEmptyComponent={
           <EmptyState
@@ -130,9 +116,6 @@ export default function HomeFeedScreen() {
             primary={{ label: 'Record an activity', onPress: () => router.push('/record') }}
             secondary={{ label: 'Find athletes', onPress: () => router.push('/search') }}
           />
-        }
-        ListFooterComponent={
-          isFetchingNextPage ? <ActivityIndicator className="m-6" color="#FC4C02" /> : undefined
         }
       />
     );

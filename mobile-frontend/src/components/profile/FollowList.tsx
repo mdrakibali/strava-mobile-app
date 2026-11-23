@@ -58,10 +58,8 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const cursor = useRef<string | null>(null);
 
   const toRow = useCallback((a: any, snapshot: Map<string, number>): Row => {
     const s = toAthleteSummary(a);
@@ -81,7 +79,6 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
     api.athletes.listFollows(athleteId, kind).then(
       (res) => {
         if (cancelled) return;
-        cursor.current = res.nextCursor;
         setRows(res.athletes.map((a: any) => toRow(a, snapshot)));
         setStatus('ready');
         setRefreshing(false);
@@ -107,19 +104,6 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
       loadList();
     }, [loadList])
   );
-
-  const more = async () => {
-    if (!cursor.current || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const res = await api.athletes.listFollows(athleteId, kind, cursor.current);
-      cursor.current = res.nextCursor;
-      const snapshot = captureFollowEpochs();
-      setRows((prev) => [...prev, ...res.athletes.map((a: any) => toRow(a, snapshot)).filter((r) => !prev.some((p) => p.id === r.id))]);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
 
   const toggle = async (r: Row, currentFollowing: boolean) => {
     setBusy(r.id);
@@ -148,7 +132,6 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
         <FlatList
           data={rows}
           keyExtractor={(r) => r.id}
-          onEndReached={more}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); setReloadKey((k) => k + 1); }} colors={['#FC4C02']} />}
           contentContainerStyle={rows.length === 0 ? { flexGrow: 1 } : undefined}
           ListEmptyComponent={
@@ -158,7 +141,6 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
               primary={athleteId === currentUser.id ? { label: 'Find athletes', onPress: () => router.push('/search') } : undefined}
             />
           }
-          ListFooterComponent={loadingMore ? <ActivityIndicator color="#FC4C02" style={{ margin: space.lg }} /> : undefined}
           renderItem={({ item: r }) => (
             <FollowRow
               row={r}

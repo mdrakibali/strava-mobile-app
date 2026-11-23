@@ -18,7 +18,7 @@ export default function PersonalHeatmapScreen() {
 
   useEffect(() => {
     if (!currentUser.id) return;
-    api.athletes.listActivities(currentUser.id, null, 100).then((res) => {
+    api.athletes.listActivities(currentUser.id).then((res) => {
       if (res?.activities) setUserActivities(res.activities);
     }).catch(() => null);
   }, [currentUser.id]);

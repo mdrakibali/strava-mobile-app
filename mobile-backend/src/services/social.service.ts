@@ -1,6 +1,5 @@
 import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import { activities, athletes, follows } from '../db/schema';
-import { CursorPayload, encodeCursor } from '../lib/cursor';
 import { AppDatabase } from '../lib/db';
 import { HttpError, notFound } from '../lib/http';
 import { visibleActivitiesWhere } from '../lib/policy';
@@ -87,12 +86,11 @@ export class SocialService {
    * Followers or following of `athleteId`, newest relationship first, each with whether the
    * viewer follows that person (for inline Follow buttons).
    */
-  async list(kind: 'followers' | 'following', athleteId: string, viewerId: string | undefined, limit: number, cursor: CursorPayload | null) {
+  async list(kind: 'followers' | 'following', athleteId: string, viewerId: string | undefined) {
     await this.requireAthlete(athleteId);
     const joinOn = kind === 'followers' ? follows.followerId : follows.followingId;
     const whereCol = kind === 'followers' ? follows.followingId : follows.followerId;
     const conds = [eq(whereCol, athleteId)];
-    if (cursor) conds.push(sql`(${follows.createdAt}, ${joinOn}) < (${new Date(cursor.timestamp).toISOString()}::timestamptz, ${cursor.id})`);
     const rows = await this.db
       .select({
         ...athleteCard,
@@ -104,14 +102,11 @@ export class SocialService {
       .from(follows)
       .innerJoin(athletes, eq(athletes.id, joinOn))
       .where(and(...conds))
-      .orderBy(desc(follows.createdAt), desc(joinOn))
-      .limit(limit + 1);
-    const items = rows.slice(0, limit);
-    const last = items[items.length - 1];
+      .orderBy(desc(follows.createdAt), desc(joinOn));
+
     return {
-      athletes: items.map((r) => ({ ...r, isFollowing: Boolean(r.isFollowing), isSelf: r.id === viewerId })),
-      hasNextPage: rows.length > limit,
-      nextCursor: rows.length > limit && last ? encodeCursor(last.since, last.id) : null,
+      athletes: rows.map((r) => ({ ...r, isFollowing: Boolean(r.isFollowing), isSelf: r.id === viewerId })),
+      count: rows.length,
     };
   }
 

@@ -1,46 +1,23 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
+import React from 'react';
+import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
-import { AppBar, AppText, Avatar, color, EmptyState, ErrorState, LoadingState, space } from '../../../design';
+import { AppBar, AppText, Avatar, EmptyState, ErrorState, LoadingState, space } from '../../../design';
 import { toAthleteSummary } from '../../../lib/activityView';
-import { activityKeys } from '../../../hooks/useActivities';
-import { api } from '../../../services/api';
+import { useKudosList } from '../../../hooks/useActivities';
 
-/** Who gave kudos (GET /activities/:id/kudos). */
+/**
+ * Athletes who gave kudos on this activity.
+ * Managed directly via React Query (all items fetched at once, no pagination).
+ */
 export default function KudosListScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const [extraItems, setExtraItems] = useState<any[]>([]);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const cursor = useRef<string | null>(null);
 
-  const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: activityKeys.kudos(id || ''),
-    queryFn: async () => {
-      if (!id) throw new Error('ID required');
-      const res = await api.activities.listKudos(id);
-      cursor.current = res.nextCursor;
-      return res;
-    },
-    enabled: Boolean(id),
-  });
+  const { data, isLoading, isError, error, refetch, isRefetching } = useKudosList(id);
 
-  const athletes = [...(data?.athletes ?? []), ...extraItems];
+  const athletes = data?.athletes ?? [];
   const count = data?.kudosCount ?? athletes.length;
-
-  const more = async () => {
-    if (!cursor.current || loadingMore || !id) return;
-    setLoadingMore(true);
-    try {
-      const res = await api.activities.listKudos(id, cursor.current);
-      cursor.current = res.nextCursor;
-      setExtraItems((prev) => [...prev, ...res.athletes.filter((a: any) => !prev.some((p) => p.id === a.id))]);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -56,10 +33,17 @@ export default function KudosListScreen() {
         <FlatList
           data={athletes}
           keyExtractor={(a) => a.id}
-          onEndReached={more}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={() => {
+                void refetch();
+              }}
+              colors={['#FC4C02']}
+            />
+          }
           contentContainerStyle={athletes.length === 0 ? { flexGrow: 1 } : undefined}
           ListEmptyComponent={<EmptyState icon="thumbs-up-outline" title="No kudos yet" />}
-          ListFooterComponent={loadingMore ? <ActivityIndicator color={color.brand} style={{ margin: space.lg }} /> : undefined}
           renderItem={({ item }) => {
             const a = toAthleteSummary(item);
             return (

@@ -28,7 +28,7 @@ describe('API client error handling', () => {
   });
 
   it('never sends requests from cache', async () => {
-    const f = respond(200, { feed: [], count: 0, tab: 'following', hasNextPage: false, nextCursor: null });
+    const f = respond(200, { feed: [], count: 0, tab: 'following' });
     global.fetch = f as any;
     await api.feed.getFeed('following');
     expect(f.mock.calls[0][1]).toMatchObject({ cache: 'no-store' });

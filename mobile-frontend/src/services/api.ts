@@ -203,17 +203,14 @@ export const api = {
     getMe: () => request<{ athlete: any }>('/auth/me'),
   },
 
-  // 2. Timeline Feed (Cursor-based)
+  // 2. Timeline Feed
   feed: {
-    getFeed: (tab: 'all' | 'following' | 'clubs' = 'all', cursor?: string, limit = 500) => {
-      const params = new URLSearchParams({ tab, limit: String(limit) });
-      if (cursor) params.set('cursor', cursor);
+    getFeed: (tab: 'all' | 'following' | 'clubs' = 'all') => {
+      const params = new URLSearchParams({ tab, limit: '5000' });
       return request<{
         feed: any[];
         count: number;
         tab: string;
-        hasNextPage: boolean;
-        nextCursor: string | null;
       }>(`/feed?${params.toString()}`);
     },
   },
@@ -251,14 +248,10 @@ export const api = {
       request<{ hasKudos: boolean; kudosCount: number }>(`/activities/${id}/kudos`, { method: 'PUT' }),
     removeKudos: (id: string) =>
       request<{ hasKudos: boolean; kudosCount: number }>(`/activities/${id}/kudos`, { method: 'DELETE' }),
-    listKudos: (id: string, cursor?: string | null) =>
-      request<{ athletes: any[]; kudosCount: number; hasNextPage: boolean; nextCursor: string | null }>(
-        `/activities/${id}/kudos${cursor ? `?cursor=${cursor}` : ''}`
-      ),
-    listComments: (id: string, cursor?: string | null) =>
-      request<{ comments: any[]; hasNextPage: boolean; nextCursor: string | null }>(
-        `/activities/${id}/comments${cursor ? `?cursor=${cursor}` : ''}`
-      ),
+    listKudos: (id: string) =>
+      request<{ athletes: any[]; kudosCount: number }>(`/activities/${id}/kudos`),
+    listComments: (id: string) =>
+      request<{ comments: any[] }>(`/activities/${id}/comments`),
     editComment: (id: string, commentId: string, content: string) =>
       request<{ comment: any }>(`/activities/${id}/comments/${commentId}`, {
         method: 'PATCH',
@@ -371,14 +364,9 @@ export const api = {
       request<{ athletes: any[]; count: number }>(`/athletes/search?q=${encodeURIComponent(query)}`),
     getProfile: (id: string) =>
       request<{ athlete: any; recentActivities: any[] }>(`/athletes/${id}`),
-    /** Activity history, policy-filtered by the server, cursor-paginated. */
-    listActivities: (id: string, cursor?: string | null, limit = 20) => {
-      const params = new URLSearchParams({ limit: String(limit) });
-      if (cursor) params.set('cursor', cursor);
-      return request<{ activities: any[]; hasNextPage: boolean; nextCursor: string | null }>(
-        `/athletes/${id}/activities?${params.toString()}`
-      );
-    },
+    /** Activity history, policy-filtered by the server. */
+    listActivities: (id: string) =>
+      request<{ activities: any[]; count?: number }>(`/athletes/${id}/activities`),
     toggleFollow: (id: string) =>
       request<{ isFollowing: boolean; followersCount: number }>(`/athletes/${id}/follow`, {
         method: 'POST',
@@ -387,10 +375,8 @@ export const api = {
       request<{ isFollowing: boolean; followersCount: number; followingCount: number }>(`/athletes/${id}/follow`, { method: 'PUT' }),
     unfollow: (id: string) =>
       request<{ isFollowing: boolean; followersCount: number; followingCount: number }>(`/athletes/${id}/follow`, { method: 'DELETE' }),
-    listFollows: (id: string, kind: 'followers' | 'following', cursor?: string | null) =>
-      request<{ athletes: any[]; hasNextPage: boolean; nextCursor: string | null }>(
-        `/athletes/${id}/${kind}${cursor ? `?cursor=${cursor}` : ''}`
-      ),
+    listFollows: (id: string, kind: 'followers' | 'following') =>
+      request<{ athletes: any[]; count?: number }>(`/athletes/${id}/${kind}`),
     stats: (id: string) => request<AthleteStats>(`/athletes/${id}/stats`),
     /** PUT /athletes/me (existing backend route; previously unused — profile edit was a fake save). */
     updateMe: (data: { displayName?: string; bio?: string; city?: string; country?: string }) =>

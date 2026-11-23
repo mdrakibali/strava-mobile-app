@@ -1,7 +1,6 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { activities, athletes, comments, kudos } from '../db/schema';
 import { countOf } from '../lib/counts';
-import { CursorPayload } from '../lib/cursor';
 import { AppDatabase } from '../lib/db';
 import { visibleActivitiesWhere } from '../lib/policy';
 
@@ -65,14 +64,10 @@ export class ActivityRepository {
   }
 
   /**
-   * Activity history for one athlete as seen by `viewerId` (policy-filtered), newest first, with
-   * a row-value cursor on (start_time, id) so equal start times never skip or repeat rows (API-03).
+   * Activity history for one athlete as seen by `viewerId` (policy-filtered), newest first.
    */
-  async listVisibleByAthlete(athleteId: string, viewerId: string | undefined, limit: number, cursor: CursorPayload | null) {
+  async listVisibleByAthlete(athleteId: string, viewerId: string | undefined) {
     const conditions = [eq(activities.athleteId, athleteId), visibleActivitiesWhere(viewerId)];
-    if (cursor) {
-      conditions.push(sql`(${activities.startTime}, ${activities.id}) < (${new Date(cursor.timestamp).toISOString()}::timestamptz, ${cursor.id})`);
-    }
     return this.db
       .select({
         id: activities.id,
@@ -98,8 +93,7 @@ export class ActivityRepository {
       })
       .from(activities)
       .where(and(...conditions))
-      .orderBy(desc(activities.startTime), desc(activities.id))
-      .limit(limit + 1);
+      .orderBy(desc(activities.startTime), desc(activities.id));
   }
 
   async getKudosCount(activityId: string): Promise<number> {
@@ -138,10 +132,9 @@ export class ActivityRepository {
     return removed.length > 0;
   }
 
-  /** Who gave kudos, newest first, cursor on (created_at, id). */
-  async listKudos(activityId: string, limit: number, cursor: CursorPayload | null) {
+  /** Who gave kudos, newest first. */
+  async listKudos(activityId: string) {
     const conds = [eq(kudos.activityId, activityId)];
-    if (cursor) conds.push(sql`(${kudos.createdAt}, ${kudos.id}) < (${new Date(cursor.timestamp).toISOString()}::timestamptz, ${cursor.id})`);
     return this.db
       .select({
         id: kudos.id,
@@ -157,8 +150,7 @@ export class ActivityRepository {
       .from(kudos)
       .innerJoin(athletes, eq(kudos.athleteId, athletes.id))
       .where(and(...conds))
-      .orderBy(desc(kudos.createdAt), desc(kudos.id))
-      .limit(limit + 1);
+      .orderBy(desc(kudos.createdAt), desc(kudos.id));
   }
 
   async getComment(commentId: string) {
@@ -203,10 +195,9 @@ export class ActivityRepository {
       .orderBy(desc(kudos.createdAt));
   }
 
-  /** Comments oldest first (conversation order), cursor on (created_at, id). */
-  async getComments(activityId: string, limit = 200, cursor: CursorPayload | null = null) {
+  /** Comments oldest first (conversation order). */
+  async getComments(activityId: string) {
     const conds = [eq(comments.activityId, activityId)];
-    if (cursor) conds.push(sql`(${comments.createdAt}, ${comments.id}) > (${new Date(cursor.timestamp).toISOString()}::timestamptz, ${cursor.id})`);
     return this.db
       .select({
         id: comments.id,
@@ -224,8 +215,7 @@ export class ActivityRepository {
       .from(comments)
       .innerJoin(athletes, eq(comments.athleteId, athletes.id))
       .where(and(...conds))
-      .orderBy(comments.createdAt, comments.id)
-      .limit(limit);
+      .orderBy(comments.createdAt, comments.id);
   }
 
   async addComment(activityId: string, athleteId: string, content: string, parentCommentId?: string) {
