@@ -1,5 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useToggleSaveRoute } from '../../hooks/useRoutes';
 import { LngLat, toRoute } from '../../lib/activityView';
 import { formatDuration, kmValue } from '../../lib/format';
 import { api, NearbyPlace } from '../../services/api';
@@ -15,6 +16,7 @@ export function useMapRoutes(
   initialRouteId?: string,
   difficultyFilter?: string | null
 ) {
+  const toggleSaveRouteMutation = useToggleSaveRoute();
   const [routeItems, setRouteItems] = useState<MapItem[]>([]);
   const [nearbyItems, setNearbyItems] = useState<MapItem[]>([]);
   const [routeStatus, setRouteStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -227,7 +229,7 @@ export function useMapRoutes(
     setRouteItems(patch);
     setNearbyItems(patch);
     try {
-      const res = await api.routes.toggleSave(item.id);
+      const res = await toggleSaveRouteMutation.mutateAsync(item.id);
       const apply = (list: MapItem[]) =>
         list.map((x) => (x.id === item.id ? { ...x, saved: Boolean(res.isSaved) } : x));
       setRouteItems(apply);

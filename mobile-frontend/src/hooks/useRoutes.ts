@@ -64,7 +64,7 @@ export function useCreateRoute() {
       distanceMeters: number;
       elevationGainMeters?: number;
       estimatedTimeSeconds?: number;
-      polylinePoints: string;
+      polylinePoints: any[];
       description?: string;
       surfaceTypes?: { pavedPercent: number; unpavedPercent: number };
       elevationProfile?: number[];

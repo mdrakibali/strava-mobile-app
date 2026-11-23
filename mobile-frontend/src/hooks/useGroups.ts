@@ -263,6 +263,7 @@ export function useClubDetail(id?: string) {
           isPrivate: Boolean(res.club.isPrivate),
         },
         weeklyLeaderboard: res.weeklyLeaderboard || [],
+        members: res.members || [],
       };
     },
   });

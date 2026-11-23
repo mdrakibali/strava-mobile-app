@@ -123,7 +123,6 @@ export default function CreateChallengeScreen() {
         value={targetKm}
         onChangeText={setTargetKm}
         keyboardType="decimal-pad"
-        helper="Distance required to complete the challenge"
       />
 
       {!editId && (

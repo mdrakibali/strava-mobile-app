@@ -124,7 +124,7 @@ export const FollowList: React.FC<{ kind: 'followers' | 'following' }> = ({ kind
         <EmptyState
           icon={kind === 'followers' ? 'people-outline' : 'person-add-outline'}
           title={kind === 'followers' ? 'No followers yet' : 'Not following anyone yet'}
-          description={
+          body={
             kind === 'followers'
               ? 'When athletes follow this profile, they’ll show up here.'
               : 'Find friends from Search to follow their activities and kudos.'

@@ -118,11 +118,11 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({
   const activities = useMemo(() => data?.activities ?? [], [data?.activities]);
 
   const progress = useMemo(
-    () => computeProgress(activities, sportFilter),
-    [activities, sportFilter]
+    () => computeProgress(activities, data?.stats ?? null, sportFilter),
+    [activities, data?.stats, sportFilter]
   );
 
-  const totals = useMemo(() => computeTotals(activities, sportFilter), [activities, sportFilter]);
+  const totals = useMemo(() => computeTotals(data?.stats ?? null, sportFilter), [data?.stats, sportFilter]);
 
   const reconciledStats = useMemo<AthleteStats | null>(() => {
     if (!data?.stats) return null;
@@ -135,7 +135,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({
   const header = (
     <AppBar
       title={isSelf ? 'You' : athlete?.displayName ?? 'Athlete'}
-      trailing={
+      right={
         isSelf ? (
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <IconButton
@@ -166,14 +166,14 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({
         {header}
         <View style={{ padding: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <Skeleton width={72} height={72} borderRadius={36} />
+            <Skeleton style={{ width: 72, height: 72, borderRadius: 36 }} />
             <View style={{ marginLeft: 16, flex: 1 }}>
-              <Skeleton width="60%" height={20} style={{ marginBottom: 8 }} />
-              <Skeleton width="40%" height={14} />
+              <Skeleton style={{ width: '60%', height: 20, marginBottom: 8 }} />
+              <Skeleton style={{ width: '40%', height: 14 }} />
             </View>
           </View>
-          <Skeleton width="100%" height={80} style={{ marginBottom: 16 }} />
-          <Skeleton width="100%" height={180} />
+          <Skeleton style={{ width: '100%', height: 80, marginBottom: 16 }} />
+          <Skeleton style={{ width: '100%', height: 180 }} />
         </View>
       </SafeAreaView>
     );
@@ -186,7 +186,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({
         <EmptyState
           icon="person-outline"
           title="Athlete not found"
-          description="This profile does not exist or may have been deleted."
+          body="This profile does not exist or may have been deleted."
         />
       </SafeAreaView>
     );

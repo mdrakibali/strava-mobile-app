@@ -107,7 +107,7 @@ export default function SearchScreen() {
         <EmptyState
           icon="search"
           title="Search the community"
-          description="Type at least 2 characters to search for athletes by name or city."
+          body="Type at least 2 characters to search for athletes by name or city."
         />
       ) : isLoading ? (
         <View className="flex-1 items-center justify-center">
@@ -119,7 +119,7 @@ export default function SearchScreen() {
         <EmptyState
           icon="people-outline"
           title="No athletes found"
-          description={`No results for "${query}". Try a different spelling or city.`}
+          body={`No results for "${query}". Try a different spelling or city.`}
         />
       ) : (
         <FlatList

@@ -34,6 +34,7 @@ export default function ChatScreen() {
   });
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const scrollViewRef = useRef<any>(null);
   const typingTimerRef = useRef<any>(null);
