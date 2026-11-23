@@ -167,9 +167,7 @@ export class PlacesService {
 
     try {
       const photon = (tags: string[]) => {
-        const queryTerm = sport === 'Ride' ? 'cycle' : sport === 'Hike' ? 'trail' : 'park';
         const qs = new URLSearchParams({
-          q: queryTerm,
           lat: String(lat),
           lon: String(lng),
           limit: '30',
@@ -186,12 +184,19 @@ export class PlacesService {
       if (spec.ok && gen.ok) {
         const [a, b]: any[] = await Promise.all([spec.json(), gen.json()]);
         const merged = { features: [...(a?.features ?? []), ...(b?.features ?? [])] };
-        return await finish(
-          normalizePhoton(merged, lat, lng, radiusM, 12, specificCategoriesFor(sport)),
-          'photon'
+        const places = normalizePhoton(
+          merged,
+          lat,
+          lng,
+          radiusM,
+          12,
+          specificCategoriesFor(sport)
         );
+        if (places.length > 0) {
+          return await finish(places, 'photon');
+        }
       }
-      lastError = `photon → HTTP ${spec.status}/${gen.status}`;
+      lastError = `photon → HTTP ${spec.status}/${gen.status} (0 places)`;
     } catch (e: any) {
       lastError = `photon → ${e?.message ?? 'network error'}`;
     }
