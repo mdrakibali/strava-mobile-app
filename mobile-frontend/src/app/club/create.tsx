@@ -1,15 +1,17 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { FormScreen } from '../../components/forms/FormScreen';
 import { useApp } from '../../context/AppContext';
 import { Chip, ChipRow, SectionTitle, space, TextField } from '../../design';
-import { groupStore } from '../../lib/groupStore';
+import { groupKeys } from '../../hooks/useGroups';
 import { MVP_SPORTS } from '../../lib/sports';
 import { api } from '../../services/api';
 
 export default function CreateClubScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { editId } = useLocalSearchParams<{ editId?: string }>();
   const { refreshFeed } = useApp();
   const [name, setName] = useState('');
@@ -57,13 +59,8 @@ export default function CreateClubScreen() {
           description: description.trim() || null,
           isPrivate,
         });
-        groupStore.patchClub(editId, {
-          name: name.trim(),
-          sportType,
-          city: city.trim() || null,
-          description: description.trim() || null,
-          isPrivate,
-        });
+        queryClient.invalidateQueries({ queryKey: [...groupKeys.all, 'clubs'] });
+        queryClient.invalidateQueries({ queryKey: groupKeys.clubDetail(editId) });
         router.back();
         return;
       }
@@ -74,9 +71,7 @@ export default function CreateClubScreen() {
         description: description.trim() || undefined,
         isPrivate,
       });
-      if (res?.club) {
-        groupStore.seedClubs([res.club]);
-      }
+      queryClient.invalidateQueries({ queryKey: [...groupKeys.all, 'clubs'] });
       await refreshFeed().catch(() => {});
       router.replace({ pathname: '/club/[id]', params: { id: res.club.id } });
     } catch (e: any) {

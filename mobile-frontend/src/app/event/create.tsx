@@ -1,10 +1,11 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { FormScreen } from '../../components/forms/FormScreen';
 import { useApp } from '../../context/AppContext';
 import { Chip, ChipRow, SectionTitle, TextField } from '../../design';
-import { groupStore } from '../../lib/groupStore';
+import { groupKeys } from '../../hooks/useGroups';
 import { MVP_SPORTS } from '../../lib/sports';
 import { api } from '../../services/api';
 
@@ -14,6 +15,7 @@ const label = (min: number) =>
 
 export default function CreateEventScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { editId } = useLocalSearchParams<{ editId?: string }>();
   const { refreshFeed } = useApp();
   const [title, setTitle] = useState('');
@@ -73,16 +75,15 @@ export default function CreateEventScreen() {
     setError(null);
     try {
       if (editId) {
-        const res = await api.events.update(editId, {
+        await api.events.update(editId, {
           title: title.trim(),
           sportType,
           meetingPoint: meetingPoint.trim(),
           paceDescription: pace.trim() || null,
           distanceMeters: km != null ? Math.round(km * 1000) : null,
         });
-        if (res?.event) {
-          groupStore.patchEvent(editId, res.event);
-        }
+        queryClient.invalidateQueries({ queryKey: groupKeys.events() });
+        queryClient.invalidateQueries({ queryKey: groupKeys.eventDetail(editId) });
         await refreshFeed().catch(() => {});
         router.replace({ pathname: '/event/[id]', params: { id: editId } });
       } else {
@@ -94,9 +95,7 @@ export default function CreateEventScreen() {
           paceDescription: pace.trim() || undefined,
           distanceMeters: km != null ? Math.round(km * 1000) : undefined,
         });
-        if (res?.event) {
-          groupStore.seedEvents([res.event]);
-        }
+        queryClient.invalidateQueries({ queryKey: groupKeys.events() });
         await refreshFeed().catch(() => {});
         router.replace({ pathname: '/event/[id]', params: { id: res.event.id } });
       }

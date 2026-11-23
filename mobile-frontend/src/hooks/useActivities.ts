@@ -146,6 +146,7 @@ export function useToggleKudos() {
       queryClient.invalidateQueries({ queryKey: activityKeys.kudos(activityId) });
       queryClient.invalidateQueries({ queryKey: ['activities', 'feed'] });
       queryClient.invalidateQueries({ queryKey: activityKeys.detail(activityId) });
+      queryClient.invalidateQueries({ queryKey: ['activities', 'history'] });
     },
   });
 }
@@ -169,7 +170,7 @@ export function useUpdateActivity() {
     },
     onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: activityKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: activityKeys.feed() });
+      queryClient.invalidateQueries({ queryKey: ['activities', 'feed'] });
       queryClient.invalidateQueries({ queryKey: ['activities', 'history'] });
     },
   });
@@ -253,6 +254,8 @@ export function useEditComment(activityId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: activityKeys.detail(activityId) });
+      queryClient.invalidateQueries({ queryKey: ['activities', 'feed'] });
+      queryClient.invalidateQueries({ queryKey: ['activities', 'history'] });
     },
   });
 }

@@ -1,10 +1,11 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { FormScreen } from '../../components/forms/FormScreen';
 import { useApp } from '../../context/AppContext';
 import { Chip, ChipRow, SectionTitle, TextField } from '../../design';
-import { groupStore } from '../../lib/groupStore';
+import { groupKeys } from '../../hooks/useGroups';
 import { MVP_SPORTS } from '../../lib/sports';
 import { api } from '../../services/api';
 
@@ -17,6 +18,7 @@ const DURATIONS = [
 
 export default function CreateChallengeScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { editId } = useLocalSearchParams<{ editId?: string }>();
   const { refreshFeed } = useApp();
   const [title, setTitle] = useState('');
@@ -61,15 +63,14 @@ export default function CreateChallengeScreen() {
     setError(null);
     try {
       if (editId) {
-        const res = await api.challenges.update(editId, {
+        await api.challenges.update(editId, {
           title: title.trim(),
           sportType,
           targetMeters: Math.round(km * 1000),
           description: description.trim() || undefined,
         });
-        if (res?.challenge) {
-          groupStore.patchChallenge(editId, res.challenge);
-        }
+        queryClient.invalidateQueries({ queryKey: groupKeys.challenges() });
+        queryClient.invalidateQueries({ queryKey: groupKeys.challengeDetail(editId) });
         await refreshFeed().catch(() => {});
         router.replace({ pathname: '/challenge/[id]', params: { id: editId } });
       } else {
@@ -82,9 +83,7 @@ export default function CreateChallengeScreen() {
           startDate: start.toISOString(),
           endDate: new Date(start.getTime() + days * 86_400_000).toISOString(),
         });
-        if (res?.challenge) {
-          groupStore.seedChallenges([res.challenge]);
-        }
+        queryClient.invalidateQueries({ queryKey: groupKeys.challenges() });
         await refreshFeed().catch(() => {});
         router.replace({ pathname: '/challenge/[id]', params: { id: res.challenge.id } });
       }

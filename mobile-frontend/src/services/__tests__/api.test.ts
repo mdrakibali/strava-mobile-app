@@ -1,14 +1,12 @@
 import { ApiError, api, setAuthToken, setUnauthorizedHandler } from '../api';
 
 const respond = (status: number, body: unknown) =>
-  jest
-    .fn()
-    .mockResolvedValue(
-      new Response(JSON.stringify(body), {
-        status,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    );
+  jest.fn().mockResolvedValue(
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  );
 
 afterEach(() => jest.restoreAllMocks());
 
