@@ -12,9 +12,6 @@ import {
   Skeleton,
 } from '../../design';
 import { ActivityView, AthleteSummary, fromProfileActivity, toAthleteSummary } from '../../lib/activityView';
-import { presentActivities, useActivityRevision } from '../../lib/publishedActivities';
-import { markActivityRemoved, withoutRemoved } from '../../lib/removedActivities';
-import { captureFollowEpochs, commitServerFollow, setFollowing, socialStore, useFollow } from '../../lib/social';
 import { shareAthlete } from '../../lib/share';
 import { MVP_SPORTS } from '../../lib/sports';
 import { api, AthleteStats } from '../../services/api';
@@ -41,28 +38,23 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
   const [tab, setTab] = useState<'progress' | 'activities'>('progress');
   const [sportFilter, setSportFilter] = useState<string>('All');
   const [followPending, setFollowPending] = useState(false);
-  const displayedFollowing = useFollow(athleteId, data?.isFollowing ?? false);
 
   const load = useCallback(async () => {
-    const snapshot = captureFollowEpochs();
-    const readTick = socialStore.beginRead();
     try {
       const [res, stats] = await Promise.all([
         api.athletes.getProfile(athleteId),
         api.athletes.stats(athleteId).catch(() => null),
       ]);
       const athlete = { ...toAthleteSummary(res.athlete), bio: res.athlete?.bio ?? null };
-      const all = withoutRemoved((res.recentActivities || []).map((row: any) => fromProfileActivity(row, athlete)));
-      const isFollowing = commitServerFollow(athleteId, Boolean(res.athlete?.isFollowing), snapshot);
+      const all = (res.recentActivities || []).map((row: any) => fromProfileActivity(row, athlete));
       setData({
         athlete,
         followersCount: Number(res.athlete?.followersCount) || 0,
         followingCount: Number(res.athlete?.followingCount) || 0,
-        isFollowing,
+        isFollowing: Boolean(res.athlete?.isFollowing),
         activities: isSelf ? all : all.filter((a: ActivityView) => a.visibility !== 'ONLY_ME'),
         stats,
       });
-      socialStore.seed(all, readTick);
       setStatus('ready');
     } catch (e: any) {
       setStatus(/not found/i.test(String(e?.message)) ? 'notFound' : 'error');
@@ -84,16 +76,19 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
   const onToggleFollow = async () => {
     if (!data || followPending) return;
     setFollowPending(true);
-    const wasFollowing = displayedFollowing;
+    const wasFollowing = data.isFollowing;
     const want = !wasFollowing;
     try {
-      const res = await setFollowing(athleteId, wasFollowing, want);
-      setData({
-        ...data,
-        isFollowing: res.isFollowing,
-        followersCount: typeof res.followersCount === 'number' ? res.followersCount : data.followersCount + (res.isFollowing ? 1 : -1),
-        stats: data.stats,
-      });
+      const res = want ? await api.athletes.follow(athleteId) : await api.athletes.unfollow(athleteId);
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              isFollowing: Boolean(res.isFollowing),
+              followersCount: typeof res.followersCount === 'number' ? res.followersCount : prev.followersCount + (res.isFollowing ? 1 : -1),
+            }
+          : null
+      );
       if (currentUser?.id && typeof res.followingCount === 'number') {
         updateCurrentUser({ followingCount: res.followingCount });
       }
@@ -109,7 +104,6 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
     shareAthlete(athleteId, data.athlete.displayName).catch(() => {});
   };
 
-  const revision = useActivityRevision();
   const athleteData = data?.athlete;
   const athlete = useMemo(() => {
     if (!athleteData) return null;
@@ -124,19 +118,14 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
   }, [athleteData, isSelf, currentUser]);
 
   const activities = useMemo(() => {
-    void revision;
     if (!data) return [];
-    return presentActivities(data.activities).filter((a) => a.athlete.id === athleteId && (isSelf || a.visibility !== 'ONLY_ME'));
-  }, [data, revision, athleteId, isSelf]);
+    return data.activities.filter((a) => a.athlete.id === athleteId && (isSelf || a.visibility !== 'ONLY_ME'));
+  }, [data, athleteId, isSelf]);
 
   const reconciledStats = useMemo(() => {
     if (!data?.stats) return null;
-    const removedCount = (data.activities || []).length - activities.length;
-    return {
-      ...data.stats,
-      activityCount: Math.max(0, data.stats.activityCount - Math.max(0, removedCount)),
-    };
-  }, [data, activities.length]);
+    return data.stats;
+  }, [data]);
 
   const progress = useMemo(() => {
     if (!data) return null;
@@ -172,7 +161,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
         {status === 'loading' ? (
           <View className="p-4">
             <View className="flex-row items-center">
-              <Skeleton className="w-[72px] h-[72px] rounded-full" />
+              <Skeleton className="w-18 h-18 rounded-full" />
               <View className="flex-1 ml-4">
                 <Skeleton className="w-[60%] h-5.5" />
                 <Skeleton className="w-[40%] h-3.5 mt-2" />
@@ -237,7 +226,6 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
             isSelf={isSelf}
             recentLimit={RECENT_LIMIT}
             onDeleteActivity={(deletedId) => {
-              markActivityRemoved(deletedId);
               setData((prev) =>
                 prev
                   ? {
@@ -249,7 +237,6 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
                     }
                   : null
               );
-              load();
             }}
           />
         )}

@@ -1,7 +1,8 @@
 import * as Network from 'expo-network';
 import { AppState } from 'react-native';
 import { fromFeedItem } from '../lib/activityView';
-import { rememberPublishedActivity } from '../lib/publishedActivities';
+import { queryClient } from '../lib/queryClient';
+import { activityKeys } from '../hooks/useActivities';
 import { ApiError, api, getAuthToken } from '../services/api';
 import { batchesRepo, pointsRepo, SessionRow, sessionsRepo } from './db';
 import {
@@ -288,16 +289,7 @@ class SyncWorker {
     await sessionsRepo.updateSync(s.id, { syncState: 'synced', serverActivityId: activityId, lastError: null, nextAttemptAt: null });
     this.lastSynced = { sessionId: s.id, activityId };
     if (row?.id && this.viewer) {
-      const activity = fromFeedItem({
-        ...row,
-        startTime: row.startTime instanceof Date ? row.startTime.toISOString() : row.startTime,
-        polyline: row.maskedPolyline ?? row.rawPolyline ?? row.polyline ?? [],
-        athlete: this.viewer,
-        kudosCount: row.kudosCount ?? 0,
-        commentsCount: row.commentsCount ?? 0,
-        hasKudos: false,
-      });
-      rememberPublishedActivity(activity);
+      queryClient.invalidateQueries({ queryKey: activityKeys.all });
     }
   }
 }

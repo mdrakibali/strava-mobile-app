@@ -1,112 +1,75 @@
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useMemo } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { FeedCard, FeedCardSkeleton } from '../../components/activity/FeedCard';
 import { useApp } from '../../context/AppContext';
 import { AppBar, EmptyState, ErrorState, space } from '../../design';
-import { ActivityView, fromProfileActivity, toAthleteSummary } from '../../lib/activityView';
-import { presentActivities, useActivityRevision } from '../../lib/publishedActivities';
-import { markActivityRemoved, withoutRemoved } from '../../lib/removedActivities';
-import { socialStore } from '../../lib/social';
+import { fromProfileActivity, toAthleteSummary } from '../../lib/activityView';
+import { activityKeys } from '../../hooks/useActivities';
 import { api } from '../../services/api';
 
 /**
- * Full activity history (GET /athletes/:id/activities). The server applies the visibility policy
- * and paginates with a (start_time, id) cursor, so nothing is skipped or repeated.
+ * Full activity history (GET /athletes/:id/activities).
  */
 export default function ActivityHistoryScreen() {
   const { athleteId } = useLocalSearchParams<{ athleteId: string }>();
   const router = useRouter();
   const { currentUser } = useApp();
   const isSelf = athleteId === currentUser.id;
-  const [items, setItems] = useState<ActivityView[]>([]);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [errMsg, setErrMsg] = useState<string | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [moreError, setMoreError] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
-  const cursor = useRef<string | null>(null);
-  const hasNext = useRef(false);
-  const athleteRef = useRef(toAthleteSummary({ id: athleteId }));
-  const revision = useActivityRevision();
-  const list = useMemo(
-    () => {
-      void revision;
-      return presentActivities(items).filter((a) => a.athlete.id === athleteId);
-    },
-    [items, revision, athleteId]
-  );
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!athleteId) return;
-      let cancelled = false;
-      void reloadKey;
-      const readTick = socialStore.beginRead();
-      Promise.all([api.athletes.getProfile(athleteId), api.athletes.listActivities(athleteId, null)]).then(
-        ([profile, page]) => {
-          if (cancelled) return;
-          athleteRef.current = toAthleteSummary(profile.athlete);
-          cursor.current = page.nextCursor;
-          hasNext.current = page.hasNextPage;
-          const rows = withoutRemoved(page.activities.map((r) => fromProfileActivity(r, athleteRef.current)));
-          socialStore.seed(rows, readTick);
-          setItems(rows);
-          setStatus('ready');
-          setRefreshing(false);
-        },
-        (e: any) => {
-          if (cancelled) return;
-          setErrMsg(e?.message ?? null);
-          setStatus('error');
-          setRefreshing(false);
-        }
-      );
-      return () => {
-        cancelled = true;
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: activityKeys.history(athleteId || ''),
+    queryFn: async ({ pageParam }) => {
+      const [profile, page] = await Promise.all([
+        api.athletes.getProfile(athleteId!),
+        api.athletes.listActivities(athleteId!, pageParam ?? null),
+      ]);
+      const athlete = toAthleteSummary(profile.athlete);
+      return {
+        items: (page.activities || []).map((r) => fromProfileActivity(r, athlete)),
+        nextCursor: page.nextCursor,
+        hasNextPage: page.hasNextPage,
       };
-    }, [athleteId, reloadKey])
-  );
+    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => (lastPage.hasNextPage && lastPage.nextCursor ? lastPage.nextCursor : null),
+    enabled: Boolean(athleteId),
+  });
 
-  const loadMore = async () => {
-    if (loadingMore || !hasNext.current || !cursor.current || status !== 'ready') return;
-    setLoadingMore(true);
-    setMoreError(false);
-    const readTick = socialStore.beginRead();
-    try {
-      const page = await api.athletes.listActivities(athleteId!, cursor.current);
-      cursor.current = page.nextCursor;
-      hasNext.current = page.hasNextPage;
-      const next = withoutRemoved(page.activities.map((r) => fromProfileActivity(r, athleteRef.current)));
-      socialStore.seed(next, readTick);
-      setItems((prev) => {
-        const seen = new Set(prev.map((p) => p.id));
-        return [...prev, ...next.filter((n) => !seen.has(n.id))];
-      });
-    } catch {
-      setMoreError(true);
-    } finally {
-      setLoadingMore(false);
+  const list = useMemo(() => {
+    return (data?.pages ?? []).flatMap((p) => p.items ?? []);
+  }, [data]);
+
+  const onEndReached = () => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
   };
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F7F7F8' }}>
       <AppBar title="Activities" />
-      {status === 'loading' ? (
+      {isLoading ? (
         <View>
           <FeedCardSkeleton />
           <FeedCardSkeleton />
         </View>
-      ) : status === 'error' ? (
+      ) : isError ? (
         <ErrorState
-          message={errMsg ?? "We couldn’t load these activities."}
-          onRetry={() => {
-            setStatus('loading');
-            setReloadKey((k) => k + 1);
-          }}
+          message={error?.message ?? "We couldn’t load these activities."}
+          onRetry={() => refetch()}
         />
       ) : (
         <FlatList
@@ -117,21 +80,14 @@ export default function ActivityHistoryScreen() {
               activity={item}
               currentUserId={isSelf ? currentUser.id : undefined}
               showAthlete={false}
-              onDelete={(deletedId) => {
-                markActivityRemoved(deletedId);
-                setItems((prev) => prev.filter((a) => a.id !== deletedId));
-              }}
             />
           )}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.6}
+          onEndReached={onEndReached}
+          onEndReachedThreshold={0.5}
           refreshControl={
             <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                setReloadKey((k) => k + 1);
-              }}
+              refreshing={isRefetching}
+              onRefresh={() => refetch()}
               colors={['#FC4C02']}
             />
           }
@@ -144,12 +100,8 @@ export default function ActivityHistoryScreen() {
             />
           }
           ListFooterComponent={
-            loadingMore ? (
+            isFetchingNextPage ? (
               <ActivityIndicator style={{ margin: space.xl }} color="#FC4C02" />
-            ) : moreError ? (
-              <View style={{ padding: space.gutter }}>
-                <ErrorState compact message="Couldn’t load more activities." onRetry={loadMore} />
-              </View>
             ) : undefined
           }
         />

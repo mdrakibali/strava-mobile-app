@@ -1,94 +1,63 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useApp } from '../../../context/AppContext';
+import { useQuery } from '@tanstack/react-query';
 import { AppBar, AppText, Avatar, color, EmptyState, ErrorState, LoadingState, space } from '../../../design';
 import { toAthleteSummary } from '../../../lib/activityView';
-import { useSocial } from '../../../lib/social';
+import { activityKeys } from '../../../hooks/useActivities';
 import { api } from '../../../services/api';
 
-/** Who gave kudos (GET /activities/:id/kudos — visibility enforced by the server). */
+/** Who gave kudos (GET /activities/:id/kudos). */
 export default function KudosListScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { currentUser } = useApp();
-  const [items, setItems] = useState<any[]>([]);
-  const [count, setCount] = useState(0);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [extraItems, setExtraItems] = useState<any[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
   const cursor = useRef<string | null>(null);
 
-  const social = useSocial(id ?? '', { hasKudos: null, kudosCount: count, commentsCount: 0 });
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: activityKeys.kudos(id || ''),
+    queryFn: async () => {
+      if (!id) throw new Error('ID required');
+      const res = await api.activities.listKudos(id);
+      cursor.current = res.nextCursor;
+      return res;
+    },
+    enabled: Boolean(id),
+  });
 
-  useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    api.activities.listKudos(id).then(
-      (res) => {
-        if (cancelled) return;
-        cursor.current = res.nextCursor;
-        setItems(res.athletes);
-        setCount(res.kudosCount);
-        setStatus('ready');
-      },
-      (e: any) => {
-        if (cancelled) return;
-        setErrMsg(e?.message ?? null);
-        setStatus('error');
-      }
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [id, reloadKey]);
+  const athletes = [...(data?.athletes ?? []), ...extraItems];
+  const count = data?.kudosCount ?? athletes.length;
 
   const more = async () => {
-    if (!cursor.current || loadingMore) return;
+    if (!cursor.current || loadingMore || !id) return;
     setLoadingMore(true);
     try {
-      const res = await api.activities.listKudos(id!, cursor.current);
+      const res = await api.activities.listKudos(id, cursor.current);
       cursor.current = res.nextCursor;
-      setItems((prev) => [...prev, ...res.athletes.filter((a: any) => !prev.some((p) => p.id === a.id))]);
+      setExtraItems((prev) => [...prev, ...res.athletes.filter((a: any) => !prev.some((p) => p.id === a.id))]);
     } finally {
       setLoadingMore(false);
     }
   };
 
-  const displayedCount = social.kudosCount > 0 ? social.kudosCount : count;
-  const displayedItems = useMemo(() => {
-    let list = [...items];
-    if (social.hasKudos === true) {
-      if (!list.some((a) => a.id === currentUser?.id) && currentUser?.id) {
-        list = [{ id: currentUser.id, displayName: currentUser.displayName, avatarUrl: currentUser.avatarUrl, city: currentUser.city }, ...list];
-      }
-    } else if (social.hasKudos === false) {
-      list = list.filter((a) => a.id !== currentUser?.id);
-    }
-    return list;
-  }, [items, social.hasKudos, currentUser]);
-
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-      <AppBar title={status === 'ready' || displayedCount > 0 ? `Kudos (${displayedCount})` : 'Kudos'} />
-      {status === 'loading' ? (
+      <AppBar title={count > 0 ? `Kudos (${count})` : 'Kudos'} />
+      {isLoading ? (
         <LoadingState />
-      ) : status === 'error' ? (
+      ) : isError ? (
         <ErrorState
-          message={errMsg ?? "We couldn’t load kudos."}
-          onRetry={() => {
-            setStatus('loading');
-            setReloadKey((k) => k + 1);
-          }}
+          message={error?.message ?? "We couldn’t load kudos."}
+          onRetry={() => refetch()}
         />
       ) : (
         <FlatList
-          data={displayedItems}
+          data={athletes}
           keyExtractor={(a) => a.id}
           onEndReached={more}
-          contentContainerStyle={items.length === 0 ? { flexGrow: 1 } : undefined}
+          contentContainerStyle={athletes.length === 0 ? { flexGrow: 1 } : undefined}
           ListEmptyComponent={<EmptyState icon="thumbs-up-outline" title="No kudos yet" />}
           ListFooterComponent={loadingMore ? <ActivityIndicator color={color.brand} style={{ margin: space.lg }} /> : undefined}
           renderItem={({ item }) => {

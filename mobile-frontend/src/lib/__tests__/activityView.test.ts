@@ -1,4 +1,3 @@
-import { rememberActivityEdit, reconcileActivity } from '../activityEdits';
 import {
   avgSpeedOf,
   clearCommentTombstonesForTesting,
@@ -190,18 +189,5 @@ describe('mergeCommentLists', () => {
 
     const merged = mergeCommentLists([c1], [c1, c2], 2, getDeletedCommentIds('act_1'));
     expect(merged.map((c) => c.id)).toEqual(['c1', 'c2']);
-  });
-});
-
-describe('reconcileActivity', () => {
-  it('keeps a saved edit until a later response matches it', () => {
-    rememberActivityEdit('act_1', { title: 'Updated', description: null, sportType: 'Walk', visibility: 'PUBLIC' });
-    const stale = reconcileActivity({ id: 'act_1', title: 'Old', description: 'x', sportType: 'Run', visibility: 'PUBLIC' });
-    expect(stale.title).toBe('Updated');
-    expect(stale.sportType).toBe('Walk');
-    const fresh = reconcileActivity({ id: 'act_1', title: 'Updated', description: null, sportType: 'Walk', visibility: 'PUBLIC' });
-    expect(fresh.title).toBe('Updated');
-    const after = reconcileActivity({ id: 'act_1', title: 'Old', description: 'x', sportType: 'Run', visibility: 'PUBLIC' });
-    expect(after.title).toBe('Old');
   });
 });

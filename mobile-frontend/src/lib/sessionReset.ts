@@ -1,14 +1,9 @@
-import { resetActivityEditsForTests } from './activityEdits';
-import { resetPublishedForTests } from './publishedActivities';
-import { resetRemovedForTests } from './removedActivities';
+import { queryClient } from './queryClient';
 
 /**
- * The activity overlays (published / edited / removed) are per-device module state. They belong
- * to ONE signed-in athlete, so they must be dropped whenever the session changes. Otherwise a
- * second account on the same phone would see the first account's just-published activities.
+ * Dropped whenever the session changes (logout or switch account).
+ * Clears TanStack Query cache so another account doesn't see stale queries.
  */
 export function resetSessionOverlays() {
-  resetPublishedForTests();
-  resetRemovedForTests();
-  resetActivityEditsForTests();
+  queryClient.clear();
 }
