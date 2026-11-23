@@ -134,7 +134,7 @@ export default function EditActivityScreen() {
             <SportSheet
               visible={sportSheet}
               onClose={() => setSportSheet(false)}
-              value={sport}
+              selected={sport}
               onSelect={(next) => {
                 setSport(next);
                 setSportSheet(false);

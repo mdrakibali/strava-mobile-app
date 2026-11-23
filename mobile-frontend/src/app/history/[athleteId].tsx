@@ -87,7 +87,9 @@ export default function ActivityHistoryScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
-              onRefresh={() => refetch()}
+              onRefresh={() => {
+                void refetch();
+              }}
               colors={['#FC4C02']}
             />
           }
