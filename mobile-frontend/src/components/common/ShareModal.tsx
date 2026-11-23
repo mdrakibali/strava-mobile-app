@@ -49,23 +49,26 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               selectedStyle === 'orange'
                 ? 'bg-[#FC4C02] border-orange-500'
                 : selectedStyle === 'dark'
-                ? 'bg-stone-900 border-stone-800'
-                : 'bg-white border-gray-200'
-            }`}>
+                  ? 'bg-stone-900 border-stone-800'
+                  : 'bg-white border-gray-200'
+            }`}
+          >
             {/* Top Row: Brand & Title */}
             <View className="flex-row justify-between items-start">
               <View>
                 <Text
                   className={`text-[10px] font-black tracking-widest ${
                     selectedStyle === 'minimal' ? 'text-[#FC4C02]' : 'text-white/80'
-                  }`}>
+                  }`}
+                >
                   KINETIX
                 </Text>
                 <Text
                   className={`text-sm font-black ${
                     selectedStyle === 'minimal' ? 'text-gray-900' : 'text-white'
                   }`}
-                  numberOfLines={1}>
+                  numberOfLines={1}
+                >
                   {activityTitle}
                 </Text>
               </View>
@@ -91,13 +94,15 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                 <Text
                   className={`text-[9px] uppercase font-bold ${
                     selectedStyle === 'minimal' ? 'text-gray-400' : 'text-white/70'
-                  }`}>
+                  }`}
+                >
                   Distance
                 </Text>
                 <Text
                   className={`text-xl font-black ${
                     selectedStyle === 'minimal' ? 'text-gray-900' : 'text-white'
-                  }`}>
+                  }`}
+                >
                   {distanceFormatted}
                 </Text>
               </View>
@@ -106,13 +111,15 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                 <Text
                   className={`text-[9px] uppercase font-bold ${
                     selectedStyle === 'minimal' ? 'text-gray-400' : 'text-white/70'
-                  }`}>
+                  }`}
+                >
                   Pace
                 </Text>
                 <Text
                   className={`text-xl font-black ${
                     selectedStyle === 'minimal' ? 'text-gray-900' : 'text-white'
-                  }`}>
+                  }`}
+                >
                   {paceFormatted}
                 </Text>
               </View>
@@ -121,13 +128,15 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                 <Text
                   className={`text-[9px] uppercase font-bold ${
                     selectedStyle === 'minimal' ? 'text-gray-400' : 'text-white/70'
-                  }`}>
+                  }`}
+                >
                   Elevation
                 </Text>
                 <Text
                   className={`text-xl font-black ${
                     selectedStyle === 'minimal' ? 'text-gray-900' : 'text-white'
-                  }`}>
+                  }`}
+                >
                   {elevationFormatted}
                 </Text>
               </View>
@@ -150,11 +159,13 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                   selectedStyle === s.id
                     ? 'bg-[#FC4C02] border-[#FC4C02]'
                     : 'bg-gray-100 border-gray-200'
-                }`}>
+                }`}
+              >
                 <Text
                   className={`text-xs font-bold ${
                     selectedStyle === s.id ? 'text-white' : 'text-gray-700'
-                  }`}>
+                  }`}
+                >
                   {s.label}
                 </Text>
               </TouchableOpacity>
@@ -163,28 +174,40 @@ export const ShareModal: React.FC<ShareModalProps> = ({
 
           {/* Share Action Grid */}
           <View className="flex-row justify-around mb-4 pt-2 border-t border-gray-100">
-            <TouchableOpacity onPress={() => handleShareAction('Instagram Stories')} className="items-center">
+            <TouchableOpacity
+              onPress={() => handleShareAction('Instagram Stories')}
+              className="items-center"
+            >
               <View className="w-12 h-12 rounded-full bg-pink-50 items-center justify-center mb-1 border border-pink-200">
                 <Ionicons name="logo-instagram" size={22} color="#E1306C" />
               </View>
               <Text className="text-[10px] font-bold text-gray-700">Instagram</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => handleShareAction('WhatsApp')} className="items-center">
+            <TouchableOpacity
+              onPress={() => handleShareAction('WhatsApp')}
+              className="items-center"
+            >
               <View className="w-12 h-12 rounded-full bg-emerald-50 items-center justify-center mb-1 border border-emerald-200">
                 <Ionicons name="logo-whatsapp" size={22} color="#10B981" />
               </View>
               <Text className="text-[10px] font-bold text-gray-700">WhatsApp</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => handleShareAction('Photo Gallery')} className="items-center">
+            <TouchableOpacity
+              onPress={() => handleShareAction('Photo Gallery')}
+              className="items-center"
+            >
               <View className="w-12 h-12 rounded-full bg-blue-50 items-center justify-center mb-1 border border-blue-200">
                 <Ionicons name="download-outline" size={22} color="#2563EB" />
               </View>
               <Text className="text-[10px] font-bold text-gray-700">Save Image</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => handleShareAction('Clipboard')} className="items-center">
+            <TouchableOpacity
+              onPress={() => handleShareAction('Clipboard')}
+              className="items-center"
+            >
               <View className="w-12 h-12 rounded-full bg-orange-50 items-center justify-center mb-1 border border-orange-200">
                 <Ionicons name="link-outline" size={22} color="#FC4C02" />
               </View>
@@ -199,7 +222,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                 );
                 onClose();
               }}
-              className="items-center">
+              className="items-center"
+            >
               <View className="w-12 h-12 rounded-full bg-purple-50 items-center justify-center mb-1 border border-purple-200">
                 <Ionicons name="document-text-outline" size={22} color="#7C3AED" />
               </View>

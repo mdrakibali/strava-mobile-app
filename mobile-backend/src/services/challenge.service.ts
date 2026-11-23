@@ -51,7 +51,9 @@ export class ChallengeService {
 
     const [participants, userParticipation, participantCount] = await Promise.all([
       this.challengeRepo.getLeaderboard(challengeId),
-      athleteId ? this.challengeRepo.getParticipation(challengeId, athleteId) : Promise.resolve(null),
+      athleteId
+        ? this.challengeRepo.getParticipation(challengeId, athleteId)
+        : Promise.resolve(null),
       this.challengeRepo.getParticipantCount(challengeId),
     ]);
 
@@ -84,13 +86,19 @@ export class ChallengeService {
     if (wantJoin && !participation) await this.challengeRepo.join(challengeId, athleteId);
     else if (!wantJoin && participation) await this.challengeRepo.leave(challengeId, athleteId);
 
-    return { isJoined: wantJoin, participantsCount: await this.challengeRepo.getParticipantCount(challengeId) };
+    return {
+      isJoined: wantJoin,
+      participantsCount: await this.challengeRepo.getParticipantCount(challengeId),
+    };
   }
 
   async createChallenge(creatorId: string, data: ChallengeInput) {
     const start = data.startDate ? new Date(data.startDate) : new Date();
-    const end = data.endDate ? new Date(data.endDate) : new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
-    if (end <= start) throw new HttpError(400, 'validation_failed', 'The end date must be after the start date');
+    const end = data.endDate
+      ? new Date(data.endDate)
+      : new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
+    if (end <= start)
+      throw new HttpError(400, 'validation_failed', 'The end date must be after the start date');
 
     const created = await this.challengeRepo.create({
       id: `ch_${crypto.randomUUID()}`,
@@ -110,7 +118,8 @@ export class ChallengeService {
   async updateChallenge(id: string, athleteId: string, patch: Partial<ChallengeInput>) {
     const ch = await this.challengeRepo.findById(id);
     if (!ch) throw notFound('Challenge');
-    if (ch.creatorId !== athleteId) throw new HttpError(403, 'forbidden', 'Only the challenge creator can edit it');
+    if (ch.creatorId !== athleteId)
+      throw new HttpError(403, 'forbidden', 'Only the challenge creator can edit it');
 
     const values: Record<string, unknown> = {};
     if (patch.title !== undefined) values.title = patch.title.trim();
@@ -121,7 +130,8 @@ export class ChallengeService {
     if (patch.endDate !== undefined) values.endDate = new Date(patch.endDate);
     const start = (values.startDate as Date) ?? ch.startDate;
     const end = (values.endDate as Date) ?? ch.endDate;
-    if (end <= start) throw new HttpError(400, 'validation_failed', 'The end date must be after the start date');
+    if (end <= start)
+      throw new HttpError(400, 'validation_failed', 'The end date must be after the start date');
 
     const updated = Object.keys(values).length ? await this.challengeRepo.update(id, values) : ch;
     // Sport, window or target changed: every participant's progress must be recomputed.
@@ -132,7 +142,8 @@ export class ChallengeService {
   async deleteChallenge(id: string, athleteId: string) {
     const ch = await this.challengeRepo.findById(id);
     if (!ch) throw notFound('Challenge');
-    if (ch.creatorId !== athleteId) throw new HttpError(403, 'forbidden', 'Only the challenge creator can delete it');
+    if (ch.creatorId !== athleteId)
+      throw new HttpError(403, 'forbidden', 'Only the challenge creator can delete it');
     await this.challengeRepo.delete(id);
   }
 }

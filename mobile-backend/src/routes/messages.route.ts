@@ -34,7 +34,11 @@ type Partner = { id: string; displayName: string; username: string; avatarUrl: s
  */
 export async function getOrCreateConversation(db: AppDatabase, myId: string, targetId: string) {
   if (!targetId || myId === targetId) return { error: 'self' as const };
-  const [partner] = await db.select(partnerColumns).from(athletes).where(eq(athletes.id, targetId)).limit(1);
+  const [partner] = await db
+    .select(partnerColumns)
+    .from(athletes)
+    .where(eq(athletes.id, targetId))
+    .limit(1);
   if (!partner) return { error: 'not_found' as const };
 
   const [ath1, ath2] = canonicalPair(myId, partner.id);
@@ -85,7 +89,8 @@ function conversationJson(chat: typeof chats.$inferSelect, partner: Partner, unr
 messagesRouter.get('/ws', async (c) => {
   const token = c.req.query('token');
   const user = token ? await verifyToken(token, jwtSecret(c.env)) : null;
-  if (!user?.athleteId) return c.json({ error: 'Unauthorized: Missing or invalid token', code: 'unauthorized' }, 401);
+  if (!user?.athleteId)
+    return c.json({ error: 'Unauthorized: Missing or invalid token', code: 'unauthorized' }, 401);
   if (!c.env.CHAT_ROOM) return c.json({ error: 'ChatRoom not configured' }, 503);
 
   const id = c.env.CHAT_ROOM.idFromName('global_chat');
@@ -104,7 +109,8 @@ messagesRouter.post('/conversations', requireAuth, async (c) => {
 
   const db = getDb(c);
   const result = await getOrCreateConversation(db, myId, targetUserId);
-  if ('error' in result && result.error === 'self') return c.json({ error: 'You cannot message yourself' }, 422);
+  if ('error' in result && result.error === 'self')
+    return c.json({ error: 'You cannot message yourself' }, 422);
   if ('error' in result) return c.json({ error: 'Athlete not found' }, 404);
 
   return c.json({
@@ -125,7 +131,9 @@ messagesRouter.get('/conversations', requireAuth, async (c) => {
       .where(or(eq(chats.athlete1Id, myId), eq(chats.athlete2Id, myId)))
       .orderBy(desc(chats.lastMessageAt));
 
-    const partnerIds = userChats.map((ch) => (ch.athlete1Id === myId ? ch.athlete2Id : ch.athlete1Id));
+    const partnerIds = userChats.map((ch) =>
+      ch.athlete1Id === myId ? ch.athlete2Id : ch.athlete1Id
+    );
     const partners = partnerIds.length
       ? await db.select(partnerColumns).from(athletes).where(inArray(athletes.id, partnerIds))
       : [];
@@ -163,9 +171,14 @@ async function resolveThread(db: AppDatabase, myId: string, rawParam: string) {
   if (rawParam.startsWith('chat_')) {
     const [chatRow] = await db.select().from(chats).where(eq(chats.id, rawParam)).limit(1);
     if (!chatRow) return { error: 'not_found' as const };
-    if (chatRow.athlete1Id !== myId && chatRow.athlete2Id !== myId) return { error: 'forbidden' as const };
+    if (chatRow.athlete1Id !== myId && chatRow.athlete2Id !== myId)
+      return { error: 'forbidden' as const };
     const partnerId = chatRow.athlete1Id === myId ? chatRow.athlete2Id : chatRow.athlete1Id;
-    const [partner] = await db.select(partnerColumns).from(athletes).where(eq(athletes.id, partnerId)).limit(1);
+    const [partner] = await db
+      .select(partnerColumns)
+      .from(athletes)
+      .where(eq(athletes.id, partnerId))
+      .limit(1);
     if (!partner) return { error: 'not_found' as const };
     return { chat: chatRow, partner };
   }
@@ -190,15 +203,23 @@ messagesRouter.get('/:idOrParticipantId', requireAuth, async (c) => {
 
     const db = getDb(c);
     const resolved = await resolveThread(db, myId, rawParam);
-    if ('error' in resolved && resolved.error === 'self') return c.json({ error: 'You cannot message yourself' }, 422);
-    if ('error' in resolved && resolved.error === 'forbidden') return c.json({ error: 'You are not in this conversation' }, 403);
+    if ('error' in resolved && resolved.error === 'self')
+      return c.json({ error: 'You cannot message yourself' }, 422);
+    if ('error' in resolved && resolved.error === 'forbidden')
+      return c.json({ error: 'You are not in this conversation' }, 403);
     if ('error' in resolved) return c.json({ error: 'Conversation not found' }, 404);
 
     const { chat, partner } = resolved;
     await db
       .update(directMessages)
       .set({ isRead: true })
-      .where(and(eq(directMessages.chatId, chat.id), eq(directMessages.recipientId, myId), eq(directMessages.isRead, false)));
+      .where(
+        and(
+          eq(directMessages.chatId, chat.id),
+          eq(directMessages.recipientId, myId),
+          eq(directMessages.isRead, false)
+        )
+      );
 
     const msgs = await db
       .select({
@@ -256,10 +277,12 @@ messagesRouter.post('/send', requireAuth, async (c) => {
       .from(athletes)
       .where(or(eq(athletes.id, targetId), eq(athletes.username, targetId)))
       .limit(1);
-    if (!named) return c.json({ error: 'Recipient athlete not found', code: 'recipient_not_found' }, 404);
+    if (!named)
+      return c.json({ error: 'Recipient athlete not found', code: 'recipient_not_found' }, 404);
 
     const opened = await getOrCreateConversation(db, myId, named.id);
-    if ('error' in opened && opened.error === 'self') return c.json({ error: 'You cannot message yourself' }, 422);
+    if ('error' in opened && opened.error === 'self')
+      return c.json({ error: 'You cannot message yourself' }, 422);
     if ('error' in opened) return c.json({ error: 'Recipient athlete not found' }, 404);
 
     const now = new Date();
@@ -277,7 +300,10 @@ messagesRouter.post('/send', requireAuth, async (c) => {
     };
     // Store the message first: if this fails, the conversation preview must not already claim it.
     await db.insert(directMessages).values(newMsg);
-    await db.update(chats).set({ lastMessage: trimmed, lastMessageAt: now, updatedAt: now }).where(eq(chats.id, activeChatId));
+    await db
+      .update(chats)
+      .set({ lastMessage: trimmed, lastMessageAt: now, updatedAt: now })
+      .where(eq(chats.id, activeChatId));
 
     try {
       const notifRepo = new NotificationRepository(db);
@@ -298,7 +324,11 @@ messagesRouter.post('/send', requireAuth, async (c) => {
         await stub.fetch('http://internal/broadcast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'new_message', directMessage: newMsg, chatId: activeChatId }),
+          body: JSON.stringify({
+            type: 'new_message',
+            directMessage: newMsg,
+            chatId: activeChatId,
+          }),
         });
         // Lets the recipient's notification badge update without a manual refresh.
         await stub.fetch('http://internal/broadcast', {
@@ -311,7 +341,10 @@ messagesRouter.post('/send', requireAuth, async (c) => {
       }
     }
 
-    return c.json({ message: 'Message sent successfully', directMessage: newMsg, chatId: activeChatId }, 201);
+    return c.json(
+      { message: 'Message sent successfully', directMessage: newMsg, chatId: activeChatId },
+      201
+    );
   } catch (err: any) {
     return c.json({ error: err.message || 'Failed to send message' }, 500);
   }

@@ -15,10 +15,7 @@ export const verifyPassword = async (password: string, hash: string): Promise<bo
   return computed === hash;
 };
 
-export const generateToken = async (
-  payload: AuthContext,
-  secret: string
-): Promise<string> => {
+export const generateToken = async (payload: AuthContext, secret: string): Promise<string> => {
   const secretKey = new TextEncoder().encode(secret);
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
@@ -27,10 +24,7 @@ export const generateToken = async (
     .sign(secretKey);
 };
 
-export const verifyToken = async (
-  token: string,
-  secret: string
-): Promise<AuthContext | null> => {
+export const verifyToken = async (token: string, secret: string): Promise<AuthContext | null> => {
   try {
     const secretKey = new TextEncoder().encode(secret);
     const { payload } = await jwtVerify(token, secretKey);
@@ -43,4 +37,3 @@ export const verifyToken = async (
     return null;
   }
 };
-

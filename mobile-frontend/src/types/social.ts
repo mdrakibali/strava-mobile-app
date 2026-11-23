@@ -24,4 +24,3 @@ export interface Conversation {
   lastMessageTime: string;
   unreadCount: number;
 }
-

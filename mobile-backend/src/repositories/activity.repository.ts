@@ -16,16 +16,24 @@ export class ActivityRepository {
     const [row] = await this.db
       .select()
       .from(activities)
-      .where(and(eq(activities.athleteId, athleteId), eq(activities.clientActivityId, clientActivityId)))
+      .where(
+        and(eq(activities.athleteId, athleteId), eq(activities.clientActivityId, clientActivityId))
+      )
       .limit(1);
     return row ?? null;
   }
 
   /** Insert guarded by the unique (athlete_id, client_activity_id) index; returns the existing row on conflict. */
   async createIdempotent(data: typeof activities.$inferInsert) {
-    const [created] = await this.db.insert(activities).values(data).onConflictDoNothing().returning();
+    const [created] = await this.db
+      .insert(activities)
+      .values(data)
+      .onConflictDoNothing()
+      .returning();
     if (created) return { created: true, activity: created };
-    const existing = data.clientActivityId ? await this.findByClientId(data.athleteId, data.clientActivityId) : null;
+    const existing = data.clientActivityId
+      ? await this.findByClientId(data.athleteId, data.clientActivityId)
+      : null;
     if (!existing) throw new Error('Activity insert conflicted but no existing row was found');
     return { created: false, activity: existing };
   }
@@ -85,10 +93,18 @@ export class ActivityRepository {
         maxSpeedMps: activities.maxSpeedMps,
         calories: activities.calories,
         maskedPolyline: activities.maskedPolyline,
-        kudosCount: sql<number>`(select count(*) from ${kudos} where ${kudos.activityId} = ${activities.id})`.as('kudosCount'),
-        commentsCount: sql<number>`(select count(*) from ${comments} where ${comments.activityId} = ${activities.id})`.as('commentsCount'),
+        kudosCount:
+          sql<number>`(select count(*) from ${kudos} where ${kudos.activityId} = ${activities.id})`.as(
+            'kudosCount'
+          ),
+        commentsCount:
+          sql<number>`(select count(*) from ${comments} where ${comments.activityId} = ${activities.id})`.as(
+            'commentsCount'
+          ),
         hasKudos: viewerId
-          ? sql<boolean>`exists (select 1 from ${kudos} where ${kudos.activityId} = ${activities.id} and ${kudos.athleteId} = ${viewerId})`.as('hasKudos')
+          ? sql<boolean>`exists (select 1 from ${kudos} where ${kudos.activityId} = ${activities.id} and ${kudos.athleteId} = ${viewerId})`.as(
+              'hasKudos'
+            )
           : sql<boolean>`false`.as('hasKudos'),
       })
       .from(activities)
@@ -172,7 +188,10 @@ export class ActivityRepository {
   }
 
   async getCommentsCount(activityId: string): Promise<number> {
-    const [res] = await this.db.select({ count: sql<number>`count(*)` }).from(comments).where(eq(comments.activityId, activityId));
+    const [res] = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(comments)
+      .where(eq(comments.activityId, activityId));
     return countOf(res?.count);
   }
 
@@ -218,7 +237,12 @@ export class ActivityRepository {
       .orderBy(comments.createdAt, comments.id);
   }
 
-  async addComment(activityId: string, athleteId: string, content: string, parentCommentId?: string) {
+  async addComment(
+    activityId: string,
+    athleteId: string,
+    content: string,
+    parentCommentId?: string
+  ) {
     const id = `cmt_${crypto.randomUUID()}`;
     const [created] = await this.db
       .insert(comments)
@@ -233,4 +257,3 @@ export class ActivityRepository {
     return created;
   }
 }
-

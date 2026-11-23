@@ -9,7 +9,11 @@ import { Env } from '../types';
  */
 export const jwtSecret = (env: Env): string => {
   if (!env.JWT_SECRET || env.JWT_SECRET.length < 32) {
-    throw new HttpError(500, 'server_misconfigured', 'Authentication is not configured on the server');
+    throw new HttpError(
+      500,
+      'server_misconfigured',
+      'Authentication is not configured on the server'
+    );
   }
   return env.JWT_SECRET;
 };
@@ -21,9 +25,11 @@ const bearer = (c: Context) => {
 
 export const requireAuth = async (c: Context<{ Bindings: Env }>, next: Next) => {
   const token = bearer(c);
-  if (!token) return c.json({ error: 'Unauthorized: Missing or invalid token', code: 'unauthorized' }, 401);
+  if (!token)
+    return c.json({ error: 'Unauthorized: Missing or invalid token', code: 'unauthorized' }, 401);
   const user = await verifyToken(token, jwtSecret(c.env));
-  if (!user) return c.json({ error: 'Unauthorized: Token expired or invalid', code: 'unauthorized' }, 401);
+  if (!user)
+    return c.json({ error: 'Unauthorized: Token expired or invalid', code: 'unauthorized' }, 401);
   c.set('user', user);
   await next();
 };

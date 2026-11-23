@@ -5,7 +5,10 @@ import { verifyGoogleToken } from '../lib/google-auth';
 
 const AUD = 'web-client-id.apps.googleusercontent.com';
 let jwks: ReturnType<typeof createLocalJWKSet>;
-let sign: (claims: Record<string, unknown>, opts?: { iss?: string; aud?: string; exp?: string | number }) => Promise<string>;
+let sign: (
+  claims: Record<string, unknown>,
+  opts?: { iss?: string; aud?: string; exp?: string | number }
+) => Promise<string>;
 let otherKeySign: (claims: Record<string, unknown>) => Promise<string>;
 
 beforeAll(async () => {
@@ -22,12 +25,23 @@ beforeAll(async () => {
       .setExpirationTime(o.exp ?? '1h')
       .sign(privateKey);
   const other = await generateKeyPair('RS256');
-  otherKeySign = (claims) => new SignJWT(claims).setProtectedHeader({ alg: 'RS256', kid: 'k1' }).setIssuer('https://accounts.google.com').setAudience(AUD).setExpirationTime('1h').sign(other.privateKey);
+  otherKeySign = (claims) =>
+    new SignJWT(claims)
+      .setProtectedHeader({ alg: 'RS256', kid: 'k1' })
+      .setIssuer('https://accounts.google.com')
+      .setAudience(AUD)
+      .setExpirationTime('1h')
+      .sign(other.privateKey);
 });
 
 describe('verifyGoogleToken', () => {
   it('accepts a correctly signed token for our client and returns the profile', async () => {
-    const t = await sign({ email: 'a@gmail.com', email_verified: true, name: 'A Person', picture: 'https://x/p.png' });
+    const t = await sign({
+      email: 'a@gmail.com',
+      email_verified: true,
+      name: 'A Person',
+      picture: 'https://x/p.png',
+    });
     await expect(verifyGoogleToken(t, AUD, jwks)).resolves.toMatchObject({
       googleId: 'google-sub-123',
       email: 'a@gmail.com',
@@ -38,11 +52,19 @@ describe('verifyGoogleToken', () => {
 
   it('rejects wrong audience, wrong issuer, expired, forged and missing-client-id cases', async () => {
     const claims = { email: 'a@gmail.com', email_verified: true };
-    await expect(verifyGoogleToken(await sign(claims, { aud: 'someone-elses-app' }), AUD, jwks)).rejects.toThrow();
-    await expect(verifyGoogleToken(await sign(claims, { iss: 'https://evil.example' }), AUD, jwks)).rejects.toThrow();
-    await expect(verifyGoogleToken(await sign(claims, { exp: Math.floor(Date.now() / 1000) - 60 }), AUD, jwks)).rejects.toThrow();
+    await expect(
+      verifyGoogleToken(await sign(claims, { aud: 'someone-elses-app' }), AUD, jwks)
+    ).rejects.toThrow();
+    await expect(
+      verifyGoogleToken(await sign(claims, { iss: 'https://evil.example' }), AUD, jwks)
+    ).rejects.toThrow();
+    await expect(
+      verifyGoogleToken(await sign(claims, { exp: Math.floor(Date.now() / 1000) - 60 }), AUD, jwks)
+    ).rejects.toThrow();
     await expect(verifyGoogleToken(await otherKeySign(claims), AUD, jwks)).rejects.toThrow();
-    await expect(verifyGoogleToken(await sign(claims), undefined, jwks)).rejects.toThrow(/not configured/);
+    await expect(verifyGoogleToken(await sign(claims), undefined, jwks)).rejects.toThrow(
+      /not configured/
+    );
     await expect(verifyGoogleToken('mock:anything', AUD, jwks)).rejects.toThrow();
   });
 

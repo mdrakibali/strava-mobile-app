@@ -16,8 +16,18 @@ interface ProgressProps {
   };
   maxWeek: number;
   totals: {
-    ytd: { count: number; distanceMeters: number; movingTimeSeconds: number; elevationGainMeters: number };
-    all: { count: number; distanceMeters: number; movingTimeSeconds: number; elevationGainMeters: number };
+    ytd: {
+      count: number;
+      distanceMeters: number;
+      movingTimeSeconds: number;
+      elevationGainMeters: number;
+    };
+    all: {
+      count: number;
+      distanceMeters: number;
+      movingTimeSeconds: number;
+      elevationGainMeters: number;
+    };
   } | null;
   recentLimit: number;
 }
@@ -34,12 +44,24 @@ export const ProfileProgressTab: React.FC<ProgressProps> = ({
   return (
     <View className="bg-white m-4 p-4 rounded-2xl border border-gray-100 shadow-sm">
       <ChipRow>
-        <Chip label="All sports" selected={sportFilter === 'All'} onPress={() => setSportFilter('All')} />
+        <Chip
+          label="All sports"
+          selected={sportFilter === 'All'}
+          onPress={() => setSportFilter('All')}
+        />
         {sportsPresent.map((s) => (
-          <Chip key={s.id} label={s.label} icon={s.icon} selected={sportFilter === s.id} onPress={() => setSportFilter(s.id)} />
+          <Chip
+            key={s.id}
+            label={s.label}
+            icon={s.icon}
+            selected={sportFilter === s.id}
+            onPress={() => setSportFilter(s.id)}
+          />
         ))}
       </ChipRow>
-      <AppText variant="title2" className="mt-6">This week</AppText>
+      <AppText variant="title2" className="mt-6">
+        This week
+      </AppText>
       <MetricRow className="mt-3">
         <MetricTile label="Distance" value={kmValue(progress.week.meters)} unit="km" size="L" />
         <MetricTile label="Time" value={formatDuration(progress.week.seconds)} size="L" />
@@ -51,8 +73,14 @@ export const ProfileProgressTab: React.FC<ProgressProps> = ({
         </AppText>
       ) : null}
 
-      <AppText variant="title3" className="mt-6">Past 12 weeks · distance</AppText>
-      <View className="h-24 flex-row items-end mt-4" accessible accessibilityLabel="Weekly distance for the past 12 weeks">
+      <AppText variant="title3" className="mt-6">
+        Past 12 weeks · distance
+      </AppText>
+      <View
+        className="h-24 flex-row items-end mt-4"
+        accessible
+        accessibilityLabel="Weekly distance for the past 12 weeks"
+      >
         {progress.weeks.map((w, i) => (
           <View key={w.start} className="flex-1 h-full justify-end px-0.5">
             <View
@@ -66,9 +94,14 @@ export const ProfileProgressTab: React.FC<ProgressProps> = ({
       </View>
       <View className="flex-row items-center justify-between mt-1">
         <AppText variant="caption" color="inkTertiary">
-          {new Date(progress.weeks[0].start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          {new Date(progress.weeks[0].start).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+          })}
         </AppText>
-        <AppText variant="caption" color="inkTertiary">This week</AppText>
+        <AppText variant="caption" color="inkTertiary">
+          This week
+        </AppText>
       </View>
       {!progress.windowComplete ? (
         <AppText variant="caption" color="inkTertiary" className="mt-2">
@@ -84,7 +117,9 @@ export const ProfileProgressTab: React.FC<ProgressProps> = ({
             <MetricTile label="Time" value={formatDuration(totals.ytd.movingTimeSeconds)} />
             <MetricTile label="Elev gain" value={formatElevation(totals.ytd.elevationGainMeters)} />
           </MetricRow>
-          <AppText variant="title3" className="mt-4">All time</AppText>
+          <AppText variant="title3" className="mt-4">
+            All time
+          </AppText>
           <MetricRow className="mt-2">
             <MetricTile label="Activities" value={String(totals.all.count)} />
             <MetricTile label="Distance" value={kmValue(totals.all.distanceMeters)} unit="km" />
@@ -96,4 +131,3 @@ export const ProfileProgressTab: React.FC<ProgressProps> = ({
     </View>
   );
 };
-

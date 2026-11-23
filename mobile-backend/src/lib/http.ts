@@ -17,7 +17,10 @@ export class HttpError extends Error {
 export const notFound = (what = 'Resource') => new HttpError(404, 'not_found', `${what} not found`);
 
 /** Parse + validate a JSON body. Malformed JSON → 400; schema violations → 400 with issue list. */
-export const parseBody = async <S extends ZodTypeAny>(c: Context, schema: S): Promise<z.output<S>> => {
+export const parseBody = async <S extends ZodTypeAny>(
+  c: Context,
+  schema: S
+): Promise<z.output<S>> => {
   let raw: unknown;
   try {
     raw = await c.req.json();

@@ -69,7 +69,11 @@ export class NotificationController {
 
       // Send connection ping heartbeat
       await stream.writeSSE({
-        data: JSON.stringify({ status: 'connected', athleteId: user.athleteId, timestamp: Date.now() }),
+        data: JSON.stringify({
+          status: 'connected',
+          athleteId: user.athleteId,
+          timestamp: Date.now(),
+        }),
         event: 'heartbeat',
       });
     });

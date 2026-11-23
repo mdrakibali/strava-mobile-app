@@ -23,7 +23,14 @@ const RIDE_TYPES = new Set(['Ride', 'Gravel Ride', 'Mountain Bike', 'Virtual Rid
 export const sportConfig = (sport: string | null | undefined): SportConfig => {
   const found = MVP_SPORTS.find((s) => s.id === sport);
   if (found) return found;
-  if (sport && RIDE_TYPES.has(sport)) return { id: sport as SportType, label: sport, icon: 'bicycle', primaryMetric: 'speed' };
-  if (sport === 'Trail Run') return { id: 'Trail Run', label: 'Trail Run', icon: 'footsteps', primaryMetric: 'pace' };
-  return { id: (sport as SportType) || 'Workout', label: sport || 'Activity', icon: 'pulse', primaryMetric: 'pace' };
+  if (sport && RIDE_TYPES.has(sport))
+    return { id: sport as SportType, label: sport, icon: 'bicycle', primaryMetric: 'speed' };
+  if (sport === 'Trail Run')
+    return { id: 'Trail Run', label: 'Trail Run', icon: 'footsteps', primaryMetric: 'pace' };
+  return {
+    id: (sport as SportType) || 'Workout',
+    label: sport || 'Activity',
+    icon: 'pulse',
+    primaryMetric: 'pace',
+  };
 };

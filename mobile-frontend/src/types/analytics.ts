@@ -33,7 +33,7 @@ export interface FitnessFatiguePoint {
   date: string;
   fitnessCtl: number; // Chronic Training Load (42-day)
   fatigueAtl: number; // Acute Training Load (7-day)
-  formTsb: number;    // Training Stress Balance (Fitness - Fatigue)
+  formTsb: number; // Training Stress Balance (Fitness - Fatigue)
 }
 
 export interface RacePrediction {
@@ -51,4 +51,3 @@ export interface PrivacyZoneItem {
   longitude: number;
   radiusMeters: number;
 }
-

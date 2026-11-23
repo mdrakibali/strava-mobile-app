@@ -27,11 +27,36 @@ export type MapStyleKey = keyof typeof MAP_STYLES;
 export const DEFAULT_MAP_STYLE: MapStyleKey = 'outdoor';
 
 /** Options for the "Map style" sheets (record + maps tab). */
-export const MAP_STYLE_OPTIONS: { id: MapStyleKey; title: string; description: string; icon: 'sunny-outline' | 'contrast-outline' | 'map-outline' | 'moon-outline' }[] = [
-  { id: 'outdoor', title: 'Outdoor Light', description: 'Clean outdoor map with trails, paths and parks', icon: 'sunny-outline' },
-  { id: 'dark_topo', title: 'Dark Topo', description: 'Dark topographic map with terrain and contours', icon: 'moon-outline' },
-  { id: 'positron', title: 'Minimal Light', description: 'Clean minimal map so your route stands out', icon: 'contrast-outline' },
-  { id: 'bright', title: 'Bright Streets', description: 'High-contrast streets and neighborhoods', icon: 'map-outline' },
+export const MAP_STYLE_OPTIONS: {
+  id: MapStyleKey;
+  title: string;
+  description: string;
+  icon: 'sunny-outline' | 'contrast-outline' | 'map-outline' | 'moon-outline';
+}[] = [
+  {
+    id: 'outdoor',
+    title: 'Outdoor Light',
+    description: 'Clean outdoor map with trails, paths and parks',
+    icon: 'sunny-outline',
+  },
+  {
+    id: 'dark_topo',
+    title: 'Dark Topo',
+    description: 'Dark topographic map with terrain and contours',
+    icon: 'moon-outline',
+  },
+  {
+    id: 'positron',
+    title: 'Minimal Light',
+    description: 'Clean minimal map so your route stands out',
+    icon: 'contrast-outline',
+  },
+  {
+    id: 'bright',
+    title: 'Bright Streets',
+    description: 'High-contrast streets and neighborhoods',
+    icon: 'map-outline',
+  },
 ];
 
 /** Persisted/legacy values fall back to the default. */

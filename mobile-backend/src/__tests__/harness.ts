@@ -14,7 +14,9 @@ export const ENV = { JWT_SECRET, ENVIRONMENT: 'test', GOOGLE_CLIENT_ID: 'test-cl
 export const createTestDb = async () => {
   const pg = new PGlite();
   const dir = join(__dirname, '../../drizzle');
-  for (const file of readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
+  for (const file of readdirSync(dir)
+    .filter((f) => f.endsWith('.sql'))
+    .sort()) {
     for (const stmt of readFileSync(join(dir, file), 'utf8').split('--> statement-breakpoint')) {
       if (stmt.trim()) await pg.exec(stmt);
     }
@@ -25,12 +27,20 @@ export const createTestDb = async () => {
 
 export const createTestApp = (db: AppDatabase, env: Record<string, string> = ENV) => {
   const app = createApp(async () => ({ db, close: async () => {} }));
-  const call = async (method: string, path: string, opts: { token?: string; body?: unknown; raw?: string } = {}) => {
+  const call = async (
+    method: string,
+    path: string,
+    opts: { token?: string; body?: unknown; raw?: string } = {}
+  ) => {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
     const res = await app.request(
       `/api/v1${path}`,
-      { method, headers, body: opts.raw ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined) },
+      {
+        method,
+        headers,
+        body: opts.raw ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined),
+      },
       env
     );
     const text = await res.text();
@@ -46,6 +56,8 @@ export const createTestApp = (db: AppDatabase, env: Record<string, string> = ENV
 };
 
 export const seedAthlete = async (db: AppDatabase, id: string) => {
-  await db.insert(schema.athletes).values({ id, username: id, email: `${id}@example.com`, displayName: id.toUpperCase() });
+  await db
+    .insert(schema.athletes)
+    .values({ id, username: id, email: `${id}@example.com`, displayName: id.toUpperCase() });
   return generateToken({ athleteId: id, username: id, email: `${id}@example.com` }, JWT_SECRET);
 };

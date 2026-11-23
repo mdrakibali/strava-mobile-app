@@ -14,7 +14,14 @@ import {
 } from './places.helpers';
 
 export type { NearbyResult, Place, PlaceCategory, PlaceSport };
-export { buildOverpassQuery, normalizePhoton, OVERPASS_ENDPOINTS, PHOTON_REVERSE, PHOTON_TAGS, specificCategoriesFor };
+export {
+  buildOverpassQuery,
+  normalizePhoton,
+  OVERPASS_ENDPOINTS,
+  PHOTON_REVERSE,
+  PHOTON_TAGS,
+  specificCategoriesFor,
+};
 
 type Fetcher = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -27,7 +34,13 @@ const categoryOf = (tags: Record<string, string>, type: string): PlaceCategory |
   if (tags.leisure === 'garden') return 'garden';
   if (tags.leisure === 'track') return 'track';
   if (tags.leisure === 'recreation_ground') return 'recreation';
-  if (tags.leisure === 'nature_reserve' || tags.boundary === 'protected_area' || tags.natural === 'wood' || tags.natural === 'forest') return 'nature';
+  if (
+    tags.leisure === 'nature_reserve' ||
+    tags.boundary === 'protected_area' ||
+    tags.natural === 'wood' ||
+    tags.natural === 'forest'
+  )
+    return 'nature';
   if (tags.highway === 'cycleway' || tags.cycleway) return 'cycleway';
   if (tags.highway === 'path' || tags.highway === 'track') return 'trail';
   if (tags.highway === 'footway' || tags.highway === 'pedestrian') return 'footpath';
@@ -56,10 +69,17 @@ export const normalizeOverpass = (json: any, lat: number, lng: number, limit = 1
     if (el.type === 'node') {
       pLat = el.lat;
       pLng = el.lon;
-    } else if (Array.isArray(el.geometry) && el.geometry.length > 1 && el.type === 'way' && !tags.leisure && !tags.natural) {
+    } else if (
+      Array.isArray(el.geometry) &&
+      el.geometry.length > 1 &&
+      el.type === 'way' &&
+      !tags.leisure &&
+      !tags.natural
+    ) {
       line = el.geometry.map((g: any) => [g.lon, g.lat] as [number, number]);
       lengthM = 0;
-      for (let i = 1; i < line!.length; i++) lengthM += haversineM(line![i - 1][1], line![i - 1][0], line![i][1], line![i][0]);
+      for (let i = 1; i < line!.length; i++)
+        lengthM += haversineM(line![i - 1][1], line![i - 1][0], line![i][1], line![i][0]);
       let best = Infinity;
       for (const [x, y] of line!) {
         const d = haversineM(lat, lng, y, x);
@@ -76,7 +96,8 @@ export const normalizeOverpass = (json: any, lat: number, lng: number, limit = 1
     if (existing && line) {
       existing.lengthM = (existing.lengthM ?? 0) + (lengthM ?? 0);
       existing.path = [...(existing.path ?? []), simplifyLine(line)];
-      if (distanceM < existing.distanceM) Object.assign(existing, { distanceM, lat: pLat, lng: pLng });
+      if (distanceM < existing.distanceM)
+        Object.assign(existing, { distanceM, lat: pLat, lng: pLng });
       continue;
     }
     byKey.set(key, {
@@ -110,7 +131,12 @@ export class PlacesService {
     private photonUrl: string = PHOTON_REVERSE
   ) {}
 
-  async nearby(sport: PlaceSport, userLat: number, userLng: number, radiusM: number): Promise<NearbyResult> {
+  async nearby(
+    sport: PlaceSport,
+    userLat: number,
+    userLng: number,
+    radiusM: number
+  ): Promise<NearbyResult> {
     const lat = Math.round(userLat * 1000) / 1000;
     const lng = Math.round(userLng * 1000) / 1000;
     const cacheKey = `${sport}:${lat}:${lng}:${radiusM}`;
@@ -120,7 +146,10 @@ export class PlacesService {
     }
 
     let lastError: string | null = null;
-    const finish = async (places: Place[], provider: 'photon' | 'overpass'): Promise<NearbyResult> => {
+    const finish = async (
+      places: Place[],
+      provider: 'photon' | 'overpass'
+    ): Promise<NearbyResult> => {
       const result: NearbyResult = {
         sport,
         radiusM,
@@ -139,15 +168,28 @@ export class PlacesService {
     try {
       const photon = (tags: string[]) => {
         const queryTerm = sport === 'Ride' ? 'cycle' : sport === 'Hike' ? 'trail' : 'park';
-        const qs = new URLSearchParams({ q: queryTerm, lat: String(lat), lon: String(lng), limit: '30' });
+        const qs = new URLSearchParams({
+          q: queryTerm,
+          lat: String(lat),
+          lon: String(lng),
+          limit: '30',
+        });
         for (const t of tags) qs.append('osm_tag', t);
-        return this.fetcher(`${this.photonUrl}?${qs.toString()}`, { headers: { 'User-Agent': 'OpenStrava/1.1 (fitness app; nearby places)' } });
+        return this.fetcher(`${this.photonUrl}?${qs.toString()}`, {
+          headers: { 'User-Agent': 'OpenStrava/1.1 (fitness app; nearby places)' },
+        });
       };
-      const [spec, gen] = await Promise.all([photon(PHOTON_TAGS[sport].specific), photon(PHOTON_TAGS[sport].general)]);
+      const [spec, gen] = await Promise.all([
+        photon(PHOTON_TAGS[sport].specific),
+        photon(PHOTON_TAGS[sport].general),
+      ]);
       if (spec.ok && gen.ok) {
         const [a, b]: any[] = await Promise.all([spec.json(), gen.json()]);
         const merged = { features: [...(a?.features ?? []), ...(b?.features ?? [])] };
-        return await finish(normalizePhoton(merged, lat, lng, radiusM, 12, specificCategoriesFor(sport)), 'photon');
+        return await finish(
+          normalizePhoton(merged, lat, lng, radiusM, 12, specificCategoriesFor(sport)),
+          'photon'
+        );
       }
       lastError = `photon → HTTP ${spec.status}/${gen.status}`;
     } catch (e: any) {
@@ -159,7 +201,10 @@ export class PlacesService {
       try {
         const res = await this.fetcher(endpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'OpenStrava/1.1 (fitness app; nearby places)' },
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'OpenStrava/1.1 (fitness app; nearby places)',
+          },
           body: `data=${encodeURIComponent(query)}`,
         });
         if (!res.ok) {
@@ -172,7 +217,11 @@ export class PlacesService {
       }
     }
     console.warn('Places providers unavailable:', lastError);
-    throw new HttpError(503, 'places_unavailable', 'Nearby places are temporarily unavailable. Please try again.');
+    throw new HttpError(
+      503,
+      'places_unavailable',
+      'Nearby places are temporarily unavailable. Please try again.'
+    );
   }
 }
 

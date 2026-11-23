@@ -19,7 +19,8 @@ export const ClubsList: React.FC<ClubsListProps> = ({ clubs, onToggleJoin }) => 
           key={club.id}
           activeOpacity={0.85}
           onPress={() => router.push(`/club/${club.id}`)}
-          className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm mb-3">
+          className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm mb-3"
+        >
           <View className="flex-row items-center mb-3">
             <Image
               source={{ uri: club.avatarUrl }}
@@ -55,11 +56,11 @@ export const ClubsList: React.FC<ClubsListProps> = ({ clubs, onToggleJoin }) => 
               onPress={() => onToggleJoin(club.id)}
               className={`px-4 py-1.5 rounded-full ${
                 club.isMember ? 'bg-gray-100' : 'bg-[#FC4C02]'
-              }`}>
+              }`}
+            >
               <Text
-                className={`text-xs font-bold ${
-                  club.isMember ? 'text-gray-700' : 'text-white'
-                }`}>
+                className={`text-xs font-bold ${club.isMember ? 'text-gray-700' : 'text-white'}`}
+              >
                 {club.isMember ? 'Joined' : 'Join Club'}
               </Text>
             </TouchableOpacity>
@@ -69,11 +70,11 @@ export const ClubsList: React.FC<ClubsListProps> = ({ clubs, onToggleJoin }) => 
 
       <TouchableOpacity
         onPress={() => router.push('/club/create')}
-        className="w-full py-3.5 bg-orange-50 border border-orange-200 rounded-xl items-center justify-center flex-row">
+        className="w-full py-3.5 bg-orange-50 border border-orange-200 rounded-xl items-center justify-center flex-row"
+      >
         <Ionicons name="add-circle-outline" size={18} color="#FC4C02" />
         <Text className="text-sm font-bold text-[#FC4C02] ml-1.5">Create a New Club</Text>
       </TouchableOpacity>
     </View>
   );
 };
-

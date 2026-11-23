@@ -15,7 +15,8 @@ export const SelectField: React.FC<{
     onPress={onPress}
     accessibilityRole="button"
     accessibilityLabel={`${accessibilityLabel}: ${value}`}
-    className="flex-row items-center min-h-[56px] border border-gray-300 rounded-xl px-4 bg-white active:bg-gray-100">
+    className="flex-row items-center min-h-[56px] border border-gray-300 rounded-xl px-4 bg-white active:bg-gray-100"
+  >
     {icon ? <Ionicons name={icon} size={20} color={color.ink} className="mr-3" /> : null}
     <AppText variant="body" className="flex-1" numberOfLines={1}>
       {value}
@@ -70,12 +71,16 @@ export const SectionTitle: React.FC<{ title: string; style?: object; className?:
     variant="title2"
     accessibilityRole="header"
     className={`mb-3 ${className}`}
-    style={style}>
+    style={style}
+  >
     {title}
   </AppText>
 );
 
-export const Divider: React.FC<{ inset?: number; className?: string }> = ({ inset = 0, className = '' }) => (
+export const Divider: React.FC<{ inset?: number; className?: string }> = ({
+  inset = 0,
+  className = '',
+}) => (
   <View
     className={`h-[1px] bg-gray-200 ${className}`}
     style={inset ? { marginLeft: inset } : undefined}

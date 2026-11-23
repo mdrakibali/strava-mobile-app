@@ -70,7 +70,9 @@ goalsRouter.get('/', async (c) => {
     .from(trainingGoals)
     .where(eq(trainingGoals.athleteId, user.athleteId))
     .orderBy(desc(trainingGoals.createdAt));
-  const goals = await Promise.all(rows.map(async (g) => toDto(g, await progressKm(db, user.athleteId, g))));
+  const goals = await Promise.all(
+    rows.map(async (g) => toDto(g, await progressKm(db, user.athleteId, g)))
+  );
   return c.json({ goals });
 });
 
@@ -103,7 +105,9 @@ goalsRouter.delete('/:id', async (c) => {
   const db = getDb(c);
   const deleted = await db
     .delete(trainingGoals)
-    .where(and(eq(trainingGoals.id, c.req.param('id')), eq(trainingGoals.athleteId, user.athleteId)))
+    .where(
+      and(eq(trainingGoals.id, c.req.param('id')), eq(trainingGoals.athleteId, user.athleteId))
+    )
     .returning({ id: trainingGoals.id });
   if (deleted.length === 0) return c.json({ error: 'Goal not found', code: 'not_found' }, 404);
   return c.json({ success: true, message: 'Goal deleted' });

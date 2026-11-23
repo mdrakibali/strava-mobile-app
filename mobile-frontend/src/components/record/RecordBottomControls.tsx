@@ -42,7 +42,8 @@ export function RecordBottomControls({
           disabled={starting || gpsDisabled}
           accessibilityRole="button"
           accessibilityLabel={`Start ${cfg.label}`}
-          className="w-20 h-20 rounded-full bg-[#FC4C02] items-center justify-center shadow-xl active:bg-[#E03A00] border-2 border-orange-400/30">
+          className="w-20 h-20 rounded-full bg-[#FC4C02] items-center justify-center shadow-xl active:bg-[#E03A00] border-2 border-orange-400/30"
+        >
           <Ionicons name="play" size={38} color="#FFFFFF" className="ml-1" />
         </Pressable>
       </View>
@@ -57,17 +58,23 @@ export function RecordBottomControls({
           onPress={onResume}
           accessibilityRole="button"
           accessibilityLabel="Resume recording"
-          className="flex-1 h-14 rounded-full bg-[#FC4C02] flex-row items-center justify-center shadow-lg active:bg-[#E03A00]">
+          className="flex-1 h-14 rounded-full bg-[#FC4C02] flex-row items-center justify-center shadow-lg active:bg-[#E03A00]"
+        >
           <Ionicons name="play" size={24} color="#FFFFFF" />
-          <Text style={{ color: '#FFFFFF' }} className="text-base font-black ml-2">Resume</Text>
+          <Text style={{ color: '#FFFFFF' }} className="text-base font-black ml-2">
+            Resume
+          </Text>
         </Pressable>
         <Pressable
           onPress={onFinish}
           accessibilityRole="button"
           accessibilityLabel="Finish recording"
-          className="flex-1 h-14 rounded-full bg-black flex-row items-center justify-center shadow-lg active:bg-gray-900">
+          className="flex-1 h-14 rounded-full bg-black flex-row items-center justify-center shadow-lg active:bg-gray-900"
+        >
           <Ionicons name="square" size={18} color="#FFFFFF" />
-          <Text style={{ color: '#FFFFFF' }} className="text-base font-black ml-2">Finish</Text>
+          <Text style={{ color: '#FFFFFF' }} className="text-base font-black ml-2">
+            Finish
+          </Text>
         </Pressable>
       </View>
     );
@@ -80,9 +87,12 @@ export function RecordBottomControls({
         onPress={onPause}
         accessibilityRole="button"
         accessibilityLabel="Pause recording"
-        className="h-14 rounded-full bg-[#FC4C02] flex-row items-center justify-center shadow-lg active:bg-[#E03A00]">
+        className="h-14 rounded-full bg-[#FC4C02] flex-row items-center justify-center shadow-lg active:bg-[#E03A00]"
+      >
         <Ionicons name="pause" size={24} color="#FFFFFF" />
-        <Text style={{ color: '#FFFFFF' }} className="text-base font-black ml-2">Pause</Text>
+        <Text style={{ color: '#FFFFFF' }} className="text-base font-black ml-2">
+          Pause
+        </Text>
       </Pressable>
     </View>
   );

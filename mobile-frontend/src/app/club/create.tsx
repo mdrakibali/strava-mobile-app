@@ -92,7 +92,8 @@ export default function CreateClubScreen() {
       canSubmit={name.trim().length > 1}
       submitting={saving}
       error={error}
-      onSubmit={submit}>
+      onSubmit={submit}
+    >
       <TextField
         value={name}
         onChangeText={setName}

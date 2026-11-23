@@ -6,5 +6,10 @@ import { NotAvailableScreen } from '../../components/common/NotAvailableScreen';
  * previously fell back to an invented segment, KOM time and "Local Legend" name.
  */
 export default function SegmentScreen() {
-  return <NotAvailableScreen title="Segments" reason="Segment matching and leaderboards are not implemented yet." />;
+  return (
+    <NotAvailableScreen
+      title="Segments"
+      reason="Segment matching and leaderboards are not implemented yet."
+    />
+  );
 }

@@ -43,11 +43,24 @@ const details = (over: Record<string, unknown> = {}) => ({
 /** Full upload; returns the activity id. */
 const upload = async (token = owner, over: Record<string, unknown> = {}) => {
   const cid = randomUUID();
-  expect((await call('POST', '/activities/uploads', { token, body: { clientActivityId: cid, sportType: 'Run', startTime: new Date(T0).toISOString() } })).status).toBe(201);
+  expect(
+    (
+      await call('POST', '/activities/uploads', {
+        token,
+        body: { clientActivityId: cid, sportType: 'Run', startTime: new Date(T0).toISOString() },
+      })
+    ).status
+  ).toBe(201);
   for (const [seq, points] of BATCHES.entries()) {
-    expect((await call('PUT', `/activities/uploads/${cid}/batches/${seq}`, { token, body: { points } })).status).toBe(200);
+    expect(
+      (await call('PUT', `/activities/uploads/${cid}/batches/${seq}`, { token, body: { points } }))
+        .status
+    ).toBe(200);
   }
-  const res = await call('POST', `/activities/uploads/${cid}/complete`, { token, body: details(over) });
+  const res = await call('POST', `/activities/uploads/${cid}/complete`, {
+    token,
+    body: details(over),
+  });
   expect(res.status).toBe(201);
   return { cid, id: res.body.activity.id as string, res };
 };
@@ -68,37 +81,73 @@ describe('batch upload', () => {
 
   it('is idempotent at every step (start, batch, complete)', async () => {
     const cid = randomUUID();
-    const start = { clientActivityId: cid, sportType: 'Run', startTime: new Date(T0).toISOString() };
-    expect((await call('POST', '/activities/uploads', { token: owner, body: start })).status).toBe(201);
+    const start = {
+      clientActivityId: cid,
+      sportType: 'Run',
+      startTime: new Date(T0).toISOString(),
+    };
+    expect((await call('POST', '/activities/uploads', { token: owner, body: start })).status).toBe(
+      201
+    );
     const again = await call('POST', '/activities/uploads', { token: owner, body: start });
     expect(again.status).toBe(200);
     expect(again.body.upload.receivedSeqs).toEqual([]);
 
-    await call('PUT', `/activities/uploads/${cid}/batches/0`, { token: owner, body: { points: BATCHES[0] } });
-    const dup = await call('PUT', `/activities/uploads/${cid}/batches/0`, { token: owner, body: { points: BATCHES[0] } });
+    await call('PUT', `/activities/uploads/${cid}/batches/0`, {
+      token: owner,
+      body: { points: BATCHES[0] },
+    });
+    const dup = await call('PUT', `/activities/uploads/${cid}/batches/0`, {
+      token: owner,
+      body: { points: BATCHES[0] },
+    });
     expect(dup.body).toMatchObject({ seq: 0, duplicate: true });
-    await call('PUT', `/activities/uploads/${cid}/batches/1`, { token: owner, body: { points: BATCHES[1] } });
+    await call('PUT', `/activities/uploads/${cid}/batches/1`, {
+      token: owner,
+      body: { points: BATCHES[1] },
+    });
 
-    const first = await call('POST', `/activities/uploads/${cid}/complete`, { token: owner, body: details() });
-    const second = await call('POST', `/activities/uploads/${cid}/complete`, { token: owner, body: details() });
+    const first = await call('POST', `/activities/uploads/${cid}/complete`, {
+      token: owner,
+      body: details(),
+    });
+    const second = await call('POST', `/activities/uploads/${cid}/complete`, {
+      token: owner,
+      body: details(),
+    });
     expect(first.status).toBe(201);
     expect(second.status).toBe(200);
     expect(second.body.activity.id).toBe(first.body.activity.id);
 
     // a batch retried after completion (lost ack) is acknowledged, not an error
-    const late = await call('PUT', `/activities/uploads/${cid}/batches/1`, { token: owner, body: { points: BATCHES[1] } });
+    const late = await call('PUT', `/activities/uploads/${cid}/batches/1`, {
+      token: owner,
+      body: { points: BATCHES[1] },
+    });
     expect(late.status).toBe(200);
 
-    const rows = await db.select().from(schema.activities).where(eq(schema.activities.athleteId, 'ath_a'));
+    const rows = await db
+      .select()
+      .from(schema.activities)
+      .where(eq(schema.activities.athleteId, 'ath_a'));
     expect(rows).toHaveLength(1);
   });
 
   it('creates exactly one activity under concurrent duplicate /complete calls', async () => {
     const cid = randomUUID();
-    await call('POST', '/activities/uploads', { token: owner, body: { clientActivityId: cid, sportType: 'Run', startTime: new Date(T0).toISOString() } });
-    for (const [seq, points] of BATCHES.entries()) await call('PUT', `/activities/uploads/${cid}/batches/${seq}`, { token: owner, body: { points } });
+    await call('POST', '/activities/uploads', {
+      token: owner,
+      body: { clientActivityId: cid, sportType: 'Run', startTime: new Date(T0).toISOString() },
+    });
+    for (const [seq, points] of BATCHES.entries())
+      await call('PUT', `/activities/uploads/${cid}/batches/${seq}`, {
+        token: owner,
+        body: { points },
+      });
     const results = await Promise.all(
-      Array.from({ length: 5 }, () => call('POST', `/activities/uploads/${cid}/complete`, { token: owner, body: details() }))
+      Array.from({ length: 5 }, () =>
+        call('POST', `/activities/uploads/${cid}/complete`, { token: owner, body: details() })
+      )
     );
     expect(results.filter((r) => r.status === 201)).toHaveLength(1);
     expect(results.filter((r) => r.status === 200)).toHaveLength(4);
@@ -109,9 +158,18 @@ describe('batch upload', () => {
 
   it('refuses to complete with missing batches and reports which', async () => {
     const cid = randomUUID();
-    await call('POST', '/activities/uploads', { token: owner, body: { clientActivityId: cid, sportType: 'Run', startTime: new Date(T0).toISOString() } });
-    await call('PUT', `/activities/uploads/${cid}/batches/0`, { token: owner, body: { points: BATCHES[0] } });
-    const res = await call('POST', `/activities/uploads/${cid}/complete`, { token: owner, body: details() });
+    await call('POST', '/activities/uploads', {
+      token: owner,
+      body: { clientActivityId: cid, sportType: 'Run', startTime: new Date(T0).toISOString() },
+    });
+    await call('PUT', `/activities/uploads/${cid}/batches/0`, {
+      token: owner,
+      body: { points: BATCHES[0] },
+    });
+    const res = await call('POST', `/activities/uploads/${cid}/complete`, {
+      token: owner,
+      body: details(),
+    });
     expect(res.status).toBe(409);
     expect(res.body.details.missingSeqs).toEqual([1]);
     const status = await call('GET', `/activities/uploads/${cid}`, { token: owner });
@@ -120,33 +178,90 @@ describe('batch upload', () => {
 
   it('rejects a batch re-sent with different content', async () => {
     const cid = randomUUID();
-    await call('POST', '/activities/uploads', { token: owner, body: { clientActivityId: cid, sportType: 'Run', startTime: new Date(T0).toISOString() } });
-    await call('PUT', `/activities/uploads/${cid}/batches/0`, { token: owner, body: { points: BATCHES[0] } });
-    const res = await call('PUT', `/activities/uploads/${cid}/batches/0`, { token: owner, body: { points: BATCHES[1] } });
+    await call('POST', '/activities/uploads', {
+      token: owner,
+      body: { clientActivityId: cid, sportType: 'Run', startTime: new Date(T0).toISOString() },
+    });
+    await call('PUT', `/activities/uploads/${cid}/batches/0`, {
+      token: owner,
+      body: { points: BATCHES[0] },
+    });
+    const res = await call('PUT', `/activities/uploads/${cid}/batches/0`, {
+      token: owner,
+      body: { points: BATCHES[1] },
+    });
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('batch_conflict');
   });
 
   it('keeps uploads private to their athlete', async () => {
     const cid = randomUUID();
-    await call('POST', '/activities/uploads', { token: owner, body: { clientActivityId: cid, sportType: 'Run', startTime: new Date(T0).toISOString() } });
-    expect((await call('PUT', `/activities/uploads/${cid}/batches/0`, { token: stranger, body: { points: BATCHES[0] } })).status).toBe(404);
-    expect((await call('POST', `/activities/uploads/${cid}/complete`, { token: stranger, body: details({ batchCount: 0 }) })).status).toBe(404);
+    await call('POST', '/activities/uploads', {
+      token: owner,
+      body: { clientActivityId: cid, sportType: 'Run', startTime: new Date(T0).toISOString() },
+    });
+    expect(
+      (
+        await call('PUT', `/activities/uploads/${cid}/batches/0`, {
+          token: stranger,
+          body: { points: BATCHES[0] },
+        })
+      ).status
+    ).toBe(404);
+    expect(
+      (
+        await call('POST', `/activities/uploads/${cid}/complete`, {
+          token: stranger,
+          body: details({ batchCount: 0 }),
+        })
+      ).status
+    ).toBe(404);
     expect((await call('GET', `/activities/uploads/${cid}`, { token: stranger })).status).toBe(404);
-    expect((await call('POST', '/activities/uploads', { body: { clientActivityId: cid, sportType: 'Run', startTime: new Date(T0).toISOString() } })).status).toBe(401);
+    expect(
+      (
+        await call('POST', '/activities/uploads', {
+          body: { clientActivityId: cid, sportType: 'Run', startTime: new Date(T0).toISOString() },
+        })
+      ).status
+    ).toBe(401);
   });
 
   it('validates input', async () => {
     const cid = randomUUID();
-    const bad = await call('POST', '/activities/uploads', { token: owner, body: { clientActivityId: 'nope', sportType: 'Swim', startTime: 'yesterday' } });
+    const bad = await call('POST', '/activities/uploads', {
+      token: owner,
+      body: { clientActivityId: 'nope', sportType: 'Swim', startTime: 'yesterday' },
+    });
     expect(bad.status).toBe(400);
     expect(bad.body.code).toBe('validation_failed');
-    expect((await call('POST', '/activities/uploads', { token: owner, raw: '{not json' })).status).toBe(400);
-    await call('POST', '/activities/uploads', { token: owner, body: { clientActivityId: cid, sportType: 'Run', startTime: new Date(T0).toISOString() } });
+    expect(
+      (await call('POST', '/activities/uploads', { token: owner, raw: '{not json' })).status
+    ).toBe(400);
+    await call('POST', '/activities/uploads', {
+      token: owner,
+      body: { clientActivityId: cid, sportType: 'Run', startTime: new Date(T0).toISOString() },
+    });
     const badPoint = [[T0, 200, 10, 5, null, null, null, 0]];
-    expect((await call('PUT', `/activities/uploads/${cid}/batches/0`, { token: owner, body: { points: badPoint } })).status).toBe(400);
-    expect((await call('PUT', `/activities/uploads/${cid}/batches/-1`, { token: owner, body: { points: BATCHES[1] } })).status).toBe(400);
-    const noTitle = await call('POST', `/activities/uploads/${cid}/complete`, { token: owner, body: details({ title: '  ', batchCount: 0 }) });
+    expect(
+      (
+        await call('PUT', `/activities/uploads/${cid}/batches/0`, {
+          token: owner,
+          body: { points: badPoint },
+        })
+      ).status
+    ).toBe(400);
+    expect(
+      (
+        await call('PUT', `/activities/uploads/${cid}/batches/-1`, {
+          token: owner,
+          body: { points: BATCHES[1] },
+        })
+      ).status
+    ).toBe(400);
+    const noTitle = await call('POST', `/activities/uploads/${cid}/complete`, {
+      token: owner,
+      body: details({ title: '  ', batchCount: 0 }),
+    });
     expect(noTitle.status).toBe(400);
     const backwards = await call('POST', `/activities/uploads/${cid}/complete`, {
       token: owner,
@@ -156,7 +271,13 @@ describe('batch upload', () => {
   });
 
   it('legacy POST /activities is idempotent when clientActivityId is sent', async () => {
-    const body = { clientActivityId: randomUUID(), title: 'Old build', sportType: 'Run', distanceMeters: 1000, movingTimeSeconds: 300 };
+    const body = {
+      clientActivityId: randomUUID(),
+      title: 'Old build',
+      sportType: 'Run',
+      distanceMeters: 1000,
+      movingTimeSeconds: 300,
+    };
     const a = await call('POST', '/activities', { token: owner, body });
     const b = await call('POST', '/activities', { token: owner, body });
     expect(a.status).toBe(201);
@@ -194,8 +315,12 @@ describe('visibility matrix', () => {
   });
 
   it('only the owner receives the raw track', async () => {
-    expect((await call('GET', `/activities/${pub}`, { token: owner })).body.activity.rawPolyline.length).toBeGreaterThan(0);
-    expect((await call('GET', `/activities/${pub}`, { token: follower })).body.activity.rawPolyline).toBeNull();
+    expect(
+      (await call('GET', `/activities/${pub}`, { token: owner })).body.activity.rawPolyline.length
+    ).toBeGreaterThan(0);
+    expect(
+      (await call('GET', `/activities/${pub}`, { token: follower })).body.activity.rawPolyline
+    ).toBeNull();
   });
 
   it('history and profile lists', async () => {
@@ -208,9 +333,14 @@ describe('visibility matrix', () => {
         .sort();
       expect([who, titles]).toEqual([who, want]);
       const profile = await call('GET', '/athletes/ath_a', { token });
-      expect([who, profile.body.recentActivities.map((a: any) => a.title).sort()]).toEqual([who, want]);
+      expect([who, profile.body.recentActivities.map((a: any) => a.title).sort()]).toEqual([
+        who,
+        want,
+      ]);
       expect(profile.body.athlete.email === undefined).toBe(who !== 'owner');
-      expect(profile.body.recentActivities.every((a: any) => a.rawPolyline === undefined)).toBe(true);
+      expect(profile.body.recentActivities.every((a: any) => a.rawPolyline === undefined)).toBe(
+        true
+      );
     }
   });
 
@@ -233,13 +363,22 @@ describe('visibility matrix', () => {
     expect(titles).not.toContain('Followers');
     const ownerHome = await call('GET', '/feed?tab=all', { token: owner });
     const ownerTitles = ownerHome.body.feed.map((a: any) => a.title);
-    expect(ownerTitles).toEqual(expect.arrayContaining(['Private', 'Followers', 'Public', 'Theirs', 'Mine']));
+    expect(ownerTitles).toEqual(
+      expect.arrayContaining(['Private', 'Followers', 'Public', 'Theirs', 'Mine'])
+    );
   });
 
   it('kudos, comments and export respect visibility', async () => {
     expect((await call('POST', `/activities/${priv}/kudos`, { token: follower })).status).toBe(404);
     expect((await call('POST', `/activities/${fol}/kudos`, { token: stranger })).status).toBe(404);
-    expect((await call('POST', `/activities/${priv}/comments`, { token: follower, body: { content: 'hi' } })).status).toBe(404);
+    expect(
+      (
+        await call('POST', `/activities/${priv}/comments`, {
+          token: follower,
+          body: { content: 'hi' },
+        })
+      ).status
+    ).toBe(404);
     expect((await call('GET', `/activities/${pub}/export`, { token: follower })).status).toBe(404);
     expect((await call('GET', `/activities/${pub}/export`)).status).toBe(401);
     const gpx = await call('GET', `/activities/${pub}/export`, { token: owner });
@@ -251,10 +390,19 @@ describe('visibility matrix', () => {
 describe('activity management', () => {
   it('owner can edit; others get 404', async () => {
     const { id } = await upload();
-    const res = await call('PATCH', `/activities/${id}`, { token: owner, body: { title: 'Renamed', visibility: 'ONLY_ME', sportType: 'Walk' } });
+    const res = await call('PATCH', `/activities/${id}`, {
+      token: owner,
+      body: { title: 'Renamed', visibility: 'ONLY_ME', sportType: 'Walk' },
+    });
     expect(res.status).toBe(200);
-    expect(res.body.activity).toMatchObject({ title: 'Renamed', visibility: 'ONLY_ME', sportType: 'Walk' });
-    expect((await call('PATCH', `/activities/${id}`, { token: follower, body: { title: 'x' } })).status).toBe(404);
+    expect(res.body.activity).toMatchObject({
+      title: 'Renamed',
+      visibility: 'ONLY_ME',
+      sportType: 'Walk',
+    });
+    expect(
+      (await call('PATCH', `/activities/${id}`, { token: follower, body: { title: 'x' } })).status
+    ).toBe(404);
     expect((await call('PATCH', `/activities/${id}`, { token: owner, body: {} })).status).toBe(400);
     expect((await call('GET', `/activities/${id}`, { token: follower })).status).toBe(404); // now private
   });
@@ -264,7 +412,10 @@ describe('activity management', () => {
     expect((await call('DELETE', `/activities/${id}`, { token: stranger })).status).toBe(404);
     expect((await call('DELETE', `/activities/${id}`, { token: owner })).status).toBe(204);
     expect((await call('GET', `/activities/${id}`, { token: owner })).status).toBe(404);
-    const retry = await call('POST', `/activities/uploads/${cid}/complete`, { token: owner, body: details() });
+    const retry = await call('POST', `/activities/uploads/${cid}/complete`, {
+      token: owner,
+      body: details(),
+    });
     expect(retry.status).toBe(200);
     expect(retry.body).toMatchObject({ created: false, deleted: true, activity: null });
     expect(await db.select().from(schema.activities)).toHaveLength(0);
@@ -275,7 +426,10 @@ describe('activity management', () => {
     await call('POST', `/activities/${id}/kudos`, { token: follower });
     const again = await call('POST', `/activities/${id}/kudos`, { token: follower });
     expect(again.body).toEqual({ hasKudos: true, kudosCount: 1 });
-    expect((await call('POST', `/activities/${id}/kudos`, { token: owner })).body).toEqual({ hasKudos: true, kudosCount: 2 });
+    expect((await call('POST', `/activities/${id}/kudos`, { token: owner })).body).toEqual({
+      hasKudos: true,
+      kudosCount: 2,
+    });
   });
 
   it('paginates history without skipping or repeating equal start times', async () => {
@@ -304,7 +458,10 @@ describe('authentication', () => {
   });
 
   it('rejects tokens signed with another secret (incl. the old hard-coded default)', async () => {
-    const forged = await generateToken({ athleteId: 'ath_a', username: 'a', email: 'a@x' }, 'open-strava-prod-secret-jwt-key-2026-auth');
+    const forged = await generateToken(
+      { athleteId: 'ath_a', username: 'a', email: 'a@x' },
+      'open-strava-prod-secret-jwt-key-2026-auth'
+    );
     expect((await call('GET', '/auth/me', { token: forged })).status).toBe(401);
   });
 
@@ -322,17 +479,34 @@ describe('authentication', () => {
   });
 
   it('a new account starts with genuinely empty data', async () => {
-    const reg = await call('POST', '/auth/register', { body: { email: 'new@example.com', password: 'Passw0rd!x', displayName: 'New Person' } });
+    const reg = await call('POST', '/auth/register', {
+      body: { email: 'new@example.com', password: 'Passw0rd!x', displayName: 'New Person' },
+    });
     expect(reg.status).toBeLessThan(300);
     const t = reg.body.token;
     const id = reg.body.athlete.id;
-    expect(reg.body.athlete).toMatchObject({ city: null, country: null, bio: null, followersCount: 0, followingCount: 0 });
+    expect(reg.body.athlete).toMatchObject({
+      city: null,
+      country: null,
+      bio: null,
+      followersCount: 0,
+      followingCount: 0,
+    });
     expect(reg.body.athlete.avatarUrl).toBeNull();
     expect((await call('GET', '/feed?tab=following', { token: t })).body.feed).toEqual([]);
-    expect((await call('GET', `/athletes/${id}/activities`, { token: t })).body.activities).toEqual([]);
+    expect((await call('GET', `/athletes/${id}/activities`, { token: t })).body.activities).toEqual(
+      []
+    );
     const stats = await call('GET', `/athletes/${id}/stats`, { token: t });
-    expect(stats.body).toMatchObject({ activityCount: 0, followersCount: 0, followingCount: 0, bySport: [] });
+    expect(stats.body).toMatchObject({
+      activityCount: 0,
+      followersCount: 0,
+      followingCount: 0,
+      bySport: [],
+    });
     expect((await call('GET', '/notifications', { token: t })).body.notifications).toEqual([]);
-    expect((await call('GET', `/athletes/${id}/followers`, { token: t })).body.athletes).toEqual([]);
+    expect((await call('GET', `/athletes/${id}/followers`, { token: t })).body.athletes).toEqual(
+      []
+    );
   });
 });

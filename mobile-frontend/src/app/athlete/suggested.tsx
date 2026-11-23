@@ -1,14 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 import { captureFollowEpochs, commitServerFollow, setFollowing, useFollow } from '../../lib/social';
@@ -25,7 +18,10 @@ const SuggestedAthlete: React.FC<{
     <View className="p-4 bg-white rounded-2xl mb-3 border border-gray-100 shadow-sm">
       <View className="flex-row items-center justify-between mb-2">
         <TouchableOpacity onPress={onOpen} className="flex-row items-center flex-1 mr-3">
-          <Image source={{ uri: athlete.avatarUrl || undefined }} className="w-14 h-14 rounded-full mr-3 bg-gray-100" />
+          <Image
+            source={{ uri: athlete.avatarUrl || undefined }}
+            className="w-14 h-14 rounded-full mr-3 bg-gray-100"
+          />
           <View className="flex-1">
             <Text className="text-sm font-bold text-gray-900">{athlete.displayName}</Text>
             <Text className="text-xs text-gray-400">@{athlete.username || 'athlete'}</Text>
@@ -38,12 +34,16 @@ const SuggestedAthlete: React.FC<{
           </View>
         </TouchableOpacity>
         <View className="flex-row items-center">
-          <TouchableOpacity onPress={onMessage} className="w-8 h-8 rounded-full bg-orange-50 items-center justify-center mr-2">
+          <TouchableOpacity
+            onPress={onMessage}
+            className="w-8 h-8 rounded-full bg-orange-50 items-center justify-center mr-2"
+          >
             <Ionicons name="chatbubble-outline" size={15} color="#FC4C02" />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => onToggle(isFollowing)}
-            className={`px-4 py-1.5 rounded-full ${isFollowing ? 'bg-gray-100' : 'bg-[#FC4C02]'}`}>
+            className={`px-4 py-1.5 rounded-full ${isFollowing ? 'bg-gray-100' : 'bg-[#FC4C02]'}`}
+          >
             <Text className={`text-xs font-bold ${isFollowing ? 'text-gray-700' : 'text-white'}`}>
               {isFollowing ? 'Following' : 'Follow +'}
             </Text>
@@ -51,7 +51,9 @@ const SuggestedAthlete: React.FC<{
         </View>
       </View>
       {athlete.bio ? (
-        <Text className="text-xs text-gray-600 leading-4 mt-1 border-t border-gray-50 pt-2">{athlete.bio}</Text>
+        <Text className="text-xs text-gray-600 leading-4 mt-1 border-t border-gray-50 pt-2">
+          {athlete.bio}
+        </Text>
       ) : null}
     </View>
   );
@@ -71,7 +73,10 @@ export default function SuggestedAthletesScreen() {
       if (res?.athletes) {
         const mapped = res.athletes
           .filter((a: any) => a.id !== currentUser?.id)
-          .map((a: any) => ({ ...a, isFollowing: commitServerFollow(a.id, Boolean(a.isFollowing), snapshot) }));
+          .map((a: any) => ({
+            ...a,
+            isFollowing: commitServerFollow(a.id, Boolean(a.isFollowing), snapshot),
+          }));
         setSuggested(mapped);
       }
     } catch (err) {
@@ -94,13 +99,17 @@ export default function SuggestedAthletesScreen() {
     setSuggested((prev) => prev.map((a) => (a.id === id ? { ...a, isFollowing: want } : a)));
     try {
       const res = await setFollowing(id, currentlyFollowing, want);
-      setSuggested((prev) => prev.map((a) => (a.id === id ? { ...a, isFollowing: res.isFollowing } : a)));
+      setSuggested((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, isFollowing: res.isFollowing } : a))
+      );
       if (currentUser?.id && typeof res.followingCount === 'number') {
         updateCurrentUser({ followingCount: res.followingCount });
       }
     } catch (err) {
       console.warn('Follow error:', err);
-      setSuggested((prev) => prev.map((a) => (a.id === id ? { ...a, isFollowing: currentlyFollowing } : a)));
+      setSuggested((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, isFollowing: currentlyFollowing } : a))
+      );
     }
   };
 
@@ -117,33 +126,38 @@ export default function SuggestedAthletesScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16, paddingBottom: 100, flexGrow: 1 }}>
+          contentContainerStyle={{ padding: 16, paddingBottom: 100, flexGrow: 1 }}
+        >
           <Text className="text-xs font-semibold text-gray-500 mb-3">
             Athletes active in the Kinetix community:
           </Text>
 
-        {isLoading ? (
-          <View className="py-12 items-center">
-            <ActivityIndicator size="small" color="#FC4C02" />
-            <Text className="text-xs text-gray-400 mt-2">Loading suggested athletes...</Text>
-          </View>
-        ) : suggested.length === 0 ? (
-          <View className="bg-white p-8 rounded-2xl border border-gray-200 items-center justify-center mt-4">
-            <Ionicons name="people-outline" size={32} color="#D1D5DB" />
-            <Text className="text-sm font-bold text-gray-800 mt-2">No suggested athletes yet</Text>
-          </View>
-        ) : (
-          suggested.map((athlete) => (
-            <SuggestedAthlete
-              key={athlete.id}
-              athlete={athlete}
-              onOpen={() => router.push(`/athlete/${athlete.id}`)}
-              onMessage={() => router.push({ pathname: '/messages/[id]', params: { id: athlete.id } })}
-              onToggle={(currently) => toggleFollow(athlete.id, currently)}
-            />
-          ))
-        )}
-      </ScrollView>
+          {isLoading ? (
+            <View className="py-12 items-center">
+              <ActivityIndicator size="small" color="#FC4C02" />
+              <Text className="text-xs text-gray-400 mt-2">Loading suggested athletes...</Text>
+            </View>
+          ) : suggested.length === 0 ? (
+            <View className="bg-white p-8 rounded-2xl border border-gray-200 items-center justify-center mt-4">
+              <Ionicons name="people-outline" size={32} color="#D1D5DB" />
+              <Text className="text-sm font-bold text-gray-800 mt-2">
+                No suggested athletes yet
+              </Text>
+            </View>
+          ) : (
+            suggested.map((athlete) => (
+              <SuggestedAthlete
+                key={athlete.id}
+                athlete={athlete}
+                onOpen={() => router.push(`/athlete/${athlete.id}`)}
+                onMessage={() =>
+                  router.push({ pathname: '/messages/[id]', params: { id: athlete.id } })
+                }
+                onToggle={(currently) => toggleFollow(athlete.id, currently)}
+              />
+            ))
+          )}
+        </ScrollView>
       </View>
     </SafeAreaView>
   );

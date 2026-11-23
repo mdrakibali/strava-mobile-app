@@ -24,9 +24,14 @@ export const StatBox: React.FC<StatBoxProps> = ({
       <View className="flex-row items-baseline">
         <Text
           className={`text-xl font-black ${
-            highlight ? (highlightColor ? `text-[${highlightColor}]` : 'text-[#FC4C02]') : 'text-gray-900'
+            highlight
+              ? highlightColor
+                ? `text-[${highlightColor}]`
+                : 'text-[#FC4C02]'
+              : 'text-gray-900'
           }`}
-          style={highlightColor ? { color: highlightColor } : undefined}>
+          style={highlightColor ? { color: highlightColor } : undefined}
+        >
           {value}
         </Text>
         {unit && <Text className="text-xs text-gray-500 font-medium ml-1">{unit}</Text>}

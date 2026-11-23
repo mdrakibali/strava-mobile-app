@@ -3,7 +3,10 @@ import { View } from 'react-native';
 import { Skeleton } from '../../design';
 
 export const FeedCardSkeleton: React.FC = () => (
-  <View className="bg-white border-y border-gray-100 mb-2 pb-4" accessibilityLabel="Loading activity">
+  <View
+    className="bg-white border-y border-gray-100 mb-2 pb-4"
+    accessibilityLabel="Loading activity"
+  >
     <View className="flex-row items-center px-4 pt-4">
       <Skeleton className="w-10 h-10 rounded-full" />
       <View className="flex-1 ml-3">
@@ -22,4 +25,3 @@ export const FeedCardSkeleton: React.FC = () => (
     <Skeleton className="h-44 rounded-none mt-3" />
   </View>
 );
-

@@ -19,7 +19,12 @@ interface SportCardItem {
 }
 
 const WORKOUT_SPORTS: SportCardItem[] = [
-  { id: 'Workout', label: 'Workout', icon: 'fitness', subtitle: 'Indoor gym, strength & crossfit timer' },
+  {
+    id: 'Workout',
+    label: 'Workout',
+    icon: 'fitness',
+    subtitle: 'Indoor gym, strength & crossfit timer',
+  },
   { id: 'Ride', label: 'Ride', icon: 'bicycle', subtitle: 'GPS · Speed, distance & elevation' },
   { id: 'Run', label: 'Run', icon: 'footsteps', subtitle: 'GPS · Pace, distance & elevation' },
   { id: 'Walk', label: 'Walk', icon: 'walk', subtitle: 'GPS · Distance, steps & pace' },
@@ -71,16 +76,23 @@ export default function WorkoutTab() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       {/* Light Mode Top Header */}
-      <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }} className="px-5 pt-3 pb-3 flex-row items-center justify-between">
+      <View
+        style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}
+        className="px-5 pt-3 pb-3 flex-row items-center justify-between"
+      >
         <Text className="text-3xl font-black text-gray-900 tracking-tight">Workout</Text>
         <TouchableOpacity
           onPress={() => {
             if (currentUser?.id) {
-              router.push({ pathname: '/history/[athleteId]', params: { athleteId: currentUser.id } });
+              router.push({
+                pathname: '/history/[athleteId]',
+                params: { athleteId: currentUser.id },
+              });
             }
           }}
           accessibilityLabel="Activity History"
-          className="p-2.5 rounded-full bg-gray-100 active:bg-gray-200">
+          className="p-2.5 rounded-full bg-gray-100 active:bg-gray-200"
+        >
           <Ionicons name="time-outline" size={22} color="#374151" />
         </TouchableOpacity>
       </View>
@@ -89,35 +101,45 @@ export default function WorkoutTab() {
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 16, paddingBottom: 120, flexGrow: 1 }}
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+        >
           {active ? (
             <View className="mb-4 p-4 rounded-3xl bg-orange-50 border-2 border-[#FC4C02] flex-row items-center justify-between shadow-sm">
               <TouchableOpacity
                 onPress={() => router.push('/record')}
                 activeOpacity={0.8}
-                className="flex-row items-center flex-1 mr-2">
+                className="flex-row items-center flex-1 mr-2"
+              >
                 <View className="w-10 h-10 rounded-full bg-[#FC4C02] items-center justify-center mr-3">
                   <Ionicons name="radio-button-on" size={20} color="#FFFFFF" />
                 </View>
                 <View className="flex-1">
                   <Text className="text-base font-black text-gray-900">Workout in progress</Text>
-                  <Text className="text-xs font-bold text-[#FC4C02] mt-0.5">{rec.sport} · Active (tap to return)</Text>
+                  <Text className="text-xs font-bold text-[#FC4C02] mt-0.5">
+                    {rec.sport} · Active (tap to return)
+                  </Text>
                 </View>
               </TouchableOpacity>
               <View className="flex-row items-center">
                 <TouchableOpacity
                   onPress={() => router.push('/record')}
-                  className="bg-[#FC4C02] px-3.5 py-1.5 rounded-full mr-2">
+                  className="bg-[#FC4C02] px-3.5 py-1.5 rounded-full mr-2"
+                >
                   <Text className="text-white text-xs font-black">Return</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {
                     Alert.alert('Discard Workout?', 'End and delete this workout?', [
                       { text: 'Cancel', style: 'cancel' },
-                      { text: 'Discard', style: 'destructive', onPress: () => recordingEngine.discard() },
+                      {
+                        text: 'Discard',
+                        style: 'destructive',
+                        onPress: () => recordingEngine.discard(),
+                      },
                     ]);
                   }}
-                  className="p-1.5 rounded-full bg-orange-100 active:bg-orange-200">
+                  className="p-1.5 rounded-full bg-orange-100 active:bg-orange-200"
+                >
                   <Ionicons name="close" size={18} color="#EA580C" />
                 </TouchableOpacity>
               </View>
@@ -130,11 +152,13 @@ export default function WorkoutTab() {
             return (
               <View
                 key={s.id}
-                className="bg-white rounded-3xl p-5 mb-4 border border-gray-200 shadow-sm">
+                className="bg-white rounded-3xl p-5 mb-4 border border-gray-200 shadow-sm"
+              >
                 <TouchableOpacity
                   onPress={() => startSport(s.id)}
                   activeOpacity={0.7}
-                  className="flex-row items-center justify-between mb-4">
+                  className="flex-row items-center justify-between mb-4"
+                >
                   <View className="flex-row items-center flex-1">
                     <View className="w-12 h-12 rounded-2xl bg-orange-50 items-center justify-center mr-3.5 border border-orange-200">
                       <Ionicons name={s.icon} size={24} color="#FC4C02" />
@@ -155,7 +179,8 @@ export default function WorkoutTab() {
                 <TouchableOpacity
                   onPress={() => startSport(s.id)}
                   activeOpacity={0.85}
-                  className="w-full py-4 bg-[#FC4C02] rounded-full flex-row items-center justify-center shadow-md active:bg-[#E03A00]">
+                  className="w-full py-4 bg-[#FC4C02] rounded-full flex-row items-center justify-center shadow-md active:bg-[#E03A00]"
+                >
                   <Ionicons name="play" size={18} color="#FFFFFF" />
                   <Text className="text-white font-black text-base ml-2">Start</Text>
                 </TouchableOpacity>

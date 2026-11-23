@@ -24,5 +24,7 @@ activitiesRouter.get('/:id/kudos', optionalAuth, (c) => controller.listKudos(c))
 activitiesRouter.get('/:id/comments', optionalAuth, (c) => controller.listComments(c));
 activitiesRouter.post('/:id/comments', requireAuth, (c) => controller.addComment(c));
 activitiesRouter.patch('/:id/comments/:commentId', requireAuth, (c) => controller.editComment(c));
-activitiesRouter.delete('/:id/comments/:commentId', requireAuth, (c) => controller.deleteComment(c));
+activitiesRouter.delete('/:id/comments/:commentId', requireAuth, (c) =>
+  controller.deleteComment(c)
+);
 activitiesRouter.get('/:id/export', requireAuth, (c) => controller.exportGpx(c));

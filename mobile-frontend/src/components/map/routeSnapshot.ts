@@ -29,22 +29,49 @@ const withRoute = (style: any, route: LngLat[]) => ({
   ...style,
   sources: {
     ...style.sources,
-    'app-route': { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: route } } },
+    'app-route': {
+      type: 'geojson',
+      data: {
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'LineString', coordinates: route },
+      },
+    },
     'app-ends': {
       type: 'geojson',
       data: {
         type: 'FeatureCollection',
         features: [
-          { type: 'Feature', properties: { kind: 'start' }, geometry: { type: 'Point', coordinates: route[0] } },
-          { type: 'Feature', properties: { kind: 'end' }, geometry: { type: 'Point', coordinates: route[route.length - 1] } },
+          {
+            type: 'Feature',
+            properties: { kind: 'start' },
+            geometry: { type: 'Point', coordinates: route[0] },
+          },
+          {
+            type: 'Feature',
+            properties: { kind: 'end' },
+            geometry: { type: 'Point', coordinates: route[route.length - 1] },
+          },
         ],
       },
     },
   },
   layers: [
     ...style.layers,
-    { id: 'app-route-casing', type: 'line', source: 'app-route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#FFFFFF', 'line-width': 7 } },
-    { id: 'app-route-line', type: 'line', source: 'app-route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': color.brand, 'line-width': 4 } },
+    {
+      id: 'app-route-casing',
+      type: 'line',
+      source: 'app-route',
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#FFFFFF', 'line-width': 7 },
+    },
+    {
+      id: 'app-route-line',
+      type: 'line',
+      source: 'app-route',
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': color.brand, 'line-width': 4 },
+    },
     {
       id: 'app-ends',
       type: 'circle',
@@ -78,7 +105,12 @@ const keyOf = (route: LngLat[], w: number, h: number) =>
   `${route.length}:${route[0].join(',')}:${route[route.length - 1].join(',')}:${route[Math.floor(route.length / 2)].join(',')}:${w}x${h}`;
 
 /** File URI of a PNG of the route on a real map. Rejects when snapshots aren't possible. */
-export const routeSnapshot = (route: LngLat[], width: number, height: number, force = false): Promise<string> => {
+export const routeSnapshot = (
+  route: LngLat[],
+  width: number,
+  height: number,
+  force = false
+): Promise<string> => {
   const pts = thin(route, 400);
   const key = keyOf(pts, width, height);
   if (!force && cache.has(key)) return Promise.resolve(cache.get(key)!);
@@ -91,7 +123,15 @@ export const routeSnapshot = (route: LngLat[], width: number, height: number, fo
     const style = withRoute(await loadBaseStyle(), pts);
     await acquire();
     try {
-      const uri = await mgr.createImage({ mapStyle: style, center: cam.center, zoom: cam.zoom, width, height, output: 'file', logo: false });
+      const uri = await mgr.createImage({
+        mapStyle: style,
+        center: cam.center,
+        zoom: cam.zoom,
+        width,
+        height,
+        output: 'file',
+        logo: false,
+      });
       cache.set(key, uri);
       return uri;
     } finally {

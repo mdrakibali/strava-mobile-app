@@ -1,0 +1,11 @@
+{
+  "name": "strava-mobile-app",
+  "private": true,
+  "scripts": {
+    "format": "npm --prefix mobile-frontend run format && npm --prefix mobile-backend run format",
+    "lint": "npm --prefix mobile-frontend run lint",
+    "typecheck": "npm --prefix mobile-frontend run typecheck && npm --prefix mobile-backend run typecheck",
+    "test": "npm --prefix mobile-frontend test -- --forceExit && npm --prefix mobile-backend test"
+  }
+}
+

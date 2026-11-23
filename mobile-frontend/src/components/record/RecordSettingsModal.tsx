@@ -40,9 +40,15 @@ export const RecordSettingsModal: React.FC<RecordSettingsModalProps> = ({
             <View className="flex-row items-center justify-between py-2 border-b border-gray-100">
               <View className="flex-1 mr-3">
                 <Text className="text-sm font-bold text-gray-900">Auto-Pause</Text>
-                <Text className="text-xs text-gray-500">Automatically pause timer when stopped</Text>
+                <Text className="text-xs text-gray-500">
+                  Automatically pause timer when stopped
+                </Text>
               </View>
-              <Switch value={autoPause} onValueChange={setAutoPause} trackColor={{ true: '#FC4C02', false: '#E5E7EB' }} />
+              <Switch
+                value={autoPause}
+                onValueChange={setAutoPause}
+                trackColor={{ true: '#FC4C02', false: '#E5E7EB' }}
+              />
             </View>
 
             <View className="flex-row items-center justify-between py-2 border-b border-gray-100">
@@ -50,21 +56,33 @@ export const RecordSettingsModal: React.FC<RecordSettingsModalProps> = ({
                 <Text className="text-sm font-bold text-gray-900">Audio Announcements</Text>
                 <Text className="text-xs text-gray-500">Pace and distance spoken every 1 km</Text>
               </View>
-              <Switch value={audioCues} onValueChange={setAudioCues} trackColor={{ true: '#FC4C02', false: '#E5E7EB' }} />
+              <Switch
+                value={audioCues}
+                onValueChange={setAudioCues}
+                trackColor={{ true: '#FC4C02', false: '#E5E7EB' }}
+              />
             </View>
 
             <View className="flex-row items-center justify-between py-2 border-b border-gray-100">
               <View className="flex-1 mr-3">
                 <Text className="text-sm font-bold text-gray-900">Off-Route Alerts</Text>
-                <Text className="text-xs text-gray-500">Notify when straying &gt;50m from loaded route</Text>
+                <Text className="text-xs text-gray-500">
+                  Notify when straying &gt;50m from loaded route
+                </Text>
               </View>
-              <Switch value={offRouteAlert} onValueChange={setOffRouteAlert} trackColor={{ true: '#FC4C02', false: '#E5E7EB' }} />
+              <Switch
+                value={offRouteAlert}
+                onValueChange={setOffRouteAlert}
+                trackColor={{ true: '#FC4C02', false: '#E5E7EB' }}
+              />
             </View>
 
             <View className="flex-row items-center justify-between py-2 border-b border-gray-100">
               <View className="flex-1 mr-3">
                 <Text className="text-sm font-bold text-gray-900">Beacon Live Safety</Text>
-                <Text className="text-xs text-gray-500">Share real-time GPS location with trusted contacts</Text>
+                <Text className="text-xs text-gray-500">
+                  Share real-time GPS location with trusted contacts
+                </Text>
               </View>
               <Switch
                 value={beacon}
@@ -82,7 +100,9 @@ export const RecordSettingsModal: React.FC<RecordSettingsModalProps> = ({
                     <Text className="text-[9px] font-black text-amber-800">DEV MODE</Text>
                   </View>
                 </View>
-                <Text className="text-xs text-gray-500">Simulate pacing & GPS track indoors or in simulator</Text>
+                <Text className="text-xs text-gray-500">
+                  Simulate pacing & GPS track indoors or in simulator
+                </Text>
               </View>
               <Switch
                 value={isSimulated}

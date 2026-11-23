@@ -12,14 +12,21 @@ export class AuthService {
   /**
    * Register with Email & Password
    */
-  async registerWithEmail(data: { email: string; password: string; displayName: string; username?: string }) {
+  async registerWithEmail(data: {
+    email: string;
+    password: string;
+    displayName: string;
+    username?: string;
+  }) {
     const emailNorm = data.email.toLowerCase().trim();
     const existing = await this.athleteRepo.findByEmail(emailNorm);
     if (existing) {
       throw new Error('An athlete with this email already exists');
     }
 
-    const baseUsername = (data.username || emailNorm.split('@')[0]).replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+    const baseUsername = (data.username || emailNorm.split('@')[0])
+      .replace(/[^a-zA-Z0-9_]/g, '')
+      .toLowerCase();
     let uniqueUsername = baseUsername || `runner_${Date.now()}`;
     const existingUser = await this.athleteRepo.findByUsername(uniqueUsername);
     if (existingUser) {
@@ -141,7 +148,10 @@ export class AuthService {
       if (await this.athleteRepo.findByEmail(googleUser.email.toLowerCase().trim())) {
         throw new Error('An account with this email already exists. Sign in with your password.');
       }
-      const baseUsername = googleUser.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+      const baseUsername = googleUser.email
+        .split('@')[0]
+        .replace(/[^a-zA-Z0-9_]/g, '')
+        .toLowerCase();
       let uniqueUsername = baseUsername || `runner_${Date.now()}`;
 
       // Ensure unique username
@@ -207,4 +217,3 @@ export class AuthService {
     };
   }
 }
-

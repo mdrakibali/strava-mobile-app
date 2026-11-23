@@ -37,7 +37,8 @@ export const isNativeMapAvailable = Boolean(ML?.Map);
 export const nativeMapModule = ML;
 
 export const styleUrl = (key: MapStyleKey = DEFAULT_MAP_STYLE) =>
-  (toMapStyleKey(key) === DEFAULT_MAP_STYLE && process.env.EXPO_PUBLIC_MAP_STYLE_URL) || MAP_STYLES[toMapStyleKey(key)];
+  (toMapStyleKey(key) === DEFAULT_MAP_STYLE && process.env.EXPO_PUBLIC_MAP_STYLE_URL) ||
+  MAP_STYLES[toMapStyleKey(key)];
 
 export interface MapMarker {
   id: string;
@@ -135,7 +136,13 @@ export const MapView: React.FC<MapViewProps> = ({
       type: 'FeatureCollection',
       features:
         plannedRoute && plannedRoute.length > 1
-          ? [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: plannedRoute } }]
+          ? [
+              {
+                type: 'Feature',
+                properties: {},
+                geometry: { type: 'LineString', coordinates: plannedRoute },
+              },
+            ]
           : [],
     }),
     [plannedRoute]
@@ -148,7 +155,11 @@ export const MapView: React.FC<MapViewProps> = ({
       type: 'FeatureCollection',
       features: runs
         .filter((run) => run.length > 1)
-        .map((coordinates) => ({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates } })),
+        .map((coordinates) => ({
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'LineString', coordinates },
+        })),
     };
   }, [route, routeSegments]);
 
@@ -157,7 +168,11 @@ export const MapView: React.FC<MapViewProps> = ({
       type: 'FeatureCollection',
       features: (otherRoutes ?? [])
         .filter((r) => r.length > 1)
-        .map((coordinates) => ({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates } })),
+        .map((coordinates) => ({
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'LineString', coordinates },
+        })),
     }),
     [otherRoutes]
   );
@@ -169,7 +184,11 @@ export const MapView: React.FC<MapViewProps> = ({
   const endpoints = useMemo<GeoJSON.FeatureCollection>(() => {
     const features: GeoJSON.Feature[] = [];
     if (mode === 'route' && route.length > 0) {
-      features.push({ type: 'Feature', properties: { kind: 'start' }, geometry: { type: 'Point', coordinates: route[0] } });
+      features.push({
+        type: 'Feature',
+        properties: { kind: 'start' },
+        geometry: { type: 'Point', coordinates: route[0] },
+      });
     }
     if (mode === 'route' && route.length > 1) {
       const isLoop =
@@ -228,12 +247,16 @@ export const MapView: React.FC<MapViewProps> = ({
   // real position. Never a hard-coded city.
   let cameraElement: React.ReactNode;
   if (mode === 'route' && route.length > 0) {
-    cameraElement = <Camera key={frameKey ?? 'route'} initialViewState={{ bounds: boundsOf(route), padding: cameraPadding }} />;
+    cameraElement = (
+      <Camera
+        key={frameKey ?? 'route'}
+        initialViewState={{ bounds: boundsOf(route), padding: cameraPadding }}
+      />
+    );
   } else if (mode === 'live') {
     const centre = userPosition || route[route.length - 1];
     cameraElement = (
       <Camera
-       
         key={centre ? 'live' : 'live-unknown'}
         initialViewState={centre ? { center: centre, zoom: 16 } : { zoom: 1 }}
         trackUserLocation={following ? 'default' : undefined}
@@ -243,9 +266,16 @@ export const MapView: React.FC<MapViewProps> = ({
       />
     );
   } else if (focus) {
-    cameraElement = <Camera key={frameKey ?? 'focus'} initialViewState={{ center: focus.center, zoom: focus.zoom }} />;
+    cameraElement = (
+      <Camera
+        key={frameKey ?? 'focus'}
+        initialViewState={{ center: focus.center, zoom: focus.zoom }}
+      />
+    );
   } else if (userPosition) {
-    cameraElement = <Camera key={frameKey ?? 'user'} initialViewState={{ center: userPosition, zoom: 13 }} />;
+    cameraElement = (
+      <Camera key={frameKey ?? 'user'} initialViewState={{ center: userPosition, zoom: 13 }} />
+    );
   } else {
     cameraElement = <Camera key="world" initialViewState={{ zoom: 1 }} />;
   }
@@ -267,7 +297,8 @@ export const MapView: React.FC<MapViewProps> = ({
         touchPitch={false}
         onDidFinishLoadingMap={() => setLoadState('ready')}
         onDidFailLoadingMap={() => setLoadState('error')}
-        onPress={onMapPress ? (e) => onMapPress(e.nativeEvent.lngLat as LngLat) : undefined}>
+        onPress={onMapPress ? (e) => onMapPress(e.nativeEvent.lngLat as LngLat) : undefined}
+      >
         {cameraElement}
         {nativeUserLocation ? <UserLocation animated accuracy={false} heading={false} /> : null}
         {otherRoutes && otherRoutes.length ? (
@@ -333,7 +364,8 @@ export const MapView: React.FC<MapViewProps> = ({
             onPress={(e) => {
               const id = e.nativeEvent.features?.[0]?.properties?.id;
               if (id != null) onMarkerPress?.(String(id));
-            }}>
+            }}
+          >
             <Layer
               id="clustered-points"
               type="circle"
@@ -402,15 +434,24 @@ export const MapView: React.FC<MapViewProps> = ({
       {loadState === 'error' ? (
         <View className="absolute inset-0 items-center justify-center p-6 bg-[#F5F6F8]/95">
           <AppText variant="bodyStrong">The map couldn’t load</AppText>
-          <AppText variant="label" color="inkSecondary" style={{ textAlign: 'center', marginTop: 4 }}>Check your connection.</AppText>
+          <AppText
+            variant="label"
+            color="inkSecondary"
+            style={{ textAlign: 'center', marginTop: 4 }}
+          >
+            Check your connection.
+          </AppText>
           <Pressable
             onPress={() => {
               setLoadState('loading');
               setAttempt((a) => a + 1);
             }}
             accessibilityRole="button"
-            className="mt-3 px-5 py-2.5">
-            <AppText variant="bodyStrong" color="brandText">Retry</AppText>
+            className="mt-3 px-5 py-2.5"
+          >
+            <AppText variant="bodyStrong" color="brandText">
+              Retry
+            </AppText>
           </Pressable>
         </View>
       ) : null}

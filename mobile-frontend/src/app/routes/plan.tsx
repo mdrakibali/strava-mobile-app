@@ -7,7 +7,17 @@ import { Alert, Linking, Pressable, ScrollView, useWindowDimensions, View } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ElevationProfile } from '../../components/activity/ElevationProfile';
 import { MapView } from '../../components/map/MapView';
-import { AppText, Button, Chip, ChipRow, color, IconButton, MetricRow, MetricTile, space } from '../../design';
+import {
+  AppText,
+  Button,
+  Chip,
+  ChipRow,
+  color,
+  IconButton,
+  MetricRow,
+  MetricTile,
+  space,
+} from '../../design';
 import { LngLat } from '../../lib/activityView';
 import { formatDuration, kmValue } from '../../lib/format';
 import { plannedRouteStore } from '../../lib/plannedRoute';
@@ -30,12 +40,21 @@ type PlanState =
  * lines or invented; failures show an error with Retry.
  */
 export default function RoutePlanScreen() {
-  const params = useLocalSearchParams<{ name?: string; lat?: string; lng?: string; sport?: string; place?: string }>();
+  const params = useLocalSearchParams<{
+    name?: string;
+    lat?: string;
+    lng?: string;
+    sport?: string;
+    place?: string;
+  }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
-  const dest: LngLat | null = params.lat && params.lng ? [Number(params.lng), Number(params.lat)] : null;
-  const [sport, setSport] = useState<SportType>(MVP_SPORTS.some((s) => s.id === params.sport) ? (params.sport as SportType) : 'Run');
+  const dest: LngLat | null =
+    params.lat && params.lng ? [Number(params.lng), Number(params.lat)] : null;
+  const [sport, setSport] = useState<SportType>(
+    MVP_SPORTS.some((s) => s.id === params.sport) ? (params.sport as SportType) : 'Run'
+  );
   const [state, setState] = useState<PlanState>({ status: 'locating' });
   const [selected, setSelected] = useState(0);
   const [attempt, setAttempt] = useState(0);
@@ -46,7 +65,10 @@ export default function RoutePlanScreen() {
   useEffect(() => {
     if (!params.place) return;
     let cancelled = false;
-    api.places.details(params.place).then((d) => !cancelled && setDetails(d), () => undefined);
+    api.places.details(params.place).then(
+      (d) => !cancelled && setDetails(d),
+      () => undefined
+    );
     return () => {
       cancelled = true;
     };
@@ -62,12 +84,18 @@ export default function RoutePlanScreen() {
       if (!perm?.granted) return set({ status: 'permission_denied' });
       const fix =
         (await Location.getLastKnownPositionAsync({ maxAge: 120_000 }).catch(() => null)) ??
-        (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null));
+        (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(
+          () => null
+        ));
       if (!fix) return set({ status: 'no_fix' });
       const from: LngLat = [fix.coords.longitude, fix.coords.latitude];
       set({ status: 'planning', from });
       try {
-        const plan = await api.routing.plan(sport, { lat: from[1], lng: from[0] }, { lat: dest[1], lng: dest[0] });
+        const plan = await api.routing.plan(
+          sport,
+          { lat: from[1], lng: from[0] },
+          { lat: dest[1], lng: dest[0] }
+        );
         setSelected(0);
         set({ status: 'ready', from, plan });
       } catch (e: any) {
@@ -82,13 +110,24 @@ export default function RoutePlanScreen() {
 
   const plan = state.status === 'ready' ? state.plan : null;
   const route = plan?.routes[selected];
-  const alternatives = useMemo(() => (plan ? plan.routes.filter((_, i) => i !== selected).map((r) => r.geometry as LngLat[]) : []), [plan, selected]);
+  const alternatives = useMemo(
+    () =>
+      plan ? plan.routes.filter((_, i) => i !== selected).map((r) => r.geometry as LngLat[]) : [],
+    [plan, selected]
+  );
   const from = 'from' in state ? state.from : null;
   const name = details?.nameEn || params.name || details?.name || 'Destination';
 
   const startWorkout = () => {
     if (!route) return;
-    plannedRouteStore.set({ name, sport, geometry: route.geometry as LngLat[], distanceM: route.distanceM, durationS: route.durationS, elevationGainM: route.elevationGainM });
+    plannedRouteStore.set({
+      name,
+      sport,
+      geometry: route.geometry as LngLat[],
+      distanceM: route.distanceM,
+      durationS: route.durationS,
+      elevationGainM: route.elevationGainM,
+    });
     router.push({ pathname: '/record', params: { sport } });
   };
 
@@ -102,7 +141,13 @@ export default function RoutePlanScreen() {
         distanceMeters: route.distanceM,
         polylinePoints: route.geometry.map(([lng, lat]) => ({ latitude: lat, longitude: lng })),
       });
-      Alert.alert('Route saved', 'You can find it in Maps → Routes.', [{ text: 'OK' }, { text: 'Open', onPress: () => router.push({ pathname: '/routes/[id]', params: { id: res.route.id } }) }]);
+      Alert.alert('Route saved', 'You can find it in Maps → Routes.', [
+        { text: 'OK' },
+        {
+          text: 'Open',
+          onPress: () => router.push({ pathname: '/routes/[id]', params: { id: res.route.id } }),
+        },
+      ]);
     } catch (e: any) {
       Alert.alert('Couldn’t save the route', e?.message ?? 'Please try again.');
     } finally {
@@ -111,28 +156,64 @@ export default function RoutePlanScreen() {
   };
 
   let status: React.ReactNode = null;
-  if (!dest) status = <AppText variant="body" color="inkSecondary">No destination selected.</AppText>;
-  else if (state.status === 'locating') status = <AppText variant="body" color="inkSecondary">Finding your location…</AppText>;
-  else if (state.status === 'planning') status = <AppText variant="body" color="inkSecondary">Planning a route over mapped paths…</AppText>;
+  if (!dest)
+    status = (
+      <AppText variant="body" color="inkSecondary">
+        No destination selected.
+      </AppText>
+    );
+  else if (state.status === 'locating')
+    status = (
+      <AppText variant="body" color="inkSecondary">
+        Finding your location…
+      </AppText>
+    );
+  else if (state.status === 'planning')
+    status = (
+      <AppText variant="body" color="inkSecondary">
+        Planning a route over mapped paths…
+      </AppText>
+    );
   else if (state.status === 'permission_denied')
     status = (
       <>
-        <AppText variant="body" color="inkSecondary">Location is needed to plan a route from where you are.</AppText>
-        <Button label="Open settings" size="sm" className="mt-2 self-start" onPress={() => Linking.openSettings()} />
+        <AppText variant="body" color="inkSecondary">
+          Location is needed to plan a route from where you are.
+        </AppText>
+        <Button
+          label="Open settings"
+          size="sm"
+          className="mt-2 self-start"
+          onPress={() => Linking.openSettings()}
+        />
       </>
     );
   else if (state.status === 'no_fix')
     status = (
       <>
-        <AppText variant="body" color="inkSecondary">Couldn’t get a GPS fix.</AppText>
-        <Button label="Try again" size="sm" className="mt-2 self-start" onPress={() => setAttempt((a) => a + 1)} />
+        <AppText variant="body" color="inkSecondary">
+          Couldn’t get a GPS fix.
+        </AppText>
+        <Button
+          label="Try again"
+          size="sm"
+          className="mt-2 self-start"
+          onPress={() => setAttempt((a) => a + 1)}
+        />
       </>
     );
   else if (state.status === 'error')
     status = (
       <>
-        <AppText variant="body" color="inkSecondary">{state.message}</AppText>
-        <Button label="Retry" size="sm" style={{ marginTop: 8, alignSelf: 'flex-start' }} onPress={() => setAttempt((a) => a + 1)} />
+        <AppText variant="body" color="inkSecondary">
+          {state.message}
+        </AppText>
+        <Button
+          label="Retry"
+          size="sm"
+          style={{ marginTop: 8, alignSelf: 'flex-start' }}
+          onPress={() => setAttempt((a) => a + 1)}
+        />
       </>
     );
 
@@ -151,29 +232,61 @@ export default function RoutePlanScreen() {
           padding={{ top: insets.top + 20, bottom: 20 }}
         />
         <View style={{ top: insets.top + 8 }} className="absolute left-4">
-          <IconButton icon="arrow-back" appearance="floating" accessibilityLabel="Back" onPress={() => router.back()} />
+          <IconButton
+            icon="arrow-back"
+            appearance="floating"
+            accessibilityLabel="Back"
+            onPress={() => router.back()}
+          />
         </View>
       </View>
 
-      <ScrollView className="flex-1 -mt-4 rounded-t-3xl bg-white" contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 64 }}>
+      <ScrollView
+        className="flex-1 -mt-4 rounded-t-3xl bg-white"
+        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 64 }}
+      >
         {details?.image ? (
           <View className="mb-3">
-            <Image source={{ uri: details.image.url }} className="w-full h-44 rounded-xl bg-gray-100" contentFit="cover" transition={200} accessibilityLabel={`Photo of ${name}`} />
-            <Pressable onPress={() => Linking.openURL(details.image!.pageUrl)} accessibilityRole="link">
+            <Image
+              source={{ uri: details.image.url }}
+              className="w-full h-44 rounded-xl bg-gray-100"
+              contentFit="cover"
+              transition={200}
+              accessibilityLabel={`Photo of ${name}`}
+            />
+            <Pressable
+              onPress={() => Linking.openURL(details.image!.pageUrl)}
+              accessibilityRole="link"
+            >
               <AppText variant="caption" color="inkTertiary" style={{ marginTop: 4 }}>
-                Photo: {details.image.author ?? 'unknown author'} · {details.image.license ?? 'see licence'} · Wikimedia Commons
+                Photo: {details.image.author ?? 'unknown author'} ·{' '}
+                {details.image.license ?? 'see licence'} · Wikimedia Commons
               </AppText>
             </Pressable>
           </View>
         ) : null}
 
         <AppText variant="title1">{name}</AppText>
-        {details?.address ? <AppText variant="label" color="inkSecondary">{details.address}</AppText> : null}
-        {details?.tags.openingHours ? <AppText variant="label" color="inkSecondary">Hours: {details.tags.openingHours}</AppText> : null}
+        {details?.address ? (
+          <AppText variant="label" color="inkSecondary">
+            {details.address}
+          </AppText>
+        ) : null}
+        {details?.tags.openingHours ? (
+          <AppText variant="label" color="inkSecondary">
+            Hours: {details.tags.openingHours}
+          </AppText>
+        ) : null}
 
         <ChipRow>
           {MVP_SPORTS.map((s) => (
-            <Chip key={s.id} label={s.label} icon={s.icon} selected={sport === s.id} onPress={() => setSport(s.id)} />
+            <Chip
+              key={s.id}
+              label={s.label}
+              icon={s.icon}
+              selected={sport === s.id}
+              onPress={() => setSport(s.id)}
+            />
           ))}
         </ChipRow>
 
@@ -182,17 +295,28 @@ export default function RoutePlanScreen() {
             {plan.routes.length > 1 ? (
               <ChipRow>
                 {plan.routes.map((r, i) => (
-                  <Chip key={i} label={`${i === 0 ? 'Best' : `Alt ${i}`} · ${kmValue(r.distanceM)} km`} selected={i === selected} onPress={() => setSelected(i)} />
+                  <Chip
+                    key={i}
+                    label={`${i === 0 ? 'Best' : `Alt ${i}`} · ${kmValue(r.distanceM)} km`}
+                    selected={i === selected}
+                    onPress={() => setSelected(i)}
+                  />
                 ))}
               </ChipRow>
             ) : null}
             <MetricRow style={{ marginTop: space.lg }}>
               <MetricTile label="Distance" value={kmValue(route.distanceM)} unit="km" size="L" />
               <MetricTile label="Est. time" value={formatDuration(route.durationS)} size="L" />
-              <MetricTile label="Elev gain" value={route.elevationGainM != null ? String(route.elevationGainM) : '–'} unit={route.elevationGainM != null ? 'm' : undefined} size="L" />
+              <MetricTile
+                label="Elev gain"
+                value={route.elevationGainM != null ? String(route.elevationGainM) : '–'}
+                unit={route.elevationGainM != null ? 'm' : undefined}
+                size="L"
+              />
             </MetricRow>
             <AppText variant="caption" color="inkTertiary" style={{ marginTop: space.xs }}>
-              One way from your location · time at {plan.assumedSpeedKmh} km/h · elevation from a terrain model (estimate)
+              One way from your location · time at {plan.assumedSpeedKmh} km/h · elevation from a
+              terrain model (estimate)
             </AppText>
             {route.elevationProfile && route.elevationProfile.length > 1 ? (
               <View style={{ marginTop: space.lg }}>
@@ -200,9 +324,23 @@ export default function RoutePlanScreen() {
                 <ElevationProfile samples={route.elevationProfile.map((p) => p[1])} />
               </View>
             ) : null}
-            <Button label={`Start ${sportConfig(sport).label} with this route`} icon="play" size="lg" fullWidth onPress={startWorkout} style={{ marginTop: space.xl }} />
+            <Button
+              label={`Start ${sportConfig(sport).label} with this route`}
+              icon="play"
+              size="lg"
+              fullWidth
+              onPress={startWorkout}
+              style={{ marginTop: space.xl }}
+            />
             <View className="flex-row items-center mt-2">
-              <Button label="Save route" icon="bookmark-outline" variant="outline" loading={saving} style={{ flex: 1 }} onPress={saveRoute} />
+              <Button
+                label="Save route"
+                icon="bookmark-outline"
+                variant="outline"
+                loading={saving}
+                style={{ flex: 1 }}
+                onPress={saveRoute}
+              />
               <Button
                 label="Start without route"
                 variant="ghost"
@@ -222,9 +360,15 @@ export default function RoutePlanScreen() {
         )}
 
         {details ? (
-          <Pressable onPress={() => Linking.openURL(details.osmUrl)} accessibilityRole="link" className="flex-row items-center mt-4">
+          <Pressable
+            onPress={() => Linking.openURL(details.osmUrl)}
+            accessibilityRole="link"
+            className="flex-row items-center mt-4"
+          >
             <Ionicons name="open-outline" size={16} color={color.inkSecondary} />
-            <AppText variant="caption" color="inkSecondary" style={{ marginLeft: space.xs }}>View on OpenStreetMap</AppText>
+            <AppText variant="caption" color="inkSecondary" style={{ marginLeft: space.xs }}>
+              View on OpenStreetMap
+            </AppText>
           </Pressable>
         ) : null}
       </ScrollView>

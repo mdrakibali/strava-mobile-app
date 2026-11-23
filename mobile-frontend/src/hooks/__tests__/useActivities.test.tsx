@@ -1,6 +1,5 @@
 import { activityKeys } from '../useActivities';
 import { queryClient } from '../../lib/queryClient';
-import { api } from '../../services/api';
 
 jest.mock('../../services/api', () => ({
   api: {
@@ -35,9 +34,7 @@ describe('activityKeys and queryClient', () => {
     queryClient.setQueryData(feedKey, {
       pages: [
         {
-          items: [
-            { id: 'act_1', title: 'Test Run', kudosCount: 2, hasKudos: false },
-          ],
+          items: [{ id: 'act_1', title: 'Test Run', kudosCount: 2, hasKudos: false }],
         },
       ],
     });
@@ -51,7 +48,9 @@ describe('activityKeys and queryClient', () => {
       ...old,
       pages: old.pages.map((p: any) => ({
         ...p,
-        items: p.items.map((i: any) => (i.id === 'act_1' ? { ...i, hasKudos: true, kudosCount: 3 } : i)),
+        items: p.items.map((i: any) =>
+          i.id === 'act_1' ? { ...i, hasKudos: true, kudosCount: 3 } : i
+        ),
       })),
     }));
 

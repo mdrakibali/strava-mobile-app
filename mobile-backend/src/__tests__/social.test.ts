@@ -11,7 +11,13 @@ let b: string; // will follow a
 let c: string; // stranger
 
 const NOW = Date.now();
-const insertActivity = (id: string, athleteId: string, visibility: string, startTime = new Date(NOW - 3600_000), distance = '5000') =>
+const insertActivity = (
+  id: string,
+  athleteId: string,
+  visibility: string,
+  startTime = new Date(NOW - 3600_000),
+  distance = '5000'
+) =>
   db.insert(schema.activities).values({
     id,
     athleteId,
@@ -80,8 +86,14 @@ describe('follow / unfollow', () => {
 describe('kudos', () => {
   it('give, see state in feed, list givers, remove — all idempotent', async () => {
     await call('PUT', '/athletes/ath_a/follow', { token: b });
-    expect((await call('PUT', '/activities/pub/kudos', { token: b })).body).toEqual({ hasKudos: true, kudosCount: 1 });
-    expect((await call('POST', '/activities/pub/kudos', { token: b })).body).toEqual({ hasKudos: true, kudosCount: 1 });
+    expect((await call('PUT', '/activities/pub/kudos', { token: b })).body).toEqual({
+      hasKudos: true,
+      kudosCount: 1,
+    });
+    expect((await call('POST', '/activities/pub/kudos', { token: b })).body).toEqual({
+      hasKudos: true,
+      kudosCount: 1,
+    });
     await call('PUT', '/activities/pub/kudos', { token: c });
     const feed = await call('GET', '/feed?tab=following', { token: b });
     const item = feed.body.feed.find((x: any) => x.id === 'pub');
@@ -89,24 +101,44 @@ describe('kudos', () => {
     const givers = await call('GET', '/activities/pub/kudos', { token: a });
     expect(givers.body.athletes.map((x: any) => x.id).sort()).toEqual(['ath_b', 'ath_c']);
     expect(givers.body.kudosCount).toBe(2);
-    expect((await call('DELETE', '/activities/pub/kudos', { token: b })).body).toEqual({ hasKudos: false, kudosCount: 1 });
-    expect((await call('DELETE', '/activities/pub/kudos', { token: b })).body).toEqual({ hasKudos: false, kudosCount: 1 });
+    expect((await call('DELETE', '/activities/pub/kudos', { token: b })).body).toEqual({
+      hasKudos: false,
+      kudosCount: 1,
+    });
+    expect((await call('DELETE', '/activities/pub/kudos', { token: b })).body).toEqual({
+      hasKudos: false,
+      kudosCount: 1,
+    });
     const detail = await call('GET', '/activities/pub', { token: b });
     expect(detail.body).toMatchObject({ hasKudos: false, kudosCount: 1 });
   });
 
   it('like, unlike, then like again stays consistent', async () => {
-    expect((await call('PUT', '/activities/pub/kudos', { token: b })).body).toEqual({ hasKudos: true, kudosCount: 1 });
-    expect((await call('DELETE', '/activities/pub/kudos', { token: b })).body).toEqual({ hasKudos: false, kudosCount: 0 });
-    expect((await call('PUT', '/activities/pub/kudos', { token: b })).body).toEqual({ hasKudos: true, kudosCount: 1 });
+    expect((await call('PUT', '/activities/pub/kudos', { token: b })).body).toEqual({
+      hasKudos: true,
+      kudosCount: 1,
+    });
+    expect((await call('DELETE', '/activities/pub/kudos', { token: b })).body).toEqual({
+      hasKudos: false,
+      kudosCount: 0,
+    });
+    expect((await call('PUT', '/activities/pub/kudos', { token: b })).body).toEqual({
+      hasKudos: true,
+      kudosCount: 1,
+    });
     const detail = await call('GET', '/activities/pub', { token: b });
     expect(detail.body).toMatchObject({ hasKudos: true, kudosCount: 1 });
     const feed = await call('GET', '/feed?tab=all', { token: b });
-    expect(feed.body.feed.find((x: any) => x.id === 'pub')).toMatchObject({ hasKudos: true, kudosCount: 1 });
+    expect(feed.body.feed.find((x: any) => x.id === 'pub')).toMatchObject({
+      hasKudos: true,
+      kudosCount: 1,
+    });
   });
 
   it('concurrent kudos from the same athlete count once', async () => {
-    await Promise.all(Array.from({ length: 5 }, () => call('PUT', '/activities/pub/kudos', { token: b })));
+    await Promise.all(
+      Array.from({ length: 5 }, () => call('PUT', '/activities/pub/kudos', { token: b }))
+    );
     expect((await call('GET', '/activities/pub', { token: a })).body.kudosCount).toBe(1);
   });
 
@@ -114,39 +146,84 @@ describe('kudos', () => {
     expect((await call('PUT', '/activities/fol/kudos', { token: c })).status).toBe(404);
     expect((await call('DELETE', '/activities/priv/kudos', { token: b })).status).toBe(404);
     expect((await call('GET', '/activities/priv/kudos', { token: b })).status).toBe(404);
-    expect((await call('PUT', '/activities/pub/kudos', { token: a })).body).toEqual({ hasKudos: true, kudosCount: 1 });
+    expect((await call('PUT', '/activities/pub/kudos', { token: a })).body).toEqual({
+      hasKudos: true,
+      kudosCount: 1,
+    });
   });
 });
 
 describe('comments', () => {
-  const add = async (token: string, content: string) => (await call('POST', '/activities/pub/comments', { token, body: { content } })).body.comment;
+  const add = async (token: string, content: string) =>
+    (await call('POST', '/activities/pub/comments', { token, body: { content } })).body.comment;
 
   it('add, list (paginated), edit by author only, delete by author or owner', async () => {
     const c1 = await add(b, 'Nice run!');
     const c2 = await add(c, 'Great pace');
     await add(b, 'Third');
     const list = await call('GET', '/activities/pub/comments', { token: c });
-    expect(list.body.comments.map((x: any) => x.content)).toEqual(['Nice run!', 'Great pace', 'Third']);
+    expect(list.body.comments.map((x: any) => x.content)).toEqual([
+      'Nice run!',
+      'Great pace',
+      'Third',
+    ]);
 
-    expect((await call('PATCH', `/activities/pub/comments/${c1.id}`, { token: c, body: { content: 'hijack' } })).status).toBe(403);
-    expect((await call('PATCH', `/activities/pub/comments/${c1.id}`, { token: a, body: { content: 'owner edit' } })).status).toBe(403);
-    const edited = await call('PATCH', `/activities/pub/comments/${c1.id}`, { token: b, body: { content: 'Nice run!!' } });
+    expect(
+      (
+        await call('PATCH', `/activities/pub/comments/${c1.id}`, {
+          token: c,
+          body: { content: 'hijack' },
+        })
+      ).status
+    ).toBe(403);
+    expect(
+      (
+        await call('PATCH', `/activities/pub/comments/${c1.id}`, {
+          token: a,
+          body: { content: 'owner edit' },
+        })
+      ).status
+    ).toBe(403);
+    const edited = await call('PATCH', `/activities/pub/comments/${c1.id}`, {
+      token: b,
+      body: { content: 'Nice run!!' },
+    });
     expect(edited.body.comment).toMatchObject({ content: 'Nice run!!' });
     expect(edited.body.comment.updatedAt).toBeTruthy();
 
-    expect((await call('DELETE', `/activities/pub/comments/${c2.id}`, { token: b })).status).toBe(403); // not author, not owner
-    expect((await call('DELETE', `/activities/pub/comments/${c2.id}`, { token: a })).body).toEqual({ commentsCount: 2 }); // owner
-    expect((await call('DELETE', `/activities/pub/comments/${c1.id}`, { token: b })).body).toEqual({ commentsCount: 1 }); // author
-    expect((await call('DELETE', `/activities/pub/comments/${c1.id}`, { token: b })).status).toBe(404);
+    expect((await call('DELETE', `/activities/pub/comments/${c2.id}`, { token: b })).status).toBe(
+      403
+    ); // not author, not owner
+    expect((await call('DELETE', `/activities/pub/comments/${c2.id}`, { token: a })).body).toEqual({
+      commentsCount: 2,
+    }); // owner
+    expect((await call('DELETE', `/activities/pub/comments/${c1.id}`, { token: b })).body).toEqual({
+      commentsCount: 1,
+    }); // author
+    expect((await call('DELETE', `/activities/pub/comments/${c1.id}`, { token: b })).status).toBe(
+      404
+    );
   });
 
   it('validates content and visibility', async () => {
-    expect((await call('POST', '/activities/pub/comments', { token: b, body: { content: '   ' } })).status).toBe(400);
-    expect((await call('POST', '/activities/pub/comments', { token: b, body: { content: 'x'.repeat(1001) } })).status).toBe(400);
+    expect(
+      (await call('POST', '/activities/pub/comments', { token: b, body: { content: '   ' } }))
+        .status
+    ).toBe(400);
+    expect(
+      (
+        await call('POST', '/activities/pub/comments', {
+          token: b,
+          body: { content: 'x'.repeat(1001) },
+        })
+      ).status
+    ).toBe(400);
     expect((await call('GET', '/activities/priv/comments', { token: b })).status).toBe(404);
     const c1 = await add(b, 'hi');
     // a comment id from another activity is not addressable through this one
-    expect((await call('DELETE', `/activities/fol/comments/${c1.id}`, { token: a })).status).toBe(404);
+    expect((await call('DELETE', `/activities/fol/comments/${c1.id}`, { token: a })).status).toBe(
+      404
+    );
   });
 });
 
@@ -163,14 +240,19 @@ describe('stats', () => {
   });
 
   it('week buckets start on Monday (UTC)', () => {
-    expect(new Date(weekStartUtc(Date.UTC(2026, 10, 20, 12))).toISOString()).toBe('2026-11-16T00:00:00.000Z');
-    expect(new Date(weekStartUtc(Date.UTC(2026, 10, 16, 0))).toISOString()).toBe('2026-11-16T00:00:00.000Z');
+    expect(new Date(weekStartUtc(Date.UTC(2026, 10, 20, 12))).toISOString()).toBe(
+      '2026-11-16T00:00:00.000Z'
+    );
+    expect(new Date(weekStartUtc(Date.UTC(2026, 10, 16, 0))).toISOString()).toBe(
+      '2026-11-16T00:00:00.000Z'
+    );
   });
 });
 
 describe('feed refresh semantics', () => {
   it('returns fresh data on every request with no-store caching', async () => {
-    for (let i = 0; i < 5; i++) await insertActivity(`p${i}`, 'ath_a', 'PUBLIC', new Date(NOW - 7200_000));
+    for (let i = 0; i < 5; i++)
+      await insertActivity(`p${i}`, 'ath_a', 'PUBLIC', new Date(NOW - 7200_000));
     const p1 = await call('GET', '/feed?tab=following', { token: a });
     expect(p1.body.feed.length).toBeGreaterThanOrEqual(5);
     await insertActivity('newest', 'ath_a', 'PUBLIC', new Date(NOW)); // arrives between requests

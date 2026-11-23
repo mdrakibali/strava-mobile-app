@@ -14,7 +14,11 @@ const clubFields = {
   description: z.string().trim().max(1000).nullish(),
   isPrivate: z.boolean(),
 };
-const createSchema = z.object({ ...clubFields, sportType: clubFields.sportType.default('Run'), isPrivate: clubFields.isPrivate.default(false) });
+const createSchema = z.object({
+  ...clubFields,
+  sportType: clubFields.sportType.default('Run'),
+  isPrivate: clubFields.isPrivate.default(false),
+});
 const updateSchema = z.object(clubFields).partial();
 
 // Errors are HttpError instances and are turned into JSON (with the right status) by app.onError.
@@ -51,7 +55,11 @@ export class ClubController {
   // PATCH /api/v1/clubs/:id (owner or admin)
   async update(c: Context<{ Bindings: Env }>) {
     const body = await parseBody(c, updateSchema);
-    const club = await this.getService(c).updateClub(c.req.param('id') ?? '', c.get('user').athleteId, body);
+    const club = await this.getService(c).updateClub(
+      c.req.param('id') ?? '',
+      c.get('user').athleteId,
+      body
+    );
     return c.json({ message: 'Club updated', club });
   }
 
@@ -65,7 +73,11 @@ export class ClubController {
   async toggleMembership(c: Context<{ Bindings: Env }>) {
     const raw = await c.req.json().catch(() => ({}));
     const join = typeof raw?.join === 'boolean' ? raw.join : undefined;
-    const result = await this.getService(c).setMembership(c.req.param('id') ?? '', c.get('user').athleteId, join);
+    const result = await this.getService(c).setMembership(
+      c.req.param('id') ?? '',
+      c.get('user').athleteId,
+      join
+    );
     return c.json({ message: result.isMember ? 'Joined club' : 'Left club', ...result });
   }
 }

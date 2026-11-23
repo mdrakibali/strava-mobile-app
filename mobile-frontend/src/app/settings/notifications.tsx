@@ -22,8 +22,14 @@ export default function NotificationSettingsScreen() {
         <Text className="text-base font-black text-gray-900 ml-3">Notifications</Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="p-4" contentContainerClassName="pb-24">
-        <Text className="text-xs font-bold text-gray-500 uppercase mb-2">Social Activity Alerts</Text>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        className="p-4"
+        contentContainerClassName="pb-24"
+      >
+        <Text className="text-xs font-bold text-gray-500 uppercase mb-2">
+          Social Activity Alerts
+        </Text>
         <View className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4 space-y-4">
           <View className="flex-row items-center justify-between py-1 mb-3">
             <View className="flex-1 mr-3">
@@ -34,22 +40,30 @@ export default function NotificationSettingsScreen() {
               onPress={() => setKudosAlerts(!kudosAlerts)}
               className={`w-12 h-7 rounded-full justify-center px-1 ${
                 kudosAlerts ? 'bg-[#FC4C02]' : 'bg-gray-300'
-              }`}>
-              <View className={`w-5 h-5 rounded-full bg-white shadow-sm ${kudosAlerts ? 'self-end' : 'self-start'}`} />
+              }`}
+            >
+              <View
+                className={`w-5 h-5 rounded-full bg-white shadow-sm ${kudosAlerts ? 'self-end' : 'self-start'}`}
+              />
             </TouchableOpacity>
           </View>
 
           <View className="flex-row items-center justify-between py-1 mb-3 border-t border-gray-50 pt-3">
             <View className="flex-1 mr-3">
               <Text className="text-sm font-bold text-gray-900">Comments & Replies</Text>
-              <Text className="text-xs text-gray-500">When someone comments or replies to your post.</Text>
+              <Text className="text-xs text-gray-500">
+                When someone comments or replies to your post.
+              </Text>
             </View>
             <TouchableOpacity
               onPress={() => setCommentAlerts(!commentAlerts)}
               className={`w-12 h-7 rounded-full justify-center px-1 ${
                 commentAlerts ? 'bg-[#FC4C02]' : 'bg-gray-300'
-              }`}>
-              <View className={`w-5 h-5 rounded-full bg-white shadow-sm ${commentAlerts ? 'self-end' : 'self-start'}`} />
+              }`}
+            >
+              <View
+                className={`w-5 h-5 rounded-full bg-white shadow-sm ${commentAlerts ? 'self-end' : 'self-start'}`}
+              />
             </TouchableOpacity>
           </View>
 
@@ -62,13 +76,18 @@ export default function NotificationSettingsScreen() {
               onPress={() => setFollowerAlerts(!followerAlerts)}
               className={`w-12 h-7 rounded-full justify-center px-1 ${
                 followerAlerts ? 'bg-[#FC4C02]' : 'bg-gray-300'
-              }`}>
-              <View className={`w-5 h-5 rounded-full bg-white shadow-sm ${followerAlerts ? 'self-end' : 'self-start'}`} />
+              }`}
+            >
+              <View
+                className={`w-5 h-5 rounded-full bg-white shadow-sm ${followerAlerts ? 'self-end' : 'self-start'}`}
+              />
             </TouchableOpacity>
           </View>
         </View>
 
-        <Text className="text-xs font-bold text-gray-500 uppercase mb-2">Community & Milestone Updates</Text>
+        <Text className="text-xs font-bold text-gray-500 uppercase mb-2">
+          Community & Milestone Updates
+        </Text>
         <View className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-4">
           <View className="flex-row items-center justify-between py-1 mb-3">
             <View className="flex-1 mr-3">
@@ -79,22 +98,30 @@ export default function NotificationSettingsScreen() {
               onPress={() => setChallengeAlerts(!challengeAlerts)}
               className={`w-12 h-7 rounded-full justify-center px-1 ${
                 challengeAlerts ? 'bg-[#FC4C02]' : 'bg-gray-300'
-              }`}>
-              <View className={`w-5 h-5 rounded-full bg-white shadow-sm ${challengeAlerts ? 'self-end' : 'self-start'}`} />
+              }`}
+            >
+              <View
+                className={`w-5 h-5 rounded-full bg-white shadow-sm ${challengeAlerts ? 'self-end' : 'self-start'}`}
+              />
             </TouchableOpacity>
           </View>
 
           <View className="flex-row items-center justify-between py-1 border-t border-gray-50 pt-3">
             <View className="flex-1 mr-3">
               <Text className="text-sm font-bold text-gray-900">Club Announcements</Text>
-              <Text className="text-xs text-gray-500">New group events and weekly leaderboard posts.</Text>
+              <Text className="text-xs text-gray-500">
+                New group events and weekly leaderboard posts.
+              </Text>
             </View>
             <TouchableOpacity
               onPress={() => setClubAlerts(!clubAlerts)}
               className={`w-12 h-7 rounded-full justify-center px-1 ${
                 clubAlerts ? 'bg-[#FC4C02]' : 'bg-gray-300'
-              }`}>
-              <View className={`w-5 h-5 rounded-full bg-white shadow-sm ${clubAlerts ? 'self-end' : 'self-start'}`} />
+              }`}
+            >
+              <View
+                className={`w-5 h-5 rounded-full bg-white shadow-sm ${clubAlerts ? 'self-end' : 'self-start'}`}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -102,4 +129,3 @@ export default function NotificationSettingsScreen() {
     </SafeAreaView>
   );
 }
-

@@ -24,7 +24,12 @@ const querySchema = z.object({
 placesRouter.get('/nearby', requireAuth, async (c) => {
   const parsed = querySchema.safeParse(c.req.query());
   if (!parsed.success) {
-    throw new HttpError(400, 'validation_failed', 'lat and lng are required (sport: Run|Walk|Hike|Ride, radius 500–15000 m)', parsed.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })));
+    throw new HttpError(
+      400,
+      'validation_failed',
+      'lat and lng are required (sport: Run|Walk|Hike|Ride, radius 500–15000 m)',
+      parsed.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message }))
+    );
   }
   const { lat, lng, sport, radius } = parsed.data;
   return c.json(await new PlacesService().nearby(sport, lat, lng, radius));
@@ -32,5 +37,7 @@ placesRouter.get('/nearby', requireAuth, async (c) => {
 
 /** GET /places/:type/:id — OSM details + a genuine Wikimedia Commons photo (or null) with attribution. */
 placesRouter.get('/:type/:id', requireAuth, async (c) => {
-  return c.json(await new PlaceDetailsService().details(c.req.param('type') ?? '', c.req.param('id') ?? ''));
+  return c.json(
+    await new PlaceDetailsService().details(c.req.param('type') ?? '', c.req.param('id') ?? '')
+  );
 });

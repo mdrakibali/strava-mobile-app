@@ -74,25 +74,25 @@ export interface Activity {
   averageCadence?: number;
   averagePowerWatts?: number;
   calories?: number;
-  
+
   // Advanced Parity Analytics
   gradeAdjustedPaceSeconds?: number;
   relativeEffortScore?: number;
   trainingStressScore?: number;
-  
+
   // Display Helpers
   distanceFormatted: string;
   movingTimeFormatted: string;
   paceFormatted: string;
   elevationFormatted: string;
   gapFormatted?: string;
-  
+
   // Route and Visuals
   photos?: string[];
   routePoints?: LatLngPoint[];
   elevationProfile?: number[];
   splits?: SplitItem[];
-  
+
   // Social Interactions
   kudosCount: number;
   hasKudos: boolean;
@@ -209,6 +209,3 @@ export interface GearItem {
 
 export * from './analytics';
 export * from './social';
-
-
-

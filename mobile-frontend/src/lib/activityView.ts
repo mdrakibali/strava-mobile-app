@@ -60,7 +60,8 @@ export function mergeCommentLists(
   const activeIncoming = incoming.filter((c) => !isDeleted(c.id));
   const activeCurrent = current.filter((c) => !isDeleted(c.id));
 
-  if (activeIncoming.length === 0 && activeCurrent.length > 0 && serverCount > 0) return activeCurrent;
+  if (activeIncoming.length === 0 && activeCurrent.length > 0 && serverCount > 0)
+    return activeCurrent;
   if (activeIncoming.length === 0) return serverCount === 0 ? [] : activeCurrent;
   const seen = new Set(activeIncoming.map((c) => c.id));
   const kept = activeCurrent.filter(
@@ -69,7 +70,9 @@ export function mergeCommentLists(
       (c.id.startsWith('local_') ||
         !activeIncoming.some((n) => n.content === c.content && n.author.id === c.author.id))
   );
-  return [...activeIncoming, ...kept].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  return [...activeIncoming, ...kept].sort((a, b) =>
+    String(a.createdAt).localeCompare(String(b.createdAt))
+  );
 }
 
 export interface CommentView {
@@ -139,7 +142,8 @@ export const toRoute = (points: unknown): LngLat[] => {
       lng = num(p.longitude ?? p.lng);
       lat = num(p.latitude ?? p.lat);
     }
-    if (lng !== null && lat !== null && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) out.push([lng, lat]);
+    if (lng !== null && lat !== null && Math.abs(lat) <= 90 && Math.abs(lng) <= 180)
+      out.push([lng, lat]);
   }
   return out;
 };
@@ -170,7 +174,9 @@ const toSplits = (splits: unknown): SplitView[] => {
 };
 
 const toElevation = (profile: unknown): number[] =>
-  Array.isArray(profile) ? (profile as unknown[]).map(num).filter((n): n is number => n !== null) : [];
+  Array.isArray(profile)
+    ? (profile as unknown[]).map(num).filter((n): n is number => n !== null)
+    : [];
 
 const base = (row: any, athlete: AthleteSummary): ActivityView => ({
   id: String(row.id),
@@ -214,7 +220,8 @@ export const fromDetailResponse = (res: any): ActivityView => {
     route: displayRoute(toRoute(row.rawPolyline?.length ? row.rawPolyline : row.maskedPolyline)),
     kudosCount: num(res.kudosCount) ?? 0,
     hasKudos: res.hasKudos === true || res.hasKudos === false ? res.hasKudos : null,
-    commentsCount: num(res.commentsCount) ?? (Array.isArray(res.comments) ? res.comments.length : 0),
+    commentsCount:
+      num(res.commentsCount) ?? (Array.isArray(res.comments) ? res.comments.length : 0),
     comments: Array.isArray(res.comments)
       ? res.comments.map((c: any) => ({
           id: String(c.id),
@@ -233,12 +240,21 @@ export const fromDetailResponse = (res: any): ActivityView => {
  */
 export const fromProfileActivity = (row: any, athlete: AthleteSummary): ActivityView => ({
   ...base(row, athlete),
-  route: displayRoute(toRoute(row.polyline?.length ? row.polyline : row.maskedPolyline?.length ? row.maskedPolyline : row.rawPolyline)),
+  route: displayRoute(
+    toRoute(
+      row.polyline?.length
+        ? row.polyline
+        : row.maskedPolyline?.length
+          ? row.maskedPolyline
+          : row.rawPolyline
+    )
+  ),
   kudosCount: num(row.kudosCount) ?? 0,
   hasKudos: row.hasKudos === true || row.hasKudos === false ? row.hasKudos : null,
   commentsCount: num(row.commentsCount) ?? 0,
 });
 
 /** Avg speed with fallback to distance / moving time (never a hard-coded default). */
-export const avgSpeedOf = (a: Pick<ActivityView, 'averageSpeedMps' | 'distanceMeters' | 'movingTimeSeconds'>) =>
-  a.averageSpeedMps ?? (a.movingTimeSeconds > 0 ? a.distanceMeters / a.movingTimeSeconds : null);
+export const avgSpeedOf = (
+  a: Pick<ActivityView, 'averageSpeedMps' | 'distanceMeters' | 'movingTimeSeconds'>
+) => a.averageSpeedMps ?? (a.movingTimeSeconds > 0 ? a.distanceMeters / a.movingTimeSeconds : null);

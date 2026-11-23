@@ -1,14 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GroupsTabContent } from '../../components/groups/GroupsTabContent';
 import { useApp } from '../../context/AppContext';
@@ -174,13 +167,24 @@ export default function GroupsScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F7F7F8' }}>
       {/* Top Header */}
-      <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }} className="px-5 pt-3 pb-2 flex-row items-center justify-between">
+      <View
+        style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}
+        className="px-5 pt-3 pb-2 flex-row items-center justify-between"
+      >
         <Text className="text-3xl font-black text-gray-900 tracking-tight">Groups</Text>
         <View className="flex-row items-center">
-          <TouchableOpacity onPress={() => router.push('/search')} accessibilityLabel="Search" className="p-2">
+          <TouchableOpacity
+            onPress={() => router.push('/search')}
+            accessibilityLabel="Search"
+            className="p-2"
+          >
             <Ionicons name="search-outline" size={24} color="#1F2937" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push(create[tab])} accessibilityLabel="Create" className="p-2 ml-1">
+          <TouchableOpacity
+            onPress={() => router.push(create[tab])}
+            accessibilityLabel="Create"
+            className="p-2 ml-1"
+          >
             <Ionicons name="add" size={28} color="#1F2937" />
           </TouchableOpacity>
         </View>
@@ -189,11 +193,20 @@ export default function GroupsScreen() {
       {/* Tab Navigation */}
       <View className="flex-row bg-white border-b border-gray-200 px-4">
         {(['challenges', 'clubs', 'events'] as Tab[]).map((t) => (
-          <TouchableOpacity key={t} onPress={() => setTab(t)} activeOpacity={0.8} className="flex-1 py-3 items-center">
+          <TouchableOpacity
+            key={t}
+            onPress={() => setTab(t)}
+            activeOpacity={0.8}
+            className="flex-1 py-3 items-center"
+          >
             <Text className={`text-sm font-bold ${tab === t ? 'text-gray-900' : 'text-gray-400'}`}>
               {t === 'challenges' ? 'Challenges' : t === 'clubs' ? 'Clubs' : 'Events'}
             </Text>
-            {tab === t ? <View className="h-0.5 w-12 bg-[#FC4C02] mt-2 rounded-full" /> : <View className="h-0.5 mt-2" />}
+            {tab === t ? (
+              <View className="h-0.5 w-12 bg-[#FC4C02] mt-2 rounded-full" />
+            ) : (
+              <View className="h-0.5 mt-2" />
+            )}
           </TouchableOpacity>
         ))}
       </View>
@@ -201,13 +214,33 @@ export default function GroupsScreen() {
       {/* Horizontal Sport Filter Chips */}
       <View className="py-2.5 px-4 bg-white border-b border-gray-100">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
-          <TouchableOpacity onPress={() => setSport('All')} className={`px-4 py-1.5 rounded-full mr-2 ${sport === 'All' ? 'bg-[#FC4C02]' : 'bg-gray-100'}`}>
-            <Text className={`text-xs font-bold ${sport === 'All' ? 'text-white' : 'text-gray-600'}`}>All</Text>
+          <TouchableOpacity
+            onPress={() => setSport('All')}
+            className={`px-4 py-1.5 rounded-full mr-2 ${sport === 'All' ? 'bg-[#FC4C02]' : 'bg-gray-100'}`}
+          >
+            <Text
+              className={`text-xs font-bold ${sport === 'All' ? 'text-white' : 'text-gray-600'}`}
+            >
+              All
+            </Text>
           </TouchableOpacity>
           {MVP_SPORTS.map((s) => (
-            <TouchableOpacity key={s.id} onPress={() => setSport(s.id)} className={`flex-row items-center px-3.5 py-1.5 rounded-full mr-2 ${sport === s.id ? 'bg-[#FC4C02]' : 'bg-gray-100'}`}>
-              <Ionicons name={s.icon} size={13} color={sport === s.id ? '#FFFFFF' : '#4B5563'} style={{ marginRight: 5 }} />
-              <Text className={`text-xs font-bold ${sport === s.id ? 'text-white' : 'text-gray-700'}`}>{s.label}</Text>
+            <TouchableOpacity
+              key={s.id}
+              onPress={() => setSport(s.id)}
+              className={`flex-row items-center px-3.5 py-1.5 rounded-full mr-2 ${sport === s.id ? 'bg-[#FC4C02]' : 'bg-gray-100'}`}
+            >
+              <Ionicons
+                name={s.icon}
+                size={13}
+                color={sport === s.id ? '#FFFFFF' : '#4B5563'}
+                style={{ marginRight: 5 }}
+              />
+              <Text
+                className={`text-xs font-bold ${sport === s.id ? 'text-white' : 'text-gray-700'}`}
+              >
+                {s.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -219,12 +252,18 @@ export default function GroupsScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 16, paddingBottom: 60, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />}>
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />
+          }
+        >
           <GroupsTabContent
             tab={tab}
             data={activeData}
             status={status}
-            onRefresh={() => { setStatus('loading'); onRefresh(); }}
+            onRefresh={() => {
+              setStatus('loading');
+              onRefresh();
+            }}
             bySport={bySport}
             create={create}
             joinChallenge={joinChallenge}

@@ -5,7 +5,11 @@
 import { ApiError } from '../../services/api';
 import type { SessionRow } from '../db';
 
-type Fake = { sessions: Map<string, SessionRow>; points: Map<string, any[]>; acked: Map<string, Set<number>> };
+type Fake = {
+  sessions: Map<string, SessionRow>;
+  points: Map<string, any[]>;
+  acked: Map<string, Set<number>>;
+};
 const mockStore: Fake = { sessions: new Map(), points: new Map(), acked: new Map() };
 
 jest.mock('expo-network', () => ({ addNetworkStateListener: jest.fn() }));
@@ -13,7 +17,10 @@ jest.mock('../db', () => ({
   sessionsRepo: {
     listUnsynced: async (athleteId: string) =>
       [...mockStore.sessions.values()].filter(
-        (s) => s.athleteId === athleteId && s.status === 'completed' && (s.syncState === 'queued' || s.syncState === 'needs_attention')
+        (s) =>
+          s.athleteId === athleteId &&
+          s.status === 'completed' &&
+          (s.syncState === 'queued' || s.syncState === 'needs_attention')
       ),
     get: async (id: string) => mockStore.sessions.get(id) ?? null,
     updateSync: async (id: string, patch: Partial<SessionRow>) => {
@@ -23,7 +30,8 @@ jest.mock('../db', () => ({
     pruneSynced: async () => {},
   },
   pointsRepo: {
-    range: async (id: string, from = 0, to = Number.MAX_SAFE_INTEGER) => (mockStore.points.get(id) ?? []).slice(from, to),
+    range: async (id: string, from = 0, to = Number.MAX_SAFE_INTEGER) =>
+      (mockStore.points.get(id) ?? []).slice(from, to),
   },
   batchesRepo: {
     acked: async (id: string) => new Set(mockStore.acked.get(id) ?? []),
@@ -32,7 +40,8 @@ jest.mock('../db', () => ({
       seqs.forEach((s) => set.add(s));
       mockStore.acked.set(id, set);
     },
-    unack: async (id: string, seqs: number[]) => seqs.forEach((s) => mockStore.acked.get(id)?.delete(s)),
+    unack: async (id: string, seqs: number[]) =>
+      seqs.forEach((s) => mockStore.acked.get(id)?.delete(s)),
     reset: async (id: string) => mockStore.acked.set(id, new Set()),
   },
 }));
@@ -59,7 +68,10 @@ jest.mock('../../services/api', () => {
       uploads: {
         start: async ({ clientActivityId }: any) => {
           mockServer.maybeFail('start');
-          const u = mockServer.uploads.get(clientActivityId) ?? { batches: new Map(), activityId: null };
+          const u = mockServer.uploads.get(clientActivityId) ?? {
+            batches: new Map(),
+            activityId: null,
+          };
           mockServer.uploads.set(clientActivityId, u);
           return {
             upload: {
@@ -78,9 +90,11 @@ jest.mock('../../services/api', () => {
         complete: async (cid: string, body: any) => {
           mockServer.maybeFail('complete');
           const u = mockServer.uploads.get(cid)!;
-          if (u.activityId) return { created: false, deleted: false, activity: { id: u.activityId } };
+          if (u.activityId)
+            return { created: false, deleted: false, activity: { id: u.activityId } };
           const missing = [...Array(body.batchCount).keys()].filter((i) => !u.batches.has(i));
-          if (missing.length) throw new actual.ApiError('missing', 409, 'missing_batches', { missingSeqs: missing });
+          if (missing.length)
+            throw new actual.ApiError('missing', 409, 'missing_batches', { missingSeqs: missing });
           u.activityId = `act_${++mockServer.activities}`;
           return { created: true, deleted: false, activity: { id: u.activityId } };
         },
@@ -97,7 +111,16 @@ const T0 = 1_700_000_000_000;
 const session = (id: string, pointCount: number, over: Partial<SessionRow> = {}): SessionRow => {
   mockStore.points.set(
     id,
-    Array.from({ length: pointCount }, (_, i) => ({ t: T0 + i * 1000, lat: 23.78, lng: 90.42 + i * 0.00003, acc: 5, alt: null, altAcc: null, speed: 3, seg: 0 }))
+    Array.from({ length: pointCount }, (_, i) => ({
+      t: T0 + i * 1000,
+      lat: 23.78,
+      lng: 90.42 + i * 0.00003,
+      acc: 5,
+      alt: null,
+      altAcc: null,
+      speed: 3,
+      seg: 0,
+    }))
   );
   const s: SessionRow = {
     id,
@@ -142,7 +165,10 @@ it('uploads in sealed batches of 300 and completes once', async () => {
   await syncWorker.kick(true);
   expect(mockServer.calls).toEqual(['start', 'batch:0', 'batch:1', 'batch:2', 'complete']);
   expect(mockServer.uploads.get('s1')!.batches.get(2)).toBe(50);
-  expect(mockStore.sessions.get('s1')).toMatchObject({ syncState: 'synced', serverActivityId: 'act_1' });
+  expect(mockStore.sessions.get('s1')).toMatchObject({
+    syncState: 'synced',
+    serverActivityId: 'act_1',
+  });
 });
 
 it('keeps data and schedules a retry when offline, then resumes without re-sending acked batches', async () => {
@@ -179,7 +205,10 @@ it('never creates a duplicate when the completion response is lost', async () =>
   await syncWorker.kick(true);
   expect(mockStore.sessions.get('s1')!.syncState).toBe('queued');
   await syncWorker.kick(true);
-  expect(mockStore.sessions.get('s1')).toMatchObject({ syncState: 'synced', serverActivityId: 'act_1' });
+  expect(mockStore.sessions.get('s1')).toMatchObject({
+    syncState: 'synced',
+    serverActivityId: 'act_1',
+  });
   expect(mockServer.activities).toBe(1);
   mockServer.maybeFail = origComplete;
 });
@@ -206,7 +235,10 @@ it('marks permanent rejections as needing attention instead of retrying forever'
   session('s1', 10);
   mockServer.failNext = [new ApiError('Request validation failed', 400, 'validation_failed')];
   await syncWorker.kick(true);
-  expect(mockStore.sessions.get('s1')).toMatchObject({ syncState: 'needs_attention', lastError: 'Request validation failed' });
+  expect(mockStore.sessions.get('s1')).toMatchObject({
+    syncState: 'needs_attention',
+    lastError: 'Request validation failed',
+  });
   mockServer.calls = [];
   await syncWorker.kick(); // automatic runs skip it
   expect(mockServer.calls).toEqual([]);

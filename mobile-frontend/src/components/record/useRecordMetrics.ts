@@ -65,14 +65,20 @@ export function useRecordMetrics({
   const avgSpeed = rec.movingTimeS > 0 ? rec.distanceM / rec.movingTimeS : null;
   const second =
     cfg.primaryMetric === 'speed'
-      ? { label: 'Speed (km/h)', value: speedValue(status === 'recording' ? liveSpeed(rec, now) : avgSpeed) }
+      ? {
+          label: 'Speed (km/h)',
+          value: speedValue(status === 'recording' ? liveSpeed(rec, now) : avgSpeed),
+        }
       : { label: 'Avg pace (/km)', value: paceValue(rec.distanceM, rec.movingTimeS) };
 
   const current = liveSpeed(rec, now);
   const currentMetric =
     cfg.primaryMetric === 'speed'
       ? { label: 'Speed now', value: status === 'recording' ? speedValue(current) : DASH }
-      : { label: 'Pace now', value: status === 'recording' && current > 0.5 ? paceValue(1000, 1000 / current) : DASH };
+      : {
+          label: 'Pace now',
+          value: status === 'recording' && current > 0.5 ? paceValue(1000, 1000 / current) : DASH,
+        };
 
   const onStart = async () => {
     setFollowing(true);

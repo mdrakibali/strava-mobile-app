@@ -29,14 +29,24 @@ export const ActivitySplits: React.FC<Props> = ({ splits, elevationProfile, show
             </AppText>
           </View>
           {splits.map((s) => (
-            <View key={s.index} className="flex-row items-center min-h-[40px] border-t border-gray-100">
+            <View
+              key={s.index}
+              className="flex-row items-center min-h-[40px] border-t border-gray-100"
+            >
               <AppText variant="bodyStrong" style={{ width: 48 }}>
                 {s.index}
               </AppText>
-              <AppText variant="bodyStrong" style={[{ flex: 1 }, { fontVariant: ['tabular-nums'] }]}>
+              <AppText
+                variant="bodyStrong"
+                style={[{ flex: 1 }, { fontVariant: ['tabular-nums'] }]}
+              >
                 {s.pace ? `${s.pace} /km` : DASH}
               </AppText>
-              <AppText variant="body" color="inkSecondary" style={{ width: 80, textAlign: 'right' }}>
+              <AppText
+                variant="body"
+                color="inkSecondary"
+                style={{ width: 80, textAlign: 'right' }}
+              >
                 {s.elevationDeltaMeters == null
                   ? DASH
                   : `${s.elevationDeltaMeters > 0 ? '+' : ''}${Math.round(s.elevationDeltaMeters)} m`}
@@ -55,4 +65,3 @@ export const ActivitySplits: React.FC<Props> = ({ splits, elevationProfile, show
     </View>
   );
 };
-

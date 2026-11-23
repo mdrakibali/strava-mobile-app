@@ -10,6 +10,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,js,json}\"",
     "test": "vitest run --fileParallelism=false",
     "seed": "node scripts/seed.mjs",
     "dev:local": "vite-node scripts/dev-local.ts"
@@ -29,6 +30,7 @@
     "@types/pg": "^8.23.1",
     "dotenv": "^16.4.7",
     "drizzle-kit": "^0.30.2",
+    "prettier": "^3.10.1",
     "typescript": "^5.7.3",
     "vitest": "^3.2.7",
     "wrangler": "^3.103.2"

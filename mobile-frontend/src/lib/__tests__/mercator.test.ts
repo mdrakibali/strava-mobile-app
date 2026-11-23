@@ -11,7 +11,10 @@ describe('mercator', () => {
 
   it('fits a 2 km route into a feed-sized box and keeps every point inside the padding', () => {
     // ~2 km east-west in Dhaka
-    const route: [number, number][] = Array.from({ length: 50 }, (_, i) => [90.4 + i * 0.0004, 23.78 + Math.sin(i / 8) * 0.002]);
+    const route: [number, number][] = Array.from({ length: 50 }, (_, i) => [
+      90.4 + i * 0.0004,
+      23.78 + Math.sin(i / 8) * 0.002,
+    ]);
     const L = previewLayout(route, 360, 200, { padding: 24 })!;
     expect(L.zoom).toBeGreaterThanOrEqual(13);
     expect(L.zoom).toBeLessThanOrEqual(15);
@@ -59,10 +62,12 @@ describe('fitCamera (MapLibre convention)', () => {
   });
   it('fits the route bounds inside the padded box at the chosen zoom', () => {
     const route: [number, number][] = [
-      [90.40, 23.77],
+      [90.4, 23.77],
       [90.43, 23.79],
     ];
-    const w = 360, h = 240, pad = 28;
+    const w = 360,
+      h = 240,
+      pad = 28;
     const cam = fitCamera(route, w, h, { padding: pad })!;
     const z256 = cam.zoom + 1;
     const [cx, cy] = project(cam.center, z256);
@@ -74,10 +79,22 @@ describe('fitCamera (MapLibre convention)', () => {
     // and it is tight on at least one axis
     const xs = route.map((p) => project(p, z256)[0]);
     const ys = route.map((p) => project(p, z256)[1]);
-    const tight = Math.max(Math.abs(xs[1] - xs[0]) / (w - 2 * pad), Math.abs(ys[1] - ys[0]) / (h - 2 * pad));
+    const tight = Math.max(
+      Math.abs(xs[1] - xs[0]) / (w - 2 * pad),
+      Math.abs(ys[1] - ys[0]) / (h - 2 * pad)
+    );
     expect(tight).toBeCloseTo(1, 6);
   });
   it('caps the zoom for tiny routes', () => {
-    expect(fitCamera([[90.4, 23.78], [90.40001, 23.78]], 300, 200)!.zoom).toBe(16);
+    expect(
+      fitCamera(
+        [
+          [90.4, 23.78],
+          [90.40001, 23.78],
+        ],
+        300,
+        200
+      )!.zoom
+    ).toBe(16);
   });
 });

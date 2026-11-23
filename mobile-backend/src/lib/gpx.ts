@@ -1,9 +1,17 @@
 import { LatLngPoint } from './privacy';
 
 export const escapeXml = (s: string) =>
-  s.replace(/[<>&'"]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[ch]!);
+  s.replace(
+    /[<>&'"]/g,
+    (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[ch]!
+  );
 
-export function buildGpx(title: string, sportType: string, startTime: string | Date, points: LatLngPoint[]): string {
+export function buildGpx(
+  title: string,
+  sportType: string,
+  startTime: string | Date,
+  points: LatLngPoint[]
+): string {
   const trkpts = points
     .map(
       (p) =>
@@ -29,4 +37,3 @@ ${trkpts}
   </trk>
 </gpx>`;
 }
-

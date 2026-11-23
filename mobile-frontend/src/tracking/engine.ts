@@ -26,7 +26,8 @@ export const LOCATION_TASK = 'open-strava-recording-location';
 
 export type LngLat = [number, number];
 
-const toLngLatRuns = (b: RouteSegments): LngLat[][] => b.drawn().map((run) => run.map((p) => [p.lng, p.lat] as LngLat));
+const toLngLatRuns = (b: RouteSegments): LngLat[][] =>
+  b.drawn().map((run) => run.map((p) => [p.lng, p.lat] as LngLat));
 
 export interface Fix {
   lat: number;
@@ -130,7 +131,15 @@ class RecordingEngine {
 
   private metrics(): Partial<RecordingSnapshot> {
     const a = this.acc;
-    if (!a) return { distanceM: 0, movingTimeS: 0, maxSpeedMps: 0, elevGainM: null, speedAtLastFixMps: 0, lastAcceptedAt: null };
+    if (!a)
+      return {
+        distanceM: 0,
+        movingTimeS: 0,
+        maxSpeedMps: 0,
+        elevGainM: null,
+        speedAtLastFixMps: 0,
+        lastAcceptedAt: null,
+      };
     return {
       distanceM: a.distanceM,
       movingTimeS: Math.round(a.movingMs / 1000),
@@ -214,7 +223,12 @@ class RecordingEngine {
       if (!locations.length) return;
       const sorted = [...locations].sort((a, b) => a.timestamp - b.timestamp);
       const last = sorted[sorted.length - 1];
-      const lastFix: Fix = { lat: last.coords.latitude, lng: last.coords.longitude, acc: last.coords.accuracy ?? null, t: last.timestamp };
+      const lastFix: Fix = {
+        lat: last.coords.latitude,
+        lng: last.coords.longitude,
+        acc: last.coords.accuracy ?? null,
+        t: last.timestamp,
+      };
       const id = this.snap.sessionId;
       if (!id || !this.acc) {
         this.set({ lastFix });
@@ -242,11 +256,20 @@ class RecordingEngine {
       this.set({ lifecycle: this.apply({ type: 'PREPARE' }), error: null });
       const permission = await this.ensurePermission(false);
       // status may have changed while awaiting the permission prompt
-      if (permission !== 'granted' || (this.snap.lifecycle.status as string) !== 'preparing') return;
+      if (permission !== 'granted' || (this.snap.lifecycle.status as string) !== 'preparing')
+        return;
       this.previewSub?.remove();
       this.previewSub = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 0 },
-        (l) => this.set({ lastFix: { lat: l.coords.latitude, lng: l.coords.longitude, acc: l.coords.accuracy ?? null, t: l.timestamp } })
+        (l) =>
+          this.set({
+            lastFix: {
+              lat: l.coords.latitude,
+              lng: l.coords.longitude,
+              acc: l.coords.accuracy ?? null,
+              t: l.timestamp,
+            },
+          })
       ).catch(() => null);
     });
   }
@@ -256,7 +279,8 @@ class RecordingEngine {
     return this.serial(async () => {
       this.previewSub?.remove();
       this.previewSub = null;
-      if (this.snap.lifecycle.status === 'preparing') this.set({ lifecycle: this.apply({ type: 'CANCEL' }) });
+      if (this.snap.lifecycle.status === 'preparing')
+        this.set({ lifecycle: this.apply({ type: 'CANCEL' }) });
     });
   }
 
@@ -269,7 +293,10 @@ class RecordingEngine {
     let state: PermissionState;
     try {
       const current = await Location.getForegroundPermissionsAsync();
-      const perm = current.granted || !(request || current.canAskAgain) ? current : await Location.requestForegroundPermissionsAsync();
+      const perm =
+        current.granted || !(request || current.canAskAgain)
+          ? current
+          : await Location.requestForegroundPermissionsAsync();
       if (!perm.granted) state = 'denied';
       else state = (await Location.hasServicesEnabledAsync()) ? 'granted' : 'services_off';
     } catch {
@@ -284,7 +311,8 @@ class RecordingEngine {
   start(sport: string) {
     return this.serial(async () => {
       const status = this.snap.lifecycle.status;
-      if (status === 'recording' || status === 'paused') throw new Error('A recording is already in progress.');
+      if (status === 'recording' || status === 'paused')
+        throw new Error('A recording is already in progress.');
       if (!this.athleteId) throw new Error('Sign in to record.');
       const permission = await this.ensurePermission(true);
       if (permission === 'denied') throw new Error('Location permission is required to record.');
@@ -303,14 +331,30 @@ class RecordingEngine {
       await sessionsRepo.saveLifecycle(id, lifecycle, 'start');
       this.acc = new TrackAccumulator(sport);
       this.routeBuilder = new RouteSegments();
-      this.snap = { ...this.snap, ...this.metrics(), sessionId: id, sport, lifecycle, route: [], routeSegments: [], error: null };
+      this.snap = {
+        ...this.snap,
+        ...this.metrics(),
+        sessionId: id,
+        sport,
+        lifecycle,
+        route: [],
+        routeSegments: [],
+        error: null,
+      };
       this.listeners.forEach((l) => l());
       try {
         await this.startUpdates(sport);
       } catch (e: any) {
         await sessionsRepo.remove(id);
         this.acc = null;
-        this.set({ ...this.metrics(), sessionId: null, lifecycle: INITIAL_LIFECYCLE, route: [], routeSegments: [], error: e?.message ?? 'Could not start GPS' });
+        this.set({
+          ...this.metrics(),
+          sessionId: null,
+          lifecycle: INITIAL_LIFECYCLE,
+          route: [],
+          routeSegments: [],
+          error: e?.message ?? 'Could not start GPS',
+        });
         throw e;
       }
     });
@@ -342,20 +386,29 @@ class RecordingEngine {
       return 'background';
     } catch (err: any) {
       bgErr = err;
-      console.warn('Background location service startup failed, attempting foreground fallback:', err);
+      console.warn(
+        'Background location service startup failed, attempting foreground fallback:',
+        err
+      );
     }
 
     if (!this.previewSub) {
       try {
         this.previewSub = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 0 },
+          {
+            accuracy: Location.Accuracy.BestForNavigation,
+            timeInterval: 1000,
+            distanceInterval: 0,
+          },
           (l) => {
             this.ingest([l]);
           }
         );
       } catch (watchErr: any) {
         this.set({ trackingMode: 'idle' });
-        throw new Error(watchErr?.message || bgErr?.message || 'Could not start GPS tracking service');
+        throw new Error(
+          watchErr?.message || bgErr?.message || 'Could not start GPS tracking service'
+        );
       }
     }
 
@@ -410,11 +463,16 @@ class RecordingEngine {
   /** What the activity looks like if finished now (Save screen). Pure; doesn't change state. */
   async previewSummary(): Promise<TrackSummary | null> {
     const { lifecycle, sessionId, sport } = this.snap;
-    if (!sessionId || (lifecycle.status !== 'recording' && lifecycle.status !== 'paused')) return null;
+    if (!sessionId || (lifecycle.status !== 'recording' && lifecycle.status !== 'paused'))
+      return null;
     const done = transition(lifecycle, { type: 'FINISH', at: Date.now() });
     const acc = new TrackAccumulator(sport);
     for (const p of await pointsRepo.range(sessionId)) acc.add(p);
-    return acc.summary({ startedAt: done.startedAt!, finishedAt: done.finishedAt, pauses: done.pauses });
+    return acc.summary({
+      startedAt: done.startedAt!,
+      finishedAt: done.finishedAt,
+      pauses: done.pauses,
+    });
   }
 
   /**
@@ -426,7 +484,8 @@ class RecordingEngine {
     return this.serial(async () => {
       const id = this.snap.sessionId;
       const status = this.snap.lifecycle.status;
-      if (!id || (status !== 'recording' && status !== 'paused')) throw new Error('There is no recording to save.');
+      if (!id || (status !== 'recording' && status !== 'paused'))
+        throw new Error('There is no recording to save.');
       const lifecycle = this.apply({ type: 'FINISH', at: Date.now() });
       await sessionsRepo.saveLifecycle(id, lifecycle, 'finish');
       await sessionsRepo.setSave(id, save);

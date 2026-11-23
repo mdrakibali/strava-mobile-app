@@ -53,7 +53,8 @@ export function RouteDetailModal({
                   onPress={() => onToggleSave(item)}
                   accessibilityRole="button"
                   accessibilityLabel="Save route"
-                  className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center active:bg-gray-200">
+                  className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center active:bg-gray-200"
+                >
                   <Ionicons
                     name={item.saved ? 'bookmark' : 'bookmark-outline'}
                     size={20}
@@ -65,7 +66,8 @@ export function RouteDetailModal({
                 onPress={onClose}
                 accessibilityRole="button"
                 accessibilityLabel="Close modal"
-                className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center active:bg-gray-200">
+                className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center active:bg-gray-200"
+              >
                 <Ionicons name="close" size={20} color="#111827" />
               </Pressable>
             </View>
@@ -93,7 +95,9 @@ export function RouteDetailModal({
                       </AppText>
                     </View>
                     <View className="px-2 py-0.5 rounded-full bg-white border border-emerald-200">
-                      <AppText className="text-[#10B981] text-[10px] font-bold">Verified OSM</AppText>
+                      <AppText className="text-[#10B981] text-[10px] font-bold">
+                        Verified OSM
+                      </AppText>
                     </View>
                   </View>
 
@@ -120,7 +124,8 @@ export function RouteDetailModal({
                   <Pressable
                     onPress={() => Linking.openURL(item.osmUrl!)}
                     accessibilityRole="link"
-                    className="flex-row items-center justify-between bg-gray-50 rounded-2xl p-4 mb-4 border border-gray-200">
+                    className="flex-row items-center justify-between bg-gray-50 rounded-2xl p-4 mb-4 border border-gray-200"
+                  >
                     <View className="flex-row items-center">
                       <Ionicons name="globe-outline" size={18} color="#4B5563" />
                       <AppText className="text-gray-700 text-xs font-bold ml-2">
@@ -215,7 +220,8 @@ export function RouteDetailModal({
               onPress={() => onStartRoute(item)}
               accessibilityRole="button"
               accessibilityLabel={isPlace ? `Get directions to ${item.name}` : `Start ${item.name}`}
-              className="h-14 rounded-full bg-[#FC4C02] flex-row items-center justify-center shadow-lg active:bg-[#E03A00]">
+              className="h-14 rounded-full bg-[#FC4C02] flex-row items-center justify-center shadow-lg active:bg-[#E03A00]"
+            >
               <Ionicons name={isPlace ? 'navigate' : 'play'} size={20} color="#FFFFFF" />
               <AppText className="text-white text-base font-black ml-2">
                 {isPlace ? 'Get Directions & Start Workout' : 'Start Workout with this Route'}

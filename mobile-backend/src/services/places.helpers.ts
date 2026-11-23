@@ -44,13 +44,30 @@ export interface NearbyResult {
   places: Place[];
 }
 
-export const OVERPASS_ENDPOINTS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+export const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+];
 export const PHOTON_REVERSE = 'https://photon.komoot.io/api';
 
 export const PHOTON_TAGS: Record<PlaceSport, { specific: string[]; general: string[] }> = {
   All: {
-    specific: ['leisure:park', 'leisure:playground', 'leisure:pitch', 'leisure:track', 'highway:cycleway', 'route:bicycle', 'route:hiking'],
-    general: ['leisure:garden', 'leisure:recreation_ground', 'leisure:nature_reserve', 'leisure:stadium', 'leisure:common'],
+    specific: [
+      'leisure:park',
+      'leisure:playground',
+      'leisure:pitch',
+      'leisure:track',
+      'highway:cycleway',
+      'route:bicycle',
+      'route:hiking',
+    ],
+    general: [
+      'leisure:garden',
+      'leisure:recreation_ground',
+      'leisure:nature_reserve',
+      'leisure:stadium',
+      'leisure:common',
+    ],
   },
   Run: {
     specific: ['leisure:track', 'leisure:recreation_ground'],
@@ -61,7 +78,13 @@ export const PHOTON_TAGS: Record<PlaceSport, { specific: string[]; general: stri
     general: ['leisure:park', 'leisure:nature_reserve', 'leisure:recreation_ground'],
   },
   Hike: {
-    specific: ['leisure:nature_reserve', 'boundary:protected_area', 'natural:wood', 'landuse:forest', 'route:hiking'],
+    specific: [
+      'leisure:nature_reserve',
+      'boundary:protected_area',
+      'natural:wood',
+      'landuse:forest',
+      'route:hiking',
+    ],
     general: ['leisure:park'],
   },
   Ride: {
@@ -88,7 +111,8 @@ export const photonCategory = (key: string, value: string): PlaceCategory | null
   if (key === 'boundary' || key === 'natural' || key === 'landuse') return 'nature';
   if (key === 'highway' && value === 'cycleway') return 'cycleway';
   if (key === 'highway' && value === 'pedestrian') return 'footpath';
-  if (key === 'route') return value === 'bicycle' || value === 'mtb' ? 'cycle_route' : 'hiking_route';
+  if (key === 'route')
+    return value === 'bicycle' || value === 'mtb' ? 'cycle_route' : 'hiking_route';
   return null;
 };
 
@@ -115,12 +139,22 @@ export const normalizePhoton = (
     const [pLng, pLat] = coords as [number, number];
     const distanceM = Math.round(haversineM(lat, lng, pLat, pLng));
     if (distanceM > radiusM) continue;
-    const linear = category === 'cycleway' || category === 'cycle_route' || category === 'hiking_route' || category === 'footpath';
+    const linear =
+      category === 'cycleway' ||
+      category === 'cycle_route' ||
+      category === 'hiking_route' ||
+      category === 'footpath';
     if (!linear) {
       const hasExtent = Array.isArray(p.extent) && p.extent.length === 4;
-      const diag = hasExtent ? haversineM(p.extent[1], p.extent[0], p.extent[3], p.extent[2]) : null;
+      const diag = hasExtent
+        ? haversineM(p.extent[1], p.extent[0], p.extent[3], p.extent[2])
+        : null;
       if (category === 'garden' && (diag == null || diag < MIN_GARDEN_DIAGONAL_M)) continue;
-      if (diag != null && diag < (category === 'track' ? 50 : category === 'playground' ? 40 : MIN_AREA_DIAGONAL_M)) continue;
+      if (
+        diag != null &&
+        diag < (category === 'track' ? 50 : category === 'playground' ? 40 : MIN_AREA_DIAGONAL_M)
+      )
+        continue;
     }
     const type = p.osm_type === 'N' ? 'node' : p.osm_type === 'R' ? 'relation' : 'way';
     const id = `${type}/${p.osm_id}`;
@@ -139,7 +173,11 @@ export const normalizePhoton = (
       path: null,
       surface: null,
       lit: null,
-      address: [p.street, p.locality ?? p.district, p.city].filter((x: unknown) => typeof x === 'string' && x).filter((x: string, i: number, a: string[]) => a.indexOf(x) === i).join(', ') || null,
+      address:
+        [p.street, p.locality ?? p.district, p.city]
+          .filter((x: unknown) => typeof x === 'string' && x)
+          .filter((x: string, i: number, a: string[]) => a.indexOf(x) === i)
+          .join(', ') || null,
       osmUrl: `https://www.openstreetmap.org/${type}/${p.osm_id}`,
     });
   }
@@ -147,8 +185,14 @@ export const normalizePhoton = (
   if (!specificCategories.length) {
     return out.sort(byDistance).slice(0, limit);
   }
-  const specific = out.filter((p) => specificCategories.includes(p.category)).sort(byDistance).slice(0, SPECIFIC_SLOTS);
-  const general = out.filter((p) => !specific.includes(p)).sort(byDistance).slice(0, limit - specific.length);
+  const specific = out
+    .filter((p) => specificCategories.includes(p.category))
+    .sort(byDistance)
+    .slice(0, SPECIFIC_SLOTS);
+  const general = out
+    .filter((p) => !specific.includes(p))
+    .sort(byDistance)
+    .slice(0, limit - specific.length);
   return [...specific, ...general].sort(byDistance);
 };
 
@@ -166,9 +210,20 @@ const AREA_FILTERS: Record<PlaceSport, string[]> = {
     'nwr["leisure"="nature_reserve"]["name"]',
     'nwr["landuse"~"^(grass|village_green)$"]["name"]',
   ],
-  Run: ['nwr["leisure"~"^(park|track|recreation_ground)$"]["name"]', 'nwr["leisure"="nature_reserve"]["name"]'],
-  Walk: ['nwr["leisure"~"^(park|garden|recreation_ground)$"]["name"]', 'nwr["leisure"="nature_reserve"]["name"]'],
-  Hike: ['nwr["leisure"="nature_reserve"]["name"]', 'nwr["boundary"="protected_area"]["name"]', 'nwr["natural"~"^(wood|forest)$"]["name"]', 'nwr["leisure"="park"]["name"]'],
+  Run: [
+    'nwr["leisure"~"^(park|track|recreation_ground)$"]["name"]',
+    'nwr["leisure"="nature_reserve"]["name"]',
+  ],
+  Walk: [
+    'nwr["leisure"~"^(park|garden|recreation_ground)$"]["name"]',
+    'nwr["leisure"="nature_reserve"]["name"]',
+  ],
+  Hike: [
+    'nwr["leisure"="nature_reserve"]["name"]',
+    'nwr["boundary"="protected_area"]["name"]',
+    'nwr["natural"~"^(wood|forest)$"]["name"]',
+    'nwr["leisure"="park"]["name"]',
+  ],
   Ride: ['nwr["leisure"~"^(park|recreation_ground)$"]["name"]'],
 };
 const LINE_FILTERS: Record<PlaceSport, string[]> = {
@@ -189,7 +244,12 @@ const ROUTE_FILTERS: Record<PlaceSport, string> = {
   Ride: 'relation["route"~"^(bicycle|mtb)$"]',
 };
 
-export const buildOverpassQuery = (sport: PlaceSport, lat: number, lng: number, radiusM: number) => {
+export const buildOverpassQuery = (
+  sport: PlaceSport,
+  lat: number,
+  lng: number,
+  radiusM: number
+) => {
   const around = `(around:${radiusM},${lat},${lng})`;
   const areas = (AREA_FILTERS[sport] ?? AREA_FILTERS.All).map((f) => `${f}${around};`).join('\n  ');
   const lines = (LINE_FILTERS[sport] ?? LINE_FILTERS.All).map((f) => `${f}${around};`).join('\n  ');

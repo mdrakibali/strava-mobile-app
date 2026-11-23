@@ -26,7 +26,9 @@ export const ActivitySplitsTable: React.FC<ActivitySplitsTableProps> = ({ splits
           <Text className="flex-[0.8] text-xs font-bold text-gray-900">{s.splitNumber}</Text>
           <Text className="flex-[1.2] text-xs font-bold text-[#FC4C02]">{s.paceFormatted}</Text>
           <Text className="flex-[1.2] text-xs text-gray-700">
-            {s.elevationDeltaMeters > 0 ? `+${s.elevationDeltaMeters}m` : `${s.elevationDeltaMeters}m`}
+            {s.elevationDeltaMeters > 0
+              ? `+${s.elevationDeltaMeters}m`
+              : `${s.elevationDeltaMeters}m`}
           </Text>
           <Text className="flex-[1.2] text-xs text-gray-700">
             {s.averageHeartRate ? `${s.averageHeartRate} bpm` : '--'}
@@ -36,4 +38,3 @@ export const ActivitySplitsTable: React.FC<ActivitySplitsTableProps> = ({ splits
     </View>
   );
 };
-

@@ -44,7 +44,9 @@ export default function MapsScreen() {
 
   const [mapMode, setMapMode] = useState<MapStyleKey>(DEFAULT_MAP_STYLE);
   const [styleModalVisible, setStyleModalVisible] = useState(false);
-  const [locationStatus, setLocationStatus] = useState<'checking' | 'permission_denied' | 'services_off' | 'no_fix' | 'ready'>('checking');
+  const [locationStatus, setLocationStatus] = useState<
+    'checking' | 'permission_denied' | 'services_off' | 'no_fix' | 'ready'
+  >('checking');
   const [locationLoading, setLocationLoading] = useState(true);
 
   const requestLocation = useCallback(async () => {
@@ -72,7 +74,9 @@ export default function MapsScreen() {
 
       let fix = await Location.getLastKnownPositionAsync({ maxAge: 120_000 }).catch(() => null);
       if (!fix) {
-        fix = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null);
+        fix = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        }).catch(() => null);
       }
       if (fix?.coords) {
         setMe([fix.coords.longitude, fix.coords.latitude]);
@@ -103,17 +107,12 @@ export default function MapsScreen() {
     setSelectedId,
     visible,
     toggleSave,
-  } = useMapRoutes(
-    source,
-    sport,
-    query,
-    lengthFilter,
-    me,
-    params.routeId,
-    difficultyFilter
-  );
+  } = useMapRoutes(source, sport, query, lengthFilter, me, params.routeId, difficultyFilter);
 
-  const selectedIndex = Math.max(0, visible.findIndex((v) => v.id === selectedId));
+  const selectedIndex = Math.max(
+    0,
+    visible.findIndex((v) => v.id === selectedId)
+  );
   const current = visible[selectedIndex] ?? visible[0];
 
   const select = (index: number) => {
@@ -184,7 +183,11 @@ export default function MapsScreen() {
   const others = useMemo(
     () =>
       visible
-        .filter((v) => v.id !== current?.id && (!me || (v.distanceFromMeM != null && v.distanceFromMeM < 25_000)))
+        .filter(
+          (v) =>
+            v.id !== current?.id &&
+            (!me || (v.distanceFromMeM != null && v.distanceFromMeM < 25_000))
+        )
         .slice(0, 15)
         .flatMap((v) => v.paths),
     [visible, current, me]
@@ -223,7 +226,13 @@ export default function MapsScreen() {
                 ? { center: current.anchor, zoom: 15 }
                 : null
         }
-        frameKey={mainRoute.length > 1 && current ? `route:${current.id}` : me ? `me:${me[0].toFixed(3)},${me[1].toFixed(3)}:${recenterNonce}` : 'none'}
+        frameKey={
+          mainRoute.length > 1 && current
+            ? `route:${current.id}`
+            : me
+              ? `me:${me[0].toFixed(3)},${me[1].toFixed(3)}:${recenterNonce}`
+              : 'none'
+        }
         padding={{ top: insets.top + 120, bottom: 250 }}
         styleKey={mapMode}
       />
@@ -231,18 +240,29 @@ export default function MapsScreen() {
       {current && current.kind === 'route' ? (
         <View
           style={{ top: insets.top + 116 }}
-          className="absolute left-4 z-10 flex-row items-center bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-md">
+          className="absolute left-4 z-10 flex-row items-center bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-md"
+        >
           <View className="w-2.5 h-2.5 rounded-full bg-[#FC4C02] mr-2" />
-          <AppText className="text-gray-900 text-xs font-bold">{current.surfacePercentPaved}% Paved</AppText>
+          <AppText className="text-gray-900 text-xs font-bold">
+            {current.surfacePercentPaved}% Paved
+          </AppText>
         </View>
       ) : null}
 
-      <View style={{ top: insets.top + 8 }} className="absolute left-0 right-0 gap-2 z-20" pointerEvents="box-none">
+      <View
+        style={{ top: insets.top + 8 }}
+        className="absolute left-0 right-0 gap-2 z-20"
+        pointerEvents="box-none"
+      >
         <MapSearchBar
           query={query}
           onQueryChange={setQuery}
           selectedSport={sport}
-          onSportPress={() => setSport((s) => (s === 'All' ? 'Run' : s === 'Run' ? 'Ride' : s === 'Ride' ? 'Walk' : 'All'))}
+          onSportPress={() =>
+            setSport((s) =>
+              s === 'All' ? 'Run' : s === 'Run' ? 'Ride' : s === 'Ride' ? 'Walk' : 'All'
+            )
+          }
           source={source}
           onToggleSaved={() => setSource((s) => (s === 'saved' ? 'routes' : 'saved'))}
         />
@@ -268,7 +288,8 @@ export default function MapsScreen() {
           </Text>
           <TouchableOpacity
             onPress={() => Linking.openSettings()}
-            className="bg-[#FC4C02] py-2.5 px-4 rounded-xl items-center active:opacity-90">
+            className="bg-[#FC4C02] py-2.5 px-4 rounded-xl items-center active:opacity-90"
+          >
             <Text className="text-xs font-bold text-white">Enable Location in Settings</Text>
           </TouchableOpacity>
         </View>
@@ -278,11 +299,13 @@ export default function MapsScreen() {
             <Text className="text-sm font-bold text-gray-900">Location Services Disabled</Text>
           </View>
           <Text className="text-xs text-gray-600 mb-3 leading-4">
-            GPS is turned off on your device. Turn on location services to discover routes and places near you.
+            GPS is turned off on your device. Turn on location services to discover routes and
+            places near you.
           </Text>
           <TouchableOpacity
             onPress={() => Linking.openSettings()}
-            className="bg-[#FC4C02] py-2.5 px-4 rounded-xl items-center active:opacity-90">
+            className="bg-[#FC4C02] py-2.5 px-4 rounded-xl items-center active:opacity-90"
+          >
             <Text className="text-xs font-bold text-white">Open Device Settings</Text>
           </TouchableOpacity>
         </View>
@@ -296,7 +319,8 @@ export default function MapsScreen() {
           </Text>
           <TouchableOpacity
             onPress={requestLocation}
-            className="bg-[#FC4C02] py-2.5 px-4 rounded-xl items-center active:opacity-90">
+            className="bg-[#FC4C02] py-2.5 px-4 rounded-xl items-center active:opacity-90"
+          >
             <Text className="text-xs font-bold text-white">Retry GPS Fix</Text>
           </TouchableOpacity>
         </View>
@@ -315,7 +339,9 @@ export default function MapsScreen() {
         selectedIndex={selectedIndex}
         loading={routeStatus === 'loading' || (locationLoading && source === 'nearby')}
         source={source}
-        hasActiveFilter={Boolean(query.trim() || lengthFilter || difficultyFilter || sport !== 'All')}
+        hasActiveFilter={Boolean(
+          query.trim() || lengthFilter || difficultyFilter || sport !== 'All'
+        )}
         locationStatus={locationStatus}
         nearbyStatus={nearbyStatus}
         nearbyError={nearbyError}
@@ -337,7 +363,11 @@ export default function MapsScreen() {
         onToggleSave={toggleSave}
       />
 
-      <BottomSheet visible={styleModalVisible} onClose={() => setStyleModalVisible(false)} title="Map style">
+      <BottomSheet
+        visible={styleModalVisible}
+        onClose={() => setStyleModalVisible(false)}
+        title="Map style"
+      >
         {MAP_STYLE_OPTIONS.map(({ id, title, description: desc, icon }) => (
           <OptionRow
             key={id}

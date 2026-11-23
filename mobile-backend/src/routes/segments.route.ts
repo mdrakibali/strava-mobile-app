@@ -105,7 +105,10 @@ segmentsRouter.post('/', requireAuth, async (c) => {
     const body = await c.req.json();
 
     if (!body.name || !body.polylinePoints || body.polylinePoints.length < 2) {
-      return c.json({ error: 'Segment name and polylinePoints (min 2 coordinates) are required' }, 400);
+      return c.json(
+        { error: 'Segment name and polylinePoints (min 2 coordinates) are required' },
+        400
+      );
     }
 
     const db = getDb(c);

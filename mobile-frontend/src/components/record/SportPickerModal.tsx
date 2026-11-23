@@ -49,7 +49,9 @@ export const SportPickerModal: React.FC<SportPickerModalProps> = ({
           </Text>
           <View className="flex-row justify-between mb-6">
             {TOP_SPORTS.map((sport) => {
-              const isSelected = selectedSport === sport.id && (sport.label === 'Run' ? selectedSport === 'Run' : true);
+              const isSelected =
+                selectedSport === sport.id &&
+                (sport.label === 'Run' ? selectedSport === 'Run' : true);
               return (
                 <TouchableOpacity
                   key={sport.label}
@@ -57,13 +59,13 @@ export const SportPickerModal: React.FC<SportPickerModalProps> = ({
                     onSelectSport(sport.id);
                     onClose();
                   }}
-                  className="items-center w-16">
+                  className="items-center w-16"
+                >
                   <View
                     className={`w-14 h-14 rounded-full items-center justify-center border-2 mb-1.5 ${
-                      isSelected
-                        ? 'bg-orange-50 border-[#FC4C02]'
-                        : 'bg-gray-50 border-gray-200'
-                    }`}>
+                      isSelected ? 'bg-orange-50 border-[#FC4C02]' : 'bg-gray-50 border-gray-200'
+                    }`}
+                  >
                     <Ionicons
                       name={sport.icon}
                       size={24}
@@ -73,7 +75,8 @@ export const SportPickerModal: React.FC<SportPickerModalProps> = ({
                   <Text
                     className={`text-xs font-bold ${
                       isSelected ? 'text-[#FC4C02]' : 'text-gray-700'
-                    }`}>
+                    }`}
+                  >
                     {sport.label}
                   </Text>
                 </TouchableOpacity>
@@ -93,7 +96,8 @@ export const SportPickerModal: React.FC<SportPickerModalProps> = ({
                   onSelectSport(sport.id);
                   onClose();
                 }}
-                className="flex-row items-center py-2.5 px-3 rounded-xl bg-gray-50 border border-gray-100">
+                className="flex-row items-center py-2.5 px-3 rounded-xl bg-gray-50 border border-gray-100"
+              >
                 <Ionicons name={sport.icon} size={20} color="#374151" />
                 <Text className="text-sm font-bold text-gray-800 ml-3">{sport.label}</Text>
               </TouchableOpacity>
@@ -104,4 +108,3 @@ export const SportPickerModal: React.FC<SportPickerModalProps> = ({
     </Modal>
   );
 };
-

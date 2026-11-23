@@ -2,13 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { RoutePreview } from '../map/RoutePreview';
-import {
-  MetricRow,
-  MetricTile,
-  SectionTitle,
-  SelectField,
-  TextField,
-} from '../../design';
+import { MetricRow, MetricTile, SectionTitle, SelectField, TextField } from '../../design';
 import { VISIBILITY_LABEL } from './FeedCard';
 import { formatDuration, formatElevation, kmValue } from '../../lib/format';
 import { SportConfig } from '../../lib/sports';
@@ -110,7 +104,8 @@ export function SaveActivityForm({
             'Photo and video upload will be enabled in the upcoming cloud storage release.'
           )
         }
-        className="mt-4 border-2 border-dashed border-[#FC4C02] rounded-2xl py-5 items-center justify-center bg-orange-50/50 active:bg-orange-100/50">
+        className="mt-4 border-2 border-dashed border-[#FC4C02] rounded-2xl py-5 items-center justify-center bg-orange-50/50 active:bg-orange-100/50"
+      >
         <Ionicons name="image-outline" size={28} color="#FC4C02" />
         <Text className="text-sm font-bold text-[#FC4C02] mt-1">Add Photos/Videos</Text>
       </Pressable>
@@ -131,10 +126,10 @@ export function SaveActivityForm({
       <Pressable
         onPress={onDiscard}
         disabled={saving}
-        className="self-center mt-7 py-3 px-6 rounded-full bg-red-50 border border-red-200 active:bg-red-100">
+        className="self-center mt-7 py-3 px-6 rounded-full bg-red-50 border border-red-200 active:bg-red-100"
+      >
         <Text className="text-red-600 font-bold text-sm">Discard Activity</Text>
       </Pressable>
     </>
   );
 }
-

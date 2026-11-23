@@ -1,6 +1,5 @@
 import * as Network from 'expo-network';
 import { AppState } from 'react-native';
-import { fromFeedItem } from '../lib/activityView';
 import { queryClient } from '../lib/queryClient';
 import { activityKeys } from '../hooks/useActivities';
 import { ApiError, api, getAuthToken } from '../services/api';
@@ -44,7 +43,13 @@ class SyncWorker {
   private again = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private athleteId: string | null = null;
-  private viewer: { id: string; displayName: string; username?: string; avatarUrl: string | null; city: string | null } | null = null;
+  private viewer: {
+    id: string;
+    displayName: string;
+    username?: string;
+    avatarUrl: string | null;
+    city: string | null;
+  } | null = null;
   private pending: PendingUpload[] = [];
   private listeners = new Set<Listener>();
   private lastSynced: { sessionId: string; activityId: string | null } | null = null;
@@ -74,7 +79,15 @@ class SyncWorker {
   }
 
   /** Name and photo used when a just-published activity is placed on the feed before the next refetch. */
-  setViewer(viewer: { id: string; displayName: string; username?: string; avatarUrl: string | null; city: string | null } | null) {
+  setViewer(
+    viewer: {
+      id: string;
+      displayName: string;
+      username?: string;
+      avatarUrl: string | null;
+      city: string | null;
+    } | null
+  ) {
     this.viewer = viewer;
   }
 
@@ -119,7 +132,10 @@ class SyncWorker {
   }
 
   /** Wait (bounded) for a specific session to be confirmed by the server. */
-  async waitFor(sessionId: string, timeoutMs: number): Promise<{ synced: boolean; activityId: string | null }> {
+  async waitFor(
+    sessionId: string,
+    timeoutMs: number
+  ): Promise<{ synced: boolean; activityId: string | null }> {
     const deadline = Date.now() + timeoutMs;
     await Promise.race([this.kick(true), new Promise((r) => setTimeout(r, timeoutMs))]);
     while (Date.now() < deadline) {
@@ -165,7 +181,8 @@ class SyncWorker {
   }
 
   private async handleFailure(s: SessionRow, e: unknown) {
-    const err = e instanceof ApiError ? e : new ApiError((e as any)?.message ?? 'Upload failed', 0, 'client');
+    const err =
+      e instanceof ApiError ? e : new ApiError((e as any)?.message ?? 'Upload failed', 0, 'client');
     if (err.status === 401) {
       // Keep it queued: it uploads after the athlete signs in again.
       await sessionsRepo.updateSync(s.id, { lastError: 'Sign in again to upload.' });
@@ -188,11 +205,16 @@ class SyncWorker {
       throw new ApiError('This recording is incomplete and can’t be uploaded.', 422, 'incomplete');
     }
     const startTime = new Date(s.startedAt).toISOString();
-    const wireSport = (save.sportType === 'Workout' || save.sportType === 'Yoga') ? 'Run' : save.sportType;
+    const wireSport =
+      save.sportType === 'Workout' || save.sportType === 'Yoga' ? 'Run' : save.sportType;
 
     if (!s.uploadStarted) {
       try {
-        const res = await api.uploads.start({ clientActivityId: s.id, sportType: wireSport, startTime });
+        const res = await api.uploads.start({
+          clientActivityId: s.id,
+          sportType: wireSport,
+          startTime,
+        });
         await batchesRepo.reset(s.id);
         await batchesRepo.ack(s.id, res.upload.receivedSeqs);
         if (res.upload.status === 'COMPLETED') {
@@ -211,7 +233,11 @@ class SyncWorker {
     const acked = await batchesRepo.acked(s.id);
     for (let seq = 0; seq < batchCount; seq++) {
       if (acked.has(seq)) continue;
-      const pts = await pointsRepo.range(s.id, seq * UPLOAD_BATCH_SIZE, (seq + 1) * UPLOAD_BATCH_SIZE);
+      const pts = await pointsRepo.range(
+        s.id,
+        seq * UPLOAD_BATCH_SIZE,
+        (seq + 1) * UPLOAD_BATCH_SIZE
+      );
       try {
         await api.uploads.putBatch(s.id, seq, { points: pts.map(toWire) });
       } catch (e) {
@@ -248,9 +274,16 @@ class SyncWorker {
   /** Transitional path for a backend without /activities/uploads (still idempotent once deployed). */
   private async legacyUpload(s: SessionRow) {
     const save = s.save!;
-    const wireSport = (save.sportType === 'Workout' || save.sportType === 'Yoga') ? 'Run' : save.sportType;
+    const wireSport =
+      save.sportType === 'Workout' || save.sportType === 'Yoga' ? 'Run' : save.sportType;
     const points = await pointsRepo.range(s.id);
-    const sum = summarizeTrack({ sport: wireSport, points, startedAt: s.startedAt!, finishedAt: s.finishedAt, pauses: s.pauses });
+    const sum = summarizeTrack({
+      sport: wireSport,
+      points,
+      startedAt: s.startedAt!,
+      finishedAt: s.finishedAt,
+      pauses: s.pauses,
+    });
     const kept = acceptedPoints(wireSport, points);
     const drawn = routePoints(wireSport, points);
     const track = sum.distanceM >= 10 && drawn.length >= 2 ? drawn : [];
@@ -267,7 +300,13 @@ class SyncWorker {
       elevationGainMeters: sum.elevGainM ?? 0,
       maxSpeedMps: sum.maxSpeedMps ?? undefined,
       calories: estimateCalories(save.sportType, sum.distanceM, sum.movingTimeS) ?? undefined,
-      rawPolyline: track.map((p) => ({ latitude: p.lat, longitude: p.lng, altitude: p.alt, timestamp: p.t, speed: p.speed })),
+      rawPolyline: track.map((p) => ({
+        latitude: p.lat,
+        longitude: p.lng,
+        altitude: p.alt,
+        timestamp: p.t,
+        speed: p.speed,
+      })),
       splits: sum.splits.map((sp) => ({
         splitNumber: sp.index,
         distanceKm: Math.round(sp.distanceM) / 1000,
@@ -280,13 +319,21 @@ class SyncWorker {
             : null,
         elevationDeltaMeters: sp.elevDiffM,
       })),
-      elevationProfile: sum.elevGainM == null ? [] : kept.filter((p) => p.alt != null).map((p) => Math.round(p.alt!)),
+      elevationProfile:
+        sum.elevGainM == null
+          ? []
+          : kept.filter((p) => p.alt != null).map((p) => Math.round(p.alt!)),
     });
     return this.markSynced(s, res?.activity?.id ?? null, res?.activity);
   }
 
   private async markSynced(s: SessionRow, activityId: string | null, row: any) {
-    await sessionsRepo.updateSync(s.id, { syncState: 'synced', serverActivityId: activityId, lastError: null, nextAttemptAt: null });
+    await sessionsRepo.updateSync(s.id, {
+      syncState: 'synced',
+      serverActivityId: activityId,
+      lastError: null,
+      nextAttemptAt: null,
+    });
     this.lastSynced = { sessionId: s.id, activityId };
     if (row?.id && this.viewer) {
       queryClient.invalidateQueries({ queryKey: activityKeys.all });

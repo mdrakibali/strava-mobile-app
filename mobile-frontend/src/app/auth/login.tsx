@@ -104,13 +104,14 @@ export default function LoginScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}>
+        style={{ flex: 1 }}
+      >
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
           showsVerticalScrollIndicator={false}
           style={{ flex: 1 }}
-          className="px-6 py-4">
-          
+          className="px-6 py-4"
+        >
           <AuthHeader />
 
           {/* Mode Switcher Tabs */}
@@ -119,8 +120,11 @@ export default function LoginScreen() {
               onPress={() => setAuthMode('login')}
               className={`flex-1 py-2.5 rounded-xl items-center ${
                 authMode === 'login' ? 'bg-white shadow-xs' : ''
-              }`}>
-              <Text className={`text-xs font-black ${authMode === 'login' ? 'text-gray-900' : 'text-gray-500'}`}>
+              }`}
+            >
+              <Text
+                className={`text-xs font-black ${authMode === 'login' ? 'text-gray-900' : 'text-gray-500'}`}
+              >
                 Log In
               </Text>
             </TouchableOpacity>
@@ -129,8 +133,11 @@ export default function LoginScreen() {
               onPress={() => setAuthMode('register')}
               className={`flex-1 py-2.5 rounded-xl items-center ${
                 authMode === 'register' ? 'bg-white shadow-xs' : ''
-              }`}>
-              <Text className={`text-xs font-black ${authMode === 'register' ? 'text-gray-900' : 'text-gray-500'}`}>
+              }`}
+            >
+              <Text
+                className={`text-xs font-black ${authMode === 'register' ? 'text-gray-900' : 'text-gray-500'}`}
+              >
                 Create Account
               </Text>
             </TouchableOpacity>
@@ -153,7 +160,9 @@ export default function LoginScreen() {
                 </View>
 
                 <View>
-                  <Text className="text-xs font-bold text-gray-700 mb-1.5">Username (Optional)</Text>
+                  <Text className="text-xs font-bold text-gray-700 mb-1.5">
+                    Username (Optional)
+                  </Text>
                   <TextInput
                     className="w-full h-12 bg-gray-50 border border-gray-200 rounded-2xl px-4 text-sm text-gray-900"
                     placeholder="e.g. rakib_runner"
@@ -196,7 +205,8 @@ export default function LoginScreen() {
             disabled={isLoading}
             onPress={handleEmailAuth}
             activeOpacity={0.8}
-            className="w-full py-4 bg-[#FC4C02] rounded-2xl items-center justify-center shadow-md active:bg-[#E03A00] mb-3">
+            className="w-full py-4 bg-[#FC4C02] rounded-2xl items-center justify-center shadow-md active:bg-[#E03A00] mb-3"
+          >
             <Text className="text-sm font-black text-white tracking-wide">
               {authMode === 'login' ? 'Log in' : 'Create account'}
             </Text>
@@ -230,9 +240,7 @@ export default function LoginScreen() {
                 Don&apos;t have an athlete account?{' '}
               </Text>
               <TouchableOpacity onPress={() => router.replace('/auth/register')}>
-                <Text className="text-xs font-bold text-[#FC4C02]">
-                  Create Account
-                </Text>
+                <Text className="text-xs font-bold text-[#FC4C02]">Create Account</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -4,7 +4,18 @@ import React, { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
-import { AppBar, AppText, Avatar, Button, color, EmptyState, ErrorState, LoadingState, SectionTitle, space } from '../../design';
+import {
+  AppBar,
+  AppText,
+  Avatar,
+  Button,
+  color,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  SectionTitle,
+  space,
+} from '../../design';
 import { groupStore, useEvent } from '../../lib/groupStore';
 import { kmValue } from '../../lib/format';
 import { sportConfig } from '../../lib/sports';
@@ -48,7 +59,8 @@ export default function EventDetailScreen() {
           }
           setStatus('ready');
         },
-        (e: any) => !cancelled && setStatus(/not found/i.test(String(e?.message)) ? 'notFound' : 'error')
+        (e: any) =>
+          !cancelled && setStatus(/not found/i.test(String(e?.message)) ? 'notFound' : 'error')
       );
       return () => {
         cancelled = true;
@@ -58,7 +70,10 @@ export default function EventDetailScreen() {
 
   const liveEvent = useEvent(id ?? '', event);
   const currentEvent = liveEvent && event ? { ...event, ...liveEvent } : (liveEvent ?? event);
-  const mine: Rsvp = (liveEvent?.rsvpStatus as Rsvp) ?? (attendees.find((a) => a.athleteId === currentUser.id)?.status as Rsvp) ?? null;
+  const mine: Rsvp =
+    (liveEvent?.rsvpStatus as Rsvp) ??
+    (attendees.find((a) => a.athleteId === currentUser.id)?.status as Rsvp) ??
+    null;
   const going = attendees.filter((a) => a.status === 'GOING');
 
   const setRsvp = async (next: 'GOING' | 'MAYBE' | 'DECLINED') => {
@@ -68,7 +83,15 @@ export default function EventDetailScreen() {
       setAttendees((prev) => {
         const others = prev.filter((a) => a.athleteId !== currentUser.id);
         return updated.rsvpStatus
-          ? [...others, { athleteId: currentUser.id, status: updated.rsvpStatus, displayName: currentUser.displayName, avatarUrl: currentUser.avatarUrl }]
+          ? [
+              ...others,
+              {
+                athleteId: currentUser.id,
+                status: updated.rsvpStatus,
+                displayName: currentUser.displayName,
+                avatarUrl: currentUser.avatarUrl,
+              },
+            ]
           : others;
       });
     } catch (e: any) {
@@ -86,9 +109,19 @@ export default function EventDetailScreen() {
           {status === 'loading' ? (
             <LoadingState />
           ) : status === 'notFound' ? (
-            <EmptyState icon="calendar-outline" title="Event not found" primary={{ label: 'Go back', onPress: () => router.back() }} />
+            <EmptyState
+              icon="calendar-outline"
+              title="Event not found"
+              primary={{ label: 'Go back', onPress: () => router.back() }}
+            />
           ) : (
-            <ErrorState message="We couldn’t load this event." onRetry={() => { setStatus('loading'); setReloadKey((k) => k + 1); }} />
+            <ErrorState
+              message="We couldn’t load this event."
+              onRetry={() => {
+                setStatus('loading');
+                setReloadKey((k) => k + 1);
+              }}
+            />
           )}
         </View>
       </SafeAreaView>
@@ -106,12 +139,15 @@ export default function EventDetailScreen() {
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 16, paddingBottom: 64, flexGrow: 1 }}
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+        >
           <AppText variant="label" color="brandText" style={{ fontWeight: '700' }}>
-            {when.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} ·{' '}
-            {when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+            {when.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}{' '}
+            · {when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
           </AppText>
-          <AppText variant="title1" style={{ marginTop: space.xs }}>{event.title}</AppText>
+          <AppText variant="title1" style={{ marginTop: space.xs }}>
+            {event.title}
+          </AppText>
           <View className="flex-row items-center mt-2">
             <Ionicons name={sport.icon} size={16} color={color.inkSecondary} />
             <AppText variant="label" color="inkSecondary" style={{ marginLeft: space.xs, flex: 1 }}>
@@ -123,15 +159,39 @@ export default function EventDetailScreen() {
 
           <View className="mt-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
             <Info icon="location-outline" label="Meeting point" value={event.meetingPoint} />
-            {distance ? <Info icon="resize-outline" label="Distance" value={`${kmValue(distance)} km`} /> : null}
-            {event.paceDescription ? <Info icon="speedometer-outline" label="Pace / level" value={event.paceDescription} /> : null}
+            {distance ? (
+              <Info icon="resize-outline" label="Distance" value={`${kmValue(distance)} km`} />
+            ) : null}
+            {event.paceDescription ? (
+              <Info icon="speedometer-outline" label="Pace / level" value={event.paceDescription} />
+            ) : null}
             <Info icon="people-outline" label="Going" value={String(going.length)} />
           </View>
 
           <View className="flex-row items-center mt-4">
-            <Button label={mine === 'GOING' ? 'Going ✓' : 'Going'} variant={mine === 'GOING' ? 'secondary' : 'primary'} loading={busy} style={{ flex: 1 }} onPress={() => setRsvp('GOING')} />
-            <Button label={mine === 'MAYBE' ? 'Maybe ✓' : 'Maybe'} variant="outline" disabled={busy} style={{ flex: 1, marginLeft: space.sm }} onPress={() => setRsvp('MAYBE')} />
-            {mine ? <Button label="Can’t go" variant="ghost" disabled={busy} style={{ marginLeft: space.sm }} onPress={() => setRsvp('DECLINED')} /> : null}
+            <Button
+              label={mine === 'GOING' ? 'Going ✓' : 'Going'}
+              variant={mine === 'GOING' ? 'secondary' : 'primary'}
+              loading={busy}
+              style={{ flex: 1 }}
+              onPress={() => setRsvp('GOING')}
+            />
+            <Button
+              label={mine === 'MAYBE' ? 'Maybe ✓' : 'Maybe'}
+              variant="outline"
+              disabled={busy}
+              style={{ flex: 1, marginLeft: space.sm }}
+              onPress={() => setRsvp('MAYBE')}
+            />
+            {mine ? (
+              <Button
+                label="Can’t go"
+                variant="ghost"
+                disabled={busy}
+                style={{ marginLeft: space.sm }}
+                onPress={() => setRsvp('DECLINED')}
+              />
+            ) : null}
           </View>
 
           {currentUser?.id === event.creator?.id ? (
@@ -140,29 +200,35 @@ export default function EventDetailScreen() {
                 label="Edit Event"
                 variant="outline"
                 style={{ flex: 1, marginRight: space.sm }}
-                onPress={() => router.push({ pathname: '/event/create', params: { editId: event.id } })}
+                onPress={() =>
+                  router.push({ pathname: '/event/create', params: { editId: event.id } })
+                }
               />
               <Button
                 label="Delete Event"
                 variant="danger"
                 style={{ flex: 1 }}
                 onPress={() =>
-                  Alert.alert('Delete this event?', 'Attendees will be notified. This cannot be undone.', [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Delete',
-                      style: 'destructive',
-                      onPress: async () => {
-                        try {
-                          await api.events.remove(event.id);
-                          groupStore.remove(event.id);
-                          router.replace('/(tabs)/groups');
-                        } catch (e: any) {
-                          Alert.alert('Couldn’t delete event', e?.message ?? 'Please try again.');
-                        }
+                  Alert.alert(
+                    'Delete this event?',
+                    'Attendees will be notified. This cannot be undone.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Delete',
+                        style: 'destructive',
+                        onPress: async () => {
+                          try {
+                            await api.events.remove(event.id);
+                            groupStore.remove(event.id);
+                            router.replace('/(tabs)/groups');
+                          } catch (e: any) {
+                            Alert.alert('Couldn’t delete event', e?.message ?? 'Please try again.');
+                          }
+                        },
                       },
-                    },
-                  ])
+                    ]
+                  )
                 }
               />
             </View>
@@ -170,17 +236,26 @@ export default function EventDetailScreen() {
 
           <SectionTitle title={`Attendees (${attendees.length})`} style={{ marginTop: space.xl }} />
           {attendees.length === 0 ? (
-            <AppText variant="body" color="inkSecondary">No one has responded yet.</AppText>
+            <AppText variant="body" color="inkSecondary">
+              No one has responded yet.
+            </AppText>
           ) : (
             attendees.map((a) => (
               <Pressable
                 key={a.athleteId}
-                onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: a.athleteId } })}
+                onPress={() =>
+                  router.push({ pathname: '/athlete/[id]', params: { id: a.athleteId } })
+                }
                 className="flex-row items-center py-2"
-                accessibilityRole="button">
+                accessibilityRole="button"
+              >
                 <Avatar uri={a.avatarUrl} name={a.displayName} size={40} />
-                <AppText variant="bodyStrong" style={{ flex: 1, marginLeft: space.md }}>{a.displayName}</AppText>
-                <AppText variant="label" color="inkSecondary">{a.status === 'GOING' ? 'Going' : 'Maybe'}</AppText>
+                <AppText variant="bodyStrong" style={{ flex: 1, marginLeft: space.md }}>
+                  {a.displayName}
+                </AppText>
+                <AppText variant="label" color="inkSecondary">
+                  {a.status === 'GOING' ? 'Going' : 'Maybe'}
+                </AppText>
               </Pressable>
             ))
           )}
@@ -190,11 +265,17 @@ export default function EventDetailScreen() {
   );
 }
 
-const Info: React.FC<{ icon: keyof typeof Ionicons.glyphMap; label: string; value: string }> = ({ icon, label, value }) => (
+const Info: React.FC<{ icon: keyof typeof Ionicons.glyphMap; label: string; value: string }> = ({
+  icon,
+  label,
+  value,
+}) => (
   <View className="flex-row items-center py-2">
     <Ionicons name={icon} size={20} color={color.inkSecondary} />
     <View style={{ marginLeft: space.md, flex: 1 }}>
-      <AppText variant="label" color="inkSecondary">{label}</AppText>
+      <AppText variant="label" color="inkSecondary">
+        {label}
+      </AppText>
       <AppText variant="bodyStrong">{value}</AppText>
     </View>
   </View>

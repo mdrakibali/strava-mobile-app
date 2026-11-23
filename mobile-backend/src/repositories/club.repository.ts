@@ -15,7 +15,9 @@ export class ClubRepository {
 
     if (query && query.trim()) {
       const term = `%${query.trim()}%`;
-      conditions.push(or(ilike(clubs.name, term), ilike(clubs.city, term), ilike(clubs.sportType, term)));
+      conditions.push(
+        or(ilike(clubs.name, term), ilike(clubs.city, term), ilike(clubs.sportType, term))
+      );
     }
 
     if (clubIds) {
@@ -94,10 +96,7 @@ export class ClubRepository {
   }
 
   async addMember(clubId: string, athleteId: string, role = 'MEMBER') {
-    await this.db
-      .insert(clubMembers)
-      .values({ clubId, athleteId, role })
-      .onConflictDoNothing();
+    await this.db.insert(clubMembers).values({ clubId, athleteId, role }).onConflictDoNothing();
   }
 
   async removeMember(clubId: string, athleteId: string) {

@@ -177,7 +177,14 @@ export const sessionsRepo = {
 
   async saveLifecycle(
     id: string,
-    l: { status: LifecycleStatus; startedAt: number | null; finishedAt: number | null; pauses: PauseInterval[]; pauseReason: PauseReason | null; segment: number },
+    l: {
+      status: LifecycleStatus;
+      startedAt: number | null;
+      finishedAt: number | null;
+      pauses: PauseInterval[];
+      pauseReason: PauseReason | null;
+      segment: number;
+    },
     event?: string
   ) {
     const db = await getDb();
@@ -194,7 +201,13 @@ export const sessionsRepo = {
         now,
         id
       );
-      if (event) await tx.runAsync('INSERT INTO session_events (session_id, at, type) VALUES (?, ?, ?)', id, now, event);
+      if (event)
+        await tx.runAsync(
+          'INSERT INTO session_events (session_id, at, type) VALUES (?, ?, ?)',
+          id,
+          now,
+          event
+        );
     });
   },
 
@@ -211,7 +224,17 @@ export const sessionsRepo = {
 
   async updateSync(
     id: string,
-    patch: Partial<Pick<SessionRow, 'syncState' | 'uploadStarted' | 'serverActivityId' | 'attempts' | 'nextAttemptAt' | 'lastError'>>
+    patch: Partial<
+      Pick<
+        SessionRow,
+        | 'syncState'
+        | 'uploadStarted'
+        | 'serverActivityId'
+        | 'attempts'
+        | 'nextAttemptAt'
+        | 'lastError'
+      >
+    >
   ) {
     const cols: string[] = [];
     const vals: (string | number | null)[] = [];
@@ -229,7 +252,12 @@ export const sessionsRepo = {
     }
     if (!cols.length) return;
     const db = await getDb();
-    await db.runAsync(`UPDATE sessions SET ${cols.join(', ')}, updated_at = ? WHERE id = ?`, ...vals, Date.now(), id);
+    await db.runAsync(
+      `UPDATE sessions SET ${cols.join(', ')}, updated_at = ? WHERE id = ?`,
+      ...vals,
+      Date.now(),
+      id
+    );
   },
 
   /** Deletes the session and (cascade) all of its points. Only for discards and old synced data. */
@@ -265,7 +293,8 @@ export const pointsRepo = {
       );
       let lastFix: number | null = null;
       for (const p of points) lastFix = Math.max(lastFix ?? 0, p.t);
-      if (lastFix != null) await tx.runAsync('UPDATE sessions SET last_fix_at = ? WHERE id = ?', lastFix, sessionId);
+      if (lastFix != null)
+        await tx.runAsync('UPDATE sessions SET last_fix_at = ? WHERE id = ?', lastFix, sessionId);
       if (!s || s.status !== 'recording') return;
       let idx = s.point_count;
       for (const p of points) {
@@ -287,7 +316,8 @@ export const pointsRepo = {
           stored.push({ ...p, seg: s.segment });
         }
       }
-      if (idx !== s.point_count) await tx.runAsync('UPDATE sessions SET point_count = ? WHERE id = ?', idx, sessionId);
+      if (idx !== s.point_count)
+        await tx.runAsync('UPDATE sessions SET point_count = ? WHERE id = ?', idx, sessionId);
     });
     return stored;
   },
@@ -300,14 +330,26 @@ export const pointsRepo = {
       from,
       to
     );
-    return rows.map((r) => ({ t: r.t, lat: r.lat, lng: r.lng, acc: r.acc, alt: r.alt, altAcc: r.alt_acc, speed: r.speed, seg: r.seg }));
+    return rows.map((r) => ({
+      t: r.t,
+      lat: r.lat,
+      lng: r.lng,
+      acc: r.acc,
+      alt: r.alt,
+      altAcc: r.alt_acc,
+      speed: r.speed,
+      seg: r.seg,
+    }));
   },
 };
 
 export const batchesRepo = {
   async acked(sessionId: string): Promise<Set<number>> {
     const db = await getDb();
-    const rows = await db.getAllAsync<{ seq: number }>('SELECT seq FROM acked_batches WHERE session_id = ?', sessionId);
+    const rows = await db.getAllAsync<{ seq: number }>(
+      'SELECT seq FROM acked_batches WHERE session_id = ?',
+      sessionId
+    );
     return new Set(rows.map((r) => r.seq));
   },
   async ack(sessionId: string, seqs: number[]) {
@@ -316,12 +358,22 @@ export const batchesRepo = {
     const now = Date.now();
     await db.withExclusiveTransactionAsync(async (tx) => {
       for (const seq of seqs)
-        await tx.runAsync('INSERT OR IGNORE INTO acked_batches (session_id, seq, acked_at) VALUES (?, ?, ?)', sessionId, seq, now);
+        await tx.runAsync(
+          'INSERT OR IGNORE INTO acked_batches (session_id, seq, acked_at) VALUES (?, ?, ?)',
+          sessionId,
+          seq,
+          now
+        );
     });
   },
   async unack(sessionId: string, seqs: number[]) {
     const db = await getDb();
-    for (const seq of seqs) await db.runAsync('DELETE FROM acked_batches WHERE session_id = ? AND seq = ?', sessionId, seq);
+    for (const seq of seqs)
+      await db.runAsync(
+        'DELETE FROM acked_batches WHERE session_id = ? AND seq = ?',
+        sessionId,
+        seq
+      );
   },
   async reset(sessionId: string) {
     const db = await getDb();

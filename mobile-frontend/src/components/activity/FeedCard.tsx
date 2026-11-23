@@ -49,8 +49,10 @@ export const FeedCard = memo(function FeedCard({
   const { mutate: deleteActivity } = useDeleteActivity();
 
   const open = () => router.push({ pathname: '/activity/[id]', params: { id: activity.id } });
-  const openKudos = () => router.push({ pathname: '/activity/kudos/[id]', params: { id: activity.id } });
-  const openComments = () => router.push({ pathname: '/activity/[id]', params: { id: activity.id, focus: 'comments' } });
+  const openKudos = () =>
+    router.push({ pathname: '/activity/kudos/[id]', params: { id: activity.id } });
+  const openComments = () =>
+    router.push({ pathname: '/activity/[id]', params: { id: activity.id, focus: 'comments' } });
 
   const onKudos = () => {
     toggleKudos({
@@ -78,20 +80,36 @@ export const FeedCard = memo(function FeedCard({
     isOwn
       ? Alert.alert(activity.title, 'Activity options', [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Edit Activity', onPress: () => router.push({ pathname: '/activity/edit/[id]', params: { id: activity.id } }) },
+          {
+            text: 'Edit Activity',
+            onPress: () =>
+              router.push({ pathname: '/activity/edit/[id]', params: { id: activity.id } }),
+          },
           { text: 'Delete Activity', style: 'destructive', onPress: confirmDelete },
           { text: 'Share', onPress: () => shareActivity(activity) },
         ])
       : Alert.alert(activity.title, 'Activity options', [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Share', onPress: () => shareActivity(activity) },
-          { text: 'Report', style: 'destructive', onPress: () => router.push({ pathname: '/settings/report', params: { targetType: 'activity', targetId: activity.id } }) },
+          {
+            text: 'Report',
+            style: 'destructive',
+            onPress: () =>
+              router.push({
+                pathname: '/settings/report',
+                params: { targetType: 'activity', targetId: activity.id },
+              }),
+          },
         ]);
 
   const speedOrPace =
     sport.primaryMetric === 'speed'
       ? { label: 'Speed', value: speedValue(avgSpeedOf(activity)), unit: 'km/h' }
-      : { label: 'Pace', value: paceValue(activity.distanceMeters, activity.movingTimeSeconds), unit: '/km' };
+      : {
+          label: 'Pace',
+          value: paceValue(activity.distanceMeters, activity.movingTimeSeconds),
+          unit: '/km',
+        };
 
   const visibility = VISIBILITY_LABEL[activity.visibility] ?? VISIBILITY_LABEL.PUBLIC;
   const location = activity.athlete.city;
@@ -101,11 +119,18 @@ export const FeedCard = memo(function FeedCard({
       {showAthlete ? (
         <View className="flex-row items-center px-4 pt-4">
           <Pressable
-            onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: activity.athlete.id } })}
+            onPress={() =>
+              router.push({ pathname: '/athlete/[id]', params: { id: activity.athlete.id } })
+            }
             accessibilityRole="button"
             accessibilityLabel={`${activity.athlete.displayName}'s profile`}
-            className="flex-row items-center flex-1">
-            <Avatar uri={activity.athlete.avatarUrl} name={activity.athlete.displayName} size={40} />
+            className="flex-row items-center flex-1"
+          >
+            <Avatar
+              uri={activity.athlete.avatarUrl}
+              name={activity.athlete.displayName}
+              size={40}
+            />
             <View className="flex-1 ml-3">
               <View className="flex-row items-center">
                 <Text className="text-sm font-bold text-gray-900" numberOfLines={1}>
@@ -126,7 +151,8 @@ export const FeedCard = memo(function FeedCard({
             onPress={onOptions}
             accessibilityRole="button"
             accessibilityLabel="Activity options"
-            className="p-1">
+            className="p-1"
+          >
             <Ionicons name="ellipsis-horizontal" size={20} color="#4B5563" />
           </Pressable>
         </View>
@@ -139,7 +165,11 @@ export const FeedCard = memo(function FeedCard({
         </View>
       )}
 
-      <Pressable onPress={open} accessibilityRole="button" accessibilityLabel={`Open ${activity.title}`}>
+      <Pressable
+        onPress={open}
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${activity.title}`}
+      >
         <View className="px-4">
           <Text className="text-lg font-bold text-gray-900 mt-2.5" numberOfLines={2}>
             {activity.title}
@@ -147,9 +177,7 @@ export const FeedCard = memo(function FeedCard({
           {isOwn && activity.visibility !== 'PUBLIC' ? (
             <View className="flex-row items-center mt-1">
               <Ionicons name={visibility.icon} size={13} color="#4B5563" />
-              <Text className="ml-1 text-xs text-gray-600">
-                {visibility.label}
-              </Text>
+              <Text className="ml-1 text-xs text-gray-600">{visibility.label}</Text>
             </View>
           ) : null}
           {activity.description ? (
@@ -161,7 +189,9 @@ export const FeedCard = memo(function FeedCard({
             <View className="flex-1">
               <Text className="text-xs text-gray-500 font-medium">Distance</Text>
               <View className="flex-row items-baseline mt-0.5">
-                <Text className="text-xl font-bold text-gray-900">{kmValue(activity.distanceMeters)}</Text>
+                <Text className="text-xl font-bold text-gray-900">
+                  {kmValue(activity.distanceMeters)}
+                </Text>
                 <Text className="text-xs text-gray-500 ml-1 font-semibold">km</Text>
               </View>
             </View>
@@ -170,14 +200,18 @@ export const FeedCard = memo(function FeedCard({
               <View className="flex-row items-baseline mt-0.5">
                 <Text className="text-xl font-bold text-gray-900">{speedOrPace.value}</Text>
                 {speedOrPace.value !== '–' && speedOrPace.unit ? (
-                  <Text className="text-xs text-gray-500 ml-1 font-semibold">{speedOrPace.unit}</Text>
+                  <Text className="text-xs text-gray-500 ml-1 font-semibold">
+                    {speedOrPace.unit}
+                  </Text>
                 ) : null}
               </View>
             </View>
             <View className="flex-1">
               <Text className="text-xs text-gray-500 font-medium">Time</Text>
               <View className="flex-row items-baseline mt-0.5">
-                <Text className="text-xl font-bold text-gray-900">{formatDuration(activity.movingTimeSeconds)}</Text>
+                <Text className="text-xl font-bold text-gray-900">
+                  {formatDuration(activity.movingTimeSeconds)}
+                </Text>
               </View>
             </View>
           </View>
@@ -186,9 +220,18 @@ export const FeedCard = memo(function FeedCard({
       </Pressable>
 
       <View className="pt-3 px-4 flex-row justify-between">
-        <Pressable onPress={openKudos} disabled={kudosCount === 0} accessibilityRole="button" hitSlop={8}>
+        <Pressable
+          onPress={openKudos}
+          disabled={kudosCount === 0}
+          accessibilityRole="button"
+          hitSlop={8}
+        >
           <Text className="text-xs text-gray-500 font-medium">
-            {kudosCount > 0 ? `${kudosCount} gave kudos` : isOwn ? 'No kudos yet' : 'Be the first to give kudos'}
+            {kudosCount > 0
+              ? `${kudosCount} gave kudos`
+              : isOwn
+                ? 'No kudos yet'
+                : 'Be the first to give kudos'}
           </Text>
         </Pressable>
         {commentsCount > 0 ? (
@@ -206,7 +249,8 @@ export const FeedCard = memo(function FeedCard({
           accessibilityRole="button"
           accessibilityLabel={hasKudos ? 'Remove kudos' : 'Give kudos'}
           accessibilityState={{ selected: hasKudos }}
-          className="flex-1 flex-row items-center justify-center min-h-[48px] active:bg-gray-50">
+          className="flex-1 flex-row items-center justify-center min-h-[48px] active:bg-gray-50"
+        >
           <Ionicons
             name={hasKudos ? 'thumbs-up' : 'thumbs-up-outline'}
             size={22}
@@ -217,7 +261,8 @@ export const FeedCard = memo(function FeedCard({
           onPress={openComments}
           accessibilityRole="button"
           accessibilityLabel="Comment"
-          className="flex-1 flex-row items-center justify-center min-h-[48px] active:bg-gray-50">
+          className="flex-1 flex-row items-center justify-center min-h-[48px] active:bg-gray-50"
+        >
           <Ionicons name="chatbox-ellipses-outline" size={22} color="#1F2937" />
         </Pressable>
         {activity.visibility !== 'ONLY_ME' ? (
@@ -225,7 +270,8 @@ export const FeedCard = memo(function FeedCard({
             onPress={() => shareActivity(activity)}
             accessibilityRole="button"
             accessibilityLabel="Share activity"
-            className="flex-1 flex-row items-center justify-center min-h-[48px] active:bg-gray-50">
+            className="flex-1 flex-row items-center justify-center min-h-[48px] active:bg-gray-50"
+          >
             <Ionicons name="share-social-outline" size={22} color="#1F2937" />
           </Pressable>
         ) : null}

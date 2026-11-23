@@ -28,7 +28,11 @@ export const ProfileActivitiesTab: React.FC<Props> = ({
         icon="footsteps-outline"
         title={isSelf ? 'No activities yet' : 'No activities to show'}
         body={isSelf ? 'Record your first activity and it will appear here.' : undefined}
-        primary={isSelf ? { label: 'Record an activity', onPress: () => router.push('/record') } : undefined}
+        primary={
+          isSelf
+            ? { label: 'Record an activity', onPress: () => router.push('/record') }
+            : undefined
+        }
       />
     );
   }
@@ -55,4 +59,3 @@ export const ProfileActivitiesTab: React.FC<Props> = ({
     </View>
   );
 };
-

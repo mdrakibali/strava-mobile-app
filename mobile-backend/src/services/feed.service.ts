@@ -30,8 +30,13 @@ export class FeedService {
     } else if (tab === 'clubs' && dto.currentUserId) {
       const userClubIds = await this.clubRepo.getUserClubIds(dto.currentUserId);
       const allMembers = await Promise.all(userClubIds.map((cid) => this.clubRepo.getMembers(cid)));
-      const memberIds = Array.from(new Set([dto.currentUserId, ...allMembers.flat().map((m) => m.athleteId)]));
-      where = and(inArray(activities.athleteId, memberIds), visibleActivitiesWhere(dto.currentUserId))!;
+      const memberIds = Array.from(
+        new Set([dto.currentUserId, ...allMembers.flat().map((m) => m.athleteId)])
+      );
+      where = and(
+        inArray(activities.athleteId, memberIds),
+        visibleActivitiesWhere(dto.currentUserId)
+      )!;
     } else {
       where = visibleActivitiesWhere(dto.currentUserId);
     }
@@ -59,7 +64,9 @@ export class FeedService {
         maxSpeedMps: activity.maxSpeedMps ? Number(activity.maxSpeedMps) : null,
         averageHeartRate: activity.averageHeartRate,
         calories: activity.calories,
-        polyline: isAuthor ? activity.rawPolyline || activity.maskedPolyline : activity.maskedPolyline,
+        polyline: isAuthor
+          ? activity.rawPolyline || activity.maskedPolyline
+          : activity.maskedPolyline,
         photos: activity.photos,
         athlete,
         kudosCount: countOf(kudosCount),

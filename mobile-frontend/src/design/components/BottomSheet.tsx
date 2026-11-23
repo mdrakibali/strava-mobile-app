@@ -23,7 +23,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, titl
       animationType="slide"
       onRequestClose={onClose}
       statusBarTranslucent
-      navigationBarTranslucent>
+      navigationBarTranslucent
+    >
       <View className="flex-1 justify-end bg-black/40">
         <Pressable
           className="absolute inset-0"
@@ -33,7 +34,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, titl
         />
         <View
           className="bg-white rounded-t-3xl pt-2 shadow-2xl"
-          style={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
+          style={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}
+        >
           <View className="self-center w-10 h-1 rounded-full bg-gray-300 mb-2" />
           {title ? (
             <View className="flex-row items-center pl-4 pr-2 pb-2">
@@ -62,7 +64,8 @@ export const OptionRow: React.FC<{
     onPress={onPress}
     accessibilityRole="radio"
     accessibilityState={{ checked: selected }}
-    className="flex-row items-center px-4 py-3 min-h-[64px] active:bg-gray-50">
+    className="flex-row items-center px-4 py-3 min-h-[64px] active:bg-gray-50"
+  >
     {icon ? (
       <View className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center mr-3">
         <Ionicons name={icon} size={20} color={color.ink} />

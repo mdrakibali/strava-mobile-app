@@ -6,17 +6,20 @@ import { Activity } from '../types';
  */
 export const generateGpxXml = (activity: Activity): string => {
   const points = activity.routePoints || [];
-  const startTime = activity.startTime ? new Date(activity.startTime).toISOString() : new Date().toISOString();
+  const startTime = activity.startTime
+    ? new Date(activity.startTime).toISOString()
+    : new Date().toISOString();
 
   let trkpts = '';
   points.forEach((pt: any, index) => {
     const lat = pt.latitude || pt[1];
     const lon = pt.longitude || pt[0];
     const ele = pt.altitude !== undefined ? `<ele>${pt.altitude}</ele>` : '<ele>10.0</ele>';
-    
+
     // Increment time per point based on elapsed duration
     const ptTime = new Date(
-      new Date(startTime).getTime() + (index * (activity.movingTimeSeconds / Math.max(1, points.length))) * 1000
+      new Date(startTime).getTime() +
+        index * (activity.movingTimeSeconds / Math.max(1, points.length)) * 1000
     ).toISOString();
 
     trkpts += `      <trkpt lat="${lat}" lon="${lon}">
@@ -52,7 +55,7 @@ const escapeXml = (unsafe: string) => {
         return '&gt;';
       case '&':
         return '&amp;';
-      case '\'':
+      case "'":
         return '&apos;';
       case '"':
         return '&quot;';
@@ -61,4 +64,3 @@ const escapeXml = (unsafe: string) => {
     }
   });
 };
-

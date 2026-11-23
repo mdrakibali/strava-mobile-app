@@ -15,7 +15,9 @@ import {
 
 // 1. Athletes (Users) Table
 export const athletes = pgTable('athletes', {
-  id: text('id').primaryKey().$defaultFn(() => `ath_${crypto.randomUUID()}`),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => `ath_${crypto.randomUUID()}`),
   googleId: text('google_id').unique(),
   username: varchar('username', { length: 50 }).notNull().unique(),
   email: varchar('email', { length: 255 }).notNull().unique(),
@@ -67,78 +69,90 @@ export const privacyZones = pgTable('privacy_zones', {
 });
 
 // 4. Activities Table
-export const activities = pgTable('activities', {
-  id: text('id').primaryKey().$defaultFn(() => `act_${crypto.randomUUID()}`),
-  athleteId: text('athlete_id')
-    .notNull()
-    .references(() => athletes.id, { onDelete: 'cascade' }),
-  title: text('title').notNull(),
-  description: text('description'),
-  sportType: varchar('sport_type', { length: 50 }).notNull(),
-  visibility: varchar('visibility', { length: 20 }).default('PUBLIC').notNull(), // PUBLIC, FOLLOWERS_ONLY, ONLY_ME
-  startTime: timestamp('start_time', { withTimezone: true }).notNull(),
-  distanceMeters: decimal('distance_meters', { precision: 12, scale: 2 }).notNull(),
-  movingTimeSeconds: integer('moving_time_seconds').notNull(),
-  elapsedTimeSeconds: integer('elapsed_time_seconds').notNull(),
-  elevationGainMeters: integer('elevation_gain_meters').default(0).notNull(),
-  averageSpeedMps: decimal('average_speed_mps', { precision: 6, scale: 2 }),
-  maxSpeedMps: decimal('max_speed_mps', { precision: 6, scale: 2 }),
-  averageHeartRate: integer('average_heart_rate'),
-  maxHeartRate: integer('max_heart_rate'),
-  calories: integer('calories'),
-  relativeEffortScore: integer('relative_effort_score'),
-  gapFormatted: text('gap_formatted'),
-  rawPolyline: jsonb('raw_polyline'), // Accessible only by author
-  maskedPolyline: jsonb('masked_polyline'), // Privacy clipped polyline for feed/public
-  splits: jsonb('splits'), // Array of SplitItem
-  elevationProfile: jsonb('elevation_profile'), // Array of altitudes
-  photos: jsonb('photos'),
-  gearId: text('gear_id'),
-  excludeFromFeed: boolean('exclude_from_feed').default(false).notNull(),
-  /** Client-generated UUID of the recording; makes uploads idempotent (ADR-06). Null for legacy rows. */
-  clientActivityId: text('client_activity_id'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  uniqueIndex('activities_athlete_client_idx').on(table.athleteId, table.clientActivityId),
-  index('activities_athlete_start_idx').on(table.athleteId, table.startTime),
-]);
+export const activities = pgTable(
+  'activities',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => `act_${crypto.randomUUID()}`),
+    athleteId: text('athlete_id')
+      .notNull()
+      .references(() => athletes.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description'),
+    sportType: varchar('sport_type', { length: 50 }).notNull(),
+    visibility: varchar('visibility', { length: 20 }).default('PUBLIC').notNull(), // PUBLIC, FOLLOWERS_ONLY, ONLY_ME
+    startTime: timestamp('start_time', { withTimezone: true }).notNull(),
+    distanceMeters: decimal('distance_meters', { precision: 12, scale: 2 }).notNull(),
+    movingTimeSeconds: integer('moving_time_seconds').notNull(),
+    elapsedTimeSeconds: integer('elapsed_time_seconds').notNull(),
+    elevationGainMeters: integer('elevation_gain_meters').default(0).notNull(),
+    averageSpeedMps: decimal('average_speed_mps', { precision: 6, scale: 2 }),
+    maxSpeedMps: decimal('max_speed_mps', { precision: 6, scale: 2 }),
+    averageHeartRate: integer('average_heart_rate'),
+    maxHeartRate: integer('max_heart_rate'),
+    calories: integer('calories'),
+    relativeEffortScore: integer('relative_effort_score'),
+    gapFormatted: text('gap_formatted'),
+    rawPolyline: jsonb('raw_polyline'), // Accessible only by author
+    maskedPolyline: jsonb('masked_polyline'), // Privacy clipped polyline for feed/public
+    splits: jsonb('splits'), // Array of SplitItem
+    elevationProfile: jsonb('elevation_profile'), // Array of altitudes
+    photos: jsonb('photos'),
+    gearId: text('gear_id'),
+    excludeFromFeed: boolean('exclude_from_feed').default(false).notNull(),
+    /** Client-generated UUID of the recording; makes uploads idempotent (ADR-06). Null for legacy rows. */
+    clientActivityId: text('client_activity_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('activities_athlete_client_idx').on(table.athleteId, table.clientActivityId),
+    index('activities_athlete_start_idx').on(table.athleteId, table.startTime),
+  ]
+);
 
 /**
  * Staged GPS uploads (batch sync). One row per recording, keyed by the client's UUID within the
  * athlete, so ids can't collide across athletes and nobody can touch someone else's upload.
  * Drafts never appear in feeds: the activities row is only created on /complete.
  */
-export const activityUploads = pgTable('activity_uploads', {
-  athleteId: text('athlete_id')
-    .notNull()
-    .references(() => athletes.id, { onDelete: 'cascade' }),
-  clientActivityId: text('client_activity_id').notNull(),
-  sportType: varchar('sport_type', { length: 50 }).notNull(),
-  startTime: timestamp('start_time', { withTimezone: true }).notNull(),
-  status: varchar('status', { length: 20 }).default('OPEN').notNull(), // OPEN | COMPLETED
-  activityId: text('activity_id').references(() => activities.id, { onDelete: 'set null' }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  primaryKey({ columns: [table.athleteId, table.clientActivityId] }),
-]);
+export const activityUploads = pgTable(
+  'activity_uploads',
+  {
+    athleteId: text('athlete_id')
+      .notNull()
+      .references(() => athletes.id, { onDelete: 'cascade' }),
+    clientActivityId: text('client_activity_id').notNull(),
+    sportType: varchar('sport_type', { length: 50 }).notNull(),
+    startTime: timestamp('start_time', { withTimezone: true }).notNull(),
+    status: varchar('status', { length: 20 }).default('OPEN').notNull(), // OPEN | COMPLETED
+    activityId: text('activity_id').references(() => activities.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.athleteId, table.clientActivityId] })]
+);
 
-export const activityUploadBatches = pgTable('activity_upload_batches', {
-  athleteId: text('athlete_id').notNull(),
-  clientActivityId: text('client_activity_id').notNull(),
-  seq: integer('seq').notNull(),
-  /** WirePoint[]: [t, lat, lng, acc, alt, altAcc, speed, seg] */
-  points: jsonb('points').notNull(),
-  pointCount: integer('point_count').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  primaryKey({ columns: [table.athleteId, table.clientActivityId, table.seq] }),
-  foreignKey({
-    columns: [table.athleteId, table.clientActivityId],
-    foreignColumns: [activityUploads.athleteId, activityUploads.clientActivityId],
-  }).onDelete('cascade'),
-]);
+export const activityUploadBatches = pgTable(
+  'activity_upload_batches',
+  {
+    athleteId: text('athlete_id').notNull(),
+    clientActivityId: text('client_activity_id').notNull(),
+    seq: integer('seq').notNull(),
+    /** WirePoint[]: [t, lat, lng, acc, alt, altAcc, speed, seg] */
+    points: jsonb('points').notNull(),
+    pointCount: integer('point_count').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.athleteId, table.clientActivityId, table.seq] }),
+    foreignKey({
+      columns: [table.athleteId, table.clientActivityId],
+      foreignColumns: [activityUploads.athleteId, activityUploads.clientActivityId],
+    }).onDelete('cascade'),
+  ]
+);
 
 // 5. Kudos (Likes) Table
 export const kudos = pgTable(
@@ -160,24 +174,30 @@ export const kudos = pgTable(
 );
 
 // 6. Comments Table (Threaded / Nested Discussions)
-export const comments = pgTable('comments', {
-  id: text('id').primaryKey(),
-  activityId: text('activity_id')
-    .notNull()
-    .references(() => activities.id, { onDelete: 'cascade' }),
-  athleteId: text('athlete_id')
-    .notNull()
-    .references(() => athletes.id, { onDelete: 'cascade' }),
-  parentCommentId: text('parent_comment_id'),
-  content: text('content').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  /** Set when the author edits the comment (null = never edited). */
-  updatedAt: timestamp('updated_at', { withTimezone: true }),
-}, (table) => [index('comments_activity_created_idx').on(table.activityId, table.createdAt)]);
+export const comments = pgTable(
+  'comments',
+  {
+    id: text('id').primaryKey(),
+    activityId: text('activity_id')
+      .notNull()
+      .references(() => activities.id, { onDelete: 'cascade' }),
+    athleteId: text('athlete_id')
+      .notNull()
+      .references(() => athletes.id, { onDelete: 'cascade' }),
+    parentCommentId: text('parent_comment_id'),
+    content: text('content').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    /** Set when the author edits the comment (null = never edited). */
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+  },
+  (table) => [index('comments_activity_created_idx').on(table.activityId, table.createdAt)]
+);
 
 // 7. Clubs Table
 export const clubs = pgTable('clubs', {
-  id: text('id').primaryKey().$defaultFn(() => `clb_${crypto.randomUUID()}`),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => `clb_${crypto.randomUUID()}`),
   name: text('name').notNull(),
   sportType: varchar('sport_type', { length: 50 }).notNull(),
   city: varchar('city', { length: 100 }),
@@ -205,14 +225,14 @@ export const clubMembers = pgTable(
     role: varchar('role', { length: 20 }).default('MEMBER').notNull(), // OWNER, ADMIN, MEMBER
     joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [
-    primaryKey({ columns: [table.clubId, table.athleteId] }),
-  ]
+  (table) => [primaryKey({ columns: [table.clubId, table.athleteId] })]
 );
 
 // 9. Challenges Table
 export const challenges = pgTable('challenges', {
-  id: text('id').primaryKey().$defaultFn(() => `chl_${crypto.randomUUID()}`),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => `chl_${crypto.randomUUID()}`),
   title: text('title').notNull(),
   description: text('description'),
   sportType: varchar('sport_type', { length: 50 }).notNull(),
@@ -241,14 +261,14 @@ export const challengeParticipants = pgTable(
     completedAt: timestamp('completed_at', { withTimezone: true }),
     joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [
-    primaryKey({ columns: [table.challengeId, table.athleteId] }),
-  ]
+  (table) => [primaryKey({ columns: [table.challengeId, table.athleteId] })]
 );
 
 // 11. Group Events Table
 export const groupEvents = pgTable('group_events', {
-  id: text('id').primaryKey().$defaultFn(() => `evt_${crypto.randomUUID()}`),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => `evt_${crypto.randomUUID()}`),
   title: text('title').notNull(),
   sportType: varchar('sport_type', { length: 50 }).notNull(),
   clubId: text('club_id').references(() => clubs.id, { onDelete: 'set null' }),
@@ -276,14 +296,14 @@ export const eventRsvps = pgTable(
     status: varchar('status', { length: 20 }).default('GOING').notNull(), // GOING, MAYBE, DECLINED
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [
-    primaryKey({ columns: [table.eventId, table.athleteId] }),
-  ]
+  (table) => [primaryKey({ columns: [table.eventId, table.athleteId] })]
 );
 
 // 13. Segments Table
 export const segments = pgTable('segments', {
-  id: text('id').primaryKey().$defaultFn(() => `seg_${crypto.randomUUID()}`),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => `seg_${crypto.randomUUID()}`),
   name: text('name').notNull(),
   sportType: varchar('sport_type', { length: 50 }).notNull(),
   distanceMeters: decimal('distance_meters', { precision: 10, scale: 2 }).notNull(),
@@ -327,27 +347,33 @@ export const gear = pgTable('gear', {
   model: text('model').notNull(),
   sportType: varchar('sport_type', { length: 20 }).notNull(), // Run, Ride
   distanceMeters: decimal('distance_meters', { precision: 12, scale: 2 }).default('0').notNull(),
-  maxDistanceMeters: decimal('max_distance_meters', { precision: 12, scale: 2 }).default('500000').notNull(),
+  maxDistanceMeters: decimal('max_distance_meters', { precision: 12, scale: 2 })
+    .default('500000')
+    .notNull(),
   isDefault: boolean('is_default').default(false).notNull(),
   isRetired: boolean('is_retired').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // 16. In-App Notifications Table
-export const notifications = pgTable('notifications', {
-  id: text('id').primaryKey(),
-  recipientId: text('recipient_id')
-    .notNull()
-    .references(() => athletes.id, { onDelete: 'cascade' }),
-  actorId: text('actor_id')
-    .notNull()
-    .references(() => athletes.id, { onDelete: 'cascade' }),
-  actionType: varchar('action_type', { length: 30 }).notNull(), // KUDOS, COMMENT, FOLLOW, CHALLENGE_WON
-  targetActivityId: text('target_activity_id'),
-  message: text('message').notNull(),
-  isRead: boolean('is_read').default(false).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [index('notifications_recipient_created_idx').on(table.recipientId, table.createdAt)]);
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: text('id').primaryKey(),
+    recipientId: text('recipient_id')
+      .notNull()
+      .references(() => athletes.id, { onDelete: 'cascade' }),
+    actorId: text('actor_id')
+      .notNull()
+      .references(() => athletes.id, { onDelete: 'cascade' }),
+    actionType: varchar('action_type', { length: 30 }).notNull(), // KUDOS, COMMENT, FOLLOW, CHALLENGE_WON
+    targetActivityId: text('target_activity_id'),
+    message: text('message').notNull(),
+    isRead: boolean('is_read').default(false).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index('notifications_recipient_created_idx').on(table.recipientId, table.createdAt)]
+);
 
 // 17. Direct Messaging (Chat) Table
 export const chats = pgTable(
@@ -411,7 +437,9 @@ export const beaconSessions = pgTable('beacon_sessions', {
 
 // 19. Routes Table (Community and User Created Routes)
 export const routes = pgTable('routes', {
-  id: text('id').primaryKey().$defaultFn(() => `route_${crypto.randomUUID()}`),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => `route_${crypto.randomUUID()}`),
   creatorId: text('creator_id')
     .notNull()
     .references(() => athletes.id, { onDelete: 'cascade' }),
@@ -440,14 +468,14 @@ export const savedRoutes = pgTable(
       .references(() => routes.id, { onDelete: 'cascade' }),
     savedAt: timestamp('saved_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [
-    primaryKey({ columns: [table.athleteId, table.routeId] }),
-  ]
+  (table) => [primaryKey({ columns: [table.athleteId, table.routeId] })]
 );
 
 // 21. Training Goals Table
 export const trainingGoals = pgTable('training_goals', {
-  id: text('id').primaryKey().$defaultFn(() => `goal_${crypto.randomUUID()}`),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => `goal_${crypto.randomUUID()}`),
   athleteId: text('athlete_id')
     .notNull()
     .references(() => athletes.id, { onDelete: 'cascade' }),
@@ -458,6 +486,3 @@ export const trainingGoals = pgTable('training_goals', {
   period: varchar('period', { length: 20 }).default('WEEKLY').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
-
-
-

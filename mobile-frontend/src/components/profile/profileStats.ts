@@ -20,7 +20,9 @@ export const computeProgress = (
   const match = (sport: string) => sportFilter === 'All' || sport === sportFilter;
   if (stats) {
     const weeks = stats.weeks.map((w) => {
-      let meters = 0, seconds = 0, elev = 0;
+      let meters = 0,
+        seconds = 0,
+        elev = 0;
       for (const [sport, v] of Object.entries(w.bySport)) {
         if (!match(sport)) continue;
         meters += v.distance;
@@ -30,17 +32,31 @@ export const computeProgress = (
       return { start: new Date(w.weekStart).getTime(), meters, seconds, elev };
     });
     const cur = weeks[weeks.length - 1];
-    return { week: { meters: cur.meters, seconds: cur.seconds, elev: cur.elev }, weeks, weekComplete: true, windowComplete: true };
+    return {
+      week: { meters: cur.meters, seconds: cur.seconds, elev: cur.elev },
+      weeks,
+      weekComplete: true,
+      windowComplete: true,
+    };
   }
   const list = activities.filter((a) => match(a.sportType));
   const thisWeekStart = startOfWeek(new Date()).getTime();
   const windowStart = thisWeekStart - 11 * WEEK_MS;
-  const weeks = Array.from({ length: 12 }, (_, i) => ({ start: windowStart + i * WEEK_MS, meters: 0, seconds: 0, elev: 0 }));
+  const weeks = Array.from({ length: 12 }, (_, i) => ({
+    start: windowStart + i * WEEK_MS,
+    meters: 0,
+    seconds: 0,
+    elev: 0,
+  }));
   let week = { meters: 0, seconds: 0, elev: 0 };
   for (const a of list) {
     const t = new Date(a.startTime).getTime();
     if (t >= thisWeekStart) {
-      week = { meters: week.meters + a.distanceMeters, seconds: week.seconds + a.movingTimeSeconds, elev: week.elev + (a.elevationGainMeters ?? 0) };
+      week = {
+        meters: week.meters + a.distanceMeters,
+        seconds: week.seconds + a.movingTimeSeconds,
+        elev: week.elev + (a.elevationGainMeters ?? 0),
+      };
     }
     const idx = Math.floor((t - windowStart) / WEEK_MS);
     if (idx >= 0 && idx < 12) weeks[idx].meters += a.distanceMeters;
@@ -64,4 +80,3 @@ export const computeTotals = (stats: AthleteStats | null, sportFilter: string) =
     );
   return { ytd: sum('yearToDate'), all: sum('allTime') };
 };
-

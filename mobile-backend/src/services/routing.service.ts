@@ -95,31 +95,58 @@ export const elevationChange = (heights: number[], threshold = 5) => {
 const costing = (sport: PlanSport) => {
   switch (sport) {
     case 'Ride':
-      return { costing: 'bicycle', costing_options: { bicycle: { bicycle_type: 'hybrid', cycling_speed: SPEED_KMH.Ride } } };
+      return {
+        costing: 'bicycle',
+        costing_options: { bicycle: { bicycle_type: 'hybrid', cycling_speed: SPEED_KMH.Ride } },
+      };
     case 'Hike':
-      return { costing: 'pedestrian', costing_options: { pedestrian: { walking_speed: SPEED_KMH.Hike, max_hiking_difficulty: 6, use_hills: 1 } } };
+      return {
+        costing: 'pedestrian',
+        costing_options: {
+          pedestrian: { walking_speed: SPEED_KMH.Hike, max_hiking_difficulty: 6, use_hills: 1 },
+        },
+      };
     default:
-      return { costing: 'pedestrian', costing_options: { pedestrian: { walking_speed: SPEED_KMH[sport] } } };
+      return {
+        costing: 'pedestrian',
+        costing_options: { pedestrian: { walking_speed: SPEED_KMH[sport] } },
+      };
   }
 };
 
 export class RoutingService {
-  constructor(private fetcher: Fetcher = (u, i) => fetch(u, i), private base = VALHALLA_URL, private now: () => number = Date.now) {}
+  constructor(
+    private fetcher: Fetcher = (u, i) => fetch(u, i),
+    private base = VALHALLA_URL,
+    private now: () => number = Date.now
+  ) {}
 
   private async post(path: string, body: unknown) {
     return this.fetcher(`${this.base}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'User-Agent': 'OpenStrava/1.1 (fitness app; route planning)' },
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'OpenStrava/1.1 (fitness app; route planning)',
+      },
       body: JSON.stringify(body),
     });
   }
 
-  private async elevation(shape: string): Promise<Pick<PlannedRoute, 'elevationGainM' | 'elevationLossM' | 'elevationProfile'>> {
+  private async elevation(
+    shape: string
+  ): Promise<Pick<PlannedRoute, 'elevationGainM' | 'elevationLossM' | 'elevationProfile'>> {
     try {
-      const res = await this.post('/height', { encoded_polyline: shape, shape_format: 'polyline6', range: true, resample_distance: 30 });
+      const res = await this.post('/height', {
+        encoded_polyline: shape,
+        shape_format: 'polyline6',
+        range: true,
+        resample_distance: 30,
+      });
       if (!res.ok) throw new Error(String(res.status));
       const d: any = await res.json();
-      const profile: [number, number][] = (d.range_height ?? []).filter((p: any) => Array.isArray(p) && p[1] != null && p[1] > -1000);
+      const profile: [number, number][] = (d.range_height ?? []).filter(
+        (p: any) => Array.isArray(p) && p[1] != null && p[1] > -1000
+      );
       if (profile.length < 2) throw new Error('no heights');
       const { gain, loss } = elevationChange(profile.map((p) => p[1]));
       return { elevationGainM: gain, elevationLossM: loss, elevationProfile: profile };
@@ -131,7 +158,12 @@ export class RoutingService {
   async plan(sport: PlanSport, from: LatLng, to: LatLng): Promise<RoutePlan> {
     const crow = haversineM(from.lat, from.lng, to.lat, to.lng);
     if (crow < 20) throw new HttpError(422, 'too_close', 'You are already there.');
-    if (crow > MAX_DISTANCE_M) throw new HttpError(422, 'too_far', 'Destination is too far for a workout route (max 60 km).');
+    if (crow > MAX_DISTANCE_M)
+      throw new HttpError(
+        422,
+        'too_far',
+        'Destination is too far for a workout route (max 60 km).'
+      );
     const r4 = (n: number) => Math.round(n * 1e4) / 1e4; // ~11 m: cache key + privacy
     const f = { lat: r4(from.lat), lng: r4(from.lng) };
     const t = { lat: r4(to.lat), lng: r4(to.lng) };
@@ -154,12 +186,21 @@ export class RoutingService {
       d = await res.json().catch(() => null);
       if (!res.ok) {
         // 442 / 171 etc.: no route between the points over mapped ways
-        if (res.status === 400 && d?.error_code) throw new HttpError(422, 'no_route', 'No route over mapped paths was found to this place.');
+        if (res.status === 400 && d?.error_code)
+          throw new HttpError(
+            422,
+            'no_route',
+            'No route over mapped paths was found to this place.'
+          );
         throw new Error(`HTTP ${res.status}`);
       }
     } catch (e) {
       if (e instanceof HttpError) throw e;
-      throw new HttpError(503, 'routing_unavailable', 'Route planning is temporarily unavailable. Please try again.');
+      throw new HttpError(
+        503,
+        'routing_unavailable',
+        'Route planning is temporarily unavailable. Please try again.'
+      );
     }
 
     const trips = [d?.trip, ...(d?.alternates ?? []).map((a: any) => a.trip)].filter(Boolean);
@@ -176,7 +217,8 @@ export class RoutingService {
         ...(await this.elevation(shape)),
       });
     }
-    if (!routes.length) throw new HttpError(422, 'no_route', 'No route over mapped paths was found to this place.');
+    if (!routes.length)
+      throw new HttpError(422, 'no_route', 'No route over mapped paths was found to this place.');
     const body: RoutePlan = {
       sport,
       from: f,
@@ -195,10 +237,17 @@ export class RoutingService {
    * Matches GPS traces to real OpenStreetMap roads/paths when valid.
    * If trace is in an unmapped area or match is unreliable, returns null so the raw GPS route is preserved.
    */
-  async matchTrace(sport: PlanSport, points: { lat: number; lng: number; time?: number }[]): Promise<[number, number][] | null> {
+  async matchTrace(
+    sport: PlanSport,
+    points: { lat: number; lng: number; time?: number }[]
+  ): Promise<[number, number][] | null> {
     if (!points || points.length < 2) return null;
     try {
-      const shape = points.map((p) => ({ lat: p.lat, lon: p.lng, ...(p.time ? { time: p.time } : {}) }));
+      const shape = points.map((p) => ({
+        lat: p.lat,
+        lon: p.lng,
+        ...(p.time ? { time: p.time } : {}),
+      }));
       const costingName = sport === 'Ride' ? 'bicycle' : 'pedestrian';
       const res = await this.post('/trace_route', {
         shape,

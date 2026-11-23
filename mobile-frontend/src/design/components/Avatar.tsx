@@ -44,10 +44,12 @@ export const Avatar: React.FC<AvatarProps> = ({ uri, name, size = 40 }) => {
       style={[style, { backgroundColor: tintOf(name || '?') }]}
       className="items-center justify-center"
       accessible
-      accessibilityLabel={name ? `${name}'s avatar` : 'Avatar'}>
+      accessibilityLabel={name ? `${name}'s avatar` : 'Avatar'}
+    >
       <AppText
         variant={size >= 72 ? 'title1' : size >= 48 ? 'title3' : 'label'}
-        className="font-bold text-gray-500">
+        className="font-bold text-gray-500"
+      >
         {initialsOf(name)}
       </AppText>
     </View>

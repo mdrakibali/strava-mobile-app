@@ -29,7 +29,10 @@ export const ActivityStatsGrid: React.FC<Props> = ({ activity }) => {
     { label: 'Moving time', value: formatClock(activity.movingTimeSeconds) },
     sport.primaryMetric === 'speed'
       ? { label: 'Avg speed', value: formatSpeed(avgSpeed) }
-      : { label: 'Avg pace', value: formatPace(activity.distanceMeters, activity.movingTimeSeconds) },
+      : {
+          label: 'Avg pace',
+          value: formatPace(activity.distanceMeters, activity.movingTimeSeconds),
+        },
     { label: 'Elevation gain', value: formatElevation(activity.elevationGainMeters) },
     { label: 'Elapsed time', value: formatClock(activity.elapsedTimeSeconds) },
     { label: 'Calories (est.)', value: formatCalories(calories) },
@@ -49,4 +52,3 @@ export const ActivityStatsGrid: React.FC<Props> = ({ activity }) => {
     </View>
   );
 };
-

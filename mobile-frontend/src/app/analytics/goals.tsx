@@ -1,14 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GoalCard } from '../../components/analytics/GoalCard';
 import { NewGoalForm } from '../../components/analytics/NewGoalForm';
@@ -74,7 +67,10 @@ export default function GoalsScreen() {
       setIsAdding(false);
       setNewTitle('');
       if (res?.goal) {
-        setGoals((prev) => [res.goal as TrainingGoal, ...prev.filter((g) => g.id !== (res.goal as any).id)]);
+        setGoals((prev) => [
+          res.goal as TrainingGoal,
+          ...prev.filter((g) => g.id !== (res.goal as any).id),
+        ]);
       } else {
         await fetchGoals();
       }
@@ -121,7 +117,8 @@ export default function GoalsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         className="p-4"
-        contentContainerStyle={{ paddingBottom: 110 }}>
+        contentContainerStyle={{ paddingBottom: 110 }}
+      >
         {isAdding && (
           <NewGoalForm
             title={newTitle}
@@ -154,14 +151,13 @@ export default function GoalsScreen() {
             </Text>
             <TouchableOpacity
               onPress={() => setIsAdding(true)}
-              className="px-5 py-2.5 bg-[#FC4C02] rounded-full">
+              className="px-5 py-2.5 bg-[#FC4C02] rounded-full"
+            >
               <Text className="text-xs font-bold text-white">+ Create Your First Goal</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          goals.map((goal) => (
-            <GoalCard key={goal.id} goal={goal} onDelete={handleDeleteGoal} />
-          ))
+          goals.map((goal) => <GoalCard key={goal.id} goal={goal} onDelete={handleDeleteGoal} />)
         )}
       </ScrollView>
     </SafeAreaView>

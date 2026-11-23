@@ -41,14 +41,20 @@ export const formatDuration = (totalSeconds: number | null | undefined) => {
 };
 
 /** Pace mm:ss per km from distance + time. Needs ≥ 50 m to be meaningful. Returns value without unit. */
-export const paceValue = (meters: number | null | undefined, seconds: number | null | undefined) => {
+export const paceValue = (
+  meters: number | null | undefined,
+  seconds: number | null | undefined
+) => {
   if (!meters || !seconds || meters < 50 || seconds <= 0) return DASH;
   const secPerKm = Math.round(seconds / (meters / 1000));
   if (!isFinite(secPerKm) || secPerKm > 99 * 60) return DASH;
   return `${Math.floor(secPerKm / 60)}:${pad(secPerKm % 60)}`;
 };
 
-export const formatPace = (meters: number | null | undefined, seconds: number | null | undefined) => {
+export const formatPace = (
+  meters: number | null | undefined,
+  seconds: number | null | undefined
+) => {
   const v = paceValue(meters, seconds);
   return v === DASH ? DASH : `${v} /km`;
 };
@@ -68,11 +74,12 @@ export const formatElevation = (meters: number | null | undefined) =>
 export const formatCalories = (kcal: number | null | undefined) =>
   kcal == null || !isFinite(kcal) || kcal <= 0 ? DASH : `${Math.round(kcal).toLocaleString()} Cal`;
 
-const timeOfDay = (d: Date) =>
-  d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+const timeOfDay = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
 const sameDay = (a: Date, b: Date) =>
-  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
 
 /** "Today at 6:42 AM" · "Yesterday at …" · "November 1, 2026 at …" (reference feed header). */
 export const formatActivityDate = (iso: string | null | undefined, now = new Date()) => {
@@ -103,7 +110,14 @@ export const formatRelative = (iso: string | null | undefined, now = new Date())
 /** Default activity title: Morning (05–12) / Afternoon (12–17) / Evening (17–21) / Night + sport. */
 export const defaultActivityTitle = (sportLabel: string, start: Date = new Date()) => {
   const h = start.getHours();
-  const part = h >= 5 && h < 12 ? 'Morning' : h >= 12 && h < 17 ? 'Afternoon' : h >= 17 && h < 21 ? 'Evening' : 'Night';
+  const part =
+    h >= 5 && h < 12
+      ? 'Morning'
+      : h >= 12 && h < 17
+        ? 'Afternoon'
+        : h >= 17 && h < 21
+          ? 'Evening'
+          : 'Night';
   return `${part} ${sportLabel}`;
 };
 

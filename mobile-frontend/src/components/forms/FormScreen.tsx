@@ -28,12 +28,14 @@ export const FormScreen: React.FC<{
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView
           style={{ flex: 1 }}
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-          keyboardShouldPersistTaps="handled">
+          keyboardShouldPersistTaps="handled"
+        >
           {children}
 
           {error ? (
@@ -46,13 +48,15 @@ export const FormScreen: React.FC<{
         {/* Single Sticky Bottom Submit Button */}
         <View
           style={{ paddingBottom: Math.max(insets.bottom, 12) }}
-          className="px-4 pt-3 pb-3 border-t border-gray-100 bg-white shadow-sm">
+          className="px-4 pt-3 pb-3 border-t border-gray-100 bg-white shadow-sm"
+        >
           <Pressable
             onPress={onSubmit}
             disabled={submitting}
             accessibilityRole="button"
             accessibilityLabel={submitLabel}
-            className="h-14 rounded-full bg-[#FC4C02] flex-row items-center justify-center shadow-md active:bg-[#E03A00]">
+            className="h-14 rounded-full bg-[#FC4C02] flex-row items-center justify-center shadow-md active:bg-[#E03A00]"
+          >
             {submitting ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (

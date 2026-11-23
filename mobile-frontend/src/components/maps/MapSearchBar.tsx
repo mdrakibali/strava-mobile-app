@@ -31,7 +31,8 @@ export function MapSearchBar({
         onPress={onSportPress}
         accessibilityRole="button"
         accessibilityLabel={`Sport: ${selectedSport}. Change sport`}
-        className="flex-row items-center py-1 pr-2 active:opacity-70">
+        className="flex-row items-center py-1 pr-2 active:opacity-70"
+      >
         <Ionicons name={cfg.icon} size={20} color="#FC4C02" />
         <Ionicons name="chevron-down" size={14} color="#6B7280" className="ml-1" />
       </Pressable>
@@ -56,7 +57,8 @@ export function MapSearchBar({
           onPress={() => onQueryChange('')}
           hitSlop={8}
           className="p-1"
-          accessibilityLabel="Clear search text">
+          accessibilityLabel="Clear search text"
+        >
           <Ionicons name="close-circle" size={18} color="#9CA3AF" />
         </Pressable>
       ) : (
@@ -64,7 +66,8 @@ export function MapSearchBar({
           onPress={onToggleSaved}
           accessibilityRole="button"
           accessibilityLabel="View Saved Routes"
-          className="flex-row items-center pl-2 py-1 active:opacity-70">
+          className="flex-row items-center pl-2 py-1 active:opacity-70"
+        >
           <Ionicons
             name={source === 'saved' ? 'bookmark' : 'bookmark-outline'}
             size={18}
@@ -73,7 +76,8 @@ export function MapSearchBar({
           <AppText
             className={`text-xs font-bold ml-1 ${
               source === 'saved' ? 'text-[#FC4C02]' : 'text-gray-900'
-            }`}>
+            }`}
+          >
             Saved
           </AppText>
         </Pressable>
@@ -81,4 +85,3 @@ export function MapSearchBar({
     </View>
   );
 }
-

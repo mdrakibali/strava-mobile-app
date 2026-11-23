@@ -47,15 +47,47 @@ export default function ProfileEditScreen() {
   return (
     <SafeAreaView style={{ flex: 1 }} className="flex-1 bg-white">
       <AppBar title="Edit profile" leading="close" />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
-          <TextField label="Name" value={displayName} onChangeText={setDisplayName} maxLength={100} autoCapitalize="words" />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <TextField
+            label="Name"
+            value={displayName}
+            onChangeText={setDisplayName}
+            maxLength={100}
+            autoCapitalize="words"
+          />
           <View className="h-4" />
-          <TextField label="City" value={city} onChangeText={setCity} maxLength={100} placeholder="e.g. Dhaka" />
+          <TextField
+            label="City"
+            value={city}
+            onChangeText={setCity}
+            maxLength={100}
+            placeholder="e.g. Dhaka"
+          />
           <View className="h-4" />
-          <TextField label="Country" value={country} onChangeText={setCountry} maxLength={100} placeholder="e.g. Bangladesh" />
+          <TextField
+            label="Country"
+            value={country}
+            onChangeText={setCountry}
+            maxLength={100}
+            placeholder="e.g. Bangladesh"
+          />
           <View className="h-4" />
-          <TextField label="Bio" value={bio} onChangeText={setBio} multiline maxLength={300} placeholder="Tell other athletes about yourself" />
+          <TextField
+            label="Bio"
+            value={bio}
+            onChangeText={setBio}
+            multiline
+            maxLength={300}
+            placeholder="Tell other athletes about yourself"
+          />
           {error ? (
             <View style={{ marginTop: space.lg }}>
               <ErrorState compact message={error} />
@@ -63,7 +95,14 @@ export default function ProfileEditScreen() {
           ) : null}
         </ScrollView>
         <View className="p-4 border-t border-gray-100 bg-white">
-          <Button label="Save" size="lg" fullWidth loading={saving} disabled={!displayName.trim()} onPress={onSave} />
+          <Button
+            label="Save"
+            size="lg"
+            fullWidth
+            loading={saving}
+            disabled={!displayName.trim()}
+            onPress={onSave}
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

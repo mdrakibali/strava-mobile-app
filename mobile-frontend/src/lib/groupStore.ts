@@ -105,13 +105,13 @@ export const groupStore = {
         id: c.id,
         name: c.name ?? cur?.name,
         sportType: c.sportType ?? cur?.sportType,
-        city: c.city !== undefined ? c.city : cur?.city ?? null,
-        description: c.description !== undefined ? c.description : cur?.description ?? null,
-        avatarUrl: c.avatarUrl !== undefined ? c.avatarUrl : cur?.avatarUrl ?? null,
-        bannerUrl: c.bannerUrl !== undefined ? c.bannerUrl : cur?.bannerUrl ?? null,
+        city: c.city !== undefined ? c.city : (cur?.city ?? null),
+        description: c.description !== undefined ? c.description : (cur?.description ?? null),
+        avatarUrl: c.avatarUrl !== undefined ? c.avatarUrl : (cur?.avatarUrl ?? null),
+        bannerUrl: c.bannerUrl !== undefined ? c.bannerUrl : (cur?.bannerUrl ?? null),
         memberCount: finiteNumber(c.memberCount ?? c.membersCount, cur?.memberCount ?? 0),
         isMember: c.isMember !== undefined ? Boolean(c.isMember) : (cur?.isMember ?? false),
-        userRole: c.userRole !== undefined ? c.userRole : cur?.userRole ?? null,
+        userRole: c.userRole !== undefined ? c.userRole : (cur?.userRole ?? null),
         isPrivate: c.isPrivate !== undefined ? Boolean(c.isPrivate) : (cur?.isPrivate ?? false),
       };
       if (
@@ -191,7 +191,7 @@ export const groupStore = {
       const next: ChallengeState = {
         id: c.id,
         title: c.title ?? cur?.title,
-        description: c.description !== undefined ? c.description : cur?.description ?? null,
+        description: c.description !== undefined ? c.description : (cur?.description ?? null),
         sportType: c.sportType ?? cur?.sportType,
         targetMeters: c.targetMeters !== undefined ? Number(c.targetMeters) : cur?.targetMeters,
         currentMeters: c.currentMeters !== undefined ? Number(c.currentMeters) : cur?.currentMeters,
@@ -199,8 +199,8 @@ export const groupStore = {
         participantsCount: finiteNumber(c.participantsCount, cur?.participantsCount ?? 0),
         isJoined: c.isJoined !== undefined ? Boolean(c.isJoined) : (cur?.isJoined ?? false),
         isCompleted: c.isCompleted !== undefined ? Boolean(c.isCompleted) : cur?.isCompleted,
-        creatorId: c.creatorId !== undefined ? c.creatorId : cur?.creatorId ?? null,
-        badgeUrl: c.badgeUrl !== undefined ? c.badgeUrl : cur?.badgeUrl ?? null,
+        creatorId: c.creatorId !== undefined ? c.creatorId : (cur?.creatorId ?? null),
+        badgeUrl: c.badgeUrl !== undefined ? c.badgeUrl : (cur?.badgeUrl ?? null),
       };
       if (
         cur &&
@@ -233,7 +233,11 @@ export const groupStore = {
     }
     emit();
   },
-  async joinChallenge(id: string, want: boolean, fallback?: Partial<ChallengeState>): Promise<ChallengeState> {
+  async joinChallenge(
+    id: string,
+    want: boolean,
+    fallback?: Partial<ChallengeState>
+  ): Promise<ChallengeState> {
     const epoch = (challengeEpoch.get(id) ?? 0) + 1;
     challengeEpoch.set(id, epoch);
     const before = challenges.get(id) ?? {
@@ -282,11 +286,13 @@ export const groupStore = {
         sportType: e.sportType ?? cur?.sportType,
         eventDate: e.eventDate ?? cur?.eventDate,
         meetingPoint: e.meetingPoint ?? cur?.meetingPoint,
-        paceDescription: e.paceDescription !== undefined ? e.paceDescription : cur?.paceDescription ?? null,
-        distanceMeters: e.distanceMeters !== undefined ? e.distanceMeters : cur?.distanceMeters ?? null,
+        paceDescription:
+          e.paceDescription !== undefined ? e.paceDescription : (cur?.paceDescription ?? null),
+        distanceMeters:
+          e.distanceMeters !== undefined ? e.distanceMeters : (cur?.distanceMeters ?? null),
         attendeesCount: finiteNumber(e.attendeesCount, cur?.attendeesCount ?? 0),
         rsvpStatus: e.rsvpStatus !== undefined ? e.rsvpStatus : (cur?.rsvpStatus ?? null),
-        clubName: e.clubName !== undefined ? e.clubName : cur?.clubName ?? null,
+        clubName: e.clubName !== undefined ? e.clubName : (cur?.clubName ?? null),
         creator: e.creator !== undefined ? e.creator : cur?.creator,
       };
       if (
@@ -340,13 +346,18 @@ export const groupStore = {
     } else if (!isGoing && wasGoing) {
       nextAttendees = Math.max(0, nextAttendees - 1);
     }
-    groupStore.patchEvent(id, { rsvpStatus: next === 'DECLINED' ? null : next, attendeesCount: nextAttendees });
+    groupStore.patchEvent(id, {
+      rsvpStatus: next === 'DECLINED' ? null : next,
+      attendeesCount: nextAttendees,
+    });
     groupStore.noteMutation(id);
 
     try {
       const res = await api.events.rsvp(id, next);
       if (eventEpoch.get(id) !== epoch) return events.get(id)!;
-      const status = (res?.status as 'GOING' | 'MAYBE' | 'DECLINED' | null) ?? (next === 'DECLINED' ? null : next);
+      const status =
+        (res?.status as 'GOING' | 'MAYBE' | 'DECLINED' | null) ??
+        (next === 'DECLINED' ? null : next);
       const attendeesCount = finiteNumber(res?.attendeesCount, nextAttendees);
       groupStore.patchEvent(id, { rsvpStatus: status, attendeesCount });
       groupStore.noteMutation(id);
@@ -391,7 +402,10 @@ export const useClub = (id: string, fallback?: Partial<ClubState>): ClubState | 
   return cur;
 };
 
-export const useChallenge = (id: string, fallback?: Partial<ChallengeState>): ChallengeState | undefined => {
+export const useChallenge = (
+  id: string,
+  fallback?: Partial<ChallengeState>
+): ChallengeState | undefined => {
   useSyncExternalStore(groupStore.subscribe, () => version);
   const cur = groupStore.getChallenge(id);
   if (!cur && fallback) {
@@ -423,4 +437,3 @@ export const useGroupRevision = (): number => {
   useSyncExternalStore(groupStore.subscribe, () => version);
   return version;
 };
-

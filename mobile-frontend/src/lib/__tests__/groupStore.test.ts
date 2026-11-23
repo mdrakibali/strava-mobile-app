@@ -34,9 +34,7 @@ describe('groupStore', () => {
     });
 
     it('optimistically joins a club and reconciles with server response', async () => {
-      groupStore.seedClubs([
-        { id: 'c1', name: 'Running Club', isMember: false, memberCount: 10 },
-      ]);
+      groupStore.seedClubs([{ id: 'c1', name: 'Running Club', isMember: false, memberCount: 10 }]);
 
       (api.clubs.join as jest.Mock).mockResolvedValueOnce({
         isMember: true,
@@ -54,9 +52,7 @@ describe('groupStore', () => {
     });
 
     it('rolls back club state on API error', async () => {
-      groupStore.seedClubs([
-        { id: 'c1', name: 'Running Club', isMember: false, memberCount: 10 },
-      ]);
+      groupStore.seedClubs([{ id: 'c1', name: 'Running Club', isMember: false, memberCount: 10 }]);
 
       (api.clubs.join as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
 
@@ -170,7 +166,9 @@ describe('groupStore', () => {
     it('does not overwrite newer mutation with older in-flight read for challenges', () => {
       const readTick = groupStore.beginRead();
 
-      groupStore.seedChallenges([{ id: 'ch1', title: '50k', isJoined: false, participantsCount: 20 }]);
+      groupStore.seedChallenges([
+        { id: 'ch1', title: '50k', isJoined: false, participantsCount: 20 },
+      ]);
       groupStore.patchChallenge('ch1', { isJoined: true, participantsCount: 21 });
       groupStore.noteMutation('ch1');
 
@@ -204,4 +202,3 @@ describe('groupStore', () => {
     });
   });
 });
-

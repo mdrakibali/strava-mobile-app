@@ -43,8 +43,11 @@ export const SportSheet: React.FC<{
             accessibilityRole="radio"
             accessibilityState={{ checked: active }}
             accessibilityLabel={s.label}
-            className="flex-row items-center px-4 min-h-[60px] active:bg-gray-50">
-            <View className={`w-11 h-11 rounded-full items-center justify-center mr-3 ${active ? 'bg-[#FFF2EB]' : 'bg-gray-100'}`}>
+            className="flex-row items-center px-4 min-h-[60px] active:bg-gray-50"
+          >
+            <View
+              className={`w-11 h-11 rounded-full items-center justify-center mr-3 ${active ? 'bg-[#FFF2EB]' : 'bg-gray-100'}`}
+            >
               <Ionicons name={s.icon} size={22} color={active ? '#FC4C02' : '#1F2937'} />
             </View>
             <AppText variant="title3" className="flex-1">

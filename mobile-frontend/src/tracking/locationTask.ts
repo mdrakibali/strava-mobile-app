@@ -7,17 +7,20 @@ import { LOCATION_TASK, recordingEngine } from './engine';
  * (index.js) so it exists when Android starts JS just to deliver locations (headless context).
  * Fixes are written to SQLite first (engine.ingest), so nothing depends on a screen being mounted.
  */
-TaskManager.defineTask<{ locations: Location.LocationObject[] }>(LOCATION_TASK, async ({ data, error }) => {
-  if (error) {
-    console.warn('[location-task]', error.message);
-    return;
+TaskManager.defineTask<{ locations: Location.LocationObject[] }>(
+  LOCATION_TASK,
+  async ({ data, error }) => {
+    if (error) {
+      console.warn('[location-task]', error.message);
+      return;
+    }
+    const locations = data?.locations ?? [];
+    if (!locations.length) return;
+    try {
+      await recordingEngine.load(false);
+      await recordingEngine.ingest(locations);
+    } catch (e) {
+      console.warn('[location-task] failed to store fixes', e);
+    }
   }
-  const locations = data?.locations ?? [];
-  if (!locations.length) return;
-  try {
-    await recordingEngine.load(false);
-    await recordingEngine.ingest(locations);
-  } catch (e) {
-    console.warn('[location-task] failed to store fixes', e);
-  }
-});
+);

@@ -40,9 +40,14 @@ export async function syncChallengeProgress(db: AppDatabase, athleteId: string) 
       .set({
         currentMeters: meters.toFixed(2),
         isCompleted: done,
-        completedAt: done ? ch.completedAt ?? new Date() : null,
+        completedAt: done ? (ch.completedAt ?? new Date()) : null,
       })
-      .where(and(eq(challengeParticipants.challengeId, ch.challengeId), eq(challengeParticipants.athleteId, athleteId)));
+      .where(
+        and(
+          eq(challengeParticipants.challengeId, ch.challengeId),
+          eq(challengeParticipants.athleteId, athleteId)
+        )
+      );
   }
 }
 
@@ -86,7 +91,11 @@ export class ChallengeRepository {
   }
 
   async update(id: string, values: Partial<typeof challenges.$inferInsert>) {
-    const [updated] = await this.db.update(challenges).set(values).where(eq(challenges.id, id)).returning();
+    const [updated] = await this.db
+      .update(challenges)
+      .set(values)
+      .where(eq(challenges.id, id))
+      .returning();
     return updated;
   }
 
@@ -194,7 +203,12 @@ export class ChallengeRepository {
       );
   }
 
-  async updateProgress(challengeId: string, athleteId: string, currentMeters: number, isCompleted: boolean) {
+  async updateProgress(
+    challengeId: string,
+    athleteId: string,
+    currentMeters: number,
+    isCompleted: boolean
+  ) {
     await this.db
       .update(challengeParticipants)
       .set({

@@ -32,7 +32,8 @@ export function MapFilterChips({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+        contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+      >
         {/* Source Toggle: Routes vs Nearby Places */}
         <Pressable
           onPress={() => onSourceChange(source === 'routes' ? 'nearby' : 'routes')}
@@ -42,7 +43,8 @@ export function MapFilterChips({
             source === 'nearby'
               ? 'border-2 border-[#10B981] bg-emerald-50'
               : 'border border-gray-200'
-          }`}>
+          }`}
+        >
           <Ionicons
             name={source === 'nearby' ? 'trail-sign' : 'map'}
             size={14}
@@ -52,7 +54,8 @@ export function MapFilterChips({
           <AppText
             className={`text-xs ml-1 ${
               source === 'nearby' ? 'text-[#10B981] font-black' : 'text-gray-700 font-semibold'
-            }`}>
+            }`}
+          >
             {source === 'nearby' ? 'Nearby Places' : 'Explore Routes'}
           </AppText>
         </Pressable>
@@ -68,11 +71,13 @@ export function MapFilterChips({
               accessibilityLabel={`Sport filter: ${s}`}
               className={`px-3.5 py-1.5 rounded-full bg-white shadow-sm active:bg-gray-50 ${
                 isSelected ? 'border-2 border-[#FC4C02] bg-orange-50' : 'border border-gray-200'
-              }`}>
+              }`}
+            >
               <AppText
                 className={`text-xs ${
                   isSelected ? 'text-[#FC4C02] font-black' : 'text-gray-700 font-semibold'
-                }`}>
+                }`}
+              >
                 {s}
               </AppText>
             </Pressable>
@@ -86,11 +91,13 @@ export function MapFilterChips({
           accessibilityLabel={`Distance filter: ${lengthFilter || 'Any'}`}
           className={`px-3.5 py-1.5 rounded-full bg-white shadow-sm active:bg-gray-50 ${
             lengthFilter ? 'border-2 border-[#FC4C02] bg-orange-50' : 'border border-gray-200'
-          }`}>
+          }`}
+        >
           <AppText
             className={`text-xs ${
               lengthFilter ? 'text-[#FC4C02] font-black' : 'text-gray-700 font-semibold'
-            }`}>
+            }`}
+          >
             {lengthFilter ? `Dist: ${lengthFilter}` : 'Distance'}
           </AppText>
         </Pressable>
@@ -102,11 +109,13 @@ export function MapFilterChips({
           accessibilityLabel={`Difficulty filter: ${difficultyFilter || 'Any'}`}
           className={`px-3.5 py-1.5 rounded-full bg-white shadow-sm active:bg-gray-50 ${
             difficultyFilter ? 'border-2 border-[#FC4C02] bg-orange-50' : 'border border-gray-200'
-          }`}>
+          }`}
+        >
           <AppText
             className={`text-xs ${
               difficultyFilter ? 'text-[#FC4C02] font-black' : 'text-gray-700 font-semibold'
-            }`}>
+            }`}
+          >
             {difficultyFilter ? `Diff: ${difficultyFilter}` : 'Difficulty'}
           </AppText>
         </Pressable>

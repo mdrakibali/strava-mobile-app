@@ -7,4 +7,3 @@ export const feedRouter = new Hono<{ Bindings: Env }>();
 const controller = new FeedController();
 
 feedRouter.get('/', optionalAuth, (c) => controller.getFeed(c));
-

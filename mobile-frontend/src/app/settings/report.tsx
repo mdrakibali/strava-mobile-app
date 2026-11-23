@@ -17,13 +17,19 @@ export default function ReportScreen() {
   ];
 
   const handleSubmit = () => {
-    Alert.alert('Report Submitted', 'Thank you for keeping our community safe. Our moderation team will review this report.', [
-      { text: 'OK', onPress: () => router.back() },
-    ]);
+    Alert.alert(
+      'Report Submitted',
+      'Thank you for keeping our community safe. Our moderation team will review this report.',
+      [{ text: 'OK', onPress: () => router.back() }]
+    );
   };
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }} className="justify-between p-6">
+    <SafeAreaView
+      edges={['top']}
+      style={{ flex: 1, backgroundColor: '#FFFFFF' }}
+      className="justify-between p-6"
+    >
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="flex-row items-center justify-between mb-4">
           <TouchableOpacity onPress={() => router.back()}>
@@ -35,7 +41,8 @@ export default function ReportScreen() {
 
         <Text className="text-2xl font-black text-gray-900 mb-2">Safety Report</Text>
         <Text className="text-xs text-gray-500 mb-6 leading-4">
-          Kinetix is committed to a positive, authentic, and safe athletic environment. Reports are evaluated strictly against community guidelines.
+          Kinetix is committed to a positive, authentic, and safe athletic environment. Reports are
+          evaluated strictly against community guidelines.
         </Text>
 
         <Text className="text-xs font-bold text-gray-600 mb-2">Primary Reason</Text>
@@ -48,7 +55,8 @@ export default function ReportScreen() {
                 onPress={() => setReason(r)}
                 className={`p-3.5 rounded-xl border mb-2 flex-row items-center justify-between ${
                   isSelected ? 'border-[#FC4C02] bg-orange-50/50' : 'border-gray-200 bg-white'
-                }`}>
+                }`}
+              >
                 <Text className="text-xs font-bold text-gray-900 flex-1 mr-2">{r}</Text>
                 {isSelected && <Ionicons name="checkmark-circle" size={18} color="#FC4C02" />}
               </TouchableOpacity>
@@ -69,10 +77,10 @@ export default function ReportScreen() {
 
       <TouchableOpacity
         onPress={handleSubmit}
-        className="w-full py-4 bg-red-600 rounded-2xl items-center shadow-md">
+        className="w-full py-4 bg-red-600 rounded-2xl items-center shadow-md"
+      >
         <Text className="text-base font-black text-white">Submit Report</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
 }
-

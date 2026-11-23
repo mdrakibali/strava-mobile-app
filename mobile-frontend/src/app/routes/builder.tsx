@@ -39,7 +39,9 @@ export default function RouteBuilderScreen() {
       const perm = await Location.requestForegroundPermissionsAsync().catch(() => null);
       if (cancelled) return;
       if (!perm?.granted) return setLocState('denied');
-      const fix = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null);
+      const fix = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      }).catch(() => null);
       if (cancelled) return;
       if (fix) setMe([fix.coords.longitude, fix.coords.latitude]);
       setLocState('ok');
@@ -115,7 +117,9 @@ export default function RouteBuilderScreen() {
             geometry: route.geometry,
             distanceM: route.distanceM,
             elevationGainM: route.elevationGainM ?? 0,
-            elevationProfile: route.elevationProfile ? route.elevationProfile.map((pt) => pt[1]) : undefined,
+            elevationProfile: route.elevationProfile
+              ? route.elevationProfile.map((pt) => pt[1])
+              : undefined,
           },
         ]);
       } else {
@@ -199,10 +203,13 @@ export default function RouteBuilderScreen() {
         {/* Floating Route Info Banner */}
         <View
           className="absolute top-4 left-4 right-4 bg-gray-900/90 rounded-2xl p-3.5 shadow-xl border border-gray-700"
-          pointerEvents="none">
+          pointerEvents="none"
+        >
           <View className="flex-row items-center justify-between">
             <View>
-              <AppText className="text-white text-lg font-black">{kmValue(totalDistance)} km</AppText>
+              <AppText className="text-white text-lg font-black">
+                {kmValue(totalDistance)} km
+              </AppText>
               {totalElevationGain > 0 ? (
                 <AppText className="text-emerald-400 text-xs font-bold">
                   +{Math.round(totalElevationGain)} m elevation gain
@@ -212,7 +219,9 @@ export default function RouteBuilderScreen() {
             {snapping ? (
               <View className="flex-row items-center bg-gray-800 px-3 py-1.5 rounded-full border border-gray-600">
                 <ActivityIndicator size="small" color="#FC4C02" />
-                <AppText className="text-gray-300 text-xs font-semibold ml-2">Snapping to OSM…</AppText>
+                <AppText className="text-gray-300 text-xs font-semibold ml-2">
+                  Snapping to OSM…
+                </AppText>
               </View>
             ) : null}
           </View>
@@ -229,7 +238,8 @@ export default function RouteBuilderScreen() {
       {/* Bottom Controls Sheet */}
       <View
         style={{ paddingBottom: insets.bottom + 12 }}
-        className="p-4 gap-2 bg-gray-900 rounded-t-3xl shadow-2xl border-t border-gray-800">
+        className="p-4 gap-2 bg-gray-900 rounded-t-3xl shadow-2xl border-t border-gray-800"
+      >
         <View className="flex-row items-center justify-between mb-1">
           <View className="flex-row items-center">
             <Button

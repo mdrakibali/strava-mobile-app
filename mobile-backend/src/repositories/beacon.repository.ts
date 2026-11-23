@@ -43,8 +43,14 @@ export class BeaconRepository {
       .set({
         lastLatitude: String(coords.latitude),
         lastLongitude: String(coords.longitude),
-        lastAltitude: coords.altitude !== undefined && coords.altitude !== null ? String(coords.altitude) : null,
-        lastSpeedMps: coords.speedMps !== undefined && coords.speedMps !== null ? String(coords.speedMps) : null,
+        lastAltitude:
+          coords.altitude !== undefined && coords.altitude !== null
+            ? String(coords.altitude)
+            : null,
+        lastSpeedMps:
+          coords.speedMps !== undefined && coords.speedMps !== null
+            ? String(coords.speedMps)
+            : null,
         batteryPercentage: coords.batteryPercentage,
         lastPingAt: new Date(),
       })
@@ -60,4 +66,3 @@ export class BeaconRepository {
       .where(and(eq(beaconSessions.token, token), eq(beaconSessions.athleteId, athleteId)));
   }
 }
-

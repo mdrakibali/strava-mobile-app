@@ -17,7 +17,10 @@ beforeEach(async () => {
 
 describe('clubs', () => {
   it('create, list, detail, join/leave', async () => {
-    const created = await call('POST', '/clubs', { token: a, body: { name: 'Dhaka Runners', sportType: 'Run', city: 'Dhaka' } });
+    const created = await call('POST', '/clubs', {
+      token: a,
+      body: { name: 'Dhaka Runners', sportType: 'Run', city: 'Dhaka' },
+    });
     expect(created.status).toBe(201);
     const id = created.body.club.id;
     const list = await call('GET', '/clubs', { token: b });
@@ -37,7 +40,13 @@ describe('challenges', () => {
     const now = Date.now();
     const created = await call('POST', '/challenges', {
       token: a,
-      body: { title: '50 km in November', targetMeters: 50000, sportType: 'Run', startDate: new Date(now - 86400000).toISOString(), endDate: new Date(now + 20 * 86400000).toISOString() },
+      body: {
+        title: '50 km in November',
+        targetMeters: 50000,
+        sportType: 'Run',
+        startDate: new Date(now - 86400000).toISOString(),
+        endDate: new Date(now + 20 * 86400000).toISOString(),
+      },
     });
     expect(created.status).toBe(201);
     const id = created.body.challenge.id;
@@ -67,8 +76,18 @@ describe('challenges', () => {
       movingTimeSeconds: 1200,
       startTime: new Date().toISOString(),
     };
-    expect((await call('POST', '/activities', { token: a, body: { ...activity, sportType: 'Run' } })).status).toBe(201);
-    expect((await call('POST', '/activities', { token: a, body: { ...activity, title: 'Ride', sportType: 'Ride', distanceMeters: 9000 } })).status).toBe(201);
+    expect(
+      (await call('POST', '/activities', { token: a, body: { ...activity, sportType: 'Run' } }))
+        .status
+    ).toBe(201);
+    expect(
+      (
+        await call('POST', '/activities', {
+          token: a,
+          body: { ...activity, title: 'Ride', sportType: 'Ride', distanceMeters: 9000 },
+        })
+      ).status
+    ).toBe(201);
     const detail = await call('GET', `/challenges/${id}`, { token: a });
     const me = detail.body.leaderboard.find((p: any) => p.athleteId === 'ath_a');
     expect(Number(me.currentMeters)).toBe(4000);
@@ -79,8 +98,29 @@ describe('challenges', () => {
 describe('events', () => {
   it('create with validation, list shows the viewer RSVP and real attendee count, RSVP', async () => {
     const when = new Date(Date.now() + 3 * 86400000).toISOString();
-    expect((await call('POST', '/events', { token: a, body: { title: 'x', sportType: 'Run', eventDate: '2001-01-01T00:00:00Z', meetingPoint: 'Park' } })).status).toBe(400);
-    const created = await call('POST', '/events', { token: a, body: { title: 'Saturday long run', sportType: 'Run', eventDate: when, meetingPoint: 'Hatirjheel', distanceMeters: 15000 } });
+    expect(
+      (
+        await call('POST', '/events', {
+          token: a,
+          body: {
+            title: 'x',
+            sportType: 'Run',
+            eventDate: '2001-01-01T00:00:00Z',
+            meetingPoint: 'Park',
+          },
+        })
+      ).status
+    ).toBe(400);
+    const created = await call('POST', '/events', {
+      token: a,
+      body: {
+        title: 'Saturday long run',
+        sportType: 'Run',
+        eventDate: when,
+        meetingPoint: 'Hatirjheel',
+        distanceMeters: 15000,
+      },
+    });
     expect(created.status).toBe(201);
     const id = created.body.event.id;
     let list = await call('GET', '/events', { token: b });
@@ -102,16 +142,33 @@ describe('routes (Maps)', () => {
   it('create, list, detail, save/unsave', async () => {
     const created = await call('POST', '/routes', {
       token: a,
-      body: { name: 'River loop', sportType: 'Run', distanceMeters: 999999, polylinePoints: [{ latitude: 23.78, longitude: 90.42 }, { latitude: 23.79, longitude: 90.43 }] },
+      body: {
+        name: 'River loop',
+        sportType: 'Run',
+        distanceMeters: 999999,
+        polylinePoints: [
+          { latitude: 23.78, longitude: 90.42 },
+          { latitude: 23.79, longitude: 90.43 },
+        ],
+      },
     });
     expect(created.status).toBe(201);
     // distance comes from the points (≈1.5 km), never from the client or a default
     expect(Number(created.body.route.distanceMeters)).toBeGreaterThan(1400);
     expect(Number(created.body.route.distanceMeters)).toBeLessThan(1600);
     expect(created.body.route.surfaceTypes).toBeNull();
-    expect((await call('POST', '/routes', { token: a, body: { name: 'x', polylinePoints: [{ latitude: 1, longitude: 1 }] } })).status).toBe(400);
+    expect(
+      (
+        await call('POST', '/routes', {
+          token: a,
+          body: { name: 'x', polylinePoints: [{ latitude: 1, longitude: 1 }] },
+        })
+      ).status
+    ).toBe(400);
     const id = created.body.route.id;
-    expect((await call('GET', '/routes', { token: b })).body.routes.map((r: any) => r.id)).toContain(id);
+    expect(
+      (await call('GET', '/routes', { token: b })).body.routes.map((r: any) => r.id)
+    ).toContain(id);
     expect((await call('GET', `/routes/${id}`, { token: b })).status).toBe(200);
     const saved = await call('POST', `/routes/${id}/toggle-save`, { token: b });
     expect(saved.body.isSaved).toBe(true);

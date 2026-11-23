@@ -4,7 +4,13 @@ import { MAX_BATCHES, missingSeqs } from '../../../shared/tracking/batching';
 import { estimateCalories } from '../../../shared/tracking/calories';
 import { acceptedPoints, routePoints, summarizeTrack } from '../../../shared/tracking/metrics';
 import { fromWire, RawPoint, TrackSummary, WirePoint } from '../../../shared/tracking/types';
-import { activities, activityUploadBatches, activityUploads, athletes, privacyZones } from '../db/schema';
+import {
+  activities,
+  activityUploadBatches,
+  activityUploads,
+  athletes,
+  privacyZones,
+} from '../db/schema';
 import { AppDatabase } from '../lib/db';
 import { HttpError, notFound } from '../lib/http';
 import { maskPolylineWithPrivacyZones } from '../lib/privacy';
@@ -27,13 +33,20 @@ export class UploadService {
     const [upload] = await this.db
       .select()
       .from(activityUploads)
-      .where(and(eq(activityUploads.athleteId, athleteId), eq(activityUploads.clientActivityId, cid)))
+      .where(
+        and(eq(activityUploads.athleteId, athleteId), eq(activityUploads.clientActivityId, cid))
+      )
       .limit(1);
     if (!upload) return null;
     const seqs = await this.db
       .select({ seq: activityUploadBatches.seq })
       .from(activityUploadBatches)
-      .where(and(eq(activityUploadBatches.athleteId, athleteId), eq(activityUploadBatches.clientActivityId, cid)))
+      .where(
+        and(
+          eq(activityUploadBatches.athleteId, athleteId),
+          eq(activityUploadBatches.clientActivityId, cid)
+        )
+      )
       .orderBy(asc(activityUploadBatches.seq));
     return {
       clientActivityId: cid,
@@ -87,7 +100,9 @@ export class UploadService {
     await this.db
       .update(activityUploads)
       .set({ updatedAt: new Date() })
-      .where(and(eq(activityUploads.athleteId, athleteId), eq(activityUploads.clientActivityId, cid)));
+      .where(
+        and(eq(activityUploads.athleteId, athleteId), eq(activityUploads.clientActivityId, cid))
+      );
     return { seq, duplicate: false, completed: false };
   }
 
@@ -103,7 +118,11 @@ export class UploadService {
         )
       );
     if (row && row.pointCount !== count)
-      throw new HttpError(409, 'batch_conflict', `Batch ${seq} was already received with different content`);
+      throw new HttpError(
+        409,
+        'batch_conflict',
+        `Batch ${seq} was already received with different content`
+      );
     return { seq, duplicate: true, completed: false };
   }
 
@@ -117,7 +136,9 @@ export class UploadService {
       const [upload] = await tx
         .select()
         .from(activityUploads)
-        .where(and(eq(activityUploads.athleteId, athleteId), eq(activityUploads.clientActivityId, cid)))
+        .where(
+          and(eq(activityUploads.athleteId, athleteId), eq(activityUploads.clientActivityId, cid))
+        )
         .for('update');
       if (!upload) throw notFound('Upload');
 
@@ -132,23 +153,43 @@ export class UploadService {
       const batches = await tx
         .select({ seq: activityUploadBatches.seq, points: activityUploadBatches.points })
         .from(activityUploadBatches)
-        .where(and(eq(activityUploadBatches.athleteId, athleteId), eq(activityUploadBatches.clientActivityId, cid)))
+        .where(
+          and(
+            eq(activityUploadBatches.athleteId, athleteId),
+            eq(activityUploadBatches.clientActivityId, cid)
+          )
+        )
         .orderBy(asc(activityUploadBatches.seq));
       const missing = missingSeqs(
         batches.map((b) => b.seq),
         input.batchCount
       );
       if (missing.length > 0)
-        throw new HttpError(409, 'missing_batches', 'Some GPS batches have not been received', { missingSeqs: missing });
+        throw new HttpError(409, 'missing_batches', 'Some GPS batches have not been received', {
+          missingSeqs: missing,
+        });
       if (batches.some((b) => b.seq >= input.batchCount))
-        throw new HttpError(409, 'unexpected_batches', 'More batches were received than batchCount');
+        throw new HttpError(
+          409,
+          'unexpected_batches',
+          'More batches were received than batchCount'
+        );
 
       const raw: RawPoint[] = batches.flatMap((b) => (b.points as WirePoint[]).map(fromWire));
       const startedAt = Date.parse(input.startTime);
       const finishedAt = Date.parse(input.finishedAt);
-      const summary = summarizeTrack({ sport: input.sportType, points: raw, startedAt, finishedAt, pauses: input.pauses });
+      const summary = summarizeTrack({
+        sport: input.sportType,
+        points: raw,
+        startedAt,
+        finishedAt,
+        pauses: input.pauses,
+      });
 
-      const [athlete] = await tx.select({ weightKg: athletes.weightKg }).from(athletes).where(eq(athletes.id, athleteId));
+      const [athlete] = await tx
+        .select({ weightKg: athletes.weightKg })
+        .from(athletes)
+        .where(eq(athletes.id, athleteId));
       const zones = await tx
         .select()
         .from(privacyZones)
@@ -161,7 +202,11 @@ export class UploadService {
         raw,
         summary,
         weightKg: athlete?.weightKg ? Number(athlete.weightKg) : undefined,
-        zones: zones.map((z) => ({ ...z, latitude: Number(z.latitude), longitude: Number(z.longitude) })),
+        zones: zones.map((z) => ({
+          ...z,
+          latitude: Number(z.latitude),
+          longitude: Number(z.longitude),
+        })),
       });
 
       const inserted = await tx.insert(activities).values(row).onConflictDoNothing().returning();
@@ -177,11 +222,18 @@ export class UploadService {
       await tx
         .update(activityUploads)
         .set({ status: 'COMPLETED', activityId: activity.id, updatedAt: new Date() })
-        .where(and(eq(activityUploads.athleteId, athleteId), eq(activityUploads.clientActivityId, cid)));
+        .where(
+          and(eq(activityUploads.athleteId, athleteId), eq(activityUploads.clientActivityId, cid))
+        );
       // The track now lives on the activity; staged batches are no longer needed.
       await tx
         .delete(activityUploadBatches)
-        .where(and(eq(activityUploadBatches.athleteId, athleteId), eq(activityUploadBatches.clientActivityId, cid)));
+        .where(
+          and(
+            eq(activityUploadBatches.athleteId, athleteId),
+            eq(activityUploadBatches.clientActivityId, cid)
+          )
+        );
 
       return { created: inserted.length > 0, deleted: false, activity };
     });
@@ -212,7 +264,13 @@ export const buildActivityRow = (o: {
   const { summary: s, input } = o;
   const kept = acceptedPoints(input.sportType, o.raw);
   const drawn = routePoints(input.sportType, o.raw);
-  const track = (s.distanceM >= 10 && drawn.length >= 2 ? drawn : []).map((p) => ({ latitude: p.lat, longitude: p.lng, altitude: p.alt, timestamp: p.t, speed: p.speed }));
+  const track = (s.distanceM >= 10 && drawn.length >= 2 ? drawn : []).map((p) => ({
+    latitude: p.lat,
+    longitude: p.lng,
+    altitude: p.alt,
+    timestamp: p.t,
+    speed: p.speed,
+  }));
   return {
     id: crypto.randomUUID(),
     athleteId: o.athleteId,
@@ -234,11 +292,22 @@ export const buildActivityRow = (o: {
     rawPolyline: track,
     maskedPolyline: maskPolylineWithPrivacyZones(track, o.zones),
     splits: s.splits.map((sp) => ({
-      splitNumber: sp.index, distanceMeters: sp.distanceM, distanceKm: Math.round(sp.distanceM) / 1000,
-      movingTimeSeconds: sp.movingTimeS, elapsedTimeSeconds: sp.elapsedTimeS,
-      averageSpeedMps: sp.avgSpeedMps, paceFormatted: pace(sp.movingTimeS, sp.distanceM), elevationDeltaMeters: sp.elevDiffM,
+      splitNumber: sp.index,
+      distanceMeters: sp.distanceM,
+      distanceKm: Math.round(sp.distanceM) / 1000,
+      movingTimeSeconds: sp.movingTimeS,
+      elapsedTimeSeconds: sp.elapsedTimeS,
+      averageSpeedMps: sp.avgSpeedMps,
+      paceFormatted: pace(sp.movingTimeS, sp.distanceM),
+      elevationDeltaMeters: sp.elevDiffM,
     })),
-    elevationProfile: s.elevGainM == null ? [] : downsample(kept.filter((p) => p.alt != null).map((p) => Math.round(p.alt!)), MAX_ELEVATION_SAMPLES),
+    elevationProfile:
+      s.elevGainM == null
+        ? []
+        : downsample(
+            kept.filter((p) => p.alt != null).map((p) => Math.round(p.alt!)),
+            MAX_ELEVATION_SAMPLES
+          ),
     photos: [],
   };
 };

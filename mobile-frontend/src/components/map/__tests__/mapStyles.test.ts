@@ -7,8 +7,19 @@ describe('map style configuration', () => {
     expect(MAP_STYLES.dark_topo).toBeDefined();
   });
   it('offers outdoor, dark_topo, positron, bright and voyager (no 3D Liberty)', () => {
-    expect(Object.keys(MAP_STYLES).sort()).toEqual(['bright', 'dark_topo', 'outdoor', 'positron', 'voyager']);
-    expect(MAP_STYLE_OPTIONS.map((o) => o.id).sort()).toEqual(['bright', 'dark_topo', 'outdoor', 'positron']);
+    expect(Object.keys(MAP_STYLES).sort()).toEqual([
+      'bright',
+      'dark_topo',
+      'outdoor',
+      'positron',
+      'voyager',
+    ]);
+    expect(MAP_STYLE_OPTIONS.map((o) => o.id).sort()).toEqual([
+      'bright',
+      'dark_topo',
+      'outdoor',
+      'positron',
+    ]);
     expect(JSON.stringify(MAP_STYLES)).not.toMatch(/liberty/);
   });
   it('maps legacy or unknown keys to the default', () => {

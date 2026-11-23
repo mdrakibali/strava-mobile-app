@@ -35,7 +35,7 @@ export default function ActivityHistoryScreen() {
         </View>
       ) : isError ? (
         <ErrorState
-          message={error?.message ?? "We couldn’t load these activities."}
+          message={error?.message ?? 'We couldn’t load these activities.'}
           onRetry={() => refetch()}
         />
       ) : (
@@ -58,12 +58,18 @@ export default function ActivityHistoryScreen() {
               colors={['#FC4C02']}
             />
           }
-          contentContainerStyle={list.length === 0 ? { flexGrow: 1 } : { paddingTop: 8, paddingBottom: 64 }}
+          contentContainerStyle={
+            list.length === 0 ? { flexGrow: 1 } : { paddingTop: 8, paddingBottom: 64 }
+          }
           ListEmptyComponent={
             <EmptyState
               icon="footsteps-outline"
               title={isSelf ? 'No activities yet' : 'No activities to show'}
-              primary={isSelf ? { label: 'Record an activity', onPress: () => router.push('/record') } : undefined}
+              primary={
+                isSelf
+                  ? { label: 'Record an activity', onPress: () => router.push('/record') }
+                  : undefined
+              }
             />
           }
         />

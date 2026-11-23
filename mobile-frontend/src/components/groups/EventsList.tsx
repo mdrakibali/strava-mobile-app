@@ -22,7 +22,8 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onToggleRsvp }) 
             key={event.id}
             activeOpacity={0.85}
             onPress={() => router.push(`/event/${event.id}`)}
-            className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm mb-3">
+            className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm mb-3"
+          >
             <View className="flex-row justify-between items-start mb-2">
               <View className="bg-orange-50 px-2 py-0.5 rounded-md">
                 <Text className="text-[10px] font-bold text-[#FC4C02]">{event.sportType}</Text>
@@ -35,9 +36,7 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onToggleRsvp }) 
               </View>
             </View>
 
-            <Text className="text-base font-black text-gray-900 mb-1 leading-5">
-              {event.title}
-            </Text>
+            <Text className="text-base font-black text-gray-900 mb-1 leading-5">{event.title}</Text>
             <Text className="text-xs font-semibold text-gray-500 mb-2">
               Hosted by {event.clubName}
             </Text>
@@ -69,13 +68,9 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onToggleRsvp }) 
               </Text>
               <TouchableOpacity
                 onPress={() => onToggleRsvp(event.id, isGoing ? 'DECLINED' : 'GOING')}
-                className={`px-4 py-1.5 rounded-full ${
-                  isGoing ? 'bg-gray-100' : 'bg-[#FC4C02]'
-                }`}>
-                <Text
-                  className={`text-xs font-bold ${
-                    isGoing ? 'text-gray-700' : 'text-white'
-                  }`}>
+                className={`px-4 py-1.5 rounded-full ${isGoing ? 'bg-gray-100' : 'bg-[#FC4C02]'}`}
+              >
+                <Text className={`text-xs font-bold ${isGoing ? 'text-gray-700' : 'text-white'}`}>
                   {isGoing ? 'Attending' : 'RSVP Going'}
                 </Text>
               </TouchableOpacity>
@@ -86,11 +81,13 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onToggleRsvp }) 
 
       <TouchableOpacity
         onPress={() => router.push('/event/create')}
-        className="w-full py-3.5 bg-orange-50 border border-orange-200 rounded-xl items-center justify-center flex-row">
+        className="w-full py-3.5 bg-orange-50 border border-orange-200 rounded-xl items-center justify-center flex-row"
+      >
         <Ionicons name="calendar-outline" size={18} color="#FC4C02" />
-        <Text className="text-sm font-bold text-[#FC4C02] ml-1.5">Host a Group Workout / Event</Text>
+        <Text className="text-sm font-bold text-[#FC4C02] ml-1.5">
+          Host a Group Workout / Event
+        </Text>
       </TouchableOpacity>
     </View>
   );
 };
-

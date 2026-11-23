@@ -24,7 +24,8 @@ export const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, onTo
             key={challenge.id}
             activeOpacity={0.85}
             onPress={() => router.push(`/challenge/${challenge.id}`)}
-            className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm mb-3">
+            className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm mb-3"
+          >
             <View className="flex-row items-center mb-3">
               <Image
                 source={{ uri: challenge.badgeUrl }}
@@ -36,7 +37,9 @@ export const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, onTo
                 </Text>
                 <View className="flex-row items-center mt-1">
                   <View className="bg-gray-100 px-2 py-0.5 rounded-full mr-2">
-                    <Text className="text-[10px] font-bold text-gray-600">{challenge.sportType}</Text>
+                    <Text className="text-[10px] font-bold text-gray-600">
+                      {challenge.sportType}
+                    </Text>
                   </View>
                   <View className="flex-row items-center">
                     <Ionicons name="time-outline" size={13} color="#EA580C" />
@@ -75,11 +78,13 @@ export const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, onTo
                 onPress={() => onToggleJoin(challenge.id)}
                 className={`px-4 py-1.5 rounded-full ${
                   challenge.isJoined ? 'bg-gray-100' : 'bg-[#FC4C02]'
-                }`}>
+                }`}
+              >
                 <Text
                   className={`text-xs font-bold ${
                     challenge.isJoined ? 'text-gray-700' : 'text-white'
-                  }`}>
+                  }`}
+                >
                   {challenge.isJoined ? 'Joined' : 'Join Challenge'}
                 </Text>
               </TouchableOpacity>
@@ -90,11 +95,13 @@ export const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, onTo
 
       <TouchableOpacity
         onPress={() => router.push('/challenge/create')}
-        className="w-full py-3.5 bg-orange-50 border border-orange-200 rounded-xl items-center justify-center flex-row">
+        className="w-full py-3.5 bg-orange-50 border border-orange-200 rounded-xl items-center justify-center flex-row"
+      >
         <Ionicons name="trophy-outline" size={18} color="#FC4C02" />
-        <Text className="text-sm font-bold text-[#FC4C02] ml-1.5">Create a Community Challenge</Text>
+        <Text className="text-sm font-bold text-[#FC4C02] ml-1.5">
+          Create a Community Challenge
+        </Text>
       </TouchableOpacity>
     </View>
   );
 };
-

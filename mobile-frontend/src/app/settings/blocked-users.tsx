@@ -25,14 +25,16 @@ export default function BlockedUsersScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} className="p-4">
         <Text className="text-xs text-gray-500 mb-4 leading-4">
-          Blocked athletes cannot view your profile, give kudos to your activities, see your routes, or message you in clubs.
+          Blocked athletes cannot view your profile, give kudos to your activities, see your routes,
+          or message you in clubs.
         </Text>
 
         {blockedList.length > 0 ? (
           blockedList.map((item) => (
             <View
               key={item.id}
-              className="flex-row items-center justify-between p-4 bg-white rounded-2xl mb-3 border border-gray-100 shadow-sm">
+              className="flex-row items-center justify-between p-4 bg-white rounded-2xl mb-3 border border-gray-100 shadow-sm"
+            >
               <View className="flex-1 mr-3">
                 <Text className="text-sm font-bold text-gray-900">{item.name}</Text>
                 <Text className="text-xs text-gray-400">@{item.username}</Text>
@@ -40,7 +42,8 @@ export default function BlockedUsersScreen() {
               </View>
               <TouchableOpacity
                 onPress={() => handleUnblock(item.id)}
-                className="px-4 py-1.5 bg-gray-100 rounded-full">
+                className="px-4 py-1.5 bg-gray-100 rounded-full"
+              >
                 <Text className="text-xs font-bold text-gray-700">Unblock</Text>
               </TouchableOpacity>
             </View>
@@ -56,4 +59,3 @@ export default function BlockedUsersScreen() {
     </SafeAreaView>
   );
 }
-

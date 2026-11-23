@@ -45,10 +45,18 @@ const TTL_MS = 7 * 24 * 3600_000;
 const memory = new Map<string, { at: number; body: PlaceDetails }>();
 
 const stripHtml = (s: unknown) =>
-  typeof s === 'string' ? s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() || null : null;
+  typeof s === 'string'
+    ? s
+        .replace(/<[^>]+>/g, '')
+        .replace(/\s+/g, ' ')
+        .trim() || null
+    : null;
 
 export class PlaceDetailsService {
-  constructor(private fetcher: Fetcher = (u, i) => fetch(u, i), private now: () => number = Date.now) {}
+  constructor(
+    private fetcher: Fetcher = (u, i) => fetch(u, i),
+    private now: () => number = Date.now
+  ) {}
 
   private async json(url: string) {
     const res = await this.fetcher(url, { headers: UA });
@@ -58,7 +66,14 @@ export class PlaceDetailsService {
 
   private async commonsImage(fileTitle: string): Promise<PlaceImage | null> {
     const title = fileTitle.startsWith('File:') ? fileTitle : `File:${fileTitle}`;
-    const qs = new URLSearchParams({ action: 'query', format: 'json', prop: 'imageinfo', iiprop: 'url|extmetadata|mime', iiurlwidth: '800', titles: title });
+    const qs = new URLSearchParams({
+      action: 'query',
+      format: 'json',
+      prop: 'imageinfo',
+      iiprop: 'url|extmetadata|mime',
+      iiurlwidth: '800',
+      titles: title,
+    });
     const d = await this.json(`https://commons.wikimedia.org/w/api.php?${qs}`);
     const page: any = Object.values(d?.query?.pages ?? {})[0];
     const ii = page?.imageinfo?.[0];
@@ -75,16 +90,27 @@ export class PlaceDetailsService {
   }
 
   private async firstFileInCategory(category: string): Promise<string | null> {
-    const qs = new URLSearchParams({ action: 'query', format: 'json', list: 'categorymembers', cmtype: 'file', cmlimit: '5', cmtitle: category });
+    const qs = new URLSearchParams({
+      action: 'query',
+      format: 'json',
+      list: 'categorymembers',
+      cmtype: 'file',
+      cmlimit: '5',
+      cmtitle: category,
+    });
     const d = await this.json(`https://commons.wikimedia.org/w/api.php?${qs}`);
-    const f = (d?.query?.categorymembers ?? []).find((m: any) => /\.(jpe?g|png|webp)$/i.test(m.title));
+    const f = (d?.query?.categorymembers ?? []).find((m: any) =>
+      /\.(jpe?g|png|webp)$/i.test(m.title)
+    );
     return f?.title ?? null;
   }
 
   private async findImage(tags: Record<string, string>): Promise<PlaceImage | null> {
     try {
       if (/^Q\d+$/.test(tags.wikidata ?? '')) {
-        const d = await this.json(`https://www.wikidata.org/wiki/Special:EntityData/${tags.wikidata}.json`);
+        const d = await this.json(
+          `https://www.wikidata.org/wiki/Special:EntityData/${tags.wikidata}.json`
+        );
         const p18 = d?.entities?.[tags.wikidata]?.claims?.P18?.[0]?.mainsnak?.datavalue?.value;
         if (typeof p18 === 'string') {
           const img = await this.commonsImage(p18);
@@ -104,7 +130,8 @@ export class PlaceDetailsService {
   }
 
   async details(type: string, id: string): Promise<PlaceDetails> {
-    if (!/^(node|way|relation)$/.test(type) || !/^\d{1,15}$/.test(id)) throw new HttpError(400, 'invalid_place', 'Invalid place id');
+    if (!/^(node|way|relation)$/.test(type) || !/^\d{1,15}$/.test(id))
+      throw new HttpError(400, 'invalid_place', 'Invalid place id');
     const key = `${type}/${id}`;
     const hit = memory.get(key);
     if (hit && this.now() - hit.at < TTL_MS) return hit.body;
@@ -114,12 +141,17 @@ export class PlaceDetailsService {
       const d = await this.json(`https://api.openstreetmap.org/api/0.6/${type}/${id}.json`);
       el = d?.elements?.[0];
     } catch (e) {
-      if (/^404 /.test((e as Error).message)) throw new HttpError(404, 'not_found', 'Place not found');
+      if (/^404 /.test((e as Error).message))
+        throw new HttpError(404, 'not_found', 'Place not found');
       throw new HttpError(503, 'places_unavailable', 'Place details are temporarily unavailable.');
     }
     if (!el) throw new HttpError(404, 'not_found', 'Place not found');
     const tags: Record<string, string> = el.tags ?? {};
-    const address = [tags['addr:street'] && `${tags['addr:housenumber'] ?? ''} ${tags['addr:street']}`.trim(), tags['addr:suburb'], tags['addr:city']]
+    const address = [
+      tags['addr:street'] && `${tags['addr:housenumber'] ?? ''} ${tags['addr:street']}`.trim(),
+      tags['addr:suburb'],
+      tags['addr:city'],
+    ]
       .filter(Boolean)
       .join(', ');
     const body: PlaceDetails = {

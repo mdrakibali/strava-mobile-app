@@ -13,4 +13,3 @@ beaconRouter.get('/:token', (c) => controller.getSpectator(c));
 beaconRouter.post('/start', requireAuth, (c) => controller.start(c));
 beaconRouter.post('/:token/ping', requireAuth, (c) => controller.ping(c));
 beaconRouter.post('/:token/stop', requireAuth, (c) => controller.stop(c));
-

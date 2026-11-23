@@ -14,7 +14,10 @@ export interface RouteProgress {
 }
 
 /** Real progress from a GPS fix. Returns null when there is no route or no fix: nothing is invented. */
-export function routeProgress(route: LngLat[], user: LngLat | null | undefined): RouteProgress | null {
+export function routeProgress(
+  route: LngLat[],
+  user: LngLat | null | undefined
+): RouteProgress | null {
   if (!user || route.length < 2) return null;
   let nearest = 0;
   let best = Infinity;

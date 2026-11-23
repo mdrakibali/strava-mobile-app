@@ -14,7 +14,10 @@ export const worldSize = (z: number) => TILE * 2 ** z;
 export const project = ([lng, lat]: LngLat, z: number): [number, number] => {
   const W = worldSize(z);
   const phi = (Math.max(-MAX_LAT, Math.min(MAX_LAT, lat)) * Math.PI) / 180;
-  return [((lng + 180) / 360) * W, ((1 - Math.log(Math.tan(phi) + 1 / Math.cos(phi)) / Math.PI) / 2) * W];
+  return [
+    ((lng + 180) / 360) * W,
+    ((1 - Math.log(Math.tan(phi) + 1 / Math.cos(phi)) / Math.PI) / 2) * W,
+  ];
 };
 
 export interface PreviewLayout {
@@ -69,7 +72,13 @@ export const previewLayout = (
   for (let ty = Math.floor(originY / TILE); ty <= Math.floor((originY + height) / TILE); ty++) {
     if (ty < 0 || ty >= n) continue;
     for (let tx = Math.floor(originX / TILE); tx <= Math.floor((originX + width) / TILE); tx++) {
-      tiles.push({ x: ((tx % n) + n) % n, y: ty, z: zoom, left: tx * TILE - originX, top: ty * TILE - originY });
+      tiles.push({
+        x: ((tx % n) + n) % n,
+        y: ty,
+        z: zoom,
+        left: tx * TILE - originX,
+        top: ty * TILE - originY,
+      });
     }
   }
   const points = route.map((p) => {
@@ -80,7 +89,7 @@ export const previewLayout = (
 };
 
 /** Evenly thin a long route for drawing (keeps first and last point). */
-export const thin = <T,>(pts: T[], max = 400): T[] => {
+export const thin = <T>(pts: T[], max = 400): T[] => {
   if (pts.length <= max) return pts;
   const step = (pts.length - 1) / (max - 1);
   return Array.from({ length: max }, (_, i) => pts[Math.round(i * step)]);

@@ -24,9 +24,7 @@ export const EmptyState: React.FC<{
         {body}
       </AppText>
     ) : null}
-    {primary ? (
-      <Button label={primary.label} onPress={primary.onPress} className="mt-5" />
-    ) : null}
+    {primary ? <Button label={primary.label} onPress={primary.onPress} className="mt-5" /> : null}
     {secondary ? (
       <Button
         label={secondary.label}
@@ -38,7 +36,11 @@ export const EmptyState: React.FC<{
   </View>
 );
 
-export const ErrorState: React.FC<{ message?: string; onRetry?: () => void; compact?: boolean }> = ({
+export const ErrorState: React.FC<{
+  message?: string;
+  onRetry?: () => void;
+  compact?: boolean;
+}> = ({
   message = 'Something went wrong. Check your connection and try again.',
   onRetry,
   compact,
@@ -73,7 +75,10 @@ export const LoadingState: React.FC = () => (
 );
 
 /** Pulsing grey block for skeleton layouts. */
-export const Skeleton: React.FC<{ style?: ViewStyle; className?: string }> = ({ style, className = '' }) => {
+export const Skeleton: React.FC<{ style?: ViewStyle; className?: string }> = ({
+  style,
+  className = '',
+}) => {
   const [opacity] = useState(() => new Animated.Value(0.5));
   useEffect(() => {
     const loop = Animated.loop(
@@ -86,9 +91,6 @@ export const Skeleton: React.FC<{ style?: ViewStyle; className?: string }> = ({ 
     return () => loop.stop();
   }, [opacity]);
   return (
-    <Animated.View
-      className={`bg-gray-200 rounded ${className}`}
-      style={[{ opacity }, style]}
-    />
+    <Animated.View className={`bg-gray-200 rounded ${className}`} style={[{ opacity }, style]} />
   );
 };

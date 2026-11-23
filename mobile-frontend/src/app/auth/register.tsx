@@ -54,7 +54,10 @@ export default function RegisterScreen() {
       await loginWithGoogle(idToken);
       router.replace('/(tabs)');
     } catch (err: any) {
-      Alert.alert('Registration Failed', err.message || 'Could not verify Google account with backend');
+      Alert.alert(
+        'Registration Failed',
+        err.message || 'Could not verify Google account with backend'
+      );
     } finally {
       setIsLoading(false);
       setStatusMessage(null);
@@ -79,7 +82,10 @@ export default function RegisterScreen() {
       });
       router.replace('/(tabs)');
     } catch (err: any) {
-      Alert.alert('Registration Failed', err.message || 'Please check your information and try again.');
+      Alert.alert(
+        'Registration Failed',
+        err.message || 'Please check your information and try again.'
+      );
     } finally {
       setIsLoading(false);
       setStatusMessage(null);
@@ -90,13 +96,14 @@ export default function RegisterScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}>
+        style={{ flex: 1 }}
+      >
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
           showsVerticalScrollIndicator={false}
           style={{ flex: 1 }}
-          className="px-6 py-4">
-          
+          className="px-6 py-4"
+        >
           <AuthHeader />
 
           <View className="mb-4">
@@ -159,10 +166,9 @@ export default function RegisterScreen() {
             disabled={isLoading}
             onPress={handleRegister}
             activeOpacity={0.8}
-            className="w-full py-4 bg-[#FC4C02] rounded-2xl items-center justify-center shadow-md active:bg-[#E03A00] mb-3">
-            <Text className="text-sm font-black text-white tracking-wide">
-              Create Account
-            </Text>
+            className="w-full py-4 bg-[#FC4C02] rounded-2xl items-center justify-center shadow-md active:bg-[#E03A00] mb-3"
+          >
+            <Text className="text-sm font-black text-white tracking-wide">Create Account</Text>
           </TouchableOpacity>
 
           <View className="flex-row items-center my-4">

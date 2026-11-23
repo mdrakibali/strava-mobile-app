@@ -79,7 +79,9 @@ export const createApp = (dbProvider: DbProvider = hyperdriveProvider) => {
 
   app.route('/api/v1', api);
 
-  app.notFound((c) => c.json({ error: 'Endpoint Not Found', code: 'not_found', path: c.req.path }, 404));
+  app.notFound((c) =>
+    c.json({ error: 'Endpoint Not Found', code: 'not_found', path: c.req.path }, 404)
+  );
 
   app.onError((err, c) => {
     if (err instanceof HttpError) return c.json(errorBody(err), err.status);

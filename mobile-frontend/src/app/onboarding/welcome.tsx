@@ -1,12 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import {
-  ImageBackground,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ImageBackground, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SLIDES = [
@@ -22,7 +17,8 @@ const SLIDES = [
   },
   {
     title: 'Advanced pro athlete analytics.',
-    subtitle: 'Fitness & Freshness, Grade Adjusted Pace (GAP), Relative Effort, and segment records.',
+    subtitle:
+      'Fitness & Freshness, Grade Adjusted Pace (GAP), Relative Effort, and segment records.',
     icon: 'stats-chart',
   },
   {
@@ -45,20 +41,17 @@ export default function WelcomeScreen() {
           uri: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=1200&auto=format&fit=crop&q=80',
         }}
         style={{ flex: 1, justifyContent: 'space-between' }}
-        resizeMode="cover">
+        resizeMode="cover"
+      >
         {/* Dark Vignette Overlay for Crisp Readability */}
         <View className="absolute inset-0 bg-black/60" />
 
         <SafeAreaView edges={['top']} className="px-6 pt-4 items-center z-20">
-          <Text className="text-3xl font-black text-white tracking-widest font-sans">
-            KINETIX
-          </Text>
+          <Text className="text-3xl font-black text-white tracking-widest font-sans">KINETIX</Text>
         </SafeAreaView>
 
         {/* Carousel Content */}
-        <View
-          style={{ paddingBottom: Math.max(insets.bottom, 20) }}
-          className="px-6 z-20">
+        <View style={{ paddingBottom: Math.max(insets.bottom, 20) }} className="px-6 z-20">
           {/* Active Feature Icon Pill */}
           <View className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md items-center justify-center mb-4 border border-white/20">
             <Ionicons name={SLIDES[slideIndex].icon as any} size={24} color="#FC4C02" />
@@ -92,19 +85,17 @@ export default function WelcomeScreen() {
             <TouchableOpacity
               onPress={() => router.push('/onboarding/sport-preferences')}
               activeOpacity={0.85}
-              className="w-full py-4 bg-primary rounded-full items-center justify-center shadow-xl mb-3">
-              <Text className="text-base font-black text-white tracking-wide">
-                Get Started
-              </Text>
+              className="w-full py-4 bg-primary rounded-full items-center justify-center shadow-xl mb-3"
+            >
+              <Text className="text-base font-black text-white tracking-wide">Get Started</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => router.push('/auth/login')}
               activeOpacity={0.7}
-              className="w-full py-3.5 bg-white/10 rounded-full items-center justify-center border border-white/20">
-              <Text className="text-sm font-bold text-white">
-                Log In
-              </Text>
+              className="w-full py-3.5 bg-white/10 rounded-full items-center justify-center border border-white/20"
+            >
+              <Text className="text-sm font-bold text-white">Log In</Text>
             </TouchableOpacity>
           </View>
         </View>

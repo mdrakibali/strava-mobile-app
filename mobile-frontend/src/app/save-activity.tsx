@@ -28,7 +28,11 @@ import { ActivityVisibility, SportType } from '../types';
 
 const VISIBILITY_OPTIONS: { id: ActivityVisibility; title: string; description: string }[] = [
   { id: 'PUBLIC', title: 'Everyone', description: 'Anyone on Kinetix can see this activity.' },
-  { id: 'FOLLOWERS_ONLY', title: 'Followers', description: 'Only people who follow you can view this activity.' },
+  {
+    id: 'FOLLOWERS_ONLY',
+    title: 'Followers',
+    description: 'Only people who follow you can view this activity.',
+  },
   { id: 'ONLY_ME', title: 'Only you', description: 'Private. Only you can view this activity.' },
 ];
 
@@ -43,7 +47,9 @@ export default function SaveActivityScreen() {
 
   const [startDate] = useState(() => new Date(rec.lifecycle.startedAt ?? Date.now()));
   const [sport, setSport] = useState<SportType>((rec.sport as SportType) || 'Run');
-  const [title, setTitle] = useState(() => defaultActivityTitle(sportConfig(rec.sport).label, startDate));
+  const [title, setTitle] = useState(() =>
+    defaultActivityTitle(sportConfig(rec.sport).label, startDate)
+  );
   const [titleEdited, setTitleEdited] = useState(false);
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<ActivityVisibility>('PUBLIC');
@@ -120,7 +126,10 @@ export default function SaveActivityScreen() {
     } else {
       router.replace('/(tabs)/workout');
       if (!synced) {
-        Alert.alert('Saved on this phone', 'Your activity will upload automatically when the connection is back.');
+        Alert.alert(
+          'Saved on this phone',
+          'Your activity will upload automatically when the connection is back.'
+        );
       }
     }
   };
@@ -132,7 +141,11 @@ export default function SaveActivityScreen() {
   const blocked = s ? noMovementReason(sport, distanceM, movingS) : null;
   const second =
     cfg.primaryMetric === 'speed'
-      ? { label: 'Avg speed', value: speedValue(movingS > 0 ? distanceM / movingS : null), unit: 'km/h' }
+      ? {
+          label: 'Avg speed',
+          value: speedValue(movingS > 0 ? distanceM / movingS : null),
+          unit: 'km/h',
+        }
       : { label: 'Avg pace', value: paceValue(distanceM, movingS), unit: '/km' };
 
   return (
@@ -142,15 +155,23 @@ export default function SaveActivityScreen() {
         <Pressable
           onPress={onResume}
           disabled={saving}
-          className="px-3.5 py-1.5 rounded-full border border-gray-200 active:bg-gray-50">
+          className="px-3.5 py-1.5 rounded-full border border-gray-200 active:bg-gray-50"
+        >
           <Text className="text-gray-900 font-bold text-xs">Resume</Text>
         </Pressable>
         <Text className="text-lg font-black text-gray-900 text-center flex-1">Save Activity</Text>
         <View className="w-16" />
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 64 }} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 64 }}
+          keyboardShouldPersistTaps="handled"
+        >
           <SaveActivityForm
             distanceM={distanceM}
             movingS={movingS}
@@ -184,13 +205,17 @@ export default function SaveActivityScreen() {
         </ScrollView>
 
         {/* Sticky Bottom Save Activity Button */}
-        <View style={{ paddingBottom: Math.max(insets.bottom, 12) + 12 }} className="px-4 pt-3 bg-white border-t border-gray-100 shadow-md">
+        <View
+          style={{ paddingBottom: Math.max(insets.bottom, 12) + 12 }}
+          className="px-4 pt-3 bg-white border-t border-gray-100 shadow-md"
+        >
           <Pressable
             onPress={onSave}
             disabled={saving || !title.trim() || Boolean(blocked)}
             accessibilityRole="button"
             accessibilityLabel="Save Activity"
-            className={`h-14 rounded-full flex-row items-center justify-center shadow-lg ${blocked ? 'bg-gray-300' : 'bg-[#FC4C02] active:bg-[#E03A00]'}`}>
+            className={`h-14 rounded-full flex-row items-center justify-center shadow-lg ${blocked ? 'bg-gray-300' : 'bg-[#FC4C02] active:bg-[#E03A00]'}`}
+          >
             {saving ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
@@ -215,7 +240,11 @@ export default function SaveActivityScreen() {
         }}
         onClose={() => setSportSheet(false)}
       />
-      <BottomSheet visible={visibilitySheet} onClose={() => setVisibilitySheet(false)} title="Who can view">
+      <BottomSheet
+        visible={visibilitySheet}
+        onClose={() => setVisibilitySheet(false)}
+        title="Who can view"
+      >
         {VISIBILITY_OPTIONS.map((o) => (
           <OptionRow
             key={o.id}

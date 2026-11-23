@@ -54,7 +54,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         : null
     );
     if (id) recordingEngine.load(true).catch((e) => console.warn('recording recovery failed', e));
-  }, [isAuthenticated, currentUser.id, currentUser.displayName, currentUser.username, currentUser.avatarUrl, currentUser.city]);
+  }, [
+    isAuthenticated,
+    currentUser.id,
+    currentUser.displayName,
+    currentUser.username,
+    currentUser.avatarUrl,
+    currentUser.city,
+  ]);
 
   // The home feed, profile, activity, club, challenge and event screens load their own data
   // (paginated, with error states). App-wide state is only the session and notifications.
@@ -112,26 +119,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           await loadFeedData();
           if (parsed?.id) {
             const requestEpoch = profileMutationEpochRef.current;
-            api.athletes.getProfile(parsed.id).then((fresh) => {
-              if (fresh?.athlete && profileMutationEpochRef.current === requestEpoch) {
-                setCurrentUser((prev) => {
-                  if (prev.id !== fresh.athlete.id) return prev;
-                  const nextAthlete = {
-                    ...prev,
-                    displayName: fresh.athlete.displayName ?? prev.displayName,
-                    username: fresh.athlete.username ?? prev.username,
-                    avatarUrl: fresh.athlete.avatarUrl ?? prev.avatarUrl,
-                    bio: fresh.athlete.bio ?? prev.bio,
-                    city: fresh.athlete.city ?? prev.city,
-                    country: fresh.athlete.country ?? prev.country,
-                    followersCount: fresh.athlete.followersCount ?? prev.followersCount,
-                    followingCount: fresh.athlete.followingCount ?? prev.followingCount,
-                  };
-                  AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(nextAthlete)).catch(() => {});
-                  return nextAthlete;
-                });
-              }
-            }).catch(() => {});
+            api.athletes
+              .getProfile(parsed.id)
+              .then((fresh) => {
+                if (fresh?.athlete && profileMutationEpochRef.current === requestEpoch) {
+                  setCurrentUser((prev) => {
+                    if (prev.id !== fresh.athlete.id) return prev;
+                    const nextAthlete = {
+                      ...prev,
+                      displayName: fresh.athlete.displayName ?? prev.displayName,
+                      username: fresh.athlete.username ?? prev.username,
+                      avatarUrl: fresh.athlete.avatarUrl ?? prev.avatarUrl,
+                      bio: fresh.athlete.bio ?? prev.bio,
+                      city: fresh.athlete.city ?? prev.city,
+                      country: fresh.athlete.country ?? prev.country,
+                      followersCount: fresh.athlete.followersCount ?? prev.followersCount,
+                      followingCount: fresh.athlete.followingCount ?? prev.followingCount,
+                    };
+                    AsyncStorage.setItem('@open_strava_athlete', JSON.stringify(nextAthlete)).catch(
+                      () => {}
+                    );
+                    return nextAthlete;
+                  });
+                }
+              })
+              .catch(() => {});
           }
         } else {
           setIsAuthenticated(false);
@@ -191,7 +203,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const registerWithEmail = async (data: { email: string; password: string; displayName: string; username?: string }) => {
+  const registerWithEmail = async (data: {
+    email: string;
+    password: string;
+    displayName: string;
+    username?: string;
+  }) => {
     setIsSyncing(true);
     try {
       await startSession(await api.auth.register(data));
@@ -332,7 +349,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         loginWithGoogle,
         logout,
         updateCurrentUser,
-      }}>
+      }}
+    >
       {children}
     </AppContext.Provider>
   );

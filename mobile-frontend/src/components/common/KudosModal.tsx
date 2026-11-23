@@ -38,7 +38,8 @@ export const KudosModal: React.FC<KudosModalProps> = ({ visible, onClose, athlet
                   onClose();
                   router.push(`/athlete/${athlete.id}`);
                 }}
-                className="flex-row items-center justify-between py-2.5 border-b border-gray-50">
+                className="flex-row items-center justify-between py-2.5 border-b border-gray-50"
+              >
                 <View className="flex-row items-center flex-1 mr-3">
                   <Image
                     source={{ uri: athlete.avatarUrl }}
@@ -58,4 +59,3 @@ export const KudosModal: React.FC<KudosModalProps> = ({ visible, onClose, athlet
     </Modal>
   );
 };
-

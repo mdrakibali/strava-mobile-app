@@ -28,10 +28,13 @@ export default function RecordScreen() {
   const isIdle = status === 'idle' || status === 'preparing';
   const now = useNow(true);
 
-  const requested = MVP_SPORTS.some((x) => x.id === params.sport) || params.sport === 'Workout'
-    ? (params.sport as SportType)
-    : null;
-  const [sport, setSport] = useState<SportType>(isIdle ? (requested ?? 'Run') : (rec.sport as SportType));
+  const requested =
+    MVP_SPORTS.some((x) => x.id === params.sport) || params.sport === 'Workout'
+      ? (params.sport as SportType)
+      : null;
+  const [sport, setSport] = useState<SportType>(
+    isIdle ? (requested ?? 'Run') : (rec.sport as SportType)
+  );
   const [sportSheet, setSportSheet] = useState(false);
   const [statsView, setStatsView] = useState(false);
   const [following, setFollowing] = useState(true);
@@ -58,7 +61,10 @@ export default function RecordScreen() {
 
   useEffect(() => {
     recordingEngine.prepare();
-    const sub = AppState.addEventListener('change', (s) => s === 'active' && recordingEngine.refreshPermission());
+    const sub = AppState.addEventListener(
+      'change',
+      (s) => s === 'active' && recordingEngine.refreshPermission()
+    );
     return () => {
       sub.remove();
       recordingEngine.cancelPrepare();
@@ -67,11 +73,21 @@ export default function RecordScreen() {
 
   const gps = gpsStatus(rec, now);
   const route = rec.route;
-  const userPosition = rec.lastFix ? ([rec.lastFix.lng, rec.lastFix.lat] as [number, number]) : null;
+  const userPosition = rec.lastFix
+    ? ([rec.lastFix.lng, rec.lastFix.lat] as [number, number])
+    : null;
 
   const {
-    gpsLabel, gpsColor, gpsBg, statusAction,
-    time, distance, second, currentMetric, onStart, onFinish,
+    gpsLabel,
+    gpsColor,
+    gpsBg,
+    statusAction,
+    time,
+    distance,
+    second,
+    currentMetric,
+    onStart,
+    onFinish,
   } = useRecordMetrics({ rec, now, sport, cfg, status, isIdle, gps, setFollowing, setStarting });
 
   const planned = usePlannedRoute();
@@ -105,10 +121,17 @@ export default function RecordScreen() {
     const indoorCal = estimateIndoorCalories(sport, rec.movingTimeS);
     return (
       <RecordIndoorView
-        status={status} time={time} sportLabel={cfg.label} calories={indoorCal}
-        heartRate={null} onBack={handleBack} onSettings={() => router.push('/settings/gps')}
-        onStart={onStart} onPause={() => recordingEngine.pause()}
-        onResume={handleResume} onFinish={onFinish}
+        status={status}
+        time={time}
+        sportLabel={cfg.label}
+        calories={indoorCal}
+        heartRate={null}
+        onBack={handleBack}
+        onSettings={() => router.push('/settings/gps')}
+        onStart={onStart}
+        onPause={() => recordingEngine.pause()}
+        onResume={handleResume}
+        onFinish={onFinish}
       />
     );
   }
@@ -117,15 +140,32 @@ export default function RecordScreen() {
     const calories = estimateCalories(sport, rec.movingTimeS, rec.distanceM);
     return (
       <RecordStatsFullscreen
-        sportConfig={cfg} time={time} secondLabel={second.label} secondValue={second.value}
-        distance={distance} movingTimeS={rec.movingTimeS} currentLabel={currentMetric.label}
-        currentValue={currentMetric.value} elevGainM={rec.elevGainM} calories={calories}
-        gpsLabel={gpsLabel} gpsColor={gpsColor} gpsBg={gpsBg} trackingMode={rec.trackingMode} status={status} starting={starting}
-        gpsDisabled={gps === 'denied' || gps === 'off'} hasPlannedRoute={Boolean(planned)}
-        onClose={() => setStatsView(false)} onOpenSportSheet={() => setSportSheet(true)}
-        onStart={onStart} onPause={() => recordingEngine.pause()}
-        onResume={handleResume} onFinish={onFinish}
-        onOpenRoutes={() => router.push('/(tabs)/maps?source=routes')} onStatusAction={statusAction}
+        sportConfig={cfg}
+        time={time}
+        secondLabel={second.label}
+        secondValue={second.value}
+        distance={distance}
+        movingTimeS={rec.movingTimeS}
+        currentLabel={currentMetric.label}
+        currentValue={currentMetric.value}
+        elevGainM={rec.elevGainM}
+        calories={calories}
+        gpsLabel={gpsLabel}
+        gpsColor={gpsColor}
+        gpsBg={gpsBg}
+        trackingMode={rec.trackingMode}
+        status={status}
+        starting={starting}
+        gpsDisabled={gps === 'denied' || gps === 'off'}
+        hasPlannedRoute={Boolean(planned)}
+        onClose={() => setStatsView(false)}
+        onOpenSportSheet={() => setSportSheet(true)}
+        onStart={onStart}
+        onPause={() => recordingEngine.pause()}
+        onResume={handleResume}
+        onFinish={onFinish}
+        onOpenRoutes={() => router.push('/(tabs)/maps?source=routes')}
+        onStatusAction={statusAction}
       />
     );
   }
@@ -175,7 +215,8 @@ export default function RecordScreen() {
 
         <View
           style={{ paddingBottom: Math.max(insets.bottom, 16) + 12 }}
-          className="bg-white rounded-t-3xl px-5 pt-2 border-t border-gray-100 shadow-2xl">
+          className="bg-white rounded-t-3xl px-5 pt-2 border-t border-gray-100 shadow-2xl"
+        >
           <View className="self-center w-10 h-1 rounded-full bg-gray-300 mb-3" />
           <RecordBottomControls
             status={status}
@@ -203,7 +244,11 @@ export default function RecordScreen() {
         onClose={() => setSportSheet(false)}
       />
 
-      <BottomSheet visible={styleModalVisible} onClose={() => setStyleModalVisible(false)} title="Map style">
+      <BottomSheet
+        visible={styleModalVisible}
+        onClose={() => setStyleModalVisible(false)}
+        title="Map style"
+      >
         {MAP_STYLE_OPTIONS.map(({ id, title, description: desc, icon }) => (
           <OptionRow
             key={id}

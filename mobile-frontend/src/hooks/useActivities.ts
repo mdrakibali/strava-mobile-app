@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ActivityView, fromDetailResponse, fromFeedItem, fromProfileActivity, toAthleteSummary } from '../lib/activityView';
+import {
+  ActivityView,
+  fromDetailResponse,
+  fromFeedItem,
+  fromProfileActivity,
+  toAthleteSummary,
+} from '../lib/activityView';
 import { api } from '../services/api';
 
 export const activityKeys = {
@@ -119,10 +125,13 @@ export function useToggleKudos() {
       });
 
       // 3. Update history queries (plain arrays)
-      queryClient.setQueriesData({ queryKey: ['activities', 'history'] }, (old?: ActivityView[]) => {
-        if (!Array.isArray(old)) return old;
-        return old.map(patchItem);
-      });
+      queryClient.setQueriesData(
+        { queryKey: ['activities', 'history'] },
+        (old?: ActivityView[]) => {
+          if (!Array.isArray(old)) return old;
+          return old.map(patchItem);
+        }
+      );
 
       return { previousQueries };
     },
@@ -185,10 +194,13 @@ export function useDeleteActivity() {
       });
 
       // Optimistically remove from history
-      queryClient.setQueriesData({ queryKey: ['activities', 'history'] }, (old?: ActivityView[]) => {
-        if (!Array.isArray(old)) return old;
-        return old.filter((item) => item.id !== deletedId);
-      });
+      queryClient.setQueriesData(
+        { queryKey: ['activities', 'history'] },
+        (old?: ActivityView[]) => {
+          if (!Array.isArray(old)) return old;
+          return old.filter((item) => item.id !== deletedId);
+        }
+      );
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: activityKeys.all });
@@ -202,7 +214,13 @@ export function useDeleteActivity() {
 export function useAddComment(activityId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ content, parentCommentId }: { content: string; parentCommentId?: string }) => {
+    mutationFn: async ({
+      content,
+      parentCommentId,
+    }: {
+      content: string;
+      parentCommentId?: string;
+    }) => {
       return api.activities.addComment(activityId, content, parentCommentId);
     },
     onSuccess: () => {

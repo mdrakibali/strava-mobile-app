@@ -9,8 +9,13 @@ import { View } from 'react-native';
 import { MapView } from './MapView';
 import { MapMarkerItem, StravaMapViewProps, toMapStyleKey } from './mapTypes';
 
-export type { HeatmapTypeOption, MapMarkerItem, MapStyleKey, MapTypeOption, TerrainTypeOption } from './mapTypes';
-
+export type {
+  HeatmapTypeOption,
+  MapMarkerItem,
+  MapStyleKey,
+  MapTypeOption,
+  TerrainTypeOption,
+} from './mapTypes';
 
 export const StravaMapView: React.FC<StravaMapViewProps> = ({
   styleKey,
@@ -38,12 +43,23 @@ export const StravaMapView: React.FC<StravaMapViewProps> = ({
         following={mode === 'live-record' ? followUser !== false : undefined}
         showUserLocation={showUserLocation}
         otherRoutes={heatmapRoutes}
-        markers={markers?.map((m) => ({ id: m.id, coordinate: m.coordinate, selected: m.id === selectedMarkerId }))}
-        onMarkerPress={onMarkerPress ? (id) => byId.get(id) && onMarkerPress(byId.get(id)!) : undefined}
+        markers={markers?.map((m) => ({
+          id: m.id,
+          coordinate: m.coordinate,
+          selected: m.id === selectedMarkerId,
+        }))}
+        onMarkerPress={
+          onMarkerPress ? (id) => byId.get(id) && onMarkerPress(byId.get(id)!) : undefined
+        }
         onMapPress={onMapPress}
-        focus={routeCoordinates.length === 0 && centerCoordinate ? { center: centerCoordinate, zoom: zoomLevel ?? 14 } : null}
+        focus={
+          routeCoordinates.length === 0 && centerCoordinate
+            ? { center: centerCoordinate, zoom: zoomLevel ?? 14 }
+            : null
+        }
         frameKey={`${routeCoordinates.length}:${centerCoordinate?.join(',') ?? ''}`}
-        styleKey={toMapStyleKey(styleKey)}>
+        styleKey={toMapStyleKey(styleKey)}
+      >
         {children}
       </MapView>
     </View>

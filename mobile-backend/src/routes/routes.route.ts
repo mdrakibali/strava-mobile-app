@@ -139,7 +139,9 @@ const createRouteSchema = z.object({
   description: z.string().trim().max(1000).optional(),
   sportType: z.enum(['Run', 'Walk', 'Hike', 'Ride']).default('Run'),
   polylinePoints: z
-    .array(z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }))
+    .array(
+      z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) })
+    )
     .min(2)
     .max(5000),
   elevationGainMeters: z.number().nonnegative().optional(),
@@ -158,8 +160,15 @@ routesRouter.post('/', requireAuth, async (c) => {
   const body = await parseBody(c, createRouteSchema);
   const pts = body.polylinePoints;
   let distance = 0;
-  for (let i = 1; i < pts.length; i++) distance += haversineM(pts[i - 1].latitude, pts[i - 1].longitude, pts[i].latitude, pts[i].longitude);
-  if (distance < 50) throw new HttpError(400, 'route_too_short', 'A route must be at least 50 m long');
+  for (let i = 1; i < pts.length; i++)
+    distance += haversineM(
+      pts[i - 1].latitude,
+      pts[i - 1].longitude,
+      pts[i].latitude,
+      pts[i].longitude
+    );
+  if (distance < 50)
+    throw new HttpError(400, 'route_too_short', 'A route must be at least 50 m long');
   const newRoute = {
     id: `route_${crypto.randomUUID()}`,
     creatorId: user.athleteId,

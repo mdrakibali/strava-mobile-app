@@ -1,19 +1,8 @@
-import { Ionicons } from "@expo/vector-icons";
-import React from "react";
-import { Text, TouchableOpacity, View } from "react-native";
-import Svg, {
-  Circle,
-  Defs,
-  LinearGradient,
-  Path,
-  Stop,
-} from "react-native-svg";
-import {
-  HeatmapTypeOption,
-  MapMarkerItem,
-  MapTypeOption,
-  TerrainTypeOption,
-} from "./mapTypes";
+import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
+import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
+import { HeatmapTypeOption, MapMarkerItem, MapTypeOption, TerrainTypeOption } from './mapTypes';
 
 interface MapFallbackViewProps {
   routeCoordinates?: [number, number][];
@@ -34,9 +23,9 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
   markers = [],
   userLocation,
   centerCoordinate,
-  mapType = "standard",
-  heatmapType = "global_run",
-  terrainType = "none",
+  mapType = 'standard',
+  heatmapType = 'global_run',
+  terrainType = 'none',
   is3D = false,
   poiEnabled = true,
   bikeLanesEnabled = false,
@@ -46,7 +35,7 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
   const svgHeight = 240;
   const padding = 32;
 
-  let pathString = "";
+  let pathString = '';
   let startPt: { x: number; y: number } | null = null;
   let endPt: { x: number; y: number } | null = null;
 
@@ -68,8 +57,7 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
 
     const pts = routeCoordinates.map(([lon, lat]) => {
       const x = padding + ((lon - minLon) / lonSpan) * (svgWidth - 2 * padding);
-      const y =
-        padding + ((maxLat - lat) / latSpan) * (svgHeight - 2 * padding);
+      const y = padding + ((maxLat - lat) / latSpan) * (svgHeight - 2 * padding);
       return { x, y };
     });
 
@@ -78,25 +66,19 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
         i === 0
           ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}`
           : `${acc} L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`,
-      "",
+      ''
     );
     startPt = pts[0];
     endPt = pts[pts.length - 1];
   }
 
   // Theme based on mapType
-  const isSatellite = mapType === "satellite" || mapType === "hybrid";
-  const isWinter = mapType === "winter";
-  const bgColor = isSatellite
-    ? "bg-[#15231D]"
-    : isWinter
-      ? "bg-[#EAF2F8]"
-      : "bg-[#F4F3F0]";
+  const isSatellite = mapType === 'satellite' || mapType === 'hybrid';
+  const isWinter = mapType === 'winter';
+  const bgColor = isSatellite ? 'bg-[#15231D]' : isWinter ? 'bg-[#EAF2F8]' : 'bg-[#F4F3F0]';
 
   return (
-    <View
-      className={`flex-1 ${bgColor} items-center justify-center relative overflow-hidden`}
-    >
+    <View className={`flex-1 ${bgColor} items-center justify-center relative overflow-hidden`}>
       {/* 3D Horizon and Perspective Grid */}
       {is3D && (
         <View className="absolute inset-x-0 top-0 h-20 bg-sky-200/40 pointer-events-none z-10 border-b border-sky-300/50">
@@ -113,42 +95,42 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
       <View className="absolute inset-0 opacity-40">
         <View className="w-full h-full border border-gray-300/50" />
         <View
-          className={`absolute w-full h-1 ${isSatellite ? "bg-[#374151]" : "bg-[#E2E8F0]"} top-1/4 -rotate-6`}
+          className={`absolute w-full h-1 ${isSatellite ? 'bg-[#374151]' : 'bg-[#E2E8F0]'} top-1/4 -rotate-6`}
         />
         <View
-          className={`absolute w-full h-2 ${isSatellite ? "bg-[#4B5563]" : "bg-[#E2E8F0]"} top-1/2 rotate-6`}
+          className={`absolute w-full h-2 ${isSatellite ? 'bg-[#4B5563]' : 'bg-[#E2E8F0]'} top-1/2 rotate-6`}
         />
         <View
-          className={`absolute w-2 h-full ${isSatellite ? "bg-[#374151]" : "bg-[#E2E8F0]"} left-1/3`}
+          className={`absolute w-2 h-full ${isSatellite ? 'bg-[#374151]' : 'bg-[#E2E8F0]'} left-1/3`}
         />
         <View
-          className={`absolute w-1.5 h-full ${isSatellite ? "bg-[#374151]" : "bg-[#E2E8F0]"} right-1/4 -rotate-3`}
+          className={`absolute w-1.5 h-full ${isSatellite ? 'bg-[#374151]' : 'bg-[#E2E8F0]'} right-1/4 -rotate-3`}
         />
 
         {/* River / Water body */}
         <View
-          className={`absolute -right-10 top-1/3 w-36 h-28 ${isSatellite ? "bg-[#0E7490]/50" : "bg-[#BAE6FD]/60"} rounded-full blur-sm`}
+          className={`absolute -right-10 top-1/3 w-36 h-28 ${isSatellite ? 'bg-[#0E7490]/50' : 'bg-[#BAE6FD]/60'} rounded-full blur-sm`}
         />
 
         {/* Park / Greenery feature */}
         <View
-          className={`absolute -left-8 bottom-6 w-44 h-32 ${isSatellite ? "bg-[#064E3B]/60" : "bg-[#DCFCE7]/70"} rounded-3xl`}
+          className={`absolute -left-8 bottom-6 w-44 h-32 ${isSatellite ? 'bg-[#064E3B]/60' : 'bg-[#DCFCE7]/70'} rounded-3xl`}
         />
       </View>
 
       {/* Heatmap Layer Overlays (Strava Heatmap Effect) */}
-      {heatmapType !== "none" && (
+      {heatmapType !== 'none' && (
         <View className="absolute inset-0 pointer-events-none opacity-60 z-10">
           {/* Heat glow lines mimicking community athletic activity */}
           <Svg width="100%" height="100%">
             <Path
               d="M 20 80 Q 120 40 220 90 T 360 70"
               stroke={
-                heatmapType === "night"
-                  ? "#A855F7"
-                  : heatmapType === "weekly"
-                    ? "#10B981"
-                    : "#FC4C02"
+                heatmapType === 'night'
+                  ? '#A855F7'
+                  : heatmapType === 'weekly'
+                    ? '#10B981'
+                    : '#FC4C02'
               }
               strokeWidth={8}
               strokeOpacity={0.4}
@@ -163,7 +145,7 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
             />
             <Path
               d="M 80 10 Q 140 120 180 240"
-              stroke={heatmapType === "personal" ? "#3B82F6" : "#FC4C02"}
+              stroke={heatmapType === 'personal' ? '#3B82F6' : '#FC4C02'}
               strokeWidth={7}
               strokeOpacity={0.4}
               fill="none"
@@ -197,11 +179,7 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
       {/* Real Geodesic SVG Polyline */}
       {pathString ? (
         <View className="w-full h-full absolute inset-0 items-center justify-center z-20">
-          <Svg
-            width="100%"
-            height="100%"
-            viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          >
+          <Svg width="100%" height="100%" viewBox={`0 0 ${svgWidth} ${svgHeight}`}>
             <Defs>
               <LinearGradient id="routeGlow" x1="0" y1="0" x2="1" y2="1">
                 <Stop offset="0%" stopColor="#FC4C02" stopOpacity="0.9" />
@@ -248,13 +226,7 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
             {/* Finish Pin / Current Location (Red/Orange with Pulse Ring) */}
             {endPt && (
               <>
-                <Circle
-                  cx={endPt.x}
-                  cy={endPt.y}
-                  r={9}
-                  fill="#FC4C02"
-                  opacity={0.25}
-                />
+                <Circle cx={endPt.x} cy={endPt.y} r={9} fill="#FC4C02" opacity={0.25} />
                 <Circle
                   cx={endPt.x}
                   cy={endPt.y}
@@ -283,8 +255,7 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
           <View className="bg-stone-900/90 border border-stone-700 px-2.5 py-1 rounded-full shadow-md mt-1 flex-row items-center">
             <View className="w-2 h-2 rounded-full bg-emerald-400 mr-1.5" />
             <Text className="text-[10px] font-black text-white tracking-wide">
-              GPS Active · {userLocation[1].toFixed(4)},{" "}
-              {userLocation[0].toFixed(4)}
+              GPS Active · {userLocation[1].toFixed(4)}, {userLocation[0].toFixed(4)}
             </Text>
           </View>
         </View>
@@ -307,15 +278,11 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
         <>
           <View className="absolute top-1/4 left-16 z-20 flex-row items-center bg-white/95 px-2 py-1 rounded-full shadow-sm border border-gray-200">
             <Ionicons name="cafe" size={12} color="#D97706" />
-            <Text className="text-[9px] font-bold text-gray-800 ml-1">
-              Café
-            </Text>
+            <Text className="text-[9px] font-bold text-gray-800 ml-1">Café</Text>
           </View>
           <View className="absolute bottom-1/3 right-12 z-20 flex-row items-center bg-white/95 px-2 py-1 rounded-full shadow-sm border border-gray-200">
             <Ionicons name="water" size={12} color="#0284C7" />
-            <Text className="text-[9px] font-bold text-gray-800 ml-1">
-              Water Station
-            </Text>
+            <Text className="text-[9px] font-bold text-gray-800 ml-1">Water Station</Text>
           </View>
         </>
       )}
@@ -326,7 +293,7 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
           key={m.id}
           onPress={() => onMarkerPress && onMarkerPress(m)}
           style={{
-            position: "absolute",
+            position: 'absolute',
             top: `${26 + (idx % 3) * 22}%`,
             left: `${22 + (idx % 3) * 26}%`,
           }}
@@ -334,11 +301,11 @@ export const MapFallbackView: React.FC<MapFallbackViewProps> = ({
         >
           <View
             className={`w-7 h-7 rounded-full border-2 border-white shadow-md items-center justify-center ${
-              m.type === "segment" ? "bg-amber-500" : "bg-[#FC4C02]"
+              m.type === 'segment' ? 'bg-amber-500' : 'bg-[#FC4C02]'
             }`}
           >
             <Ionicons
-              name={m.type === "segment" ? "trophy" : "navigate"}
+              name={m.type === 'segment' ? 'trophy' : 'navigate'}
               size={14}
               color="#FFFFFF"
             />

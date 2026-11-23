@@ -6,11 +6,7 @@ export class AthleteRepository {
   constructor(private db: AppDatabase) {}
 
   async findById(id: string) {
-    const [athlete] = await this.db
-      .select()
-      .from(athletes)
-      .where(eq(athletes.id, id))
-      .limit(1);
+    const [athlete] = await this.db.select().from(athletes).where(eq(athletes.id, id)).limit(1);
     return athlete || null;
   }
 
@@ -99,10 +95,7 @@ export class AthleteRepository {
   }
 
   async follow(followerId: string, followingId: string): Promise<void> {
-    await this.db
-      .insert(follows)
-      .values({ followerId, followingId })
-      .onConflictDoNothing();
+    await this.db.insert(follows).values({ followerId, followingId }).onConflictDoNothing();
   }
 
   async unfollow(followerId: string, followingId: string): Promise<void> {
@@ -128,4 +121,3 @@ export class AthleteRepository {
       .limit(limit);
   }
 }
-

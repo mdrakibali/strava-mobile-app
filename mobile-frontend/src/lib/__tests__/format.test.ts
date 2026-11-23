@@ -70,9 +70,15 @@ describe('calories display', () => {
 describe('dates and titles', () => {
   const now = new Date(2026, 10, 19, 18, 0, 0);
   it('today / yesterday / full date', () => {
-    expect(formatActivityDate(new Date(2026, 10, 19, 6, 42).toISOString(), now)).toMatch(/^Today at 6:42/);
-    expect(formatActivityDate(new Date(2026, 10, 18, 7, 5).toISOString(), now)).toMatch(/^Yesterday at 7:05/);
-    expect(formatActivityDate(new Date(2026, 10, 1, 9, 44).toISOString(), now)).toMatch(/^November 1, 2026 at 9:44/);
+    expect(formatActivityDate(new Date(2026, 10, 19, 6, 42).toISOString(), now)).toMatch(
+      /^Today at 6:42/
+    );
+    expect(formatActivityDate(new Date(2026, 10, 18, 7, 5).toISOString(), now)).toMatch(
+      /^Yesterday at 7:05/
+    );
+    expect(formatActivityDate(new Date(2026, 10, 1, 9, 44).toISOString(), now)).toMatch(
+      /^November 1, 2026 at 9:44/
+    );
     expect(formatActivityDate(undefined, now)).toBe('');
   });
   it('default title by time of day', () => {
@@ -85,7 +91,7 @@ describe('dates and titles', () => {
 });
 
 describe('formatEventWhen', () => {
-  it('shows the instant in the viewer\'s own zone, not the server\'s', () => {
+  it("shows the instant in the viewer's own zone, not the server's", () => {
     const iso = '2026-11-21T00:30:00.000Z';
     const d = new Date(iso);
     const expectedTime = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });

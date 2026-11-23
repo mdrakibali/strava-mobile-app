@@ -54,13 +54,7 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({
         </Defs>
 
         <Path d={areaPath} fill="url(#elevGradient)" />
-        <Path
-          d={linePath}
-          fill="none"
-          stroke="#8B5CF6"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
+        <Path d={linePath} fill="none" stroke="#8B5CF6" strokeWidth="2.5" strokeLinecap="round" />
       </Svg>
     </View>
   );

@@ -44,7 +44,8 @@ export const IconButton: React.FC<IconButtonProps> = ({
     ]}
     className={`items-center justify-center ${
       appearance === 'floating' ? 'bg-white shadow-md active:bg-gray-50' : 'active:bg-gray-100'
-    } ${className}`}>
+    } ${className}`}
+  >
     <Ionicons name={icon} size={Math.round(size * 0.5)} color={iconColor} />
     {badgeCount ? (
       <View className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#FC4C02] border-2 border-white items-center justify-center">

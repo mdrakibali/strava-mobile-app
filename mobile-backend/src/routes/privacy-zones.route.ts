@@ -9,4 +9,3 @@ const controller = new PrivacyZoneController();
 privacyZonesRouter.get('/', requireAuth, (c) => controller.list(c));
 privacyZonesRouter.post('/', requireAuth, (c) => controller.create(c));
 privacyZonesRouter.delete('/:id', requireAuth, (c) => controller.delete(c));
-

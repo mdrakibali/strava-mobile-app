@@ -29,16 +29,19 @@ export default function CreateChallengeScreen() {
 
   useEffect(() => {
     if (!editId) return;
-    api.challenges.get(editId).then((res) => {
-      if (res?.challenge) {
-        setTitle(res.challenge.title || '');
-        setSportType(res.challenge.sportType || 'Run');
-        if (res.challenge.targetMeters) {
-          setTargetKm(String(Number(res.challenge.targetMeters) / 1000));
+    api.challenges
+      .get(editId)
+      .then((res) => {
+        if (res?.challenge) {
+          setTitle(res.challenge.title || '');
+          setSportType(res.challenge.sportType || 'Run');
+          if (res.challenge.targetMeters) {
+            setTargetKm(String(Number(res.challenge.targetMeters) / 1000));
+          }
+          setDescription(res.challenge.description || '');
         }
-        setDescription(res.challenge.description || '');
-      }
-    }).catch(() => {});
+      })
+      .catch(() => {});
   }, [editId]);
 
   const km = Number(targetKm.replace(',', '.'));
@@ -86,7 +89,10 @@ export default function CreateChallengeScreen() {
         router.replace({ pathname: '/challenge/[id]', params: { id: res.challenge.id } });
       }
     } catch (e: any) {
-      setError(e?.message ?? (editId ? 'Could not update the challenge.' : 'Could not create the challenge.'));
+      setError(
+        e?.message ??
+          (editId ? 'Could not update the challenge.' : 'Could not create the challenge.')
+      );
       setSaving(false);
     }
   };
@@ -98,7 +104,8 @@ export default function CreateChallengeScreen() {
       canSubmit={valid}
       submitting={saving}
       error={error}
-      onSubmit={submit}>
+      onSubmit={submit}
+    >
       <TextField
         value={title}
         onChangeText={setTitle}

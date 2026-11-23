@@ -3,15 +3,13 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
+import { AppBar, EmptyState, ErrorState, IconButton, SegmentedTabs, Skeleton } from '../../design';
 import {
-  AppBar,
-  EmptyState,
-  ErrorState,
-  IconButton,
-  SegmentedTabs,
-  Skeleton,
-} from '../../design';
-import { ActivityView, AthleteSummary, fromProfileActivity, toAthleteSummary } from '../../lib/activityView';
+  ActivityView,
+  AthleteSummary,
+  fromProfileActivity,
+  toAthleteSummary,
+} from '../../lib/activityView';
 import { shareAthlete } from '../../lib/share';
 import { MVP_SPORTS } from '../../lib/sports';
 import { api, AthleteStats } from '../../services/api';
@@ -29,7 +27,10 @@ interface ProfileData {
   stats: AthleteStats | null;
 }
 
-export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ athleteId, isSelf }) => {
+export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({
+  athleteId,
+  isSelf,
+}) => {
   const router = useRouter();
   const { currentUser, updateCurrentUser } = useApp();
   const [data, setData] = useState<ProfileData | null>(null);
@@ -79,13 +80,18 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
     const wasFollowing = data.isFollowing;
     const want = !wasFollowing;
     try {
-      const res = want ? await api.athletes.follow(athleteId) : await api.athletes.unfollow(athleteId);
+      const res = want
+        ? await api.athletes.follow(athleteId)
+        : await api.athletes.unfollow(athleteId);
       setData((prev) =>
         prev
           ? {
               ...prev,
               isFollowing: Boolean(res.isFollowing),
-              followersCount: typeof res.followersCount === 'number' ? res.followersCount : prev.followersCount + (res.isFollowing ? 1 : -1),
+              followersCount:
+                typeof res.followersCount === 'number'
+                  ? res.followersCount
+                  : prev.followersCount + (res.isFollowing ? 1 : -1),
             }
           : null
       );
@@ -119,7 +125,9 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
 
   const activities = useMemo(() => {
     if (!data) return [];
-    return data.activities.filter((a) => a.athlete.id === athleteId && (isSelf || a.visibility !== 'ONLY_ME'));
+    return data.activities.filter(
+      (a) => a.athlete.id === athleteId && (isSelf || a.visibility !== 'ONLY_ME')
+    );
   }, [data, athleteId, isSelf]);
 
   const reconciledStats = useMemo(() => {
@@ -144,9 +152,21 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
       leading="none"
       right={
         <>
-          <IconButton icon="add" accessibilityLabel="Record an activity" onPress={() => router.push('/record')} />
-          <IconButton icon="search-outline" accessibilityLabel="Find athletes" onPress={() => router.push('/search')} />
-          <IconButton icon="settings-outline" accessibilityLabel="Settings" onPress={() => router.push('/settings')} />
+          <IconButton
+            icon="add"
+            accessibilityLabel="Record an activity"
+            onPress={() => router.push('/record')}
+          />
+          <IconButton
+            icon="search-outline"
+            accessibilityLabel="Find athletes"
+            onPress={() => router.push('/search')}
+          />
+          <IconButton
+            icon="settings-outline"
+            accessibilityLabel="Settings"
+            onPress={() => router.push('/settings')}
+          />
         </>
       }
     />
@@ -172,7 +192,12 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
         ) : status === 'notFound' ? (
           <EmptyState icon="person-outline" title="Athlete not found" />
         ) : (
-          <ErrorState onRetry={() => { setStatus('loading'); load(); }} />
+          <ErrorState
+            onRetry={() => {
+              setStatus('loading');
+              load();
+            }}
+          />
         )}
       </SafeAreaView>
     );
@@ -180,15 +205,20 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
 
   const maxWeek = Math.max(...progress.weeks.map((w) => w.meters), 1);
   const sportsPresent = MVP_SPORTS.filter(
-    (s) => activities.some((a) => a.sportType === s.id) || data.stats?.bySport.some((b) => b.sportType === s.id)
+    (s) =>
+      activities.some((a) => a.sportType === s.id) ||
+      data.stats?.bySport.some((b) => b.sportType === s.id)
   );
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       {header}
       <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />}
-        contentContainerStyle={{ paddingBottom: 64 }}>
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />
+        }
+        contentContainerStyle={{ paddingBottom: 64 }}
+      >
         <ProfileHeader
           athleteId={athleteId}
           athlete={athlete!}
@@ -232,7 +262,10 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({ 
                       ...prev,
                       activities: prev.activities.filter((x) => x.id !== deletedId),
                       stats: prev.stats
-                        ? { ...prev.stats, activityCount: Math.max(0, prev.stats.activityCount - 1) }
+                        ? {
+                            ...prev.stats,
+                            activityCount: Math.max(0, prev.stats.activityCount - 1),
+                          }
                         : null,
                     }
                   : null

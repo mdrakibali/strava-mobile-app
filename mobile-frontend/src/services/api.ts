@@ -15,7 +15,17 @@ export const API_BASE_URL =
 
 const TIMEOUT_MS = 30_000;
 
-export type PlaceCategory = 'park' | 'garden' | 'nature' | 'track' | 'trail' | 'footpath' | 'cycleway' | 'cycle_route' | 'hiking_route' | 'recreation';
+export type PlaceCategory =
+  | 'park'
+  | 'garden'
+  | 'nature'
+  | 'track'
+  | 'trail'
+  | 'footpath'
+  | 'cycleway'
+  | 'cycle_route'
+  | 'hiking_route'
+  | 'recreation';
 
 export interface NearbyPlace {
   id: string;
@@ -36,9 +46,23 @@ export interface PlaceDetails {
   id: string;
   name: string | null;
   nameEn: string | null;
-  tags: { website: string | null; openingHours: string | null; surface: string | null; lit: boolean | null; access: string | null; description: string | null };
+  tags: {
+    website: string | null;
+    openingHours: string | null;
+    surface: string | null;
+    lit: boolean | null;
+    access: string | null;
+    description: string | null;
+  };
   address: string | null;
-  image: { url: string; pageUrl: string; author: string | null; license: string | null; licenseUrl: string | null; source: string } | null;
+  image: {
+    url: string;
+    pageUrl: string;
+    author: string | null;
+    license: string | null;
+    licenseUrl: string | null;
+    source: string;
+  } | null;
   osmUrl: string;
   attribution: string;
 }
@@ -86,7 +110,10 @@ export interface AthleteStats {
   followersCount: number;
   followingCount: number;
   bySport: { sportType: string; allTime: Totals; yearToDate: Totals }[];
-  weeks: { weekStart: string; bySport: Record<string, { distance: number; moving: number; elevation: number; count: number }> }[];
+  weeks: {
+    weekStart: string;
+    bySport: Record<string, { distance: number; moving: number; elevation: number; count: number }>;
+  }[];
 }
 
 let authToken: string | null = null;
@@ -154,10 +181,17 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   let res: Response;
   try {
     // no-store: the feed and social counts must always come from the server (stale-feed fix).
-    res = await fetch(finalUrl, { cache: 'no-store', ...options, headers, signal: controller.signal });
+    res = await fetch(finalUrl, {
+      cache: 'no-store',
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
   } catch (e: any) {
     throw new ApiError(
-      e?.name === 'AbortError' ? 'The server took too long to respond.' : 'No connection to the server.',
+      e?.name === 'AbortError'
+        ? 'The server took too long to respond.'
+        : 'No connection to the server.',
       0,
       'network'
     );
@@ -170,12 +204,21 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     // The route itself doesn't exist on this server (older deployment): say so plainly instead of
     // a confusing "not found" — never pretend the action worked.
     if (res.status === 404 && body?.error === 'Endpoint Not Found') {
-      throw new ApiError('This feature needs the latest server version, which is not deployed yet.', 404, 'endpoint_missing');
+      throw new ApiError(
+        'This feature needs the latest server version, which is not deployed yet.',
+        404,
+        'endpoint_missing'
+      );
     }
     // Only react if the token that failed is still the active one (a late 401 from a previous
     // account must not sign the new one out).
     if (res.status === 401 && sentToken && sentToken === authToken) unauthorizedHandler?.();
-    throw new ApiError(body?.error || `HTTP ${res.status}`, res.status, body?.code ?? null, body?.details ?? null);
+    throw new ApiError(
+      body?.error || `HTTP ${res.status}`,
+      res.status,
+      body?.code ?? null,
+      body?.details ?? null
+    );
   }
 
   if (res.status === 204) return undefined as T;
@@ -245,20 +288,25 @@ export const api = {
         method: 'POST',
       }),
     giveKudos: (id: string) =>
-      request<{ hasKudos: boolean; kudosCount: number }>(`/activities/${id}/kudos`, { method: 'PUT' }),
+      request<{ hasKudos: boolean; kudosCount: number }>(`/activities/${id}/kudos`, {
+        method: 'PUT',
+      }),
     removeKudos: (id: string) =>
-      request<{ hasKudos: boolean; kudosCount: number }>(`/activities/${id}/kudos`, { method: 'DELETE' }),
+      request<{ hasKudos: boolean; kudosCount: number }>(`/activities/${id}/kudos`, {
+        method: 'DELETE',
+      }),
     listKudos: (id: string) =>
       request<{ athletes: any[]; kudosCount: number }>(`/activities/${id}/kudos`),
-    listComments: (id: string) =>
-      request<{ comments: any[] }>(`/activities/${id}/comments`),
+    listComments: (id: string) => request<{ comments: any[] }>(`/activities/${id}/comments`),
     editComment: (id: string, commentId: string, content: string) =>
       request<{ comment: any }>(`/activities/${id}/comments/${commentId}`, {
         method: 'PATCH',
         body: JSON.stringify({ content }),
       }),
     deleteComment: (id: string, commentId: string) =>
-      request<{ commentsCount: number }>(`/activities/${id}/comments/${commentId}`, { method: 'DELETE' }),
+      request<{ commentsCount: number }>(`/activities/${id}/comments/${commentId}`, {
+        method: 'DELETE',
+      }),
     addComment: (id: string, content: string, parentCommentId?: string) =>
       request<any>(`/activities/${id}/comments`, {
         method: 'POST',
@@ -266,8 +314,10 @@ export const api = {
       }),
     getGpxDownloadUrl: (id: string) => `${API_BASE_URL}/activities/${id}/export`,
     /** Owner only. Returns the same shape as get(). */
-    update: (id: string, data: { title?: string; description?: string | null; sportType?: string; visibility?: string }) =>
-      request<any>(`/activities/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    update: (
+      id: string,
+      data: { title?: string; description?: string | null; sportType?: string; visibility?: string }
+    ) => request<any>(`/activities/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     /** Owner only. */
     remove: (id: string) => request<void>(`/activities/${id}`, { method: 'DELETE' }),
   },
@@ -275,7 +325,10 @@ export const api = {
   /** Batch GPS upload protocol (shared/tracking/batching.ts). All calls are idempotent. */
   uploads: {
     start: (data: UploadStartRequest) =>
-      request<UploadStatusResponse>('/activities/uploads', { method: 'POST', body: JSON.stringify(data) }),
+      request<UploadStatusResponse>('/activities/uploads', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     putBatch: (clientActivityId: string, seq: number, data: UploadBatchRequest) =>
       request<{ seq: number; duplicate: boolean; completed: boolean }>(
         `/activities/uploads/${clientActivityId}/batches/${seq}`,
@@ -297,16 +350,30 @@ export const api = {
       return request<{ clubs: any[]; count: number }>(`/clubs?${params.toString()}`);
     },
     get: (id: string) => request<any>(`/clubs/${id}`),
-    create: (data: { name: string; sportType: string; city?: string; country?: string; description?: string; isPrivate?: boolean }) =>
-      request<{ club: any }>('/clubs', { method: 'POST', body: JSON.stringify(data) }),
+    create: (data: {
+      name: string;
+      sportType: string;
+      city?: string;
+      country?: string;
+      description?: string;
+      isPrivate?: boolean;
+    }) => request<{ club: any }>('/clubs', { method: 'POST', body: JSON.stringify(data) }),
     /** Pass the wanted state: the call is then idempotent (a retry can't flip it back). */
     join: (id: string, join?: boolean) =>
       request<{ isMember: boolean; membersCount?: number; message: string }>(`/clubs/${id}/join`, {
         method: 'POST',
         body: JSON.stringify(join === undefined ? {} : { join }),
       }),
-    update: (id: string, data: { name?: string; sportType?: string; city?: string | null; description?: string | null; isPrivate?: boolean }) =>
-      request<{ club: any }>(`/clubs/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    update: (
+      id: string,
+      data: {
+        name?: string;
+        sportType?: string;
+        city?: string | null;
+        description?: string | null;
+        isPrivate?: boolean;
+      }
+    ) => request<{ club: any }>(`/clubs/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     remove: (id: string) => request<{ message: string }>(`/clubs/${id}`, { method: 'DELETE' }),
   },
 
@@ -314,15 +381,38 @@ export const api = {
   challenges: {
     list: () => request<{ challenges: any[]; count: number }>('/challenges'),
     get: (id: string) => request<any>(`/challenges/${id}`),
-    create: (data: { title: string; sportType: string; targetMeters: number; description?: string; startDate: string; endDate: string }) =>
+    create: (data: {
+      title: string;
+      sportType: string;
+      targetMeters: number;
+      description?: string;
+      startDate: string;
+      endDate: string;
+    }) =>
       request<{ challenge: any }>('/challenges', { method: 'POST', body: JSON.stringify(data) }),
     join: (id: string, join?: boolean) =>
-      request<{ isJoined: boolean; participantsCount?: number; message: string }>(`/challenges/${id}/join`, {
-        method: 'POST',
-        body: JSON.stringify(join === undefined ? {} : { join }),
+      request<{ isJoined: boolean; participantsCount?: number; message: string }>(
+        `/challenges/${id}/join`,
+        {
+          method: 'POST',
+          body: JSON.stringify(join === undefined ? {} : { join }),
+        }
+      ),
+    update: (
+      id: string,
+      data: {
+        title?: string;
+        sportType?: string;
+        targetMeters?: number;
+        description?: string | null;
+        startDate?: string;
+        endDate?: string;
+      }
+    ) =>
+      request<{ challenge: any }>(`/challenges/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
       }),
-    update: (id: string, data: { title?: string; sportType?: string; targetMeters?: number; description?: string | null; startDate?: string; endDate?: string }) =>
-      request<{ challenge: any }>(`/challenges/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     remove: (id: string) => request<{ message: string }>(`/challenges/${id}`, { method: 'DELETE' }),
   },
 
@@ -333,7 +423,16 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ sportType }),
       }),
-    ping: (token: string, coords: { latitude: number; longitude: number; altitude?: number; speedMps?: number; batteryPercentage?: number }) =>
+    ping: (
+      token: string,
+      coords: {
+        latitude: number;
+        longitude: number;
+        altitude?: number;
+        speedMps?: number;
+        batteryPercentage?: number;
+      }
+    ) =>
       request<{ success: boolean; timestamp: number }>(`/beacon/${token}/ping`, {
         method: 'POST',
         body: JSON.stringify(coords),
@@ -361,7 +460,9 @@ export const api = {
   // 8. Athletes & Social Graph
   athletes: {
     search: (query = '') =>
-      request<{ athletes: any[]; count: number }>(`/athletes/search?q=${encodeURIComponent(query)}`),
+      request<{ athletes: any[]; count: number }>(
+        `/athletes/search?q=${encodeURIComponent(query)}`
+      ),
     getProfile: (id: string) =>
       request<{ athlete: any; recentActivities: any[] }>(`/athletes/${id}`),
     /** Activity history, policy-filtered by the server. */
@@ -372,9 +473,15 @@ export const api = {
         method: 'POST',
       }),
     follow: (id: string) =>
-      request<{ isFollowing: boolean; followersCount: number; followingCount: number }>(`/athletes/${id}/follow`, { method: 'PUT' }),
+      request<{ isFollowing: boolean; followersCount: number; followingCount: number }>(
+        `/athletes/${id}/follow`,
+        { method: 'PUT' }
+      ),
     unfollow: (id: string) =>
-      request<{ isFollowing: boolean; followersCount: number; followingCount: number }>(`/athletes/${id}/follow`, { method: 'DELETE' }),
+      request<{ isFollowing: boolean; followersCount: number; followingCount: number }>(
+        `/athletes/${id}/follow`,
+        { method: 'DELETE' }
+      ),
     listFollows: (id: string, kind: 'followers' | 'following') =>
       request<{ athletes: any[]; count?: number }>(`/athletes/${id}/${kind}`),
     stats: (id: string) => request<AthleteStats>(`/athletes/${id}/stats`),
@@ -399,18 +506,16 @@ export const api = {
   /** Real routes over mapped ways (Valhalla) with DEM elevation. */
   routing: {
     plan: (sport: string, from: { lat: number; lng: number }, to: { lat: number; lng: number }) =>
-      request<RoutePlan>('/routing/plan', { method: 'POST', body: JSON.stringify({ sport, from, to }) }),
+      request<RoutePlan>('/routing/plan', {
+        method: 'POST',
+        body: JSON.stringify({ sport, from, to }),
+      }),
   },
 
   // 10. Privacy Zones (Start/End masking)
   privacyZones: {
     list: () => request<{ privacyZones: any[] }>('/privacy-zones'),
-    create: (data: {
-      name: string;
-      latitude: number;
-      longitude: number;
-      radiusMeters?: number;
-    }) =>
+    create: (data: { name: string; latitude: number; longitude: number; radiusMeters?: number }) =>
       request<{ message: string; privacyZone: any }>('/privacy-zones', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -423,16 +528,20 @@ export const api = {
 
   // 11. Direct Messages (1-on-1 Chat)
   messages: {
-    getConversations: () =>
-      request<{ conversations: any[] }>('/messages/conversations'),
+    getConversations: () => request<{ conversations: any[] }>('/messages/conversations'),
     /** Opens the existing direct conversation or creates one. Safe to call repeatedly. */
     open: (targetUserId: string) =>
-      request<{ conversation: { id: string; participant: any }; created: boolean }>('/messages/conversations', {
-        method: 'POST',
-        body: JSON.stringify({ targetUserId }),
-      }),
+      request<{ conversation: { id: string; participant: any }; created: boolean }>(
+        '/messages/conversations',
+        {
+          method: 'POST',
+          body: JSON.stringify({ targetUserId }),
+        }
+      ),
     getThread: (idOrParticipantId: string) =>
-      request<{ messages: any[]; chatId?: string; partner?: any }>(`/messages/${idOrParticipantId}`),
+      request<{ messages: any[]; chatId?: string; partner?: any }>(
+        `/messages/${idOrParticipantId}`
+      ),
     send: (
       recipientOrChatId: string,
       text: string,
@@ -441,8 +550,12 @@ export const api = {
       request<{ message: string; directMessage: any; chatId?: string }>('/messages/send', {
         method: 'POST',
         body: JSON.stringify({
-          recipientId: options?.recipientId || (recipientOrChatId.startsWith('chat_') ? undefined : recipientOrChatId),
-          chatId: options?.chatId || (recipientOrChatId.startsWith('chat_') ? recipientOrChatId : undefined),
+          recipientId:
+            options?.recipientId ||
+            (recipientOrChatId.startsWith('chat_') ? undefined : recipientOrChatId),
+          chatId:
+            options?.chatId ||
+            (recipientOrChatId.startsWith('chat_') ? recipientOrChatId : undefined),
           text,
         }),
       }),
@@ -455,8 +568,7 @@ export const api = {
       return request<{ segments: any[] }>(`/segments${q}`);
     },
     get: (id: string) => request<{ segment: any }>(`/segments/${id}`),
-    getLeaderboard: (id: string) =>
-      request<{ leaderboard: any[] }>(`/segments/${id}/leaderboard`),
+    getLeaderboard: (id: string) => request<{ leaderboard: any[] }>(`/segments/${id}/leaderboard`),
     create: (data: {
       name: string;
       sportType: string;
@@ -507,16 +619,35 @@ export const api = {
   events: {
     list: () => request<{ events: any[] }>('/events'),
     get: (id: string) => request<{ event: any; attendees: any[] }>(`/events/${id}`),
-    create: (data: { title: string; sportType: string; eventDate: string; meetingPoint: string; paceDescription?: string; distanceMeters?: number; clubId?: string }) =>
-      request<{ event: any }>('/events', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id: string, data: { title?: string; sportType?: string; eventDate?: string; meetingPoint?: string; paceDescription?: string | null; distanceMeters?: number | null }) =>
-      request<{ event: any }>(`/events/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    create: (data: {
+      title: string;
+      sportType: string;
+      eventDate: string;
+      meetingPoint: string;
+      paceDescription?: string;
+      distanceMeters?: number;
+      clubId?: string;
+    }) => request<{ event: any }>('/events', { method: 'POST', body: JSON.stringify(data) }),
+    update: (
+      id: string,
+      data: {
+        title?: string;
+        sportType?: string;
+        eventDate?: string;
+        meetingPoint?: string;
+        paceDescription?: string | null;
+        distanceMeters?: number | null;
+      }
+    ) => request<{ event: any }>(`/events/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     remove: (id: string) => request<{ message: string }>(`/events/${id}`, { method: 'DELETE' }),
     rsvp: (id: string, status: 'GOING' | 'MAYBE' | 'DECLINED') =>
-      request<{ message: string; status: string | null; attendeesCount?: number }>(`/events/${id}/rsvp`, {
-        method: 'POST',
-        body: JSON.stringify({ status }),
-      }),
+      request<{ message: string; status: string | null; attendeesCount?: number }>(
+        `/events/${id}/rsvp`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ status }),
+        }
+      ),
   },
 
   // 15. Training Goals
@@ -539,4 +670,3 @@ export const api = {
       }),
   },
 };
-

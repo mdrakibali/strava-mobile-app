@@ -27,7 +27,9 @@ export const AppBar: React.FC<AppBarProps> = ({
   const handleLeading = onLeadingPress ?? (() => router.back());
 
   return (
-    <View className={`h-14 flex-row items-center px-2 bg-white ${border ? 'border-b border-gray-100' : ''}`}>
+    <View
+      className={`h-14 flex-row items-center px-2 bg-white ${border ? 'border-b border-gray-100' : ''}`}
+    >
       {leading !== 'none' ? (
         <IconButton
           icon={leading === 'close' ? 'close' : 'arrow-back'}
@@ -40,7 +42,8 @@ export const AppBar: React.FC<AppBarProps> = ({
           <AppText
             variant={large ? 'title1' : 'title2'}
             numberOfLines={1}
-            accessibilityRole="header">
+            accessibilityRole="header"
+          >
             {title}
           </AppText>
         ) : null}

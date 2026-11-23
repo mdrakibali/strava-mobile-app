@@ -55,7 +55,10 @@ export class AthleteController {
       const followingCount = await repo.getFollowingCount(id);
       const isFollowing = currentUser ? await repo.isFollowing(currentUser.athleteId, id) : false;
       // Policy-filtered (ONLY_ME / FOLLOWERS_ONLY respected) and without the raw track (PRIV-02/03).
-      const rows = await new ActivityRepository(getDb(c)).listVisibleByAthlete(id, currentUser?.athleteId);
+      const rows = await new ActivityRepository(getDb(c)).listVisibleByAthlete(
+        id,
+        currentUser?.athleteId
+      );
       const recentActivities = rows.slice(0, 10).map(toActivityListItem);
       const isSelf = currentUser?.athleteId === id;
 
@@ -173,21 +176,29 @@ export class AthleteController {
   // PUT /athletes/:id/follow (idempotent)
   async follow(c: Context<{ Bindings: Env }>) {
     const user = c.get('user');
-    return c.json(await new SocialService(getDb(c)).follow(user.athleteId, user.username, this.targetId(c)));
+    return c.json(
+      await new SocialService(getDb(c)).follow(user.athleteId, user.username, this.targetId(c))
+    );
   }
 
   // DELETE /athletes/:id/follow (idempotent)
   async unfollow(c: Context<{ Bindings: Env }>) {
-    return c.json(await new SocialService(getDb(c)).unfollow(c.get('user').athleteId, this.targetId(c)));
+    return c.json(
+      await new SocialService(getDb(c)).unfollow(c.get('user').athleteId, this.targetId(c))
+    );
   }
 
   // GET /athletes/:id/followers | /following
   async listFollows(c: Context<{ Bindings: Env }>, kind: 'followers' | 'following') {
-    return c.json(await new SocialService(getDb(c)).list(kind, this.targetId(c), c.get('user')?.athleteId));
+    return c.json(
+      await new SocialService(getDb(c)).list(kind, this.targetId(c), c.get('user')?.athleteId)
+    );
   }
 
   // GET /athletes/:id/stats (policy-aware totals + 12 weeks)
   async stats(c: Context<{ Bindings: Env }>) {
-    return c.json(await new SocialService(getDb(c)).stats(this.targetId(c), c.get('user')?.athleteId));
+    return c.json(
+      await new SocialService(getDb(c)).stats(this.targetId(c), c.get('user')?.athleteId)
+    );
   }
 }

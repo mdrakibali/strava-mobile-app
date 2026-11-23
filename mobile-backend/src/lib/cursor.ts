@@ -33,4 +33,3 @@ export function decodeCursor(cursor?: string | null): CursorPayload | null {
     return null;
   }
 }
-

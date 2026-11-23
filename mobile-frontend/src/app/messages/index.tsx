@@ -109,7 +109,8 @@ export default function MessagesInboxScreen() {
       {/* Top Header */}
       <View
         style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}
-        className="flex-row items-center justify-between px-4 py-3">
+        className="flex-row items-center justify-between px-4 py-3"
+      >
         <TouchableOpacity onPress={() => router.back()} className="p-1">
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
@@ -120,7 +121,10 @@ export default function MessagesInboxScreen() {
       </View>
 
       {/* Search Bar */}
-      <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }} className="px-4 py-2.5">
+      <View
+        style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}
+        className="px-4 py-2.5"
+      >
         <View className="flex-row items-center bg-gray-100 rounded-xl px-3 py-2">
           <Ionicons name="search-outline" size={16} color="#9CA3AF" />
           <TextInput
@@ -139,7 +143,10 @@ export default function MessagesInboxScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 12, paddingBottom: 100, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />}>
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />
+          }
+        >
           {loadError && conversations.length === 0 ? (
             <View className="py-16 px-6 items-center">
               <Text className="text-sm font-bold text-gray-800 text-center">{loadError}</Text>
@@ -153,11 +160,18 @@ export default function MessagesInboxScreen() {
               <TouchableOpacity
                 key={item.id}
                 activeOpacity={0.8}
-                onPress={() => router.push(`/messages/${item.participant?.id || item.chatId || item.id}`)}
-                className="flex-row items-center p-3.5 bg-white rounded-2xl mb-2.5 border border-gray-100 shadow-sm">
+                onPress={() =>
+                  router.push(`/messages/${item.participant?.id || item.chatId || item.id}`)
+                }
+                className="flex-row items-center p-3.5 bg-white rounded-2xl mb-2.5 border border-gray-100 shadow-sm"
+              >
                 <View className="relative mr-3">
                   <Image
-                    source={{ uri: item.participant.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200' }}
+                    source={{
+                      uri:
+                        item.participant.avatarUrl ||
+                        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
+                    }}
                     className="w-12 h-12 rounded-full bg-gray-100"
                   />
                   <View className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" />
@@ -168,12 +182,15 @@ export default function MessagesInboxScreen() {
                       {item.participant.displayName}
                     </Text>
                     <Text className="text-[10px] text-gray-400 font-medium">
-                      {item.lastMessageTime ? new Date(item.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                      {item.lastMessageTime
+                        ? new Date(item.lastMessageTime).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : ''}
                     </Text>
                   </View>
-                  <Text
-                    className="text-xs font-normal text-gray-500"
-                    numberOfLines={1}>
+                  <Text className="text-xs font-normal text-gray-500" numberOfLines={1}>
                     {item.lastMessage}
                   </Text>
                 </View>
@@ -200,15 +217,24 @@ export default function MessagesInboxScreen() {
                       key={a.id}
                       activeOpacity={0.8}
                       onPress={() => router.push(`/messages/${a.id}`)}
-                      className="flex-row items-center justify-between p-3.5 bg-white rounded-2xl mb-2 border border-gray-100 shadow-sm">
+                      className="flex-row items-center justify-between p-3.5 bg-white rounded-2xl mb-2 border border-gray-100 shadow-sm"
+                    >
                       <View className="flex-row items-center flex-1 mr-2">
                         <Image
-                          source={{ uri: a.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200' }}
+                          source={{
+                            uri:
+                              a.avatarUrl ||
+                              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
+                          }}
                           className="w-10 h-10 rounded-full bg-gray-100 mr-3"
                         />
                         <View className="flex-1">
-                          <Text className="text-sm font-bold text-gray-900" numberOfLines={1}>{a.displayName}</Text>
-                          <Text className="text-xs text-gray-400" numberOfLines={1}>@{a.username}</Text>
+                          <Text className="text-sm font-bold text-gray-900" numberOfLines={1}>
+                            {a.displayName}
+                          </Text>
+                          <Text className="text-xs text-gray-400" numberOfLines={1}>
+                            @{a.username}
+                          </Text>
                         </View>
                       </View>
                       <View className="px-3 py-1.5 rounded-full bg-orange-50 border border-orange-200">

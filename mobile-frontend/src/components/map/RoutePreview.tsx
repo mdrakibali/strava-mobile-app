@@ -25,7 +25,8 @@ export const RoutePreview: React.FC<RoutePreviewProps> = ({
     <View
       pointerEvents="none"
       style={{ height }}
-      className={`w-full bg-[#EEF0EC] overflow-hidden ${rounded ? 'rounded-2xl' : ''}`}>
+      className={`w-full bg-[#EEF0EC] overflow-hidden ${rounded ? 'rounded-2xl' : ''}`}
+    >
       <MapView
         mode="route"
         route={route}

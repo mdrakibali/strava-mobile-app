@@ -10,9 +10,31 @@ export const DEFAULT_WEIGHT_KG = 70;
 type Band = [kmh: number, met: number];
 
 // Speed → MET anchor points; linearly interpolated, clamped at the ends.
-const RUN: Band[] = [[6.4, 6.0], [8.0, 8.3], [9.7, 9.8], [11.3, 11.0], [12.9, 11.8], [14.5, 12.8], [16.1, 14.5]];
-const WALK: Band[] = [[3.2, 2.8], [4.0, 3.0], [4.8, 3.5], [5.6, 4.3], [6.4, 5.0], [7.2, 7.0]];
-const RIDE: Band[] = [[12, 4.0], [17.5, 6.8], [20.5, 8.0], [23.5, 10.0], [27.5, 12.0], [32, 15.8]];
+const RUN: Band[] = [
+  [6.4, 6.0],
+  [8.0, 8.3],
+  [9.7, 9.8],
+  [11.3, 11.0],
+  [12.9, 11.8],
+  [14.5, 12.8],
+  [16.1, 14.5],
+];
+const WALK: Band[] = [
+  [3.2, 2.8],
+  [4.0, 3.0],
+  [4.8, 3.5],
+  [5.6, 4.3],
+  [6.4, 5.0],
+  [7.2, 7.0],
+];
+const RIDE: Band[] = [
+  [12, 4.0],
+  [17.5, 6.8],
+  [20.5, 8.0],
+  [23.5, 10.0],
+  [27.5, 12.0],
+  [32, 15.8],
+];
 const HIKE_MET = 6.0;
 
 const interpolate = (bands: Band[], kmh: number) => {

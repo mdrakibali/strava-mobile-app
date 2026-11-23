@@ -45,14 +45,20 @@ export const GoogleAuthButton: React.FC<Props> = ({
       if (error?.code === codes.SIGN_IN_CANCELLED) return;
       if (error?.code === codes.IN_PROGRESS) return;
       if (error?.code === codes.PLAY_SERVICES_NOT_AVAILABLE) {
-        Alert.alert('Google Play Services', 'Google Play Services is not available or needs an update on this device.');
+        Alert.alert(
+          'Google Play Services',
+          'Google Play Services is not available or needs an update on this device.'
+        );
       } else if (String(error?.code) === '10' || /DEVELOPER_ERROR/i.test(String(error?.message))) {
         Alert.alert(
           'Google Sign-In Configuration Error',
           'Google returned DEVELOPER_ERROR (Code 10). Make sure you have created a "Web application" OAuth Client ID in Google Cloud Console and set it as webClientId.'
         );
       } else {
-        Alert.alert('Google Sign-In', error?.message || 'Unable to sign in with Google. Please try again or use email.');
+        Alert.alert(
+          'Google Sign-In',
+          error?.message || 'Unable to sign in with Google. Please try again or use email.'
+        );
       }
     } finally {
       onLoadingChange(false);
@@ -65,12 +71,10 @@ export const GoogleAuthButton: React.FC<Props> = ({
       disabled={isLoading}
       onPress={handleGoogleSignInPress}
       activeOpacity={0.85}
-      className="w-full py-3.5 px-4 bg-white border border-gray-300 rounded-2xl flex-row items-center justify-center shadow-xs mb-4">
+      className="w-full py-3.5 px-4 bg-white border border-gray-300 rounded-2xl flex-row items-center justify-center shadow-xs mb-4"
+    >
       <Ionicons name="logo-google" size={18} color="#EA4335" />
-      <Text className="text-sm font-bold text-gray-800 ml-2.5">
-        Continue with Google
-      </Text>
+      <Text className="text-sm font-bold text-gray-800 ml-2.5">Continue with Google</Text>
     </TouchableOpacity>
   );
 };
-

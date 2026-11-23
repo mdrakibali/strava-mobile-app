@@ -17,4 +17,3 @@ athletesRouter.delete('/:id/follow', requireAuth, (c) => controller.unfollow(c))
 athletesRouter.get('/:id/followers', optionalAuth, (c) => controller.listFollows(c, 'followers'));
 athletesRouter.get('/:id/following', optionalAuth, (c) => controller.listFollows(c, 'following'));
 athletesRouter.get('/:id/stats', optionalAuth, (c) => controller.stats(c));
-

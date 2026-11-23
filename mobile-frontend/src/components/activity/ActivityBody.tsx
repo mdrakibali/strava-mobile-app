@@ -20,12 +20,19 @@ export const ActivityBody: React.FC<{
   currentUserName: string;
   currentUserAvatar?: string;
   onComposerFocus?: () => void;
-}> = ({ activity, isOwner, currentUserId, currentUserName, currentUserAvatar, onComposerFocus }) => {
+}> = ({
+  activity,
+  isOwner,
+  currentUserId,
+  currentUserName,
+  currentUserAvatar,
+  onComposerFocus,
+}) => {
   const router = useRouter();
   const sport = sportConfig(activity.sportType);
   const hasKudos = Boolean(activity.hasKudos);
   const kudosCount = activity.kudosCount ?? 0;
-  const commentsCount = activity.commentsCount ?? (activity.comments?.length ?? 0);
+  const commentsCount = activity.commentsCount ?? activity.comments?.length ?? 0;
 
   const { mutate: toggleKudos } = useToggleKudos();
 
@@ -36,22 +43,30 @@ export const ActivityBody: React.FC<{
     });
   };
 
-  const openKudos = () => router.push({ pathname: '/activity/kudos/[id]', params: { id: activity.id } });
+  const openKudos = () =>
+    router.push({ pathname: '/activity/kudos/[id]', params: { id: activity.id } });
   const visibility = VISIBILITY_LABEL[activity.visibility] ?? VISIBILITY_LABEL.PUBLIC;
 
   return (
     <View>
       <Pressable
-        onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: activity.athlete.id } })}
+        onPress={() =>
+          router.push({ pathname: '/athlete/[id]', params: { id: activity.athlete.id } })
+        }
         accessibilityRole="button"
         accessibilityLabel={`${activity.athlete.displayName}'s profile`}
-        className="flex-row items-center">
+        className="flex-row items-center"
+      >
         <Avatar uri={activity.athlete.avatarUrl} name={activity.athlete.displayName} size={48} />
         <View style={{ flex: 1, marginLeft: space.md }}>
           <AppText variant="title3">{activity.athlete.displayName}</AppText>
           <View className="flex-row items-center mt-0.5">
             <Ionicons name={sport.icon} size={14} color="#6B7280" />
-            <AppText variant="caption" color="inkTertiary" style={{ marginLeft: space.xs, flexShrink: 1 }}>
+            <AppText
+              variant="caption"
+              color="inkTertiary"
+              style={{ marginLeft: space.xs, flexShrink: 1 }}
+            >
               {formatActivityDate(activity.startTime)}
               {activity.athlete.city ? ` · ${activity.athlete.city}` : ''}
             </AppText>
@@ -77,11 +92,20 @@ export const ActivityBody: React.FC<{
       ) : null}
 
       <ActivityStatsGrid activity={activity} />
-      <ActivitySplits splits={activity.splits} elevationProfile={activity.elevationProfile} showSplits={sport.primaryMetric === 'pace'} />
+      <ActivitySplits
+        splits={activity.splits}
+        elevationProfile={activity.elevationProfile}
+        showSplits={sport.primaryMetric === 'pace'}
+      />
 
       <View className="mt-6 pt-6 border-t border-gray-100">
         <View className="flex-row justify-between items-center">
-          <Pressable onPress={openKudos} disabled={kudosCount === 0} accessibilityRole="button" style={{ flex: 1 }}>
+          <Pressable
+            onPress={openKudos}
+            disabled={kudosCount === 0}
+            accessibilityRole="button"
+            style={{ flex: 1 }}
+          >
             <AppText variant="bodyStrong" color={kudosCount > 0 ? 'ink' : 'inkSecondary'}>
               {kudosCount > 0 ? `${kudosCount} gave kudos ›` : 'No kudos yet'}
             </AppText>
@@ -94,9 +118,18 @@ export const ActivityBody: React.FC<{
           <Pressable
             onPress={onKudos}
             accessibilityRole="button"
-            className="flex-1 flex-row items-center justify-center min-h-[52px] active:bg-gray-50">
-            <Ionicons name={hasKudos ? 'thumbs-up' : 'thumbs-up-outline'} size={24} color={hasKudos ? '#FC4C02' : '#111827'} />
-            <AppText variant="label" style={{ marginLeft: space.sm, fontWeight: '600' }} color={hasKudos ? 'brandText' : 'ink'}>
+            className="flex-1 flex-row items-center justify-center min-h-[52px] active:bg-gray-50"
+          >
+            <Ionicons
+              name={hasKudos ? 'thumbs-up' : 'thumbs-up-outline'}
+              size={24}
+              color={hasKudos ? '#FC4C02' : '#111827'}
+            />
+            <AppText
+              variant="label"
+              style={{ marginLeft: space.sm, fontWeight: '600' }}
+              color={hasKudos ? 'brandText' : 'ink'}
+            >
               {hasKudos ? 'Kudos given' : 'Give kudos'}
             </AppText>
           </Pressable>
@@ -104,9 +137,12 @@ export const ActivityBody: React.FC<{
             <Pressable
               onPress={() => shareActivity(activity)}
               accessibilityRole="button"
-              className="flex-1 flex-row items-center justify-center min-h-[52px] active:bg-gray-50">
+              className="flex-1 flex-row items-center justify-center min-h-[52px] active:bg-gray-50"
+            >
               <Ionicons name="share-social-outline" size={24} color="#111827" />
-              <AppText variant="label" style={{ marginLeft: space.sm, fontWeight: '600' }}>Share</AppText>
+              <AppText variant="label" style={{ marginLeft: space.sm, fontWeight: '600' }}>
+                Share
+              </AppText>
             </Pressable>
           ) : null}
         </View>
@@ -145,4 +181,3 @@ export const DetailSkeleton: React.FC = () => (
     </View>
   </View>
 );
-

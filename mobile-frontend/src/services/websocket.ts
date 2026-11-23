@@ -44,15 +44,21 @@ class RealtimeWebSocketService {
   }
 
   private connect() {
-    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+    if (
+      this.ws &&
+      (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)
+    ) {
       return;
     }
     if (this.isConnecting || !this.token) return;
 
     this.isConnecting = true;
     this.connectedToken = this.token;
-    const baseApi = process.env.EXPO_PUBLIC_API_URL || 'https://open-strava-backend.rakib2020-tkg.workers.dev/api/v1';
-    const wsUrl = baseApi.replace(/^http/, 'ws') + `/messages/ws?token=${encodeURIComponent(this.token)}`;
+    const baseApi =
+      process.env.EXPO_PUBLIC_API_URL ||
+      'https://open-strava-backend.rakib2020-tkg.workers.dev/api/v1';
+    const wsUrl =
+      baseApi.replace(/^http/, 'ws') + `/messages/ws?token=${encodeURIComponent(this.token)}`;
 
     try {
       this.ws = new WebSocket(wsUrl);

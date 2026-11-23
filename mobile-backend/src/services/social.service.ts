@@ -31,7 +31,11 @@ export class SocialService {
   constructor(private db: AppDatabase) {}
 
   private async requireAthlete(id: string) {
-    const [a] = await this.db.select({ id: athletes.id }).from(athletes).where(eq(athletes.id, id)).limit(1);
+    const [a] = await this.db
+      .select({ id: athletes.id })
+      .from(athletes)
+      .where(eq(athletes.id, id))
+      .limit(1);
     if (!a) throw notFound('Athlete');
   }
 
@@ -69,7 +73,9 @@ export class SocialService {
 
   async unfollow(viewerId: string, targetId: string) {
     await this.requireAthlete(targetId);
-    await this.db.delete(follows).where(and(eq(follows.followerId, viewerId), eq(follows.followingId, targetId)));
+    await this.db
+      .delete(follows)
+      .where(and(eq(follows.followerId, viewerId), eq(follows.followingId, targetId)));
     return { isFollowing: false, ...(await this.relationshipCounts(viewerId, targetId)) };
   }
 
@@ -105,7 +111,11 @@ export class SocialService {
       .orderBy(desc(follows.createdAt), desc(joinOn));
 
     return {
-      athletes: rows.map((r) => ({ ...r, isFollowing: Boolean(r.isFollowing), isSelf: r.id === viewerId })),
+      athletes: rows.map((r) => ({
+        ...r,
+        isFollowing: Boolean(r.isFollowing),
+        isSelf: r.id === viewerId,
+      })),
       count: rows.length,
     };
   }
@@ -148,11 +158,22 @@ export class SocialService {
       .from(activities)
       .where(and(base, gte(activities.startTime, new Date(from12))));
 
-    const weeks = Array.from({ length: 12 }, (_, i) => ({ weekStart: new Date(from12 + i * WEEK_MS).toISOString(), bySport: {} as Record<string, { distance: number; moving: number; elevation: number; count: number }> }));
+    const weeks = Array.from({ length: 12 }, (_, i) => ({
+      weekStart: new Date(from12 + i * WEEK_MS).toISOString(),
+      bySport: {} as Record<
+        string,
+        { distance: number; moving: number; elevation: number; count: number }
+      >,
+    }));
     for (const r of recent) {
       const idx = Math.floor((weekStartUtc(r.startTime.getTime()) - from12) / WEEK_MS);
       if (idx < 0 || idx > 11) continue;
-      const w = (weeks[idx].bySport[r.sportType] ??= { distance: 0, moving: 0, elevation: 0, count: 0 });
+      const w = (weeks[idx].bySport[r.sportType] ??= {
+        distance: 0,
+        moving: 0,
+        elevation: 0,
+        count: 0,
+      });
       w.distance += Number(r.distance);
       w.moving += r.moving;
       w.elevation += r.elevation;
@@ -164,8 +185,18 @@ export class SocialService {
       ...(await this.counts(athleteId)),
       bySport: totals.map((t) => ({
         sportType: t.sportType,
-        allTime: { count: Number(t.count), distanceMeters: Number(t.distance), movingTimeSeconds: Number(t.moving), elevationGainMeters: Number(t.elevation) },
-        yearToDate: { count: Number(t.ytdCount), distanceMeters: Number(t.ytdDistance), movingTimeSeconds: Number(t.ytdMoving), elevationGainMeters: Number(t.ytdElevation) },
+        allTime: {
+          count: Number(t.count),
+          distanceMeters: Number(t.distance),
+          movingTimeSeconds: Number(t.moving),
+          elevationGainMeters: Number(t.elevation),
+        },
+        yearToDate: {
+          count: Number(t.ytdCount),
+          distanceMeters: Number(t.ytdDistance),
+          movingTimeSeconds: Number(t.ytdMoving),
+          elevationGainMeters: Number(t.ytdElevation),
+        },
       })),
       weeks,
     };

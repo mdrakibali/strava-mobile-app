@@ -15,7 +15,12 @@ const fields = {
   startDate: isoDate,
   endDate: isoDate,
 };
-const createSchema = z.object({ ...fields, sportType: fields.sportType.default('Run'), startDate: fields.startDate.optional(), endDate: fields.endDate.optional() });
+const createSchema = z.object({
+  ...fields,
+  sportType: fields.sportType.default('Run'),
+  startDate: fields.startDate.optional(),
+  endDate: fields.endDate.optional(),
+});
 const updateSchema = z.object(fields).partial();
 
 // Errors are HttpError instances and are turned into JSON (with the right status) by app.onError.
@@ -32,7 +37,10 @@ export class ChallengeController {
 
   // GET /api/v1/challenges/:id
   async getDetail(c: Context<{ Bindings: Env }>) {
-    const result = await this.getService(c).getChallengeDetail(c.req.param('id') ?? '', c.get('user')?.athleteId);
+    const result = await this.getService(c).getChallengeDetail(
+      c.req.param('id') ?? '',
+      c.get('user')?.athleteId
+    );
     if (!result) return c.json({ error: 'Challenge not found', code: 'not_found' }, 404);
     return c.json(result);
   }
@@ -41,7 +49,11 @@ export class ChallengeController {
   async toggleJoin(c: Context<{ Bindings: Env }>) {
     const raw = await c.req.json().catch(() => ({}));
     const join = typeof raw?.join === 'boolean' ? raw.join : undefined;
-    const result = await this.getService(c).setJoin(c.req.param('id') ?? '', c.get('user').athleteId, join);
+    const result = await this.getService(c).setJoin(
+      c.req.param('id') ?? '',
+      c.get('user').athleteId,
+      join
+    );
     return c.json({ message: result.isJoined ? 'Joined challenge!' : 'Left challenge', ...result });
   }
 
@@ -55,7 +67,11 @@ export class ChallengeController {
   // PATCH /api/v1/challenges/:id (creator)
   async update(c: Context<{ Bindings: Env }>) {
     const body = await parseBody(c, updateSchema);
-    const challenge = await this.getService(c).updateChallenge(c.req.param('id') ?? '', c.get('user').athleteId, body);
+    const challenge = await this.getService(c).updateChallenge(
+      c.req.param('id') ?? '',
+      c.get('user').athleteId,
+      body
+    );
     return c.json({ message: 'Challenge updated', challenge });
   }
 

@@ -49,7 +49,8 @@ export const NewGoalForm: React.FC<Props> = ({
             onPress={() => onPeriodChange(p)}
             className={`px-3 py-1.5 rounded-full mr-2 border ${
               period === p ? 'bg-[#FC4C02] border-[#FC4C02]' : 'bg-gray-100 border-gray-200'
-            }`}>
+            }`}
+          >
             <Text className={`text-xs font-bold ${period === p ? 'text-white' : 'text-gray-700'}`}>
               {p}
             </Text>
@@ -60,7 +61,8 @@ export const NewGoalForm: React.FC<Props> = ({
       <TouchableOpacity
         disabled={saving}
         onPress={onSubmit}
-        className="w-full py-3.5 bg-[#FC4C02] rounded-2xl items-center active:bg-[#E03A00]">
+        className="w-full py-3.5 bg-[#FC4C02] rounded-2xl items-center active:bg-[#E03A00]"
+      >
         {saving ? (
           <ActivityIndicator color="#FFFFFF" size="small" />
         ) : (
@@ -70,4 +72,3 @@ export const NewGoalForm: React.FC<Props> = ({
     </View>
   );
 };
-

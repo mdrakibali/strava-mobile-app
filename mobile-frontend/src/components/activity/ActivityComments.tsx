@@ -1,14 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import {
-  ActivityIndicator,
-  Alert,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { Avatar, Button, Divider, ErrorState, IconButton, SectionTitle, TextField } from '../../design';
+  Avatar,
+  Button,
+  Divider,
+  ErrorState,
+  IconButton,
+  SectionTitle,
+  TextField,
+} from '../../design';
 import { CommentView } from '../../lib/activityView';
 import { formatRelative } from '../../lib/format';
 import { useAddComment, useDeleteComment, useEditComment } from '../../hooks/useActivities';
@@ -46,7 +47,8 @@ export const ActivityComments: React.FC<Props> = ({
   const onCommentMenu = (c: CommentView) => {
     const mine = c.author.id === currentUserId;
     const buttons: any[] = [];
-    if (mine) buttons.push({ text: 'Edit', onPress: () => setEditing({ id: c.id, text: c.content }) });
+    if (mine)
+      buttons.push({ text: 'Edit', onPress: () => setEditing({ id: c.id, text: c.content }) });
     if (mine || isOwner) {
       buttons.push({
         text: 'Delete',
@@ -59,7 +61,8 @@ export const ActivityComments: React.FC<Props> = ({
               style: 'destructive',
               onPress: () => {
                 deleteComment(c.id, {
-                  onError: (e: any) => Alert.alert('Couldn’t delete', e?.message ?? 'Please try again.'),
+                  onError: (e: any) =>
+                    Alert.alert('Couldn’t delete', e?.message ?? 'Please try again.'),
                 });
               },
             },
@@ -94,7 +97,8 @@ export const ActivityComments: React.FC<Props> = ({
       { content },
       {
         onSuccess: () => setDraft(''),
-        onError: (e: any) => setCommentError(e?.message || 'Couldn’t post your comment. Try again.'),
+        onError: (e: any) =>
+          setCommentError(e?.message || 'Couldn’t post your comment. Try again.'),
       }
     );
   };
@@ -105,7 +109,9 @@ export const ActivityComments: React.FC<Props> = ({
     <View className="mt-6 pt-6 border-t border-gray-100">
       <SectionTitle title={comments.length > 0 ? `Comments (${comments.length})` : 'Comments'} />
       {comments.length === 0 ? (
-        <Text className="text-sm text-gray-500 py-2">No comments yet. Be the first to cheer them on!</Text>
+        <Text className="text-sm text-gray-500 py-2">
+          No comments yet. Be the first to cheer them on!
+        </Text>
       ) : (
         comments.map((c, i) => (
           <View key={c.id}>
@@ -114,7 +120,9 @@ export const ActivityComments: React.FC<Props> = ({
               <Avatar uri={c.author.avatarUrl} name={c.author.displayName} size={32} />
               <View className="flex-1 ml-3">
                 <View className="flex-row items-center">
-                  <Text className="text-sm font-bold text-gray-900 flex-shrink">{c.author.displayName}</Text>
+                  <Text className="text-sm font-bold text-gray-900 flex-shrink">
+                    {c.author.displayName}
+                  </Text>
                   <Text className="text-xs text-gray-400 ml-2">{formatRelative(c.createdAt)}</Text>
                 </View>
                 {editing?.id === c.id ? (
@@ -127,7 +135,12 @@ export const ActivityComments: React.FC<Props> = ({
                       multiline
                     />
                     <View className="flex-row items-center mt-2 justify-end">
-                      <Button label="Cancel" variant="ghost" size="sm" onPress={() => setEditing(null)} />
+                      <Button
+                        label="Cancel"
+                        variant="ghost"
+                        size="sm"
+                        onPress={() => setEditing(null)}
+                      />
                       <Button
                         label="Save"
                         size="sm"
@@ -178,13 +191,16 @@ export const ActivityComments: React.FC<Props> = ({
           activeOpacity={0.8}
           className={`flex-row items-center px-3.5 py-2 rounded-full ml-2 ${
             hasDraft ? 'bg-[#FC4C02]' : 'bg-gray-200'
-          }`}>
+          }`}
+        >
           {posting ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
             <>
               <Ionicons name="send" size={14} color={hasDraft ? '#FFFFFF' : '#9CA3AF'} />
-              <Text className={`font-bold text-xs ml-1.5 ${hasDraft ? 'text-white' : 'text-gray-400'}`}>
+              <Text
+                className={`font-bold text-xs ml-1.5 ${hasDraft ? 'text-white' : 'text-gray-400'}`}
+              >
                 Post
               </Text>
             </>

@@ -39,7 +39,8 @@ export const MetricTile: React.FC<MetricTileProps> = ({
       className={`${center ? 'items-center' : 'items-start'} ${className}`}
       style={style}
       accessible
-      accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ''}`}>
+      accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ''}`}
+    >
       {size === 'XL' || size === 'display' ? null : (
         <AppText variant="label" color={inverse ? 'inverse' : 'inkSecondary'} numberOfLines={1}>
           {label}
@@ -51,14 +52,16 @@ export const MetricTile: React.FC<MetricTileProps> = ({
           color={inverse ? 'inverse' : 'ink'}
           numberOfLines={1}
           adjustsFontSizeToFit={size === 'XL' || size === 'display'}
-          minimumFontScale={0.6}>
+          minimumFontScale={0.6}
+        >
           {value}
         </AppText>
         {unit ? (
           <AppText
             variant={unitVariant}
             color={inverse ? 'inverse' : 'inkSecondary'}
-            className="ml-1">
+            className="ml-1"
+          >
             {unit}
           </AppText>
         ) : null}

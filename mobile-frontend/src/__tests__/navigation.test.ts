@@ -20,19 +20,24 @@ const walk = (dir: string): string[] =>
 const routePatterns = walk(APP)
   .map((f) => relative(APP, f).replace(/\.(tsx?|jsx?)$/, ''))
   .filter((r) => !r.split('/').some((seg) => seg.startsWith('_')))
-  .map((r) =>
-    '/' +
-    r
-      .split('/')
-      .filter((seg) => !/^\(.*\)$/.test(seg))
-      .join('/')
-      .replace(/(^|\/)index$/, '')
+  .map(
+    (r) =>
+      '/' +
+      r
+        .split('/')
+        .filter((seg) => !/^\(.*\)$/.test(seg))
+        .join('/')
+        .replace(/(^|\/)index$/, '')
   )
   .map((r) => (r === '/' ? '/' : r.replace(/\/$/, '')));
 
 const matches = (target: string) => {
   // Group segments like /(tabs) are valid in hrefs and don't change the URL.
-  const clean = target.split('?')[0].replace(/\/\([^)]+\)/g, '').replace(/\/$/, '') || '/';
+  const clean =
+    target
+      .split('?')[0]
+      .replace(/\/\([^)]+\)/g, '')
+      .replace(/\/$/, '') || '/';
   return routePatterns.some((pattern) => {
     const re = new RegExp('^' + pattern.replace(/\[[^\]]+\]/g, '[^/]+') + '$');
     return pattern === clean || re.test(clean);
@@ -50,7 +55,8 @@ describe('navigation', () => {
         ...text.matchAll(/router\.(?:push|replace|navigate)\(\s*'([^']+)'/g),
         ...text.matchAll(/pathname:\s*'([^']+)'/g),
       ].map((m) => m[1]);
-      for (const t of targets) if (t.startsWith('/') && !matches(t)) missing.push(`${relative(SRC, file)} → ${t}`);
+      for (const t of targets)
+        if (t.startsWith('/') && !matches(t)) missing.push(`${relative(SRC, file)} → ${t}`);
     }
     expect(missing).toEqual([]);
   });
@@ -65,7 +71,16 @@ describe('navigation', () => {
   });
 
   it('secondary screens added for social features exist', () => {
-    for (const r of ['/activity/kudos/abc', '/activity/edit/abc', '/history/abc', '/athlete/followers', '/athlete/following', '/settings/gps', '/routes/plan', '/routes/builder']) {
+    for (const r of [
+      '/activity/kudos/abc',
+      '/activity/edit/abc',
+      '/history/abc',
+      '/athlete/followers',
+      '/athlete/following',
+      '/settings/gps',
+      '/routes/plan',
+      '/routes/builder',
+    ]) {
       expect([r, matches(r)]).toEqual([r, true]);
     }
   });
@@ -73,7 +88,12 @@ describe('navigation', () => {
 
 describe('planned vs recorded routes', () => {
   it('the recording engine, background task and sync never read the planned route', () => {
-    for (const f of ['tracking/engine.ts', 'tracking/locationTask.ts', 'tracking/sync.ts', 'tracking/db.ts']) {
+    for (const f of [
+      'tracking/engine.ts',
+      'tracking/locationTask.ts',
+      'tracking/sync.ts',
+      'tracking/db.ts',
+    ]) {
       const text = readFileSync(join(SRC, f), 'utf8');
       expect([f, /plannedRoute/i.test(text)]).toEqual([f, false]);
     }

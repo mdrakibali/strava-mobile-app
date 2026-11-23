@@ -73,7 +73,8 @@ export function RecordStatsFullscreen({
       <View className="flex-row items-center px-4 h-14 justify-between border-b border-gray-100">
         <Pressable
           onPress={onClose}
-          className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center active:bg-gray-200">
+          className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center active:bg-gray-200"
+        >
           <Ionicons name="chevron-down" size={24} color="#111827" />
         </Pressable>
         <AppText className="text-gray-900 text-base font-black uppercase tracking-wider">
@@ -81,7 +82,8 @@ export function RecordStatsFullscreen({
         </AppText>
         <Pressable
           onPress={onClose}
-          className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center active:bg-gray-200">
+          className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center active:bg-gray-200"
+        >
           <Ionicons name="map-outline" size={20} color="#111827" />
         </Pressable>
       </View>
@@ -90,9 +92,13 @@ export function RecordStatsFullscreen({
       <Pressable
         onPress={onStatusAction}
         disabled={!onStatusAction}
-        className="mx-4 mt-3 py-2 px-4 rounded-xl flex-row items-center justify-center bg-gray-100 border border-gray-200">
+        className="mx-4 mt-3 py-2 px-4 rounded-xl flex-row items-center justify-center bg-gray-100 border border-gray-200"
+      >
         <Ionicons name="cellular" size={14} color={gpsColor} />
-        <Text style={{ color: gpsColor }} className="text-xs font-black uppercase tracking-wider ml-1.5">
+        <Text
+          style={{ color: gpsColor }}
+          className="text-xs font-black uppercase tracking-wider ml-1.5"
+        >
           {gpsLabel}
         </Text>
       </Pressable>
@@ -150,7 +156,8 @@ export function RecordStatsFullscreen({
       {/* Bottom Controls */}
       <View
         style={{ paddingBottom: Math.max(insets.bottom, 16) + 8 }}
-        className="bg-white rounded-t-3xl px-5 pt-3 border-t border-gray-100 shadow-xl">
+        className="bg-white rounded-t-3xl px-5 pt-3 border-t border-gray-100 shadow-xl"
+      >
         <View className="self-center w-10 h-1 rounded-full bg-gray-300 mb-3" />
         <RecordBottomControls
           status={status}

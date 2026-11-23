@@ -15,4 +15,3 @@ export class NotificationService {
     await this.notifRepo.markAllAsRead(recipientId);
   }
 }
-

@@ -18,7 +18,9 @@ export function useMapRoutes(
   const [routeItems, setRouteItems] = useState<MapItem[]>([]);
   const [nearbyItems, setNearbyItems] = useState<MapItem[]>([]);
   const [routeStatus, setRouteStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [nearbyStatus, setNearbyStatus] = useState<'idle' | 'loading' | 'ready' | 'empty' | 'error'>('idle');
+  const [nearbyStatus, setNearbyStatus] = useState<
+    'idle' | 'loading' | 'ready' | 'empty' | 'error'
+  >('idle');
   const [nearbyError, setNearbyError] = useState<string | null>(null);
   const [nearbyNonce, setNearbyNonce] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(initialRouteId ?? null);
@@ -148,8 +150,20 @@ export function useMapRoutes(
         setNearbyItems(
           unique.map((p: any) => {
             const lines = (p.path ?? []).filter((line: any) => line.length > 1);
-            const length = p.lengthM || (lines.length > 0 ? lines.reduce((sum: number, line: any) => sum + pathLength(line), 0) : 0);
-            return placeRouteItem(p, sport === 'All' ? 'Run' : sport, lines[0] ?? [], length, null, 0, lines);
+            const length =
+              p.lengthM ||
+              (lines.length > 0
+                ? lines.reduce((sum: number, line: any) => sum + pathLength(line), 0)
+                : 0);
+            return placeRouteItem(
+              p,
+              sport === 'All' ? 'Run' : sport,
+              lines[0] ?? [],
+              length,
+              null,
+              0,
+              lines
+            );
           })
         );
         setNearbyStatus('ready');
@@ -191,7 +205,8 @@ export function useMapRoutes(
     }
 
     if (lengthFilter === '< 5 km') rows = rows.filter((i) => i.distanceMeters < 5000);
-    else if (lengthFilter === '5-10 km') rows = rows.filter((i) => i.distanceMeters >= 5000 && i.distanceMeters <= 10000);
+    else if (lengthFilter === '5-10 km')
+      rows = rows.filter((i) => i.distanceMeters >= 5000 && i.distanceMeters <= 10000);
     else if (lengthFilter === '> 10 km') rows = rows.filter((i) => i.distanceMeters > 10000);
 
     if (difficultyFilter) {
@@ -207,16 +222,19 @@ export function useMapRoutes(
   }, [routeItems, nearbyItems, source, sport, query, lengthFilter, difficultyFilter, me]);
 
   const toggleSave = async (item: MapItem) => {
-    const patch = (list: MapItem[]) => list.map((x) => (x.id === item.id ? { ...x, saved: !x.saved } : x));
+    const patch = (list: MapItem[]) =>
+      list.map((x) => (x.id === item.id ? { ...x, saved: !x.saved } : x));
     setRouteItems(patch);
     setNearbyItems(patch);
     try {
       const res = await api.routes.toggleSave(item.id);
-      const apply = (list: MapItem[]) => list.map((x) => (x.id === item.id ? { ...x, saved: Boolean(res.isSaved) } : x));
+      const apply = (list: MapItem[]) =>
+        list.map((x) => (x.id === item.id ? { ...x, saved: Boolean(res.isSaved) } : x));
       setRouteItems(apply);
       setNearbyItems(apply);
     } catch {
-      const revert = (list: MapItem[]) => list.map((x) => (x.id === item.id ? { ...x, saved: item.saved } : x));
+      const revert = (list: MapItem[]) =>
+        list.map((x) => (x.id === item.id ? { ...x, saved: item.saved } : x));
       setRouteItems(revert);
       setNearbyItems(revert);
     }
@@ -236,7 +254,8 @@ export function useMapRoutes(
 
 const pathLength = (line: [number, number][]) => {
   let m = 0;
-  for (let i = 1; i < line.length; i++) m += haversineM(line[i - 1][1], line[i - 1][0], line[i][1], line[i][0]);
+  for (let i = 1; i < line.length; i++)
+    m += haversineM(line[i - 1][1], line[i - 1][0], line[i][1], line[i][0]);
   return m;
 };
 
@@ -254,7 +273,7 @@ const placeRouteItem = (
   name: place.name,
   subtitle: place.address || place.category.replace(/_/g, ' '),
   sportType,
-  paths: paths && paths.length ? paths : (line.length > 1 ? [line] : []),
+  paths: paths && paths.length ? paths : line.length > 1 ? [line] : [],
   anchor: [place.lng, place.lat],
   distanceFromMeM: place.distanceM,
   saved: false,

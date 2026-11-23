@@ -28,7 +28,8 @@ export class ActivityService {
     const row = await this.activityRepo.findById(activityId);
     if (!row) throw notFound('Activity');
     const owner = row.activity.athleteId;
-    const follows = viewerId && viewerId !== owner ? await this.athleteRepo.isFollowing(viewerId, owner) : false;
+    const follows =
+      viewerId && viewerId !== owner ? await this.athleteRepo.isFollowing(viewerId, owner) : false;
     if (!canViewActivity(row.activity, viewerId, follows)) throw notFound('Activity');
     return row;
   }
@@ -63,7 +64,10 @@ export class ActivityService {
       startTime: dto.startTime ? new Date(dto.startTime) : new Date(),
       distanceMeters: dto.distanceMeters.toFixed(2),
       movingTimeSeconds: dto.movingTimeSeconds,
-      elapsedTimeSeconds: Math.max(dto.elapsedTimeSeconds ?? dto.movingTimeSeconds, dto.movingTimeSeconds),
+      elapsedTimeSeconds: Math.max(
+        dto.elapsedTimeSeconds ?? dto.movingTimeSeconds,
+        dto.movingTimeSeconds
+      ),
       elevationGainMeters: Math.round(dto.elevationGainMeters ?? 0),
       averageSpeedMps: avgSpeed != null ? avgSpeed.toFixed(2) : null,
       maxSpeedMps: dto.maxSpeedMps != null ? dto.maxSpeedMps.toFixed(2) : null,
@@ -114,7 +118,11 @@ export class ActivityService {
     if (patch.visibility !== undefined) changes.visibility = patch.visibility;
     if (patch.sportType !== undefined && patch.sportType !== activity.sportType) {
       changes.sportType = patch.sportType;
-      changes.calories = estimateCalories(patch.sportType, Number(activity.distanceMeters), activity.movingTimeSeconds);
+      changes.calories = estimateCalories(
+        patch.sportType,
+        Number(activity.distanceMeters),
+        activity.movingTimeSeconds
+      );
     }
     const updated = await this.activityRepo.update(activityId, changes);
     if (!updated) throw notFound('Activity');
@@ -158,7 +166,8 @@ export class ActivityService {
     await this.loadVisible(activityId, actorId);
     const comment = await this.activityRepo.getComment(commentId);
     if (!comment || comment.activityId !== activityId) throw notFound('Comment');
-    if (comment.athleteId !== actorId) throw new HttpError(403, 'forbidden', 'Only the author can edit this comment');
+    if (comment.athleteId !== actorId)
+      throw new HttpError(403, 'forbidden', 'Only the author can edit this comment');
     return this.activityRepo.updateComment(commentId, content);
   }
 
@@ -192,9 +201,20 @@ export class ActivityService {
     return { hasKudos: liked, kudosCount };
   }
 
-  async addComment(activityId: string, actorId: string, actorUsername: string, content: string, parentCommentId?: string) {
+  async addComment(
+    activityId: string,
+    actorId: string,
+    actorUsername: string,
+    content: string,
+    parentCommentId?: string
+  ) {
     const { activity } = await this.loadVisible(activityId, actorId);
-    const comment = await this.activityRepo.addComment(activityId, actorId, content, parentCommentId);
+    const comment = await this.activityRepo.addComment(
+      activityId,
+      actorId,
+      content,
+      parentCommentId
+    );
     if (activity.athleteId !== actorId) {
       await this.notifRepo.create({
         id: newId('notif'),
@@ -211,7 +231,12 @@ export class ActivityService {
   /** GPX export: owner only (the raw track reveals home/work), XML-escaped (PRIV-04). */
   async generateGpx(activityId: string, ownerId: string) {
     const { activity } = await this.loadOwned(activityId, ownerId);
-    return buildGpx(activity.title, activity.sportType, activity.startTime, (activity.rawPolyline || []) as LatLngPoint[]);
+    return buildGpx(
+      activity.title,
+      activity.sportType,
+      activity.startTime,
+      (activity.rawPolyline || []) as LatLngPoint[]
+    );
   }
 }
 

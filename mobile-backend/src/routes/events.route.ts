@@ -50,7 +50,9 @@ eventsRouter.get('/', optionalAuth, async (c) => {
 
     // The viewer's own RSVP per event (was always null before).
     const viewer = c.get('user')?.athleteId;
-    const mine = viewer ? await db.select().from(eventRsvps).where(eq(eventRsvps.athleteId, viewer)) : [];
+    const mine = viewer
+      ? await db.select().from(eventRsvps).where(eq(eventRsvps.athleteId, viewer))
+      : [];
     const myStatus = new Map(mine.map((r) => [r.eventId, r.status]));
 
     const formatted = eventsList.map((e) => {
@@ -60,7 +62,11 @@ eventsRouter.get('/', optionalAuth, async (c) => {
         title: e.title,
         clubName: e.club?.name ?? null,
         sportType: e.sportType,
-        dateFormatted: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+        dateFormatted: d.toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+        }),
         timeFormatted: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
         meetingPoint: e.meetingPoint,
         distanceMeters: Number(e.distanceMeters || 0),
@@ -161,7 +167,11 @@ eventsRouter.post('/:id/rsvp', requireAuth, async (c) => {
   const { status } = await parseBody(c, rsvpSchema);
   const db = getDb(c);
 
-  const [event] = await db.select({ id: groupEvents.id }).from(groupEvents).where(eq(groupEvents.id, eventId)).limit(1);
+  const [event] = await db
+    .select({ id: groupEvents.id })
+    .from(groupEvents)
+    .where(eq(groupEvents.id, eventId))
+    .limit(1);
   if (!event) throw notFound('Event');
 
   const goingCount = async () => {
@@ -173,7 +183,9 @@ eventsRouter.post('/:id/rsvp', requireAuth, async (c) => {
   };
 
   if (status === 'DECLINED') {
-    await db.delete(eventRsvps).where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.athleteId, user.athleteId)));
+    await db
+      .delete(eventRsvps)
+      .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.athleteId, user.athleteId)));
     return c.json({ message: 'RSVP removed', status: null, attendeesCount: await goingCount() });
   }
 
@@ -192,7 +204,10 @@ const assertClubExists = async (db: ReturnType<typeof getDb>, clubId: string) =>
 const createEventSchema = z.object({
   title: z.string().trim().min(1).max(120),
   sportType: z.string().trim().min(1).max(50),
-  eventDate: z.string().datetime({ offset: true }).refine((d) => Date.parse(d) > Date.now() - 3600_000, 'Event date must be in the future'),
+  eventDate: z
+    .string()
+    .datetime({ offset: true })
+    .refine((d) => Date.parse(d) > Date.now() - 3600_000, 'Event date must be in the future'),
   meetingPoint: z.string().trim().min(1).max(200),
   paceDescription: z.string().trim().max(200).optional(),
   distanceMeters: z.number().finite().min(0).max(1_000_000).optional(),
@@ -220,7 +235,10 @@ eventsRouter.post('/', requireAuth, async (c) => {
       eventDate: new Date(body.eventDate),
     })
     .returning();
-  await db.insert(eventRsvps).values({ eventId: id, athleteId: user.athleteId, status: 'GOING' }).onConflictDoNothing();
+  await db
+    .insert(eventRsvps)
+    .values({ eventId: id, athleteId: user.athleteId, status: 'GOING' })
+    .onConflictDoNothing();
   return c.json({ message: 'Event created', event }, 201);
 });
 
@@ -238,7 +256,8 @@ const updateEventSchema = z
 const loadOwnedEvent = async (db: ReturnType<typeof getDb>, eventId: string, athleteId: string) => {
   const [event] = await db.select().from(groupEvents).where(eq(groupEvents.id, eventId)).limit(1);
   if (!event) throw notFound('Event');
-  if (event.creatorId !== athleteId) throw new HttpError(403, 'forbidden', 'Only the event creator can change this event');
+  if (event.creatorId !== athleteId)
+    throw new HttpError(403, 'forbidden', 'Only the event creator can change this event');
   return event;
 };
 
@@ -255,7 +274,8 @@ eventsRouter.patch('/:id', requireAuth, async (c) => {
   if (body.eventDate !== undefined) values.eventDate = new Date(body.eventDate);
   if (body.meetingPoint !== undefined) values.meetingPoint = body.meetingPoint;
   if (body.paceDescription !== undefined) values.paceDescription = body.paceDescription;
-  if (body.distanceMeters !== undefined) values.distanceMeters = body.distanceMeters === null ? null : body.distanceMeters.toFixed(2);
+  if (body.distanceMeters !== undefined)
+    values.distanceMeters = body.distanceMeters === null ? null : body.distanceMeters.toFixed(2);
 
   const [event] = Object.keys(values).length
     ? await db.update(groupEvents).set(values).where(eq(groupEvents.id, eventId)).returning()

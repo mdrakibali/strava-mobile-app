@@ -50,7 +50,10 @@ describe('realtime socket authentication', () => {
 
   it('broadcasts a sent message and a notification event only addressed to athletes', async () => {
     const { call } = createTestApp(db, { ...ENV, CHAT_ROOM: fakeRoom() } as any);
-    const res = await call('POST', '/messages/send', { token: a, body: { recipientId: 'ath_b', text: 'hi' } });
+    const res = await call('POST', '/messages/send', {
+      token: a,
+      body: { recipientId: 'ath_b', text: 'hi' },
+    });
     expect(res.status).toBe(201);
     expect(broadcasts.map((x) => x.type)).toEqual(['new_message', 'notification']);
     expect(broadcasts[1].recipientId).toBe('ath_b');

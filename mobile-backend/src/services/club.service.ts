@@ -122,7 +122,8 @@ export class ClubService {
     const club = await this.clubRepo.findById(clubId);
     if (!club) throw notFound('Club');
     const membership = await this.clubRepo.getMembership(clubId, athleteId);
-    if (membership?.role !== 'OWNER') throw new HttpError(403, 'forbidden', 'Only the club owner can delete this club');
+    if (membership?.role !== 'OWNER')
+      throw new HttpError(403, 'forbidden', 'Only the club owner can delete this club');
     await this.clubRepo.delete(clubId);
   }
 
@@ -139,7 +140,11 @@ export class ClubService {
 
     if (!wantJoin && membership) {
       if (membership.role === 'OWNER') {
-        throw new HttpError(409, 'owner_cannot_leave', 'The club owner cannot leave. Delete the club instead.');
+        throw new HttpError(
+          409,
+          'owner_cannot_leave',
+          'The club owner cannot leave. Delete the club instead.'
+        );
       }
       await this.clubRepo.removeMember(clubId, athleteId);
     } else if (wantJoin && !membership) {

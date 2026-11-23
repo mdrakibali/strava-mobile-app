@@ -79,7 +79,8 @@ export const Button: React.FC<ButtonProps> = ({
           opacity: isDisabled && !loading ? 0.45 : 1,
         },
         style,
-      ]}>
+      ]}
+    >
       {loading ? (
         <ActivityIndicator color={v.fg} size="small" />
       ) : (
@@ -98,7 +99,8 @@ export const Button: React.FC<ButtonProps> = ({
               fontSize: size === 'sm' ? 13 : 15,
               fontWeight: '700',
             }}
-            numberOfLines={1}>
+            numberOfLines={1}
+          >
             {label}
           </Text>
         </View>

@@ -23,7 +23,9 @@ export default function ActivityDetailScreen() {
   const { height } = useWindowDimensions();
   const { currentUser } = useApp();
   const keyboard = useKeyboardInset();
-  const scrollRef = useRef<{ scrollToEnd: (options?: { animated?: boolean }) => void } | null>(null);
+  const scrollRef = useRef<{ scrollToEnd: (options?: { animated?: boolean }) => void } | null>(
+    null
+  );
   const [isScrolled, setIsScrolled] = useState(false);
 
   const { data, isLoading, isError, error, refetch } = useActivityDetail(id);
@@ -84,7 +86,8 @@ export default function ActivityDetailScreen() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={insets.top}>
+        keyboardVerticalOffset={insets.top}
+      >
         <ScrollView
           ref={(node) => {
             scrollRef.current = node;
@@ -98,10 +101,15 @@ export default function ActivityDetailScreen() {
             setIsScrolled(y > threshold);
           }}
           scrollEventThrottle={16}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 32 + keyboard }}>
+          contentContainerStyle={{ paddingBottom: insets.bottom + 32 + keyboard }}
+        >
           {hasMap ? (
             <View style={{ height: mapHeight }}>
-              <MapView mode="route" route={activity.route} padding={{ top: insets.top, bottom: 24 }} />
+              <MapView
+                mode="route"
+                route={activity.route}
+                padding={{ top: insets.top, bottom: 24 }}
+              />
             </View>
           ) : (
             <View style={{ height: insets.top + 56 }} />
@@ -137,7 +145,8 @@ export default function ActivityDetailScreen() {
           justifyContent: 'space-between',
           paddingHorizontal: 16,
           zIndex: 50,
-        }}>
+        }}
+      >
         <IconButton
           icon="arrow-back"
           appearance={isScrolled || !hasMap ? 'plain' : 'floating'}
@@ -148,7 +157,8 @@ export default function ActivityDetailScreen() {
           <AppText
             variant="title3"
             numberOfLines={1}
-            style={{ flex: 1, marginHorizontal: 12, textAlign: 'center' }}>
+            style={{ flex: 1, marginHorizontal: 12, textAlign: 'center' }}
+          >
             {activity.title}
           </AppText>
         ) : (
@@ -163,9 +173,14 @@ export default function ActivityDetailScreen() {
               Alert.alert(activity.title, undefined, [
                 {
                   text: 'Edit activity',
-                  onPress: () => router.push({ pathname: '/activity/edit/[id]', params: { id: activity.id } }),
+                  onPress: () =>
+                    router.push({ pathname: '/activity/edit/[id]', params: { id: activity.id } }),
                 },
-                { text: 'Delete activity', style: 'destructive', onPress: () => confirmDelete(activity.id) },
+                {
+                  text: 'Delete activity',
+                  style: 'destructive',
+                  onPress: () => confirmDelete(activity.id),
+                },
                 { text: 'Cancel', style: 'cancel' },
               ])
             }

@@ -28,17 +28,20 @@ export default function CreateEventScreen() {
 
   useEffect(() => {
     if (!editId) return;
-    api.events.get(editId).then((res) => {
-      if (res?.event) {
-        setTitle(res.event.title || '');
-        setSportType(res.event.sportType || 'Run');
-        setMeetingPoint(res.event.meetingPoint || '');
-        setPace(res.event.paceDescription || '');
-        if (res.event.distanceMeters) {
-          setDistanceKm(String(Number(res.event.distanceMeters) / 1000));
+    api.events
+      .get(editId)
+      .then((res) => {
+        if (res?.event) {
+          setTitle(res.event.title || '');
+          setSportType(res.event.sportType || 'Run');
+          setMeetingPoint(res.event.meetingPoint || '');
+          setPace(res.event.paceDescription || '');
+          if (res.event.distanceMeters) {
+            setDistanceKm(String(Number(res.event.distanceMeters) / 1000));
+          }
         }
-      }
-    }).catch(() => {});
+      })
+      .catch(() => {});
   }, [editId]);
 
   const [now] = useState(() => Date.now());
@@ -98,7 +101,9 @@ export default function CreateEventScreen() {
         router.replace({ pathname: '/event/[id]', params: { id: res.event.id } });
       }
     } catch (e: any) {
-      setError(e?.message ?? (editId ? 'Could not update the event.' : 'Could not create the event.'));
+      setError(
+        e?.message ?? (editId ? 'Could not update the event.' : 'Could not create the event.')
+      );
       setSaving(false);
     }
   };
@@ -110,7 +115,8 @@ export default function CreateEventScreen() {
       canSubmit={valid}
       submitting={saving}
       error={error}
-      onSubmit={submit}>
+      onSubmit={submit}
+    >
       <TextField
         value={title}
         onChangeText={setTitle}
@@ -139,8 +145,12 @@ export default function CreateEventScreen() {
               i === 0
                 ? 'Today'
                 : i === 1
-                ? 'Tomorrow'
-                : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+                  ? 'Tomorrow'
+                  : d.toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                    })
             }
             selected={dayOffset === i}
             onPress={() => setDayOffset(i)}

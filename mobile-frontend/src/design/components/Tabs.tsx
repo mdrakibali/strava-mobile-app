@@ -30,17 +30,21 @@ export function SegmentedTabs<K extends string>({
             onPress={() => onChange(item.key)}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            className="flex-1 items-center pt-3 min-h-[56px]">
+            className="flex-1 items-center pt-3 min-h-[56px]"
+          >
             {item.icon ? (
               <Ionicons name={item.icon} size={22} color={active ? color.ink : color.inkTertiary} />
             ) : null}
             <AppText
               variant="label"
               color={active ? 'ink' : 'inkTertiary'}
-              className={`font-bold ${item.icon ? 'mt-0.5' : ''}`}>
+              className={`font-bold ${item.icon ? 'mt-0.5' : ''}`}
+            >
               {item.label}
             </AppText>
-            <View className={`mt-2 h-[3px] w-[60%] rounded-t ${active ? 'bg-primary' : 'bg-transparent'}`} />
+            <View
+              className={`mt-2 h-[3px] w-[60%] rounded-t ${active ? 'bg-primary' : 'bg-transparent'}`}
+            />
           </Pressable>
         );
       })}
@@ -59,10 +63,9 @@ export const Chip: React.FC<{
     accessibilityRole="button"
     accessibilityState={{ selected: !!selected }}
     className={`flex-row items-center h-9 px-3 rounded-full border ${
-      selected
-        ? 'bg-orange-50 border-primary'
-        : 'bg-white border-gray-300 active:bg-gray-100'
-    }`}>
+      selected ? 'bg-orange-50 border-primary' : 'bg-white border-gray-300 active:bg-gray-100'
+    }`}
+  >
     {icon ? (
       <Ionicons
         name={icon}
@@ -74,17 +77,15 @@ export const Chip: React.FC<{
     <AppText
       variant="label"
       color={selected ? 'brandText' : 'inkSecondary'}
-      className="font-semibold">
+      className="font-semibold"
+    >
       {label}
     </AppText>
   </Pressable>
 );
 
 export const ChipRow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <ScrollView
-    horizontal
-    showsHorizontalScrollIndicator={false}
-    contentContainerStyle={{ gap: 8 }}>
+  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
     {children}
   </ScrollView>
 );

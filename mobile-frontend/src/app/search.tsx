@@ -20,7 +20,10 @@ import { api } from '../services/api';
 
 type Row = AthleteSummary & { isFollowing: boolean; pending?: boolean };
 
-const SearchFollowButton: React.FC<{ row: Row; onFollow: (row: Row) => void }> = ({ row, onFollow }) => {
+const SearchFollowButton: React.FC<{ row: Row; onFollow: (row: Row) => void }> = ({
+  row,
+  onFollow,
+}) => {
   const isFollowing = useFollow(row.id, row.isFollowing);
   return (
     <Button
@@ -83,7 +86,11 @@ export default function SearchScreen() {
     setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, pending: true } : r)));
     try {
       const res = await setFollowing(row.id, row.isFollowing, !row.isFollowing);
-      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, isFollowing: res.isFollowing, pending: false } : r)));
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === row.id ? { ...r, isFollowing: res.isFollowing, pending: false } : r
+        )
+      );
       if (currentUser?.id && typeof res.followingCount === 'number') {
         updateCurrentUser({ followingCount: res.followingCount });
       }
@@ -111,17 +118,30 @@ export default function SearchScreen() {
             className="flex-1 ml-2 text-base text-gray-900 py-0"
           />
           {query.length > 0 ? (
-            <IconButton icon="close-circle" size={32} iconColor="#9CA3AF" accessibilityLabel="Clear search" onPress={() => setQuery('')} />
+            <IconButton
+              icon="close-circle"
+              size={32}
+              iconColor="#9CA3AF"
+              accessibilityLabel="Clear search"
+              onPress={() => setQuery('')}
+            />
           ) : null}
         </View>
       </View>
 
       {tooShort || status === 'idle' ? (
-        <EmptyState icon="people-outline" title="Find athletes" body="Search by name or city, then follow athletes to see their activities in your feed." />
+        <EmptyState
+          icon="people-outline"
+          title="Find athletes"
+          body="Search by name or city, then follow athletes to see their activities in your feed."
+        />
       ) : status === 'loading' && rows.length === 0 ? (
         <ActivityIndicator style={{ marginTop: space.xxxl }} color="#FC4C02" />
       ) : status === 'error' ? (
-        <ErrorState message="Search failed. Check your connection and try again." onRetry={() => runSearch(query)} />
+        <ErrorState
+          message="Search failed. Check your connection and try again."
+          onRetry={() => runSearch(query)}
+        />
       ) : (
         <FlatList
           data={rows}
@@ -129,19 +149,30 @@ export default function SearchScreen() {
           keyboardShouldPersistTaps="handled"
           ItemSeparatorComponent={() => <Divider inset={space.gutter + 48 + space.md} />}
           contentContainerStyle={rows.length === 0 ? { flexGrow: 1 } : undefined}
-          ListEmptyComponent={<EmptyState icon="search-outline" title="No athletes found" body={`Nobody matches “${query.trim()}”.`} />}
+          ListEmptyComponent={
+            <EmptyState
+              icon="search-outline"
+              title="No athletes found"
+              body={`Nobody matches “${query.trim()}”.`}
+            />
+          }
           renderItem={({ item }) => (
             <View className="flex-row items-center px-4 py-3">
               <Pressable
                 className="flex-1 flex-row items-center mr-3"
                 onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: item.id } })}
                 accessibilityRole="button"
-                accessibilityLabel={`${item.displayName}'s profile`}>
+                accessibilityLabel={`${item.displayName}'s profile`}
+              >
                 <Avatar uri={item.avatarUrl} name={item.displayName} size={48} />
                 <View style={{ flex: 1, marginLeft: space.md }}>
-                  <AppText variant="title3" numberOfLines={1}>{item.displayName}</AppText>
+                  <AppText variant="title3" numberOfLines={1}>
+                    {item.displayName}
+                  </AppText>
                   {item.city ? (
-                    <AppText variant="caption" color="inkTertiary" numberOfLines={1}>{item.city}</AppText>
+                    <AppText variant="caption" color="inkTertiary" numberOfLines={1}>
+                      {item.city}
+                    </AppText>
                   ) : null}
                 </View>
               </Pressable>

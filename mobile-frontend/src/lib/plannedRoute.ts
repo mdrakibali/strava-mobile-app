@@ -31,4 +31,5 @@ export const plannedRouteStore = {
   },
 };
 
-export const usePlannedRoute = () => useSyncExternalStore(plannedRouteStore.subscribe, plannedRouteStore.get);
+export const usePlannedRoute = () =>
+  useSyncExternalStore(plannedRouteStore.subscribe, plannedRouteStore.get);

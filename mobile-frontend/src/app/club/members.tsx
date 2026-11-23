@@ -63,7 +63,10 @@ export default function ClubMembersScreen() {
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
         <Text className="text-base font-black text-gray-900">Club Roster ({members.length})</Text>
-        <TouchableOpacity onPress={() => id && shareClub(id, clubName).catch(() => {})} className="p-1">
+        <TouchableOpacity
+          onPress={() => id && shareClub(id, clubName).catch(() => {})}
+          className="p-1"
+        >
           <Ionicons name="person-add-outline" size={20} color="#FC4C02" />
         </TouchableOpacity>
       </View>
@@ -80,7 +83,11 @@ export default function ClubMembersScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="p-4" contentContainerClassName="pb-24">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        className="p-4"
+        contentContainerClassName="pb-24"
+      >
         {isLoading ? (
           <View className="py-12 items-center">
             <ActivityIndicator size="small" color="#FC4C02" />
@@ -101,7 +108,8 @@ export default function ClubMembersScreen() {
             <TouchableOpacity
               key={member.id || member.athleteId || index}
               onPress={() => router.push(`/athlete/${member.athleteId || member.id}`)}
-              className="flex-row items-center justify-between p-3.5 bg-white rounded-2xl mb-2.5 border border-gray-100 shadow-sm">
+              className="flex-row items-center justify-between p-3.5 bg-white rounded-2xl mb-2.5 border border-gray-100 shadow-sm"
+            >
               <View className="flex-row items-center flex-1 mr-3">
                 <Image
                   source={{ uri: member.avatarUrl || undefined }}
@@ -109,7 +117,9 @@ export default function ClubMembersScreen() {
                 />
                 <View className="flex-1">
                   <View className="flex-row items-center">
-                    <Text className="text-sm font-bold text-gray-900 mr-2">{member.displayName}</Text>
+                    <Text className="text-sm font-bold text-gray-900 mr-2">
+                      {member.displayName}
+                    </Text>
                     {(member.role === 'ADMIN' || member.role === 'OWNER') && (
                       <View className="bg-orange-100 px-2 py-0.5 rounded-full">
                         <Text className="text-[10px] font-black text-[#FC4C02]">

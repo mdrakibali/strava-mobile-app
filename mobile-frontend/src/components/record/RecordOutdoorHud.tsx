@@ -44,9 +44,7 @@ export function RecordOutdoorHud({
         // Bright Yellow "Stopped" Banner (Matching user screenshot 7)
         <View className="bg-[#FFCC00] flex-row items-center justify-between px-4 py-2 border-b border-amber-300">
           <View className="w-5" />
-          <AppText className="text-black text-sm font-black tracking-wide">
-            Stopped
-          </AppText>
+          <AppText className="text-black text-sm font-black tracking-wide">Stopped</AppText>
           <Pressable onPress={onExpandPress} hitSlop={10} accessibilityLabel="Expand metrics">
             <Ionicons name="expand-outline" size={18} color="#000000" />
           </Pressable>
@@ -57,14 +55,18 @@ export function RecordOutdoorHud({
           {gpsLabel !== 'GPS Acquired' ? (
             <View
               style={{ backgroundColor: gpsBg }}
-              className="flex-row items-center justify-between px-4 py-1.5 border-b border-gray-100">
+              className="flex-row items-center justify-between px-4 py-1.5 border-b border-gray-100"
+            >
               <View className="flex-row items-center">
                 <Ionicons
                   name={gpsLabel.includes('Lost') ? 'alert-circle' : 'cellular'}
                   size={14}
                   color={gpsColor}
                 />
-                <Text style={{ color: gpsColor }} className="text-xs font-bold tracking-wider ml-1.5">
+                <Text
+                  style={{ color: gpsColor }}
+                  className="text-xs font-bold tracking-wider ml-1.5"
+                >
                   {gpsLabel}
                 </Text>
               </View>
@@ -86,9 +88,7 @@ export function RecordOutdoorHud({
           <View className="flex-row items-center justify-between px-4 py-2 border-b border-gray-100 bg-white">
             <View className="flex-row items-center">
               <View className="w-2 h-2 rounded-full bg-emerald-500 mr-2" />
-              <AppText className="text-gray-900 text-sm font-bold">
-                {sportLabel}
-              </AppText>
+              <AppText className="text-gray-900 text-sm font-bold">{sportLabel}</AppText>
             </View>
             <Pressable onPress={onExpandPress} hitSlop={10} accessibilityLabel="Expand metrics">
               <Ionicons name="expand-outline" size={18} color="#111827" />
@@ -100,7 +100,8 @@ export function RecordOutdoorHud({
         <Pressable
           onPress={onStatusAction}
           disabled={!onStatusAction}
-          className="flex-row items-center justify-between px-4 py-2 border-b border-gray-200 bg-[#0C2340]">
+          className="flex-row items-center justify-between px-4 py-2 border-b border-gray-200 bg-[#0C2340]"
+        >
           <View className="flex-row items-center">
             <Ionicons name="cellular" size={14} color="#38BDF8" />
             <Text style={{ color: '#FFFFFF' }} className="text-xs font-bold tracking-wider ml-1.5">
@@ -130,7 +131,8 @@ export function RecordOutdoorHud({
           <AppText className="text-gray-900 text-2xl font-black">{secondValue}</AppText>
           <AppText
             className="text-gray-500 text-[11px] font-bold uppercase tracking-wider mt-0.5"
-            numberOfLines={1}>
+            numberOfLines={1}
+          >
             {isRecording ? 'Split avg. (/km)' : secondLabel}
           </AppText>
         </View>

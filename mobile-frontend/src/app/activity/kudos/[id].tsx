@@ -2,7 +2,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppBar, AppText, Avatar, EmptyState, ErrorState, LoadingState, space } from '../../../design';
+import {
+  AppBar,
+  AppText,
+  Avatar,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  space,
+} from '../../../design';
 import { toAthleteSummary } from '../../../lib/activityView';
 import { useKudosList } from '../../../hooks/useActivities';
 
@@ -26,7 +34,7 @@ export default function KudosListScreen() {
         <LoadingState />
       ) : isError ? (
         <ErrorState
-          message={error?.message ?? "We couldn’t load kudos."}
+          message={error?.message ?? 'We couldn’t load kudos.'}
           onRetry={() => refetch()}
         />
       ) : (
@@ -50,7 +58,8 @@ export default function KudosListScreen() {
               <Pressable
                 onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: a.id } })}
                 accessibilityRole="button"
-                className="flex-row items-center px-4 py-3 border-b border-gray-100 active:bg-gray-50">
+                className="flex-row items-center px-4 py-3 border-b border-gray-100 active:bg-gray-50"
+              >
                 <Avatar uri={a.avatarUrl} name={a.displayName} size={40} />
                 <View style={{ marginLeft: space.md, flex: 1 }}>
                   <AppText variant="bodyStrong">{a.displayName}</AppText>

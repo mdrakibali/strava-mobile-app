@@ -56,7 +56,14 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
   return (
     <View className="bg-gray-50 rounded-2xl p-4 border border-gray-200">
       {/* Top metrics header */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space.sm }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: space.sm,
+        }}
+      >
         <View className="flex-row items-center gap-2">
           <View className="px-2 py-0.5 rounded-full bg-orange-100 border border-orange-200">
             <AppText className="text-[#FC4C02] text-xs font-black">
@@ -75,7 +82,8 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
         onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
         style={{ height }}
         accessible
-        accessibilityLabel={`Elevation profile from ${Math.round(min)} to ${Math.round(max)} metres`}>
+        accessibilityLabel={`Elevation profile from ${Math.round(min)} to ${Math.round(max)} metres`}
+      >
         {width > 0 ? (
           <Svg width={width} height={height - 16}>
             <Defs>
@@ -94,7 +102,9 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
       {totalKm != null ? (
         <View className="flex-row justify-between items-center pt-1 border-t border-gray-200">
           <AppText className="text-gray-400 text-[10px] font-bold">0 km</AppText>
-          {midKm ? <AppText className="text-gray-400 text-[10px] font-bold">{midKm} km</AppText> : null}
+          {midKm ? (
+            <AppText className="text-gray-400 text-[10px] font-bold">{midKm} km</AppText>
+          ) : null}
           <AppText className="text-gray-400 text-[10px] font-bold">{totalKm} km</AppText>
         </View>
       ) : null}

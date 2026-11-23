@@ -29,18 +29,21 @@ export function RecordHeaderControls({
       <View
         style={{ top: topInset + 8 }}
         className="absolute left-4 right-4 flex-row items-center justify-between z-20"
-        pointerEvents="box-none">
+        pointerEvents="box-none"
+      >
         <Pressable
           onPress={onBack}
           accessibilityLabel="Back"
-          className="w-11 h-11 rounded-full bg-white border border-gray-200 shadow-md items-center justify-center active:bg-gray-50">
+          className="w-11 h-11 rounded-full bg-white border border-gray-200 shadow-md items-center justify-center active:bg-gray-50"
+        >
           <Ionicons name="chevron-back" size={24} color="#111827" />
         </Pressable>
 
         <Pressable
           onPress={onOpenSettings}
           accessibilityLabel="Settings"
-          className="w-11 h-11 rounded-full bg-white border border-gray-200 shadow-md items-center justify-center active:bg-gray-50">
+          className="w-11 h-11 rounded-full bg-white border border-gray-200 shadow-md items-center justify-center active:bg-gray-50"
+        >
           <Ionicons name="settings-outline" size={20} color="#111827" />
         </Pressable>
       </View>
@@ -49,11 +52,13 @@ export function RecordHeaderControls({
       <View
         style={{ top: topInset + 72 }}
         className="absolute right-4 items-center gap-2.5 z-20"
-        pointerEvents="box-none">
+        pointerEvents="box-none"
+      >
         <Pressable
           onPress={onOpenLayers}
           accessibilityLabel="Layers"
-          className="w-11 h-11 rounded-full bg-white border border-gray-200 items-center justify-center shadow-md active:bg-gray-50 relative">
+          className="w-11 h-11 rounded-full bg-white border border-gray-200 items-center justify-center shadow-md active:bg-gray-50 relative"
+        >
           <Ionicons name="layers-outline" size={20} color="#111827" />
         </Pressable>
 
@@ -62,11 +67,11 @@ export function RecordHeaderControls({
           accessibilityLabel="Recenter"
           className={`w-11 h-11 rounded-full border items-center justify-center shadow-md active:bg-gray-50 ${
             following ? 'bg-white border-gray-200' : 'bg-[#FC4C02] border-[#FC4C02]'
-          }`}>
+          }`}
+        >
           <Ionicons name="locate-outline" size={20} color={following ? '#111827' : '#FFFFFF'} />
         </Pressable>
       </View>
     </>
   );
 }
-

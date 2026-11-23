@@ -11,7 +11,13 @@ import {
   unmarkCommentDeleted,
 } from '../activityView';
 
-const athlete = { id: 'ath_1', username: 'rakib', displayName: 'Rakib', avatarUrl: null, city: 'Dhaka' };
+const athlete = {
+  id: 'ath_1',
+  username: 'rakib',
+  displayName: 'Rakib',
+  avatarUrl: null,
+  city: 'Dhaka',
+};
 
 describe('toRoute', () => {
   it('accepts object points and [lng, lat] pairs, drops invalid ones', () => {
@@ -38,9 +44,9 @@ describe('toAthleteSummary', () => {
       avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
     });
     expect(a.avatarUrl).toBeNull();
-    expect(toAthleteSummary({ ...athlete, avatarUrl: 'https://lh3.googleusercontent.com/a/x' }).avatarUrl).toBe(
-      'https://lh3.googleusercontent.com/a/x'
-    );
+    expect(
+      toAthleteSummary({ ...athlete, avatarUrl: 'https://lh3.googleusercontent.com/a/x' }).avatarUrl
+    ).toBe('https://lh3.googleusercontent.com/a/x');
   });
   it('does not invent a city', () => {
     expect(toAthleteSummary({ id: '1', displayName: 'X' }).city).toBeNull();
@@ -90,8 +96,13 @@ describe('fromDetailResponse', () => {
     maxSpeedMps: '11.20',
     calories: 600,
     rawPolyline: null,
-    maskedPolyline: [{ latitude: 23.7, longitude: 90.4 }, { latitude: 23.71, longitude: 90.41 }],
-    splits: [{ splitNumber: 1, paceFormatted: '5:41 /km', elevationDeltaMeters: 3, averageHeartRate: 154 }],
+    maskedPolyline: [
+      { latitude: 23.7, longitude: 90.4 },
+      { latitude: 23.71, longitude: 90.41 },
+    ],
+    splits: [
+      { splitNumber: 1, paceFormatted: '5:41 /km', elevationDeltaMeters: 3, averageHeartRate: 154 },
+    ],
     elevationProfile: [10, '12', null],
   };
 
@@ -101,7 +112,9 @@ describe('fromDetailResponse', () => {
       athlete,
       kudosCount: 4,
       hasKudos: true,
-      comments: [{ id: 'c1', content: 'Nice!', createdAt: '2026-11-19T13:00:00Z', author: athlete }],
+      comments: [
+        { id: 'c1', content: 'Nice!', createdAt: '2026-11-19T13:00:00Z', author: athlete },
+      ],
       commentsCount: 1,
       isOwner: false,
     });
@@ -113,7 +126,13 @@ describe('fromDetailResponse', () => {
   });
 
   it('uses the masked polyline for non-owners and parses decimal strings', () => {
-    const v = fromDetailResponse({ activity: row, athlete, kudosCount: 0, hasKudos: false, comments: [] });
+    const v = fromDetailResponse({
+      activity: row,
+      athlete,
+      kudosCount: 0,
+      hasKudos: false,
+      comments: [],
+    });
     expect(v.route).toHaveLength(2);
     expect(v.distanceMeters).toBe(25000);
     expect(v.maxSpeedMps).toBeCloseTo(11.2);
@@ -122,7 +141,14 @@ describe('fromDetailResponse', () => {
 
   it('prefers the raw polyline when the owner receives it', () => {
     const v = fromDetailResponse({
-      activity: { ...row, rawPolyline: [{ latitude: 1, longitude: 1 }, { latitude: 2, longitude: 2 }, { latitude: 3, longitude: 3 }] },
+      activity: {
+        ...row,
+        rawPolyline: [
+          { latitude: 1, longitude: 1 },
+          { latitude: 2, longitude: 2 },
+          { latitude: 3, longitude: 3 },
+        ],
+      },
       athlete,
     });
     expect(v.route).toHaveLength(3);

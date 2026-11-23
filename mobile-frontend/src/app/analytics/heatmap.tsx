@@ -18,9 +18,12 @@ export default function PersonalHeatmapScreen() {
 
   useEffect(() => {
     if (!currentUser.id) return;
-    api.athletes.listActivities(currentUser.id).then((res) => {
-      if (res?.activities) setUserActivities(res.activities);
-    }).catch(() => null);
+    api.athletes
+      .listActivities(currentUser.id)
+      .then((res) => {
+        if (res?.activities) setUserActivities(res.activities);
+      })
+      .catch(() => null);
   }, [currentUser.id]);
 
   // Filter user activities by sport and aggregate all polyline coordinates
@@ -35,7 +38,8 @@ export default function PersonalHeatmapScreen() {
   });
 
   // No invented default: with no recorded points the map simply shows the empty state below.
-  const centerCoord: [number, number] | undefined = heatmapCoords.length > 0 ? heatmapCoords[0] : undefined;
+  const centerCoord: [number, number] | undefined =
+    heatmapCoords.length > 0 ? heatmapCoords[0] : undefined;
 
   return (
     <SafeAreaView className="flex-1 bg-stone-950 justify-between">
@@ -51,7 +55,8 @@ export default function PersonalHeatmapScreen() {
               'Your Personal Heatmap aggregates real GPS polylines from your completed workouts stored in Neon PostgreSQL.'
             )
           }
-          className="p-1">
+          className="p-1"
+        >
           <Ionicons name="information-circle-outline" size={22} color="#9CA3AF" />
         </TouchableOpacity>
       </View>
@@ -66,7 +71,8 @@ export default function PersonalHeatmapScreen() {
               onPress={() => setSelectedSport(sport)}
               className={`px-3 py-1 rounded-full mr-2 ${
                 selectedSport === sport ? 'bg-[#FC4C02]' : 'bg-stone-800'
-              }`}>
+              }`}
+            >
               <Text className="text-xs font-bold text-white">{sport}</Text>
             </TouchableOpacity>
           ))}
@@ -80,7 +86,8 @@ export default function PersonalHeatmapScreen() {
               onPress={() => setMapStyle(style)}
               className={`px-3 py-1 rounded-full ${
                 mapStyle === style ? 'bg-[#FC4C02]' : 'bg-transparent'
-              }`}>
+              }`}
+            >
               <Text className="text-[10px] font-black text-white capitalize">{style}</Text>
             </TouchableOpacity>
           ))}
@@ -109,7 +116,8 @@ export default function PersonalHeatmapScreen() {
               </Text>
               <TouchableOpacity
                 onPress={() => router.push('/record')}
-                className="px-5 py-2.5 bg-[#FC4C02] rounded-full">
+                className="px-5 py-2.5 bg-[#FC4C02] rounded-full"
+              >
                 <Text className="text-xs font-bold text-white">Record an Activity</Text>
               </TouchableOpacity>
             </View>
@@ -125,9 +133,7 @@ export default function PersonalHeatmapScreen() {
         </View>
         <View className="items-center">
           <Text className="text-lg font-black text-white">
-            {(
-              filteredActivities.reduce((acc, a) => acc + a.distanceMeters, 0) / 1000
-            ).toFixed(1)}{' '}
+            {(filteredActivities.reduce((acc, a) => acc + a.distanceMeters, 0) / 1000).toFixed(1)}{' '}
             km
           </Text>
           <Text className="text-[10px] text-stone-400 uppercase font-bold">Distance</Text>

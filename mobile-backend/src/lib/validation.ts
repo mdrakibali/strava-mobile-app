@@ -76,8 +76,17 @@ export const legacyCreateSchema = z
     visibility: z.enum(VISIBILITY).default('PUBLIC'),
     startTime: isoDate.optional(),
     distanceMeters: z.number().finite().min(0).max(2_000_000),
-    movingTimeSeconds: z.number().int().min(0).max(7 * 86400),
-    elapsedTimeSeconds: z.number().int().min(0).max(7 * 86400).optional(),
+    movingTimeSeconds: z
+      .number()
+      .int()
+      .min(0)
+      .max(7 * 86400),
+    elapsedTimeSeconds: z
+      .number()
+      .int()
+      .min(0)
+      .max(7 * 86400)
+      .optional(),
     elevationGainMeters: z.number().finite().min(0).max(50_000).optional(),
     maxSpeedMps: z.number().finite().min(0).max(100).optional(),
     calories: z.number().finite().min(0).max(50_000).optional(),

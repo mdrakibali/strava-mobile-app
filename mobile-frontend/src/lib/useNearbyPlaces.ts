@@ -31,10 +31,17 @@ export const useNearbyPlaces = (sport: string, enabled = true) => {
     (async () => {
       set({ status: 'locating' });
       const perm = await Location.requestForegroundPermissionsAsync().catch(() => null);
-      if (!perm || !perm.granted) return set({ status: 'permission_denied', canAskAgain: perm?.canAskAgain ?? true });
-      if (!(await Location.hasServicesEnabledAsync().catch(() => false))) return set({ status: 'location_off' });
-      let fix = await Location.getLastKnownPositionAsync({ maxAge: MAX_FIX_AGE_MS }).catch(() => null);
-      if (!fix) fix = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null);
+      if (!perm || !perm.granted)
+        return set({ status: 'permission_denied', canAskAgain: perm?.canAskAgain ?? true });
+      if (!(await Location.hasServicesEnabledAsync().catch(() => false)))
+        return set({ status: 'location_off' });
+      let fix = await Location.getLastKnownPositionAsync({ maxAge: MAX_FIX_AGE_MS }).catch(
+        () => null
+      );
+      if (!fix)
+        fix = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        }).catch(() => null);
       if (!fix) return set({ status: 'no_fix' });
       const position: LngLat = [fix.coords.longitude, fix.coords.latitude];
       set({ status: 'loading', position });

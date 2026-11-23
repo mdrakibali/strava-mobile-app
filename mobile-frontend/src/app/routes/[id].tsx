@@ -72,7 +72,8 @@ export default function RouteDetailScreen() {
         <Text className="text-base font-bold text-gray-900 mt-3">Route not found</Text>
         <TouchableOpacity
           onPress={() => router.back()}
-          className="mt-4 px-6 py-2.5 bg-[#FC4C02] rounded-full">
+          className="mt-4 px-6 py-2.5 bg-[#FC4C02] rounded-full"
+        >
           <Text className="text-xs font-black text-white">Go Back</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -106,7 +107,11 @@ export default function RouteDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 110 }}
+      >
         {/* Full Interactive Map View - Light Outdoor Style */}
         <View className="h-72 w-full bg-stone-100 relative">
           <StravaMapView
@@ -143,7 +148,10 @@ export default function RouteDetailScreen() {
           <View className="flex-row justify-between py-4 my-3 border-y border-gray-100">
             <StatBox label="Distance" value={`${distKm} km`} />
             <StatBox label="Est. Moving Time" value={`${timeHours} hrs`} />
-            <StatBox label="Elevation Gain" value={route.elevationGainMeters ? `${route.elevationGainMeters} m` : '–'} />
+            <StatBox
+              label="Elevation Gain"
+              value={route.elevationGainMeters ? `${route.elevationGainMeters} m` : '–'}
+            />
           </View>
 
           {/* Elevation Profile Component */}
@@ -194,7 +202,8 @@ export default function RouteDetailScreen() {
                 params: { sport: route.sportType || 'Ride' },
               });
             }}
-            className="w-full py-4.5 bg-[#FC4C02] rounded-full flex-row items-center justify-center shadow-lg mt-4 active:bg-[#E03A00]">
+            className="w-full py-4.5 bg-[#FC4C02] rounded-full flex-row items-center justify-center shadow-lg mt-4 active:bg-[#E03A00]"
+          >
             <Ionicons name="play" size={20} color="#FFFFFF" />
             <Text className="text-base font-black text-white ml-2 tracking-wide">
               Start Workout with this Route

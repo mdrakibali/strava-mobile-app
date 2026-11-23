@@ -29,11 +29,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {actionLabel && onAction && (
         <TouchableOpacity
           onPress={onAction}
-          className="bg-[#FC4C02] px-6 py-2.5 rounded-full shadow-sm">
+          className="bg-[#FC4C02] px-6 py-2.5 rounded-full shadow-sm"
+        >
           <Text className="text-xs font-bold text-white">{actionLabel}</Text>
         </TouchableOpacity>
       )}
     </View>
   );
 };
-

@@ -62,7 +62,8 @@ export const ProfileHeader: React.FC<Props> = ({
         <Pressable
           onPress={() => router.push({ pathname: '/athlete/followers', params: { id: athleteId } })}
           accessibilityRole="button"
-          hitSlop={8}>
+          hitSlop={8}
+        >
           <AppText variant="body">
             <AppText variant="bodyStrong">{followersCount}</AppText>
             {followersCount === 1 ? ' follower' : ' followers'}
@@ -74,7 +75,8 @@ export const ProfileHeader: React.FC<Props> = ({
         <Pressable
           onPress={() => router.push({ pathname: '/athlete/following', params: { id: athleteId } })}
           accessibilityRole="button"
-          hitSlop={8}>
+          hitSlop={8}
+        >
           <AppText variant="body">
             <AppText variant="bodyStrong">{followingCount}</AppText> following
           </AppText>
@@ -89,7 +91,12 @@ export const ProfileHeader: React.FC<Props> = ({
               className="flex-1"
               onPress={() => router.push('/settings/profile-edit')}
             />
-            <Button label="Share profile" variant="outline" className="flex-1 ml-3" onPress={onShare} />
+            <Button
+              label="Share profile"
+              variant="outline"
+              className="flex-1 ml-3"
+              onPress={onShare}
+            />
           </>
         ) : (
           <>
@@ -114,4 +121,3 @@ export const ProfileHeader: React.FC<Props> = ({
     </View>
   );
 };
-

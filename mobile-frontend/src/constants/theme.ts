@@ -3,33 +3,33 @@ export const Colors = {
   primary: '#FC4C02', // Strava iconic Athletic Orange
   primaryDark: '#E34402',
   primaryLight: '#FFF2EB',
-  
+
   // Surfaces & Backgrounds (Crisp Light Theme)
   background: '#FFFFFF',
   surface: '#F8F9FA',
   surfaceHover: '#F1F3F5',
   card: '#FFFFFF',
-  
+
   // Borders & Dividers
   border: '#E5E7EB',
   borderLight: '#F3F4F6',
   divider: '#EAECEF',
-  
+
   // Typography
   textPrimary: '#111827',
   textSecondary: '#4B5563',
   textMuted: '#9CA3AF',
   textInverse: '#FFFFFF',
-  
+
   // Metric & Status Indicators
   success: '#10B981', // PR / Record green
-  gold: '#F59E0B',    // KOM / Trophy crown gold
+  gold: '#F59E0B', // KOM / Trophy crown gold
   heartRate: '#EF4444', // Red HR
-  pace: '#3B82F6',     // Blue Pace
-  elevation: '#8B5CF6',// Purple Elevation
-  cadence: '#EC4899',  // Pink Cadence
-  power: '#F97316',    // Orange Power
-  
+  pace: '#3B82F6', // Blue Pace
+  elevation: '#8B5CF6', // Purple Elevation
+  cadence: '#EC4899', // Pink Cadence
+  power: '#F97316', // Orange Power
+
   // Overlays & Modals
   overlay: 'rgba(0, 0, 0, 0.5)',
   tint: '#FC4C02',

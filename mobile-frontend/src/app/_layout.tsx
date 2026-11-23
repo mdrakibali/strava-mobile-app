@@ -41,7 +41,8 @@ function NavigationRoot() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: Colors.background },
-      }}>
+      }}
+    >
       {/* Root Entrypoint */}
       <Stack.Screen name="index" options={{ headerShown: false }} />
 
@@ -110,7 +111,14 @@ export default function RootLayout() {
 
   if (!fontsLoaded) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: '#FFFFFF',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <ActivityIndicator size="large" color="#FC4C02" />
       </View>
     );

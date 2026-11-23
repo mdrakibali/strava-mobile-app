@@ -49,14 +49,15 @@ export class BeaconService {
       athlete: data.athlete,
       sportType: data.session.sportType,
       isActive: data.session.isActive,
-      currentLocation: data.session.lastLatitude && data.session.lastLongitude
-        ? {
-            latitude: Number(data.session.lastLatitude),
-            longitude: Number(data.session.lastLongitude),
-            altitude: data.session.lastAltitude ? Number(data.session.lastAltitude) : null,
-            speedMps: data.session.lastSpeedMps ? Number(data.session.lastSpeedMps) : null,
-          }
-        : null,
+      currentLocation:
+        data.session.lastLatitude && data.session.lastLongitude
+          ? {
+              latitude: Number(data.session.lastLatitude),
+              longitude: Number(data.session.lastLongitude),
+              altitude: data.session.lastAltitude ? Number(data.session.lastAltitude) : null,
+              speedMps: data.session.lastSpeedMps ? Number(data.session.lastSpeedMps) : null,
+            }
+          : null,
       batteryPercentage: data.session.batteryPercentage,
       startedAt: data.session.startedAt,
       lastPingAt: data.session.lastPingAt,
@@ -69,4 +70,3 @@ export class BeaconService {
     return { success: true };
   }
 }
-

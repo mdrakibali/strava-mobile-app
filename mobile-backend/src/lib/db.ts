@@ -13,7 +13,9 @@ declare module 'hono' {
 }
 
 /** Factory used by the DB middleware. Tests inject an in-process database instead (PGlite). */
-export type DbProvider = (c: Context<{ Bindings: Env }>) => Promise<{ db: AppDatabase; close: () => Promise<void> }>;
+export type DbProvider = (
+  c: Context<{ Bindings: Env }>
+) => Promise<{ db: AppDatabase; close: () => Promise<void> }>;
 
 /**
  * Production provider: ONE pg client per request through Hyperdrive (pooling happens in Hyperdrive),
@@ -29,8 +31,7 @@ export const hyperdriveProvider: DbProvider = async (c) => {
 };
 
 export const dbMiddleware =
-  (provider: DbProvider) =>
-  async (c: Context<{ Bindings: Env }>, next: Next) => {
+  (provider: DbProvider) => async (c: Context<{ Bindings: Env }>, next: Next) => {
     const { db, close } = await provider(c);
     c.set('db', db);
     try {

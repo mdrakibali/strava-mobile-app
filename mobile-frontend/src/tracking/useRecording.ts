@@ -7,7 +7,8 @@ import { syncWorker } from './sync';
 export const useRecording = (): RecordingSnapshot =>
   useSyncExternalStore(recordingEngine.subscribe, recordingEngine.getSnapshot);
 
-export const usePendingUploads = () => useSyncExternalStore(syncWorker.subscribe, syncWorker.getPending);
+export const usePendingUploads = () =>
+  useSyncExternalStore(syncWorker.subscribe, syncWorker.getPending);
 
 /** Re-render every `ms` while `enabled` (drives the timer display; the time itself is derived). */
 export const useNow = (enabled: boolean, ms = 1000) => {
@@ -23,11 +24,14 @@ export const useNow = (enabled: boolean, ms = 1000) => {
 export const isRecordingActive = (s: RecordingSnapshot) =>
   s.lifecycle.status === 'recording' || s.lifecycle.status === 'paused';
 
-export const timerSeconds = (s: RecordingSnapshot, now: number) => Math.floor(activeMs(s.lifecycle, now) / 1000);
+export const timerSeconds = (s: RecordingSnapshot, now: number) =>
+  Math.floor(activeMs(s.lifecycle, now) / 1000);
 
 /** Current speed, 0 when the last accepted fix is stale or the recording is paused. */
 export const liveSpeed = (s: RecordingSnapshot, now: number) =>
-  s.lifecycle.status === 'recording' && s.lastAcceptedAt != null && now - s.lastAcceptedAt <= 5000 ? s.speedAtLastFixMps : 0;
+  s.lifecycle.status === 'recording' && s.lastAcceptedAt != null && now - s.lastAcceptedAt <= 5000
+    ? s.speedAtLastFixMps
+    : 0;
 
 export type GpsStatus = 'off' | 'denied' | 'acquiring' | 'good' | 'weak' | 'lost';
 
