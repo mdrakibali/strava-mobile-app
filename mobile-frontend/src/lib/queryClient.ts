@@ -4,8 +4,8 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 2,
-      staleTime: 1000 * 60 * 2, // 2 minutes
-      gcTime: 1000 * 60 * 10, // 10 minutes cache
+      staleTime: 0, // Always fetch fresh data on refresh/navigation
+      gcTime: 1000 * 60 * 5, // 5 minutes cache
     },
     mutations: {
       retry: 1,

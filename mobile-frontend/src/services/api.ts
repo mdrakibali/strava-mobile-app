@@ -249,12 +249,11 @@ export const api = {
   // 2. Timeline Feed
   feed: {
     getFeed: (tab: 'all' | 'following' | 'clubs' = 'all') => {
-      const params = new URLSearchParams({ tab, limit: '5000' });
       return request<{
         feed: any[];
         count: number;
         tab: string;
-      }>(`/feed?${params.toString()}`);
+      }>(`/feed?tab=${tab}`);
     },
   },
 
