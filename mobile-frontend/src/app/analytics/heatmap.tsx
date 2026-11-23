@@ -6,25 +6,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DEFAULT_MAP_STYLE } from '../../components/map/mapTypes';
 import { MapStyleKey, StravaMapView } from '../../components/map/StravaMapView';
 import { useApp } from '../../context/AppContext';
+import { useAthleteActivities } from '../../hooks/useAthletes';
 import { toRoute } from '../../lib/activityView';
-import { api } from '../../services/api';
 
 export default function PersonalHeatmapScreen() {
   const router = useRouter();
   const { currentUser } = useApp();
   const [selectedSport, setSelectedSport] = useState<'All' | 'Run' | 'Ride'>('All');
   const [mapStyle, setMapStyle] = useState<MapStyleKey>(DEFAULT_MAP_STYLE);
-  const [userActivities, setUserActivities] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (!currentUser.id) return;
-    api.athletes
-      .listActivities(currentUser.id)
-      .then((res) => {
-        if (res?.activities) setUserActivities(res.activities);
-      })
-      .catch(() => null);
-  }, [currentUser.id]);
+  const { data: userActivities = [] } = useAthleteActivities(currentUser.id);
 
   // Filter user activities by sport and aggregate all polyline coordinates
   const filteredActivities = userActivities.filter((act) => {

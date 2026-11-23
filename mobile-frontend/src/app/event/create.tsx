@@ -1,13 +1,11 @@
-import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { FormScreen } from '../../components/forms/FormScreen';
 import { useApp } from '../../context/AppContext';
 import { Chip, ChipRow, SectionTitle, TextField } from '../../design';
-import { groupKeys } from '../../hooks/useGroups';
+import { useCreateEvent, useEventDetail, useUpdateEvent } from '../../hooks/useGroups';
 import { MVP_SPORTS } from '../../lib/sports';
-import { api } from '../../services/api';
 
 const TIMES = Array.from({ length: 33 }, (_, i) => 5 * 60 + i * 30);
 const label = (min: number) =>
@@ -15,9 +13,12 @@ const label = (min: number) =>
 
 export default function CreateEventScreen() {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const { editId } = useLocalSearchParams<{ editId?: string }>();
   const { refreshFeed } = useApp();
+  const { data: detailData } = useEventDetail(editId);
+  const createEvent = useCreateEvent();
+  const updateEvent = useUpdateEvent();
+
   const [title, setTitle] = useState('');
   const [sportType, setSportType] = useState('Run');
   const [dayOffset, setDayOffset] = useState(1);
@@ -25,26 +26,20 @@ export default function CreateEventScreen() {
   const [meetingPoint, setMeetingPoint] = useState('');
   const [pace, setPace] = useState('');
   const [distanceKm, setDistanceKm] = useState('');
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!editId) return;
-    api.events
-      .get(editId)
-      .then((res) => {
-        if (res?.event) {
-          setTitle(res.event.title || '');
-          setSportType(res.event.sportType || 'Run');
-          setMeetingPoint(res.event.meetingPoint || '');
-          setPace(res.event.paceDescription || '');
-          if (res.event.distanceMeters) {
-            setDistanceKm(String(Number(res.event.distanceMeters) / 1000));
-          }
-        }
-      })
-      .catch(() => {});
-  }, [editId]);
+    if (detailData?.event) {
+      const e = detailData.event;
+      setTitle(e.title || '');
+      setSportType(e.sportType || 'Run');
+      setMeetingPoint(e.meetingPoint || '');
+      setPace(e.paceDescription || '');
+      if (e.distanceMeters) {
+        setDistanceKm(String(Number(e.distanceMeters) / 1000));
+      }
+    }
+  }, [detailData]);
 
   const [now] = useState(() => Date.now());
   const days = useMemo(() => {
@@ -71,23 +66,23 @@ export default function CreateEventScreen() {
       return;
     }
 
-    setSaving(true);
     setError(null);
     try {
       if (editId) {
-        await api.events.update(editId, {
-          title: title.trim(),
-          sportType,
-          meetingPoint: meetingPoint.trim(),
-          paceDescription: pace.trim() || null,
-          distanceMeters: km != null ? Math.round(km * 1000) : null,
+        await updateEvent.mutateAsync({
+          id: editId,
+          data: {
+            title: title.trim(),
+            sportType,
+            meetingPoint: meetingPoint.trim(),
+            paceDescription: pace.trim() || null,
+            distanceMeters: km != null ? Math.round(km * 1000) : null,
+          },
         });
-        queryClient.invalidateQueries({ queryKey: groupKeys.events() });
-        queryClient.invalidateQueries({ queryKey: groupKeys.eventDetail(editId) });
         await refreshFeed().catch(() => {});
         router.replace({ pathname: '/event/[id]', params: { id: editId } });
       } else {
-        const res = await api.events.create({
+        const res = await createEvent.mutateAsync({
           title: title.trim(),
           sportType,
           eventDate: when.toISOString(),
@@ -95,97 +90,100 @@ export default function CreateEventScreen() {
           paceDescription: pace.trim() || undefined,
           distanceMeters: km != null ? Math.round(km * 1000) : undefined,
         });
-        queryClient.invalidateQueries({ queryKey: groupKeys.events() });
         await refreshFeed().catch(() => {});
-        router.replace({ pathname: '/event/[id]', params: { id: res.event.id } });
+        router.replace({ pathname: '/event/[id]', params: { id: (res as any).event.id } });
       }
     } catch (e: any) {
       setError(
         e?.message ?? (editId ? 'Could not update the event.' : 'Could not create the event.')
       );
-      setSaving(false);
     }
   };
 
   return (
     <FormScreen
-      title={editId ? 'Edit Event' : 'Create Event'}
-      submitLabel={editId ? 'Save Changes' : 'Create Event'}
+      title={editId ? 'Edit Group Activity' : 'Create Group Activity'}
+      submitLabel={editId ? 'Save changes' : 'Create Group Activity'}
       canSubmit={valid}
-      submitting={saving}
+      submitting={createEvent.isPending || updateEvent.isPending}
       error={error}
       onSubmit={submit}
     >
       <TextField
+        label="Event name"
+        placeholder="e.g. Saturday Morning Long Run"
         value={title}
         onChangeText={setTitle}
-        placeholder="Event name (e.g. Saturday long run)"
-        accessibilityLabel="Event name"
-        maxLength={120}
       />
-      <SectionTitle title="Sport" className="mt-5" />
+
+      <SectionTitle title="Activity type" />
       <ChipRow>
         {MVP_SPORTS.map((s) => (
           <Chip
             key={s.id}
             label={s.label}
-            icon={s.icon}
             selected={sportType === s.id}
             onPress={() => setSportType(s.id)}
           />
         ))}
       </ChipRow>
-      <SectionTitle title="Day" className="mt-5" />
-      <ChipRow>
-        {days.map((d, i) => (
-          <Chip
-            key={i}
-            label={
-              i === 0
-                ? 'Today'
-                : i === 1
-                  ? 'Tomorrow'
-                  : d.toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                    })
-            }
-            selected={dayOffset === i}
-            onPress={() => setDayOffset(i)}
-          />
-        ))}
-      </ChipRow>
-      <SectionTitle title="Start time" className="mt-5" />
-      <ChipRow>
-        {TIMES.map((t) => (
-          <Chip key={t} label={label(t)} selected={time === t} onPress={() => setTime(t)} />
-        ))}
-      </ChipRow>
-      <View className="h-4" />
+
+      {!editId && (
+        <View>
+          <SectionTitle title="Date" />
+          <ChipRow>
+            {days.map((d, i) => {
+              const text =
+                i === 0
+                  ? 'Today'
+                  : i === 1
+                    ? 'Tomorrow'
+                    : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+              return (
+                <Chip
+                  key={d.toISOString()}
+                  label={text}
+                  selected={dayOffset === i}
+                  onPress={() => setDayOffset(i)}
+                />
+              );
+            })}
+          </ChipRow>
+
+          <SectionTitle title="Start time" />
+          <ChipRow>
+            {TIMES.map((m) => (
+              <Chip
+                key={m}
+                label={label(m)}
+                selected={time === m}
+                onPress={() => setTime(m)}
+              />
+            ))}
+          </ChipRow>
+        </View>
+      )}
+
       <TextField
+        label="Meeting point"
+        placeholder="e.g. Dhanmondi Lake, Bridge 1"
         value={meetingPoint}
         onChangeText={setMeetingPoint}
-        placeholder="Meeting point"
-        accessibilityLabel="Meeting point"
-        maxLength={200}
       />
-      <View className="h-3" />
+
       <TextField
-        value={distanceKm}
-        onChangeText={setDistanceKm}
-        placeholder="Distance (km, optional)"
-        accessibilityLabel="Distance in kilometres"
-        keyboardType="decimal-pad"
-        maxLength={6}
-      />
-      <View className="h-3" />
-      <TextField
+        label="Target pace (optional)"
+        placeholder="e.g. 5:30 min/km or Casual"
         value={pace}
         onChangeText={setPace}
-        placeholder="Pace / level (optional)"
-        accessibilityLabel="Pace or level"
-        maxLength={200}
+      />
+
+      <TextField
+        label="Target distance in km (optional)"
+        placeholder="10"
+        value={distanceKm}
+        onChangeText={setDistanceKm}
+        keyboardType="decimal-pad"
       />
     </FormScreen>
   );

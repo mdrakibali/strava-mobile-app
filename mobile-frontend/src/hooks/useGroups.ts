@@ -189,6 +189,18 @@ export function useCreateChallenge() {
   });
 }
 
+export function useUpdateChallenge() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<any> }) =>
+      api.challenges.update(id, data),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: groupKeys.challenges() });
+      queryClient.invalidateQueries({ queryKey: groupKeys.challengeDetail(id) });
+    },
+  });
+}
+
 export function useDeleteChallenge() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -330,6 +342,18 @@ export function useCreateClub() {
   });
 }
 
+export function useUpdateClub() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<any> }) =>
+      api.clubs.update(id, data),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: [...groupKeys.all, 'clubs'] });
+      queryClient.invalidateQueries({ queryKey: groupKeys.clubDetail(id) });
+    },
+  });
+}
+
 export function useDeleteClub() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -459,6 +483,18 @@ export function useCreateEvent() {
     }) => api.events.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: groupKeys.events() });
+    },
+  });
+}
+
+export function useUpdateEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<any> }) =>
+      api.events.update(id, data),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: groupKeys.events() });
+      queryClient.invalidateQueries({ queryKey: groupKeys.eventDetail(id) });
     },
   });
 }

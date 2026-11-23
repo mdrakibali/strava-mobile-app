@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
@@ -14,16 +14,17 @@ import {
   IconButton,
   space,
 } from '../design';
+import { useFollowMutation, useSearchAthletes } from '../hooks/useAthletes';
 import { AthleteSummary, toAthleteSummary } from '../lib/activityView';
-import { captureFollowEpochs, commitServerFollow, setFollowing, useFollow } from '../lib/social';
-import { api } from '../services/api';
+import { captureFollowEpochs, commitServerFollow, useFollow } from '../lib/social';
 
 type Row = AthleteSummary & { isFollowing: boolean; pending?: boolean };
 
-const SearchFollowButton: React.FC<{ row: Row; onFollow: (row: Row) => void }> = ({
-  row,
-  onFollow,
-}) => {
+const SearchFollowButton: React.FC<{
+  row: Row;
+  onFollow: (row: Row) => void;
+  loading?: boolean;
+}> = ({ row, onFollow, loading }) => {
   const isFollowing = useFollow(row.id, row.isFollowing);
   return (
     <Button
@@ -31,71 +32,44 @@ const SearchFollowButton: React.FC<{ row: Row; onFollow: (row: Row) => void }> =
       size="sm"
       variant={isFollowing ? 'outline' : 'primary'}
       icon={isFollowing ? 'checkmark' : 'person-add-outline'}
-      loading={row.pending}
+      loading={loading}
       onPress={() => onFollow({ ...row, isFollowing })}
     />
   );
 };
 
-/**
- * Find athletes (reference: ScreensDesign 374842). One follow request per tap, UI follows the
- * server's returned state (the old screen toggled twice per tap — a no-op; UI/UX audit X-7).
- */
 export default function SearchScreen() {
   const router = useRouter();
-  const { currentUser, updateCurrentUser } = useApp();
+  const { currentUser } = useApp();
   const [query, setQuery] = useState('');
-  const [rows, setRows] = useState<Row[]>([]);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const requestId = useRef(0);
-
-  const runSearch = async (q: string) => {
-    const myId = ++requestId.current;
-    const snapshot = captureFollowEpochs();
-    setStatus('loading');
-    try {
-      const res = await api.athletes.search(q.trim());
-      if (myId !== requestId.current) return; // stale response
-      setRows(
-        (res.athletes || [])
-          .filter((a: any) => a.id !== currentUser.id)
-          .map((a: any) => ({
-            ...toAthleteSummary(a),
-            isFollowing: commitServerFollow(a.id, Boolean(a.isFollowing), snapshot),
-          }))
-      );
-      setStatus('ready');
-    } catch {
-      if (myId === requestId.current) setStatus('error');
-    }
-  };
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   const tooShort = query.trim().length < 2;
+  const { data: rawAthletes = [], isLoading, isError } = useSearchAthletes(query, !tooShort);
+  const followMutation = useFollowMutation();
 
-  useEffect(() => {
-    if (tooShort) {
-      requestId.current++; // drop any in-flight response
-      return;
-    }
-    const t = setTimeout(() => runSearch(query), 300);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, tooShort]);
+  const rows: Row[] = useMemo(() => {
+    if (tooShort) return [];
+    const snapshot = captureFollowEpochs();
+    return rawAthletes
+      .filter((a: any) => a.id !== currentUser.id)
+      .map((a: any) => ({
+        ...toAthleteSummary(a),
+        isFollowing: commitServerFollow(a.id, Boolean(a.isFollowing), snapshot),
+      }));
+  }, [rawAthletes, currentUser.id, tooShort]);
 
   const onFollow = async (row: Row) => {
-    setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, pending: true } : r)));
+    setPendingId(row.id);
     try {
-      const res = await setFollowing(row.id, row.isFollowing, !row.isFollowing);
-      setRows((prev) =>
-        prev.map((r) =>
-          r.id === row.id ? { ...r, isFollowing: res.isFollowing, pending: false } : r
-        )
-      );
-      if (currentUser?.id && typeof res.followingCount === 'number') {
-        updateCurrentUser({ followingCount: res.followingCount });
-      }
+      await followMutation.mutateAsync({
+        athleteId: row.id,
+        follow: !row.isFollowing,
+      });
     } catch {
-      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, pending: false } : r)));
+      // Ignored
+    } finally {
+      setPendingId(null);
     }
   };
 
@@ -129,55 +103,53 @@ export default function SearchScreen() {
         </View>
       </View>
 
-      {tooShort || status === 'idle' ? (
+      {tooShort ? (
+        <EmptyState
+          icon="search"
+          title="Search the community"
+          description="Type at least 2 characters to search for athletes by name or city."
+        />
+      ) : isLoading ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#FC4C02" size="large" />
+        </View>
+      ) : isError ? (
+        <ErrorState message="Could not complete the search. Check your connection." />
+      ) : rows.length === 0 ? (
         <EmptyState
           icon="people-outline"
-          title="Find athletes"
-          body="Search by name or city, then follow athletes to see their activities in your feed."
-        />
-      ) : status === 'loading' && rows.length === 0 ? (
-        <ActivityIndicator style={{ marginTop: space.xxxl }} color="#FC4C02" />
-      ) : status === 'error' ? (
-        <ErrorState
-          message="Search failed. Check your connection and try again."
-          onRetry={() => runSearch(query)}
+          title="No athletes found"
+          description={`No results for "${query}". Try a different spelling or city.`}
         />
       ) : (
         <FlatList
           data={rows}
-          keyExtractor={(r) => r.id}
-          keyboardShouldPersistTaps="handled"
-          ItemSeparatorComponent={() => <Divider inset={space.gutter + 48 + space.md} />}
-          contentContainerStyle={rows.length === 0 ? { flexGrow: 1 } : undefined}
-          ListEmptyComponent={
-            <EmptyState
-              icon="search-outline"
-              title="No athletes found"
-              body={`Nobody matches “${query.trim()}”.`}
-            />
-          }
+          keyExtractor={(item) => item.id}
+          ItemSeparatorComponent={() => <Divider />}
+          contentContainerStyle={{ paddingBottom: 100 }}
           renderItem={({ item }) => (
-            <View className="flex-row items-center px-4 py-3">
-              <Pressable
-                className="flex-1 flex-row items-center mr-3"
-                onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: item.id } })}
-                accessibilityRole="button"
-                accessibilityLabel={`${item.displayName}'s profile`}
-              >
-                <Avatar uri={item.avatarUrl} name={item.displayName} size={48} />
-                <View style={{ flex: 1, marginLeft: space.md }}>
-                  <AppText variant="title3" numberOfLines={1}>
-                    {item.displayName}
+            <Pressable
+              onPress={() => router.push({ pathname: '/athlete/[id]', params: { id: item.id } })}
+              accessibilityRole="button"
+              className="flex-row items-center px-4 py-3 active:bg-gray-50"
+            >
+              <Avatar uri={item.avatarUrl} name={item.displayName} size={48} />
+              <View className="flex-1 ml-3 mr-2">
+                <AppText variant="bodyStrong" numberOfLines={1}>
+                  {item.displayName}
+                </AppText>
+                {item.city ? (
+                  <AppText variant="caption" color="inkSecondary" numberOfLines={1}>
+                    {item.city}
                   </AppText>
-                  {item.city ? (
-                    <AppText variant="caption" color="inkTertiary" numberOfLines={1}>
-                      {item.city}
-                    </AppText>
-                  ) : null}
-                </View>
-              </Pressable>
-              <SearchFollowButton row={item} onFollow={onFollow} />
-            </View>
+                ) : null}
+              </View>
+              <SearchFollowButton
+                row={item}
+                onFollow={onFollow}
+                loading={pendingId === item.id}
+              />
+            </Pressable>
           )}
         />
       )}

@@ -1,18 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import React, { useMemo } from 'react';
+import { ActivityIndicator, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
-import { captureFollowEpochs, commitServerFollow, setFollowing, useFollow } from '../../lib/social';
-import { api } from '../../services/api';
+import { useFollowMutation, useSearchAthletes } from '../../hooks/useAthletes';
+import { captureFollowEpochs, commitServerFollow, useFollow } from '../../lib/social';
 
 const SuggestedAthlete: React.FC<{
   athlete: any;
   onOpen: () => void;
   onMessage: () => void;
   onToggle: (currentlyFollowing: boolean) => void;
-}> = ({ athlete, onOpen, onMessage, onToggle }) => {
+  isPending?: boolean;
+}> = ({ athlete, onOpen, onMessage, onToggle, isPending }) => {
   const isFollowing = useFollow(athlete.id, Boolean(athlete.isFollowing));
   return (
     <View className="p-4 bg-white rounded-2xl mb-3 border border-gray-100 shadow-sm">
@@ -42,6 +43,7 @@ const SuggestedAthlete: React.FC<{
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => onToggle(isFollowing)}
+            disabled={isPending}
             className={`px-4 py-1.5 rounded-full ${isFollowing ? 'bg-gray-100' : 'bg-[#FC4C02]'}`}
           >
             <Text className={`text-xs font-bold ${isFollowing ? 'text-gray-700' : 'text-white'}`}>
@@ -61,55 +63,25 @@ const SuggestedAthlete: React.FC<{
 
 export default function SuggestedAthletesScreen() {
   const router = useRouter();
-  const { currentUser, updateCurrentUser } = useApp();
-  const [suggested, setSuggested] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { currentUser } = useApp();
+  const { data: rawAthletes = [], isLoading, isRefetching, refetch } = useSearchAthletes('');
+  const followMutation = useFollowMutation();
 
-  const fetchSuggested = useCallback(async () => {
+  const suggested = useMemo(() => {
     const snapshot = captureFollowEpochs();
-    setIsLoading(true);
-    try {
-      const res = await api.athletes.search('');
-      if (res?.athletes) {
-        const mapped = res.athletes
-          .filter((a: any) => a.id !== currentUser?.id)
-          .map((a: any) => ({
-            ...a,
-            isFollowing: commitServerFollow(a.id, Boolean(a.isFollowing), snapshot),
-          }));
-        setSuggested(mapped);
-      }
-    } catch (err) {
-      console.warn('Failed to load suggested athletes:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentUser?.id]);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchSuggested();
-    }, [fetchSuggested])
-  );
+    return rawAthletes
+      .filter((a: any) => a.id !== currentUser?.id)
+      .map((a: any) => ({
+        ...a,
+        isFollowing: commitServerFollow(a.id, Boolean(a.isFollowing), snapshot),
+      }));
+  }, [rawAthletes, currentUser?.id]);
 
   const toggleFollow = async (id: string, currentlyFollowing: boolean) => {
-    const row = suggested.find((a) => a.id === id);
-    if (!row) return;
-    const want = !currentlyFollowing;
-    setSuggested((prev) => prev.map((a) => (a.id === id ? { ...a, isFollowing: want } : a)));
     try {
-      const res = await setFollowing(id, currentlyFollowing, want);
-      setSuggested((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, isFollowing: res.isFollowing } : a))
-      );
-      if (currentUser?.id && typeof res.followingCount === 'number') {
-        updateCurrentUser({ followingCount: res.followingCount });
-      }
+      await followMutation.mutateAsync({ athleteId: id, follow: !currentlyFollowing });
     } catch (err) {
       console.warn('Follow error:', err);
-      setSuggested((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, isFollowing: currentlyFollowing } : a))
-      );
     }
   };
 
@@ -127,21 +99,25 @@ export default function SuggestedAthletesScreen() {
           showsVerticalScrollIndicator={false}
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 16, paddingBottom: 100, flexGrow: 1 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={() => {
+                void refetch();
+              }}
+              tintColor="#FC4C02"
+            />
+          }
         >
-          <Text className="text-xs font-semibold text-gray-500 mb-3">
-            Athletes active in the Kinetix community:
-          </Text>
-
           {isLoading ? (
-            <View className="py-12 items-center">
-              <ActivityIndicator size="small" color="#FC4C02" />
-              <Text className="text-xs text-gray-400 mt-2">Loading suggested athletes...</Text>
+            <View className="flex-1 items-center justify-center py-20">
+              <ActivityIndicator size="large" color="#FC4C02" />
             </View>
           ) : suggested.length === 0 ? (
-            <View className="bg-white p-8 rounded-2xl border border-gray-200 items-center justify-center mt-4">
-              <Ionicons name="people-outline" size={32} color="#D1D5DB" />
-              <Text className="text-sm font-bold text-gray-800 mt-2">
-                No suggested athletes yet
+            <View className="flex-1 items-center justify-center py-20">
+              <Ionicons name="people-outline" size={48} color="#D1D5DB" />
+              <Text className="text-sm font-semibold text-gray-400 mt-2">
+                No suggested athletes right now
               </Text>
             </View>
           ) : (
@@ -150,10 +126,9 @@ export default function SuggestedAthletesScreen() {
                 key={athlete.id}
                 athlete={athlete}
                 onOpen={() => router.push(`/athlete/${athlete.id}`)}
-                onMessage={() =>
-                  router.push({ pathname: '/messages/[id]', params: { id: athlete.id } })
-                }
-                onToggle={(currently) => toggleFollow(athlete.id, currently)}
+                onMessage={() => router.push(`/messages/${athlete.id}`)}
+                onToggle={(isFollowing) => toggleFollow(athlete.id, isFollowing)}
+                isPending={followMutation.isPending}
               />
             ))
           )}

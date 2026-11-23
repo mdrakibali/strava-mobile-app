@@ -1,9 +1,10 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 import { AppBar, EmptyState, ErrorState, IconButton, SegmentedTabs, Skeleton } from '../../design';
+import { useAthleteProfile, useAthleteStats, useFollowMutation } from '../../hooks/useAthletes';
 import {
   ActivityView,
   AthleteSummary,
@@ -12,10 +13,10 @@ import {
 } from '../../lib/activityView';
 import { shareAthlete } from '../../lib/share';
 import { MVP_SPORTS } from '../../lib/sports';
-import { api, AthleteStats } from '../../services/api';
+import { AthleteStats } from '../../services/api';
+import { ProfileActivitiesTab } from './ProfileActivitiesTab';
 import { ProfileHeader } from './ProfileHeader';
 import { ProfileProgressTab } from './ProfileProgressTab';
-import { ProfileActivitiesTab } from './ProfileActivitiesTab';
 import { computeProgress, computeTotals, RECENT_LIMIT } from './profileStats';
 
 interface ProfileData {
@@ -33,75 +34,68 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({
 }) => {
   const router = useRouter();
   const { currentUser, updateCurrentUser } = useApp();
-  const [data, setData] = useState<ProfileData | null>(null);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'notFound'>('loading');
-  const [refreshing, setRefreshing] = useState(false);
+
+  const {
+    data: profileRes,
+    isLoading: profileLoading,
+    isError: profileError,
+    error: profileErrObj,
+    isRefetching,
+    refetch,
+  } = useAthleteProfile(athleteId);
+
+  const { data: stats } = useAthleteStats(athleteId);
+  const followMutation = useFollowMutation();
+
   const [tab, setTab] = useState<'progress' | 'activities'>('progress');
   const [sportFilter, setSportFilter] = useState<string>('All');
-  const [followPending, setFollowPending] = useState(false);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
-  const load = useCallback(async () => {
-    try {
-      const [res, stats] = await Promise.all([
-        api.athletes.getProfile(athleteId),
-        api.athletes.stats(athleteId).catch(() => null),
-      ]);
-      const athlete = { ...toAthleteSummary(res.athlete), bio: res.athlete?.bio ?? null };
-      const all = (res.recentActivities || []).map((row: any) => fromProfileActivity(row, athlete));
-      setData({
-        athlete,
-        followersCount: Number(res.athlete?.followersCount) || 0,
-        followingCount: Number(res.athlete?.followingCount) || 0,
-        isFollowing: Boolean(res.athlete?.isFollowing),
-        activities: isSelf ? all : all.filter((a: ActivityView) => a.visibility !== 'ONLY_ME'),
-        stats,
-      });
-      setStatus('ready');
-    } catch (e: any) {
-      setStatus(/not found/i.test(String(e?.message)) ? 'notFound' : 'error');
+  const data = useMemo<ProfileData | null>(() => {
+    if (!profileRes?.athlete) return null;
+    const athlete = {
+      ...toAthleteSummary(profileRes.athlete),
+      bio: profileRes.athlete?.bio ?? null,
+    };
+    const all = (profileRes.recentActivities || [])
+      .filter((row: any) => !deletedIds.has(row.id))
+      .map((row: any) => fromProfileActivity(row, athlete));
+    return {
+      athlete,
+      followersCount: Number(profileRes.athlete?.followersCount) || 0,
+      followingCount: Number(profileRes.athlete?.followingCount) || 0,
+      isFollowing: Boolean(profileRes.athlete?.isFollowing),
+      activities: isSelf ? all : all.filter((a: ActivityView) => a.visibility !== 'ONLY_ME'),
+      stats: stats ?? null,
+    };
+  }, [profileRes, stats, isSelf, deletedIds]);
+
+  const status = useMemo<'loading' | 'ready' | 'error' | 'notFound'>(() => {
+    if (profileLoading) return 'loading';
+    if (profileError) {
+      return /not found/i.test(String((profileErrObj as any)?.message)) ? 'notFound' : 'error';
     }
-  }, [athleteId, isSelf]);
+    if (!data) return 'error';
+    return 'ready';
+  }, [profileLoading, profileError, profileErrObj, data]);
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await load();
-    setRefreshing(false);
+  const onRefresh = () => {
+    void refetch();
   };
 
   const onToggleFollow = async () => {
-    if (!data || followPending) return;
-    setFollowPending(true);
+    if (!data || followMutation.isPending) return;
     const wasFollowing = data.isFollowing;
-    const want = !wasFollowing;
     try {
-      const res = want
-        ? await api.athletes.follow(athleteId)
-        : await api.athletes.unfollow(athleteId);
-      setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              isFollowing: Boolean(res.isFollowing),
-              followersCount:
-                typeof res.followersCount === 'number'
-                  ? res.followersCount
-                  : prev.followersCount + (res.isFollowing ? 1 : -1),
-            }
-          : null
-      );
+      const res = await followMutation.mutateAsync({
+        athleteId,
+        follow: !wasFollowing,
+      });
       if (currentUser?.id && typeof res.followingCount === 'number') {
         updateCurrentUser({ followingCount: res.followingCount });
       }
     } catch {
       // unchanged
-    } finally {
-      setFollowPending(false);
     }
   };
 
@@ -118,87 +112,96 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({
       ...athleteData,
       displayName: currentUser.displayName || athleteData.displayName,
       avatarUrl: currentUser.avatarUrl ?? athleteData.avatarUrl,
-      city: currentUser.city !== undefined ? currentUser.city : athleteData.city,
-      bio: currentUser.bio !== undefined ? currentUser.bio : athleteData.bio,
     };
-  }, [athleteData, isSelf, currentUser]);
+  }, [athleteData, isSelf, currentUser.displayName, currentUser.avatarUrl]);
 
-  const activities = useMemo(() => {
-    if (!data) return [];
-    return data.activities.filter(
-      (a) => a.athlete.id === athleteId && (isSelf || a.visibility !== 'ONLY_ME')
-    );
-  }, [data, athleteId, isSelf]);
+  const activities = useMemo(() => data?.activities ?? [], [data?.activities]);
 
-  const reconciledStats = useMemo(() => {
-    if (!data?.stats) return null;
-    return data.stats;
-  }, [data]);
-
-  const progress = useMemo(() => {
-    if (!data) return null;
-    return computeProgress(activities, reconciledStats, sportFilter);
-  }, [data, activities, reconciledStats, sportFilter]);
-
-  const totals = useMemo(() => {
-    if (!reconciledStats) return null;
-    return computeTotals(reconciledStats, sportFilter);
-  }, [reconciledStats, sportFilter]);
-
-  const header = isSelf ? (
-    <AppBar
-      title="You"
-      large
-      leading="none"
-      right={
-        <>
-          <IconButton
-            icon="add"
-            accessibilityLabel="Record an activity"
-            onPress={() => router.push('/record')}
-          />
-          <IconButton
-            icon="search-outline"
-            accessibilityLabel="Find athletes"
-            onPress={() => router.push('/search')}
-          />
-          <IconButton
-            icon="settings-outline"
-            accessibilityLabel="Settings"
-            onPress={() => router.push('/settings')}
-          />
-        </>
-      }
-    />
-  ) : (
-    <AppBar title={athlete?.displayName ?? ''} />
+  const progress = useMemo(
+    () => computeProgress(activities, sportFilter),
+    [activities, sportFilter]
   );
 
-  if (status !== 'ready' || !data || !progress) {
-    return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-        {header}
-        {status === 'loading' ? (
-          <View className="p-4">
-            <View className="flex-row items-center">
-              <Skeleton className="w-18 h-18 rounded-full" />
-              <View className="flex-1 ml-4">
-                <Skeleton className="w-[60%] h-5.5" />
-                <Skeleton className="w-[40%] h-3.5 mt-2" />
-              </View>
-            </View>
-            <Skeleton className="h-40 mt-6" />
+  const totals = useMemo(() => computeTotals(activities, sportFilter), [activities, sportFilter]);
+
+  const reconciledStats = useMemo<AthleteStats | null>(() => {
+    if (!data?.stats) return null;
+    return {
+      ...data.stats,
+      activityCount: Math.max(data.stats.activityCount ?? 0, activities.length),
+    };
+  }, [data?.stats, activities.length]);
+
+  const header = (
+    <AppBar
+      title={isSelf ? 'You' : athlete?.displayName ?? 'Athlete'}
+      trailing={
+        isSelf ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <IconButton
+              icon="search"
+              accessibilityLabel="Find athletes"
+              onPress={() => router.push('/search')}
+            />
+            <IconButton
+              icon="settings-outline"
+              accessibilityLabel="Settings"
+              onPress={() => router.push('/settings')}
+            />
           </View>
-        ) : status === 'notFound' ? (
-          <EmptyState icon="person-outline" title="Athlete not found" />
         ) : (
-          <ErrorState
-            onRetry={() => {
-              setStatus('loading');
-              load();
-            }}
+          <IconButton
+            icon="share-outline"
+            accessibilityLabel="Share profile"
+            onPress={onShare}
           />
-        )}
+        )
+      }
+    />
+  );
+
+  if (status === 'loading') {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+        {header}
+        <View style={{ padding: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <Skeleton width={72} height={72} borderRadius={36} />
+            <View style={{ marginLeft: 16, flex: 1 }}>
+              <Skeleton width="60%" height={20} style={{ marginBottom: 8 }} />
+              <Skeleton width="40%" height={14} />
+            </View>
+          </View>
+          <Skeleton width="100%" height={80} style={{ marginBottom: 16 }} />
+          <Skeleton width="100%" height={180} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (status === 'notFound') {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+        {header}
+        <EmptyState
+          icon="person-outline"
+          title="Athlete not found"
+          description="This profile does not exist or may have been deleted."
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (status === 'error' || !data) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+        {header}
+        <ErrorState
+          message="Could not load profile. Check your connection."
+          onRetry={() => {
+            void refetch();
+          }}
+        />
       </SafeAreaView>
     );
   }
@@ -215,7 +218,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({
       {header}
       <ScrollView
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />
+          <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} colors={['#FC4C02']} />
         }
         contentContainerStyle={{ paddingBottom: 64 }}
       >
@@ -227,7 +230,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({
           followingCount={data.followingCount}
           isFollowing={data.isFollowing}
           isSelf={isSelf}
-          followPending={followPending}
+          followPending={followMutation.isPending}
           onToggleFollow={onToggleFollow}
           onShare={onShare}
         />
@@ -256,20 +259,7 @@ export const ProfileView: React.FC<{ athleteId: string; isSelf: boolean }> = ({
             isSelf={isSelf}
             recentLimit={RECENT_LIMIT}
             onDeleteActivity={(deletedId) => {
-              setData((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      activities: prev.activities.filter((x) => x.id !== deletedId),
-                      stats: prev.stats
-                        ? {
-                            ...prev.stats,
-                            activityCount: Math.max(0, prev.stats.activityCount - 1),
-                          }
-                        : null,
-                    }
-                  : null
-              );
+              setDeletedIds((prev) => new Set(prev).add(deletedId));
             }}
           />
         )}

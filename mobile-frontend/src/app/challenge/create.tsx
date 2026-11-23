@@ -1,13 +1,11 @@
-import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { FormScreen } from '../../components/forms/FormScreen';
 import { useApp } from '../../context/AppContext';
 import { Chip, ChipRow, SectionTitle, TextField } from '../../design';
-import { groupKeys } from '../../hooks/useGroups';
+import { useChallengeDetail, useCreateChallenge, useUpdateChallenge } from '../../hooks/useGroups';
 import { MVP_SPORTS } from '../../lib/sports';
-import { api } from '../../services/api';
 
 const DURATIONS = [
   { label: '1 week', days: 7 },
@@ -18,33 +16,30 @@ const DURATIONS = [
 
 export default function CreateChallengeScreen() {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const { editId } = useLocalSearchParams<{ editId?: string }>();
   const { refreshFeed } = useApp();
+  const { data: detailData } = useChallengeDetail(editId);
+  const createChallenge = useCreateChallenge();
+  const updateChallenge = useUpdateChallenge();
+
   const [title, setTitle] = useState('');
   const [sportType, setSportType] = useState('Run');
   const [targetKm, setTargetKm] = useState('');
   const [days, setDays] = useState(30);
   const [description, setDescription] = useState('');
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!editId) return;
-    api.challenges
-      .get(editId)
-      .then((res) => {
-        if (res?.challenge) {
-          setTitle(res.challenge.title || '');
-          setSportType(res.challenge.sportType || 'Run');
-          if (res.challenge.targetMeters) {
-            setTargetKm(String(Number(res.challenge.targetMeters) / 1000));
-          }
-          setDescription(res.challenge.description || '');
-        }
-      })
-      .catch(() => {});
-  }, [editId]);
+    if (detailData?.challenge) {
+      const c = detailData.challenge;
+      setTitle(c.title || '');
+      setSportType(c.sportType || 'Run');
+      if (c.targetMeters) {
+        setTargetKm(String(Number(c.targetMeters) / 1000));
+      }
+      setDescription(c.description || '');
+    }
+  }, [detailData]);
 
   const km = Number(targetKm.replace(',', '.'));
   const valid = title.trim().length > 2 && Number.isFinite(km) && km > 0 && km <= 100_000;
@@ -59,23 +54,23 @@ export default function CreateChallengeScreen() {
       return;
     }
 
-    setSaving(true);
     setError(null);
     try {
       if (editId) {
-        await api.challenges.update(editId, {
-          title: title.trim(),
-          sportType,
-          targetMeters: Math.round(km * 1000),
-          description: description.trim() || undefined,
+        await updateChallenge.mutateAsync({
+          id: editId,
+          data: {
+            title: title.trim(),
+            sportType,
+            targetMeters: Math.round(km * 1000),
+            description: description.trim() || undefined,
+          },
         });
-        queryClient.invalidateQueries({ queryKey: groupKeys.challenges() });
-        queryClient.invalidateQueries({ queryKey: groupKeys.challengeDetail(editId) });
         await refreshFeed().catch(() => {});
         router.replace({ pathname: '/challenge/[id]', params: { id: editId } });
       } else {
         const start = new Date();
-        const res = await api.challenges.create({
+        const res = await createChallenge.mutateAsync({
           title: title.trim(),
           sportType,
           targetMeters: Math.round(km * 1000),
@@ -83,75 +78,77 @@ export default function CreateChallengeScreen() {
           startDate: start.toISOString(),
           endDate: new Date(start.getTime() + days * 86_400_000).toISOString(),
         });
-        queryClient.invalidateQueries({ queryKey: groupKeys.challenges() });
         await refreshFeed().catch(() => {});
-        router.replace({ pathname: '/challenge/[id]', params: { id: res.challenge.id } });
+        router.replace({ pathname: '/challenge/[id]', params: { id: (res as any).challenge.id } });
       }
     } catch (e: any) {
       setError(
         e?.message ??
           (editId ? 'Could not update the challenge.' : 'Could not create the challenge.')
       );
-      setSaving(false);
     }
   };
 
   return (
     <FormScreen
       title={editId ? 'Edit Challenge' : 'Create Challenge'}
-      submitLabel={editId ? 'Save Changes' : 'Create Challenge'}
+      submitLabel={editId ? 'Save changes' : 'Create Challenge'}
       canSubmit={valid}
-      submitting={saving}
+      submitting={createChallenge.isPending || updateChallenge.isPending}
       error={error}
       onSubmit={submit}
     >
       <TextField
+        label="Challenge name"
+        placeholder="e.g. November 100 km Challenge"
         value={title}
         onChangeText={setTitle}
-        placeholder="Challenge name (e.g. 100 km in December)"
-        accessibilityLabel="Challenge name"
-        maxLength={100}
       />
-      <SectionTitle title="Sport" className="mt-5" />
+
+      <SectionTitle title="Activity type" />
       <ChipRow>
         {MVP_SPORTS.map((s) => (
           <Chip
             key={s.id}
             label={s.label}
-            icon={s.icon}
             selected={sportType === s.id}
             onPress={() => setSportType(s.id)}
           />
         ))}
       </ChipRow>
-      <View className="h-4" />
+
       <TextField
+        label="Distance goal (km)"
+        placeholder="50"
         value={targetKm}
         onChangeText={setTargetKm}
-        placeholder="Distance goal (km)"
-        accessibilityLabel="Distance goal in kilometres"
         keyboardType="decimal-pad"
-        maxLength={7}
+        helper="Distance required to complete the challenge"
       />
-      <SectionTitle title="Duration" className="mt-5" />
-      <ChipRow>
-        {DURATIONS.map((d) => (
-          <Chip
-            key={d.days}
-            label={d.label}
-            selected={days === d.days}
-            onPress={() => setDays(d.days)}
-          />
-        ))}
-      </ChipRow>
-      <View className="h-4" />
+
+      {!editId && (
+        <View>
+          <SectionTitle title="Duration" />
+          <ChipRow>
+            {DURATIONS.map((d) => (
+              <Chip
+                key={d.days}
+                label={d.label}
+                selected={days === d.days}
+                onPress={() => setDays(d.days)}
+              />
+            ))}
+          </ChipRow>
+        </View>
+      )}
+
       <TextField
+        label="Description (optional)"
+        placeholder="Tell participants what this challenge is about..."
         value={description}
         onChangeText={setDescription}
-        placeholder="Description (optional)"
-        accessibilityLabel="Description"
         multiline
-        maxLength={1000}
+        numberOfLines={3}
       />
     </FormScreen>
   );

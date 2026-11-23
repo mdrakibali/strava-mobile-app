@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -13,93 +14,45 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
-import { api } from '../../services/api';
+import { useSearchAthletes } from '../../hooks/useAthletes';
+import { MESSAGES_QUERY_KEY, useConversations } from '../../hooks/useMessages';
 import { realtimeWs } from '../../services/websocket';
 
 export default function MessagesInboxScreen() {
   const router = useRouter();
   const { currentUser } = useApp();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [suggestedAthletes, setSuggestedAthletes] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchConversations = useCallback(async () => {
-    try {
-      const [convRes, athletesRes] = await Promise.all([
-        api.messages.getConversations(),
-        api.athletes.search('').catch(() => ({ athletes: [] })),
-      ]);
-      setLoadError(null);
+  const {
+    data: conversations = [],
+    isLoading,
+    isRefetching,
+    refetch,
+    error,
+  } = useConversations();
 
-      if (convRes?.conversations) {
-        setConversations(convRes.conversations);
-      }
-      if (athletesRes?.athletes) {
-        setSuggestedAthletes(
-          athletesRes.athletes.filter((a: any) => a.id !== currentUser?.id).slice(0, 4)
-        );
-      }
-    } catch (err: any) {
-      setLoadError(err?.message || 'Couldn’t load conversations.');
-    } finally {
-      setIsLoading(false);
-      setRefreshing(false);
-    }
-  }, [currentUser?.id]);
+  const { data: athletes = [] } = useSearchAthletes('');
+
+  const suggestedAthletes = useMemo(() => {
+    return athletes.filter((a: any) => a.id !== currentUser?.id).slice(0, 4);
+  }, [athletes, currentUser?.id]);
 
   useEffect(() => {
-    let cancelled = false;
-    Promise.all([
-      api.messages.getConversations(),
-      api.athletes.search('').catch(() => ({ athletes: [] })),
-    ])
-      .then(([convRes, athletesRes]) => {
-        if (cancelled) return;
-        setLoadError(null);
-        if (convRes?.conversations) {
-          setConversations(convRes.conversations);
-        }
-        if (athletesRes?.athletes) {
-          setSuggestedAthletes(
-            athletesRes.athletes.filter((a: any) => a.id !== currentUser?.id).slice(0, 4)
-          );
-        }
-      })
-      .catch((err: any) => {
-        if (!cancelled) setLoadError(err?.message || 'Couldn’t load conversations.');
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-          setRefreshing(false);
-        }
-      });
-
     const unsub = realtimeWs.addListener('new_message', () => {
-      fetchConversations();
+      queryClient.invalidateQueries({ queryKey: MESSAGES_QUERY_KEY });
     });
     return () => {
-      cancelled = true;
       unsub();
     };
-  }, [currentUser?.id, fetchConversations]);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchConversations();
-    }, [fetchConversations])
-  );
+  }, [queryClient]);
 
   const onRefresh = () => {
-    setRefreshing(true);
-    fetchConversations();
+    void refetch();
   };
 
   const filtered = conversations.filter(
-    (c) =>
+    (c: any) =>
       c.participant?.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.participant?.username?.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -144,19 +97,21 @@ export default function MessagesInboxScreen() {
           contentContainerStyle={{ padding: 12, paddingBottom: 100, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FC4C02']} />
+            <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} colors={['#FC4C02']} />
           }
         >
-          {loadError && conversations.length === 0 ? (
+          {error && conversations.length === 0 ? (
             <View className="py-16 px-6 items-center">
-              <Text className="text-sm font-bold text-gray-800 text-center">{loadError}</Text>
+              <Text className="text-sm font-bold text-gray-800 text-center">
+                {(error as any)?.message || 'Couldn’t load conversations.'}
+              </Text>
             </View>
           ) : isLoading ? (
             <View className="py-20 items-center justify-center">
               <ActivityIndicator size="large" color="#FC4C02" />
             </View>
           ) : filtered.length > 0 ? (
-            filtered.map((item) => (
+            filtered.map((item: any) => (
               <TouchableOpacity
                 key={item.id}
                 activeOpacity={0.8}
@@ -169,7 +124,7 @@ export default function MessagesInboxScreen() {
                   <Image
                     source={{
                       uri:
-                        item.participant.avatarUrl ||
+                        item.participant?.avatarUrl ||
                         'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
                     }}
                     className="w-12 h-12 rounded-full bg-gray-100"
@@ -179,7 +134,7 @@ export default function MessagesInboxScreen() {
                 <View className="flex-1 mr-2">
                   <View className="flex-row items-center justify-between mb-0.5">
                     <Text className="text-sm font-bold text-gray-900" numberOfLines={1}>
-                      {item.participant.displayName}
+                      {item.participant?.displayName}
                     </Text>
                     <Text className="text-[10px] text-gray-400 font-medium">
                       {item.lastMessageTime
@@ -212,7 +167,7 @@ export default function MessagesInboxScreen() {
                   <Text className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">
                     Suggested Athletes
                   </Text>
-                  {suggestedAthletes.map((a) => (
+                  {suggestedAthletes.map((a: any) => (
                     <TouchableOpacity
                       key={a.id}
                       activeOpacity={0.8}

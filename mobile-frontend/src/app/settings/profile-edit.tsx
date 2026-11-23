@@ -4,27 +4,25 @@ import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 import { AppBar, Button, ErrorState, space, TextField } from '../../design';
-import { api } from '../../services/api';
+import { useUpdateMeMutation } from '../../hooks/useAthletes';
 
 /**
- * Edit profile — now saves via the existing PUT /athletes/me (it previously showed
- * "Profile Updated" without calling the API; UI/UX audit X-5). No invented defaults.
+ * Edit profile — saves via React Query useUpdateMeMutation.
  */
 export default function ProfileEditScreen() {
   const router = useRouter();
   const { currentUser, updateCurrentUser } = useApp();
+  const updateMeMutation = useUpdateMeMutation();
   const [displayName, setDisplayName] = useState(currentUser.displayName || '');
   const [city, setCity] = useState(currentUser.city || '');
   const [country, setCountry] = useState(currentUser.country || '');
   const [bio, setBio] = useState(currentUser.bio || '');
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onSave = async () => {
-    setSaving(true);
     setError(null);
     try {
-      const res = await api.athletes.updateMe({
+      const res = await updateMeMutation.mutateAsync({
         displayName: displayName.trim(),
         city: city.trim(),
         country: country.trim(),
@@ -40,7 +38,6 @@ export default function ProfileEditScreen() {
       router.back();
     } catch (e: any) {
       setError(e?.message || 'Couldn’t save your profile. Try again.');
-      setSaving(false);
     }
   };
 
@@ -99,7 +96,7 @@ export default function ProfileEditScreen() {
             label="Save"
             size="lg"
             fullWidth
-            loading={saving}
+            loading={updateMeMutation.isPending}
             disabled={!displayName.trim()}
             onPress={onSave}
           />

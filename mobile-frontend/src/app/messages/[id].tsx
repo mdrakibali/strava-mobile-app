@@ -15,14 +15,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
+import { useMessageThread, useSendMessageMutation } from '../../hooks/useMessages';
 import { useKeyboardInset } from '../../lib/useKeyboardInset';
-import { api } from '../../services/api';
 import { realtimeWs } from '../../services/websocket';
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { currentUser } = useApp();
+  const effectiveId = id;
 
   const [chatId, setChatId] = useState<string>(id?.startsWith('chat_') ? id : '');
   const [partner, setPartner] = useState<any>({
@@ -33,25 +34,21 @@ export default function ChatScreen() {
   });
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [isSending, setIsSending] = useState(false);
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const scrollViewRef = useRef<any>(null);
   const typingTimerRef = useRef<any>(null);
   const chatIdRef = useRef(chatId);
   const partnerIdRef = useRef(partner.id);
   const keyboard = useKeyboardInset();
-  const effectiveId = id;
 
-  const [prevId, setPrevId] = useState(effectiveId);
-  if (prevId !== effectiveId) {
-    setPrevId(effectiveId);
-    setLoadError(null);
-    setIsLoading(true);
-    setMessages([]);
-    setChatId(effectiveId?.startsWith('chat_') ? (effectiveId ?? '') : '');
-  }
+  const {
+    data: threadData,
+    isLoading,
+    error: threadError,
+  } = useMessageThread(effectiveId);
+  const sendMessageMutation = useSendMessageMutation();
+
+  const loadError = threadError ? (threadError as any)?.message || 'Couldn’t load this conversation.' : null;
 
   useEffect(() => {
     chatIdRef.current = chatId;
@@ -59,43 +56,12 @@ export default function ChatScreen() {
   }, [chatId, partner.id]);
 
   useEffect(() => {
-    if (!effectiveId) return;
-    let cancelled = false;
-    api.messages
-      .getThread(effectiveId)
-      .then((res) => {
-        if (cancelled) return;
-        if (res?.messages) setMessages(res.messages);
-        if (res?.partner) setPartner(res.partner);
-        if (res?.chatId) setChatId(res.chatId);
-      })
-      .catch(async (e: any) => {
-        if (cancelled) return;
-        // If effectiveId is an athlete ID or new thread, fetch profile to allow first-time conversation
-        if (effectiveId.startsWith('ath_') || !effectiveId.startsWith('chat_')) {
-          try {
-            const profile = await api.athletes.getProfile(effectiveId);
-            if (!cancelled && profile?.athlete) {
-              setPartner({
-                id: profile.athlete.id,
-                displayName: profile.athlete.displayName,
-                username: profile.athlete.username || 'athlete',
-                avatarUrl: profile.athlete.avatarUrl || '',
-              });
-              setMessages([]);
-              return;
-            }
-          } catch {}
-        }
-        setLoadError(e?.message || 'Couldn’t load this conversation.');
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [effectiveId]);
+    if (threadData) {
+      if (threadData.messages) setMessages(threadData.messages);
+      if (threadData.partner) setPartner(threadData.partner);
+      if (threadData.chatId) setChatId(threadData.chatId);
+    }
+  }, [threadData]);
 
   useEffect(() => {
     const unsubMsg = realtimeWs.addListener('new_message', (payload: any) => {
@@ -159,9 +125,13 @@ export default function ChatScreen() {
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      const res = await api.messages.send(effectiveId, textToSend, {
-        chatId: chatId || undefined,
-        recipientId: partner.id && partner.id !== 'partner' ? partner.id : effectiveId,
+      const res = await sendMessageMutation.mutateAsync({
+        recipientOrChatId: effectiveId,
+        text: textToSend,
+        options: {
+          chatId: chatId || undefined,
+          recipientId: partner.id && partner.id !== 'partner' ? partner.id : effectiveId,
+        },
       });
       if (res?.chatId && !chatId) setChatId(res.chatId);
       if (res?.directMessage) {

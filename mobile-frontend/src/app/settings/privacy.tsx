@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   AppBar,
@@ -17,64 +17,43 @@ import {
   space,
   TextField,
 } from '../../design';
-import { api } from '../../services/api';
+import {
+  useCreatePrivacyZone,
+  useDeletePrivacyZone,
+  usePrivacyZones,
+} from '../../hooks/usePrivacyZones';
 
 const RADII = [200, 500, 1000];
 
-/**
- * Privacy zones (real API). Previously every new zone was saved at hard-coded Dhaka coordinates
- * regardless of where the user was, and the screen contained a non-functional Beacon section.
- * Zones are now created at the device's current location.
- *
- * Note: masking is applied server-side at upload time only (technical audit PRIV-07), so a new
- * zone does not change activities that were already uploaded.
- */
 export default function PrivacyZonesScreen() {
-  const [zones, setZones] = useState<any[]>([]);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const { data: zones = [], isLoading, isError, error, isRefetching, refetch } = usePrivacyZones();
+  const createZone = useCreatePrivacyZone();
+  const deleteZone = useDeletePrivacyZone();
+
   const [name, setName] = useState('');
   const [radiusM, setRadiusM] = useState(500);
-  const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
-  const [reloadKey, setReloadKey] = useState(0);
-  useEffect(() => {
-    let cancelled = false;
-    api.privacyZones.list().then(
-      (res) => {
-        if (cancelled) return;
-        setZones(res?.privacyZones ?? []);
-        setStatus('ready');
-      },
-      () => !cancelled && setStatus('error')
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [reloadKey]);
-
   const onAdd = async () => {
-    setAdding(true);
     setAddError(null);
     try {
       const perm = await Location.requestForegroundPermissionsAsync();
-      if (perm.status !== 'granted')
+      if (perm.status !== 'granted') {
         throw new Error('Location permission is needed to place the zone where you are.');
+      }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      if ((pos.coords.accuracy ?? 999) > 100)
+      if ((pos.coords.accuracy ?? 999) > 100) {
         throw new Error('Your location is too imprecise right now. Try again outdoors.');
-      const res = await api.privacyZones.create({
+      }
+      await createZone.mutateAsync({
         name: name.trim() || 'Privacy zone',
         latitude: pos.coords.latitude,
         longitude: pos.coords.longitude,
         radiusMeters: radiusM,
       });
-      if (res?.privacyZone) setZones((prev) => [...prev, res.privacyZone]);
       setName('');
     } catch (e: any) {
       setAddError(e?.message || 'Couldn’t create the zone.');
-    } finally {
-      setAdding(false);
     }
   };
 
@@ -88,14 +67,9 @@ export default function PrivacyZonesScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            const removed = zone;
-            setZones((prev) => prev.filter((z) => z.id !== zone.id));
             try {
-              await api.privacyZones.delete(zone.id);
+              await deleteZone.mutateAsync(zone.id);
             } catch (e: any) {
-              setZones((prev) =>
-                prev.some((z) => z.id === removed.id) ? prev : [...prev, removed]
-              );
               Alert.alert('Couldn’t delete', e?.message || 'Try again.');
             }
           },
@@ -106,13 +80,13 @@ export default function PrivacyZonesScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       <AppBar title="Privacy zones" />
-      {status === 'loading' ? (
+      {isLoading ? (
         <LoadingState />
-      ) : status === 'error' ? (
+      ) : isError ? (
         <ErrorState
+          message={(error as any)?.message ?? 'Could not load privacy zones.'}
           onRetry={() => {
-            setStatus('loading');
-            setReloadKey((k) => k + 1);
+            void refetch();
           }}
         />
       ) : (
@@ -120,6 +94,15 @@ export default function PrivacyZonesScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 16 }}
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={() => {
+                void refetch();
+              }}
+              colors={['#FC4C02']}
+            />
+          }
         >
           <AppText variant="body" color="inkSecondary">
             Parts of your route inside a privacy zone are hidden from other athletes on activities
@@ -132,7 +115,7 @@ export default function PrivacyZonesScreen() {
                 No privacy zones yet.
               </AppText>
             ) : (
-              zones.map((z, i) => (
+              zones.map((z: any, i: number) => (
                 <View key={z.id}>
                   {i > 0 ? <Divider inset={space.lg} /> : null}
                   <View className="flex-row items-center pl-4 pr-2 min-h-[64px]">
@@ -191,7 +174,7 @@ export default function PrivacyZonesScreen() {
             label="Add zone at my location"
             icon="locate"
             fullWidth
-            loading={adding}
+            loading={createZone.isPending}
             onPress={onAdd}
             style={{ marginTop: space.xl }}
           />

@@ -33,6 +33,7 @@ export default function MapsScreen() {
   );
   const [query, setQuery] = useState('');
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const planRoute = usePlanRouteMutation();
   const [lengthFilter, setLengthFilter] = useState<string | null>(null);
   const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
 
@@ -136,11 +137,11 @@ export default function MapsScreen() {
 
     if (item.kind === 'place' && geometry.length < 2 && me) {
       try {
-        const plan = await api.routing.plan(
-          item.sportType || 'Run',
-          { lat: me[1], lng: me[0] },
-          { lat: item.anchor[1], lng: item.anchor[0] }
-        );
+        const plan = await planRoute.mutateAsync({
+          sport: (item.sportType as any) || 'Run',
+          from: { lat: me[1], lng: me[0] },
+          to: { lat: item.anchor[1], lng: item.anchor[0] },
+        });
         if (plan.routes[0]?.geometry?.length > 1) {
           geometry = plan.routes[0].geometry;
           dist = plan.routes[0].distanceM;
@@ -242,7 +243,7 @@ export default function MapsScreen() {
           style={{ top: insets.top + 116 }}
           className="absolute left-4 z-10 flex-row items-center bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-md"
         >
-          <View className="w-2.5 h-2.5 rounded-full bg-[#FC4C02] mr-2" />
+          <View className="w-2.5 h-2.5 rounded-full bg-primary mr-2" />
           <AppText className="text-gray-900 text-xs font-bold">
             {current.surfacePercentPaved}% Paved
           </AppText>

@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { saveLastSport } from '../../components/record/SportSheet';
 import { useApp } from '../../context/AppContext';
+import { useAthleteStats } from '../../hooks/useAthletes';
 import { formatDuration, kmValue } from '../../lib/format';
-import { api } from '../../services/api';
 import { recordingEngine } from '../../tracking/engine';
 import { isRecordingActive, useRecording } from '../../tracking/useRecording';
 import { SportType } from '../../types';
@@ -37,33 +37,20 @@ export default function WorkoutTab() {
   const { currentUser } = useApp();
   const rec = useRecording();
   const active = isRecordingActive(rec);
-  const [totals, setTotals] = useState<Totals | null>(null);
+  const { data: stats } = useAthleteStats(currentUser?.id);
 
-  useFocusEffect(
-    // eslint-disable-next-line react-hooks/preserve-manual-memoization
-    useCallback(() => {
-      if (!currentUser?.id) return;
-      let cancelled = false;
-      api.athletes.stats(currentUser.id).then(
-        (s) => {
-          if (cancelled || !s?.bySport) return;
-          const t: Totals = {};
-          for (const b of s.bySport) {
-            t[b.sportType] = {
-              count: b.yearToDate?.count || 0,
-              distance: b.yearToDate?.distanceMeters || 0,
-              moving: b.yearToDate?.movingTimeSeconds || 0,
-            };
-          }
-          setTotals(t);
-        },
-        () => !cancelled && setTotals(null)
-      );
-      return () => {
-        cancelled = true;
+  const totals = useMemo(() => {
+    if (!stats?.bySport) return null;
+    const t: Totals = {};
+    for (const b of stats.bySport) {
+      t[b.sportType] = {
+        count: b.yearToDate?.count || 0,
+        distance: b.yearToDate?.distanceMeters || 0,
+        moving: b.yearToDate?.movingTimeSeconds || 0,
       };
-    }, [currentUser?.id])
-  );
+    }
+    return t;
+  }, [stats]);
 
   const startSport = (sport: SportType) => {
     saveLastSport(sport);
