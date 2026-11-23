@@ -5,8 +5,8 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StravaMapView } from '../../components/map/StravaMapView';
+import { useRouteDetail } from '../../hooks/useRoutes';
 import { etaMinutes, OFF_ROUTE_METERS, routeProgress } from '../../lib/routeProgress';
-import { api } from '../../services/api';
 
 export default function RouteNavigationScreen() {
   const router = useRouter();
@@ -14,18 +14,7 @@ export default function RouteNavigationScreen() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [currentSpeedKmh, setCurrentSpeedKmh] = useState(0);
   const [audioEnabled, setAudioEnabled] = useState(true);
-  const [serverRoute, setServerRoute] = useState<any>(null);
-
-  useEffect(() => {
-    if (params.routeId) {
-      api.routes
-        .get(params.routeId)
-        .then((res) => {
-          if (res?.route) setServerRoute(res.route);
-        })
-        .catch(() => null);
-    }
-  }, [params.routeId]);
+  const { data: serverRoute } = useRouteDetail(params.routeId);
 
   const routeName = serverRoute?.name || 'Selected route';
   const routeDistance = Number(serverRoute?.distanceMeters) || 0;

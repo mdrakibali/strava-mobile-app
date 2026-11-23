@@ -1,59 +1,38 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ElevationProfile } from '../../components/activity/ElevationProfile';
 import { StatBox } from '../../components/common/StatBox';
 import { StravaMapView } from '../../components/map/StravaMapView';
+import { useRouteDetail, useToggleSaveRoute } from '../../hooks/useRoutes';
 import { plannedRouteStore } from '../../lib/plannedRoute';
-import { api } from '../../services/api';
 
 export default function RouteDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [route, setRoute] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: route, isLoading } = useRouteDetail(id);
+  const toggleSaveRoute = useToggleSaveRoute();
+
   const [isSaved, setIsSaved] = useState(false);
-  const [prevId, setPrevId] = useState(id);
-  if (id !== prevId) {
-    setPrevId(id);
-    setIsLoading(true);
-  }
 
   useEffect(() => {
-    if (!id) return;
-
-    api.routes
-      .get(id)
-      .then((res) => {
-        if (res?.route) {
-          setRoute(res.route);
-          if (res.route.isSaved !== undefined) {
-            setIsSaved(Boolean(res.route.isSaved));
-          }
-        } else {
-          setRoute(null);
-        }
-      })
-      .catch(() => {
-        setRoute(null);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [id]);
+    if (route && route.isSaved !== undefined) {
+      setIsSaved(Boolean(route.isSaved));
+    }
+  }, [route]);
 
   const handleToggleSave = async () => {
     if (!id) return;
     const prev = isSaved;
     setIsSaved(!prev);
     try {
-      const res = await api.routes.toggleSave(id);
+      const res = await toggleSaveRoute.mutateAsync(id);
       setIsSaved(Boolean(res.isSaved));
-    } catch (err) {
+    } catch (err: any) {
       setIsSaved(prev);
-      console.warn('Toggle save route error:', err);
+      Alert.alert('Error', err?.message || 'Failed to save route');
     }
   };
 

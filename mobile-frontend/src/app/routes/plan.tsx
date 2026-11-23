@@ -22,7 +22,8 @@ import { LngLat } from '../../lib/activityView';
 import { formatDuration, kmValue } from '../../lib/format';
 import { plannedRouteStore } from '../../lib/plannedRoute';
 import { MVP_SPORTS, sportConfig } from '../../lib/sports';
-import { api, PlaceDetails, RoutePlan } from '../../services/api';
+import { useCreateRoute, usePlaceDetailsQuery, usePlanRouteMutation } from '../../hooks/useRoutes';
+import { RoutePlan } from '../../services/api';
 import { SportType } from '../../types';
 
 type PlanState =
@@ -58,21 +59,11 @@ export default function RoutePlanScreen() {
   const [state, setState] = useState<PlanState>({ status: 'locating' });
   const [selected, setSelected] = useState(0);
   const [attempt, setAttempt] = useState(0);
-  const [details, setDetails] = useState<PlaceDetails | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Genuine place photo/details (only when the place came from OSM).
-  useEffect(() => {
-    if (!params.place) return;
-    let cancelled = false;
-    api.places.details(params.place).then(
-      (d) => !cancelled && setDetails(d),
-      () => undefined
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [params.place]);
+  const { data: details } = usePlaceDetailsQuery(params.place);
+  const planRoute = usePlanRouteMutation();
+  const createRoute = useCreateRoute();
 
   useEffect(() => {
     if (!dest) return;
@@ -91,11 +82,11 @@ export default function RoutePlanScreen() {
       const from: LngLat = [fix.coords.longitude, fix.coords.latitude];
       set({ status: 'planning', from });
       try {
-        const plan = await api.routing.plan(
+        const plan = await planRoute.mutateAsync({
           sport,
-          { lat: from[1], lng: from[0] },
-          { lat: dest[1], lng: dest[0] }
-        );
+          from: { lat: from[1], lng: from[0] },
+          to: { lat: dest[1], lng: dest[0] },
+        });
         setSelected(0);
         set({ status: 'ready', from, plan });
       } catch (e: any) {
@@ -135,7 +126,7 @@ export default function RoutePlanScreen() {
     if (!route) return;
     setSaving(true);
     try {
-      const res = await api.routes.create({
+      const res = await createRoute.mutateAsync({
         name: `To ${name}`,
         sportType: sport,
         distanceMeters: route.distanceM,

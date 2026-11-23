@@ -16,7 +16,7 @@ import { AppText, BottomSheet, OptionRow } from '../../design';
 import { LngLat } from '../../lib/activityView';
 import { plannedRouteStore } from '../../lib/plannedRoute';
 import { MVP_SPORTS } from '../../lib/sports';
-import { api } from '../../services/api';
+import { usePlanRouteMutation } from '../../hooks/useRoutes';
 
 export default function MapsScreen() {
   const router = useRouter();

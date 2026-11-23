@@ -1,53 +1,30 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GoalCard } from '../../components/analytics/GoalCard';
 import { NewGoalForm } from '../../components/analytics/NewGoalForm';
-import { api } from '../../services/api';
-import { TrainingGoal } from '../../types';
+import { useCreateGoal, useDeleteGoal, useGoals } from '../../hooks/useGoals';
 
 export default function GoalsScreen() {
   const router = useRouter();
-  const [goals, setGoals] = useState<TrainingGoal[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: goals = [], isLoading, isRefetching, refetch } = useGoals();
+  const createGoal = useCreateGoal();
+  const deleteGoal = useDeleteGoal();
+
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newTarget, setNewTarget] = useState('50');
   const [newPeriod, setNewPeriod] = useState<'WEEKLY' | 'MONTHLY' | 'ANNUAL'>('WEEKLY');
-  const [saving, setSaving] = useState(false);
-
-  // Progress (currentValue) is computed by the server from the athlete's saved activities.
-  const fetchGoals = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await api.goals.list();
-      if (res?.goals) setGoals(res.goals as TrainingGoal[]);
-    } catch (err) {
-      console.warn('Failed to load goals:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    api.goals
-      .list()
-      .then((res) => {
-        if (!cancelled && res?.goals) setGoals(res.goals as TrainingGoal[]);
-      })
-      .catch((err) => {
-        console.warn('Failed to load goals:', err);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const handleAddGoal = async () => {
     if (!newTitle.trim()) {
@@ -56,8 +33,7 @@ export default function GoalsScreen() {
     }
     const targetNum = parseFloat(newTarget) || 50;
     try {
-      setSaving(true);
-      const res = await api.goals.create({
+      await createGoal.mutateAsync({
         title: newTitle.trim(),
         targetValue: targetNum,
         unit: 'km',
@@ -66,18 +42,8 @@ export default function GoalsScreen() {
       });
       setIsAdding(false);
       setNewTitle('');
-      if (res?.goal) {
-        setGoals((prev) => [
-          res.goal as TrainingGoal,
-          ...prev.filter((g) => g.id !== (res.goal as any).id),
-        ]);
-      } else {
-        await fetchGoals();
-      }
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to save goal');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -88,12 +54,9 @@ export default function GoalsScreen() {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          const removed = goals.find((g) => g.id === goalId);
-          setGoals((prev) => prev.filter((g) => g.id !== goalId));
           try {
-            await api.goals.delete(goalId);
+            await deleteGoal.mutateAsync(goalId);
           } catch (err: any) {
-            if (removed) setGoals((prev) => [...prev, removed]);
             Alert.alert('Error', err.message || 'Failed to delete goal');
           }
         },
@@ -118,6 +81,15 @@ export default function GoalsScreen() {
         showsVerticalScrollIndicator={false}
         className="p-4"
         contentContainerStyle={{ paddingBottom: 110 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={() => {
+              void refetch();
+            }}
+            tintColor="#FC4C02"
+          />
+        }
       >
         {isAdding && (
           <NewGoalForm
@@ -127,7 +99,7 @@ export default function GoalsScreen() {
             onTargetChange={setNewTarget}
             period={newPeriod}
             onPeriodChange={setNewPeriod}
-            saving={saving}
+            saving={createGoal.isPending}
             onSubmit={handleAddGoal}
           />
         )}
@@ -136,7 +108,7 @@ export default function GoalsScreen() {
           Active Performance Targets
         </Text>
 
-        {loading ? (
+        {isLoading ? (
           <View className="py-12 items-center justify-center">
             <ActivityIndicator color="#FC4C02" size="large" />
           </View>

@@ -8,7 +8,7 @@ import { AppBar, AppText, Button, Chip, ChipRow, space, TextField } from '../../
 import { LngLat } from '../../lib/activityView';
 import { formatDuration, kmValue } from '../../lib/format';
 import { MVP_SPORTS } from '../../lib/sports';
-import { api } from '../../services/api';
+import { useCreateRoute, usePlanRouteMutation } from '../../hooks/useRoutes';
 import { haversineM } from '../../tracking/shared';
 import { SportType } from '../../types';
 
@@ -24,6 +24,8 @@ interface SegmentData {
 export default function RouteBuilderScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const createRoute = useCreateRoute();
+  const planRoute = usePlanRouteMutation();
   const [waypoints, setWaypoints] = useState<LngLat[]>([]);
   const [segments, setSegments] = useState<SegmentData[]>([]);
   const [name, setName] = useState('');
@@ -102,11 +104,11 @@ export default function RouteBuilderScreen() {
 
     try {
       // Query Valhalla routing engine for real geometry along OpenStreetMap ways
-      const plan = await api.routing.plan(
+      const plan = await planRoute.mutateAsync({
         sport,
-        { lat: last[1], lng: last[0] },
-        { lat: p[1], lng: p[0] }
-      );
+        from: { lat: last[1], lng: last[0] },
+        to: { lat: p[1], lng: p[0] },
+      });
 
       const route = plan.routes[0];
       if (route && route.geometry && route.geometry.length > 1) {
@@ -170,7 +172,7 @@ export default function RouteBuilderScreen() {
   const save = async () => {
     setSaving(true);
     try {
-      const res = await api.routes.create({
+      const res = await createRoute.mutateAsync({
         name: name.trim(),
         sportType: sport,
         distanceMeters: Math.round(totalDistance),
