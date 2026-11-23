@@ -5,7 +5,11 @@
     "format": "npm --prefix mobile-frontend run format && npm --prefix mobile-backend run format",
     "lint": "npm --prefix mobile-frontend run lint",
     "typecheck": "npm --prefix mobile-frontend run typecheck && npm --prefix mobile-backend run typecheck",
-    "test": "npm --prefix mobile-frontend test -- --forceExit && npm --prefix mobile-backend test"
+    "test": "npm --prefix mobile-frontend test -- --forceExit && npm --prefix mobile-backend test",
+    "clean": "npm --prefix mobile-frontend run clean:android",
+    "build:apk": "npm --prefix mobile-frontend run build:share",
+    "install:device": "npm --prefix mobile-frontend run install:device",
+    "share:device": "npm --prefix mobile-frontend run share:device"
   }
 }
 
