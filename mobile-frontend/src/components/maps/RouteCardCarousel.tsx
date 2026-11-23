@@ -27,7 +27,7 @@ interface RouteCardCarouselProps {
   nearbyError?: string | null;
   onRetryNearby?: () => void;
   onRetryLocation?: () => void;
-  onSelect: (index: number) => void;
+  onSelect: (index: number, fromScroll?: boolean) => void;
   onOpenDetail: (item: MapItem) => void;
   onToggleSave: (item: MapItem) => void;
 }
@@ -229,12 +229,19 @@ export function RouteCardCarousel({
           keyExtractor={(i) => `${i.kind}:${i.id}`}
           showsHorizontalScrollIndicator={false}
           snapToInterval={cardWidth + 12}
+          snapToAlignment="start"
           decelerationRate="fast"
+          disableIntervalMomentum={true}
+          getItemLayout={(_, index) => ({
+            length: cardWidth + 12,
+            offset: (cardWidth + 12) * index,
+            index,
+          })}
           contentContainerStyle={{ paddingHorizontal: 16 }}
           onMomentumScrollEnd={(e) => {
             const idx = Math.round(e.nativeEvent.contentOffset.x / (cardWidth + 12));
             if (idx >= 0 && idx < items.length) {
-              onSelect(idx);
+              onSelect(idx, true);
             }
           }}
           renderItem={({ item, index }) => {

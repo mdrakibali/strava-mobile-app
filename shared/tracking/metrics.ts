@@ -97,14 +97,22 @@ export class TrackAccumulator {
     const dtSec = Math.max(0.001, (p.t - anchor.t) / 1000);
     const implied = d / dtSec;
     const doppler = p.speed != null && p.speed >= 0 ? p.speed : null;
-    const gate = Math.max(ENGINE.minStepM, Math.min(22, accRadius > 0 ? accRadius * 0.7 : 4));
+    const gate = Math.max(
+      ENGINE.minStepM,
+      this.cfg.minMovingSpeedMps <= 0.5
+        ? Math.min(10, accRadius > 0 ? accRadius * 0.4 : 3)
+        : Math.min(20, accRadius > 0 ? accRadius * 0.65 : 4)
+    );
     const inBand = implied >= this.cfg.minMovingSpeedMps && implied <= this.cfg.maxSpeedMps;
     const dopplerAgrees = dopplerMatches(this.cfg, doppler, implied);
     const leaving = d >= gate && inBand && dopplerAgrees;
     const bearing = bearingDeg(anchor.lat, anchor.lng, p.lat, p.lng);
     const turn = this.departBearing == null ? 0 : turnDeg(this.departBearing, bearing);
-    const maxTurn = this.cfg.minMovingSpeedMps <= 0.5 ? 90 : 55;
-    const progressing = leaving && d >= this.departDist + 0.8 && turn <= maxTurn;
+    const maxTurn = this.cfg.minMovingSpeedMps <= 0.5 ? 140 : 75;
+    const progressing =
+      leaving &&
+      (this.cfg.minMovingSpeedMps <= 0.5 ? d >= this.departDist + 0.4 : d >= this.departDist + 0.8) &&
+      turn <= maxTurn;
     if (progressing) {
       this.departStreak++;
       this.departDist = d;
@@ -117,23 +125,30 @@ export class TrackAccumulator {
 
     let advanced = false;
     const distBefore = this.distanceM;
-    if (progressing && this.departStreak >= 2) {
+    const requiredStreak = this.cfg.minMovingSpeedMps <= 0.5 ? 1 : 2;
+    if (progressing && this.departStreak >= requiredStreak) {
       this.distanceM += d;
       advanced = true;
     }
 
-    // Moving time follows each short step, not the Doppler reading on its own. Three steps on
-    // the same heading are a walk or ride; a wandering phone does not hold a heading.
+    // Moving time follows each short step, not the Doppler reading on its own.
     const hop = haversineM(prev.lat, prev.lng, p.lat, p.lng);
     const hopDt = p.t - prev.t;
     const hopSpeed = hopDt > 0 ? hop / (hopDt / 1000) : 0;
     const hopBand = hopSpeed >= this.cfg.minMovingSpeedMps && hopSpeed <= this.cfg.maxSpeedMps;
     const hopBearing = bearingDeg(prev.lat, prev.lng, p.lat, p.lng);
     const hopTurn = this.hopBearing == null ? 0 : turnDeg(this.hopBearing, hopBearing);
-    if (hopBand && hopDt > 0 && hopDt <= ENGINE.maxMovingGapMs && hopTurn <= 35 && dopplerMatches(this.cfg, doppler, hopSpeed)) {
+    const maxHopTurn = this.cfg.minMovingSpeedMps <= 0.5 ? 135 : 60;
+    if (
+      hopBand &&
+      hopDt > 0 &&
+      hopDt <= ENGINE.maxMovingGapMs &&
+      hopTurn <= maxHopTurn &&
+      dopplerMatches(this.cfg, doppler, hopSpeed)
+    ) {
       this.hopStreak++;
       this.hopBearing = hopBearing;
-      if (this.hopStreak >= 2) this.movingMs += hopDt;
+      if (this.hopStreak >= (this.cfg.minMovingSpeedMps <= 0.5 ? 1 : 2)) this.movingMs += hopDt;
     } else {
       this.hopStreak = 0;
       this.hopBearing = null;
@@ -380,10 +395,10 @@ export const routePoints = (sport: string, points: RawPoint[]): RawPoint[] =>
 /** Doppler must agree with the distance actually travelled. A phone can report a walking speed while the fix barely moves. */
 const dopplerMatches = (cfg: TrackingConfig, doppler: number | null, measuredMps: number) =>
   doppler == null ||
-  (doppler >= cfg.minMovingSpeedMps &&
-    doppler <= cfg.maxSpeedMps &&
-    measuredMps >= doppler * 0.4 &&
-    measuredMps <= doppler * 2.5);
+  doppler < 0.25 ||
+  (doppler <= cfg.maxSpeedMps &&
+    measuredMps >= doppler * 0.25 &&
+    measuredMps <= doppler * 3.5);
 
 const bearingDeg = (lat1: number, lng1: number, lat2: number, lng2: number) => {
   const φ1 = (lat1 * Math.PI) / 180;

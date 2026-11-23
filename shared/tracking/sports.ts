@@ -14,13 +14,13 @@ export interface TrackingConfig {
 }
 
 export const TRACKING_CONFIG: Record<TrackingSport, TrackingConfig> = {
-  // Run keeps 30 m to allow chip warm-up while rejecting indoor wander.
-  Run: { minMovingSpeedMps: 0.9, maxSpeedMps: 12, maxAccuracyM: 30 },
-  // Walk/Hike raised to 65 m: walking workouts frequently start indoors or in stairwells
+  // Run allows chip warm-up and building proximity while rejecting stationary wander.
+  Run: { minMovingSpeedMps: 0.5, maxSpeedMps: 12, maxAccuracyM: 55 },
+  // Walk/Hike: walking workouts frequently start indoors, in apartments/high-rises, or stairwells
   // where GPS signal degrades before clearing the building.
-  Walk: { minMovingSpeedMps: 0.4, maxSpeedMps: 5, maxAccuracyM: 65 },
-  Hike: { minMovingSpeedMps: 0.3, maxSpeedMps: 5, maxAccuracyM: 65 },
-  Ride: { minMovingSpeedMps: 1.0, maxSpeedMps: 30, maxAccuracyM: 25 },
+  Walk: { minMovingSpeedMps: 0.2, maxSpeedMps: 6, maxAccuracyM: 80 },
+  Hike: { minMovingSpeedMps: 0.2, maxSpeedMps: 6, maxAccuracyM: 80 },
+  Ride: { minMovingSpeedMps: 0.8, maxSpeedMps: 30, maxAccuracyM: 35 },
 };
 
 export const trackingConfig = (sport: string): TrackingConfig =>

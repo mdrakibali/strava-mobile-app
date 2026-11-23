@@ -106,4 +106,3 @@ describe('React Query hooks caching and key consistency', () => {
     expect(queryClient.getQueryData<any[]>(PRIVACY_ZONES_KEY)![0].name).toBe('Office');
   });
 });
-

@@ -260,7 +260,7 @@ class RecordingEngine {
         return;
       this.previewSub?.remove();
       this.previewSub = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 0 },
+        { accuracy: Location.Accuracy.High, timeInterval: 1000, distanceInterval: 0 },
         (l) =>
           this.set({
             lastFix: {
@@ -368,7 +368,7 @@ class RecordingEngine {
     let bgErr: any = null;
     try {
       await Location.startLocationUpdatesAsync(LOCATION_TASK, {
-        accuracy: Location.Accuracy.BestForNavigation,
+        accuracy: sport === 'Ride' ? Location.Accuracy.BestForNavigation : Location.Accuracy.High,
         timeInterval: 1000,
         // Stream 1Hz fixes continuously. The accumulator filter rejects stationary wander.
         distanceInterval: 0,
@@ -396,7 +396,8 @@ class RecordingEngine {
       try {
         this.previewSub = await Location.watchPositionAsync(
           {
-            accuracy: Location.Accuracy.BestForNavigation,
+            accuracy:
+              sport === 'Ride' ? Location.Accuracy.BestForNavigation : Location.Accuracy.High,
             timeInterval: 1000,
             distanceInterval: 0,
           },

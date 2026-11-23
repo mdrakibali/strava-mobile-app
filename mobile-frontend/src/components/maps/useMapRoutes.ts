@@ -223,6 +223,57 @@ export function useMapRoutes(
     return withDist.sort((a, b) => (a.distanceFromMeM ?? 0) - (b.distanceFromMeM ?? 0));
   }, [routeItems, nearbyItems, source, sport, query, lengthFilter, difficultyFilter, me]);
 
+  // Auto-plan real street route from user location to selected place so map draws the highlighted route polyline
+  useEffect(() => {
+    if (!me || !selectedId) return;
+    const target = visible.find((v) => v.id === selectedId);
+    if (!target) return;
+    // If it already has a full route line (> 1 points), nothing needed
+    if (target.paths && target.paths[0] && target.paths[0].length > 1) return;
+
+    let cancelled = false;
+    const planSport = sport === 'All' ? 'Run' : sport;
+    api.routing
+      .plan(planSport, { lat: me[1], lng: me[0] }, { lat: target.anchor[1], lng: target.anchor[0] })
+      .then((plan) => {
+        if (cancelled || !plan?.routes?.[0]?.geometry?.length) return;
+        const r0 = plan.routes[0];
+        const update = (list: MapItem[]) =>
+          list.map((it) => {
+            if (it.id === selectedId) {
+              return {
+                ...it,
+                paths: [r0.geometry],
+                distanceMeters: r0.distanceM,
+                estimatedTimeSeconds: r0.durationS,
+                estTimeText: formatDuration(r0.durationS),
+                elevationGainMeters: r0.elevationGainM ?? 0,
+                elevationProfile: r0.elevationProfile
+                  ? r0.elevationProfile.map((p) => p[1])
+                  : undefined,
+                surfacePercentPaved: 85,
+              };
+            }
+            return it;
+          });
+        setNearbyItems(update);
+        setRouteItems(update);
+      })
+      .catch(() => {
+        // Fallback: draw a direct line between me and anchor
+        if (cancelled) return;
+        const directLine: [number, number][] = [me, target.anchor];
+        const update = (list: MapItem[]) =>
+          list.map((it) => (it.id === selectedId ? { ...it, paths: [directLine] } : it));
+        setNearbyItems(update);
+        setRouteItems(update);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, me, sport, visible]);
+
   const toggleSave = async (item: MapItem) => {
     const patch = (list: MapItem[]) =>
       list.map((x) => (x.id === item.id ? { ...x, saved: !x.saved } : x));

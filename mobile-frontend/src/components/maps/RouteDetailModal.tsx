@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { Linking, Modal, Pressable, ScrollView, View } from 'react-native';
 import { ElevationProfile } from '../../components/activity/ElevationProfile';
@@ -26,6 +27,7 @@ export function RouteDetailModal({
 }: RouteDetailModalProps) {
   if (!item) return null;
 
+  const router = useRouter();
   const isPlace = item.kind === 'place';
 
   return (
@@ -48,6 +50,20 @@ export function RouteDetailModal({
               </AppText>
             </View>
             <View className="flex-row items-center gap-2">
+              {!isPlace && (
+                <Pressable
+                  onPress={() => {
+                    onClose();
+                    router.push(`/routes/${item.id}`);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="View full route details"
+                  className="px-2.5 py-1.5 rounded-full bg-orange-50 border border-orange-200 flex-row items-center active:bg-orange-100"
+                >
+                  <Ionicons name="expand-outline" size={14} color="#FC4C02" />
+                  <AppText className="text-[#FC4C02] text-xs font-bold ml-1">Full</AppText>
+                </Pressable>
+              )}
               {!isPlace && (
                 <Pressable
                   onPress={() => onToggleSave(item)}
@@ -185,7 +201,7 @@ export function RouteDetailModal({
                   </AppText>
                   <View className="flex-row items-center justify-between">
                     <View className="flex-row items-center">
-                      <View className="w-3 h-3 rounded-full bg-[#FC4C02] mr-2" />
+                      <View className="w-3 h-3 rounded-full bg-primary mr-2" />
                       <AppText className="text-gray-800 text-sm font-semibold">
                         Paved ({item.surfacePercentPaved}%)
                       </AppText>

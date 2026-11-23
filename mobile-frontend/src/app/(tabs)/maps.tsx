@@ -33,6 +33,7 @@ export default function MapsScreen() {
   );
   const [query, setQuery] = useState('');
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [modalItem, setModalItem] = useState<MapItem | null>(null);
   const planRoute = usePlanRouteMutation();
   const [lengthFilter, setLengthFilter] = useState<string | null>(null);
   const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
@@ -116,12 +117,14 @@ export default function MapsScreen() {
   );
   const current = visible[selectedIndex] ?? visible[0];
 
-  const select = (index: number) => {
+  const select = (index: number, fromScroll = false) => {
     const item = visible[index];
     if (!item) return;
     pinned.current = true;
     setSelectedId(item.id);
-    listRef.current?.scrollToIndex({ index, animated: true });
+    if (!fromScroll) {
+      listRef.current?.scrollToIndex({ index, animated: true });
+    }
   };
 
   useEffect(() => {
@@ -238,14 +241,14 @@ export default function MapsScreen() {
         styleKey={mapMode}
       />
 
-      {current && current.kind === 'route' ? (
+      {current && mainRoute.length > 1 ? (
         <View
           style={{ top: insets.top + 116 }}
           className="absolute left-4 z-10 flex-row items-center bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-md"
         >
           <View className="w-2.5 h-2.5 rounded-full bg-primary mr-2" />
           <AppText className="text-gray-900 text-xs font-bold">
-            {current.surfacePercentPaved}% Paved
+            {current.surfacePercentPaved || 85}% Paved
           </AppText>
         </View>
       ) : null}
@@ -351,6 +354,7 @@ export default function MapsScreen() {
         onSelect={select}
         onOpenDetail={(item) => {
           setSelectedId(item.id);
+          setModalItem(item);
           setDetailModalVisible(true);
         }}
         onToggleSave={toggleSave}
@@ -358,7 +362,7 @@ export default function MapsScreen() {
 
       <RouteDetailModal
         visible={detailModalVisible}
-        item={current}
+        item={modalItem || current}
         onClose={() => setDetailModalVisible(false)}
         onStartRoute={startRoute}
         onToggleSave={toggleSave}
